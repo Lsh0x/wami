@@ -2287,6 +2287,72 @@ dependencies = [
  "thiserror",
  "tokio",
  "uuid",
+ "wami-core",
+ "wami-credentials",
+ "wami-macros",
+ "wami-provider",
+ "wami-traits",
+]
+
+[[package]]
+name = "wami-core"
+version = "0.1.0"
+dependencies = [
+ "aws-sdk-iam",
+ "aws-sdk-ssoadmin",
+ "aws-sdk-sts",
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "wami-credentials"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "uuid",
+ "wami-core",
+ "wami-provider",
+]
+
+[[package]]
+name = "wami-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "wami-provider"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "hex",
+ "regex",
+ "serde",
+ "sha2",
+ "uuid",
+ "wami-core",
+]
+
+[[package]]
+name = "wami-service"
+version = "0.1.0"
+dependencies = [
+ "wami-core",
+ "wami-traits",
+]
+
+[[package]]
+name = "wami-traits"
+version = "0.1.0"
+dependencies = [
+ "wami-core",
 ]
 
 [[package]]

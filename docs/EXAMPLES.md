@@ -17,25 +17,38 @@ Complete working examples for common use cases.
 Complete user CRUD operations:
 
 ```rust
-use wami::wami::identity::user;
-use wami::store::memory::InMemoryWamiStore;
+use wami::arn::{TenantPath, WamiArn};
+use wami::context::WamiContext;
+use wami::store::memory::InMemoryStore;
 use wami::store::traits::UserStore;
-use wami::provider::aws::AwsProvider;
+use wami::wami::identity::user::builder::build_user;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut store = InMemoryWamiStore::new();
-    let provider = AwsProvider::new();
-    let account = "123456789012";
+    let mut store = InMemoryStore::default();
+    
+    // Create context
+    let context = WamiContext::builder()
+        .instance_id("123456789012")
+        .tenant_path(TenantPath::single(0))
+        .caller_arn(
+            WamiArn::builder()
+                .service(wami::arn::Service::Iam)
+                .tenant_path(TenantPath::single(0))
+                .wami_instance("123456789012")
+                .resource("user", "admin")
+                .build()?,
+        )
+        .is_root(false)
+        .build()?;
     
     // Create users
     for name in ["alice", "bob", "charlie"] {
-        let user = user::builder::build_user(
+        let user = build_user(
             name.to_string(),
             Some("/engineering/".to_string()),
-            &provider,
-            account
-        );
+            &context
+        )?;
         store.create_user(user).await?;
         println!("✅ Created: {}", name);
     }
@@ -66,37 +79,49 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Example 2: Group Management and Membership
 
 ```rust
-use wami::wami::identity::{user, group};
-use wami::store::memory::InMemoryWamiStore;
+use wami::arn::{TenantPath, WamiArn};
+use wami::context::WamiContext;
+use wami::wami::identity::{user::builder::build_user, group::builder::build_group};
+use wami::store::memory::InMemoryStore;
 use wami::store::traits::{UserStore, GroupStore};
-use wami::provider::aws::AwsProvider;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut store = InMemoryWamiStore::new();
-    let provider = AwsProvider::new();
-    let account = "123456789012";
+    let mut store = InMemoryStore::default();
+    
+    // Create context
+    let context = WamiContext::builder()
+        .instance_id("123456789012")
+        .tenant_path(TenantPath::single(0))
+        .caller_arn(
+            WamiArn::builder()
+                .service(wami::arn::Service::Iam)
+                .tenant_path(TenantPath::single(0))
+                .wami_instance("123456789012")
+                .resource("user", "admin")
+                .build()?,
+        )
+        .is_root(false)
+        .build()?;
     
     // Create groups
     for group_name in ["admins", "developers", "viewers"] {
-        let grp = group::builder::build_group(
+        let grp = build_group(
             group_name.to_string(),
             Some("/".to_string()),
-            &provider,
-            account
-        );
+            &context
+        )?;
         store.create_group(grp).await?;
     }
     println!("✅ Created 3 groups");
     
     // Create users
     for user_name in ["alice", "bob"] {
-        let usr = user::builder::build_user(
+        let usr = build_user(
             user_name.to_string(),
             None,
-            &provider,
-            account
-        );
+            &context
+        )?;
         store.create_user(usr).await?;
     }
     println!("✅ Created 2 users");

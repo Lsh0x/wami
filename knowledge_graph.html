@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Codebase Analysis Report</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        #report-container { display: flex; width: 98%; gap: 16px; margin-top: 20px; }
+        #graph-container { flex-grow: 1; border: 1px solid #ccc; padding: 10px; border-radius: 8px; position: relative; height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
+        #sidebar { width: 400px; flex-shrink: 0; border: 1px solid #ccc; padding: 10px; border-radius: 8px; max-height: 85vh; overflow-y: auto; }
+        h1, h2 { color: #333; }
+        #analysis-report ul { list-style-type: none; padding-left: 0; }
+        #analysis-report h3 { border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px;}
+        #analysis-report li { background-color: #f9f9f9; border: 1px solid #eee; padding: 8px; margin-bottom: 5px; border-radius: 4px; }
+        #analysis-report strong { color: #c0392b; }
+        .classNode { fill:#DDA0DD; stroke:#8A2BE2; stroke-width:2px; }
+        .functionNode { fill:#87CEEB; stroke:#4682B4; stroke-width:2px; }
+        .dependencyNode { fill:#90EE90; stroke:#2E8B57; stroke-width:2px; }
+        .fileNode { fill:#FFFACD; stroke:#FFD700; stroke-width:2px; }
+        /* Make the mermaid SVG fill the container and be pannable/zoomable */
+        #graph-container .mermaid { flex: 1; }
+        #graph-container .mermaid > svg { width: 100%; height: 100%; }
+        .graph-controls { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; z-index: 10; }
+        .graph-controls button { padding: 6px 8px; font-size: 12px; border: 1px solid #bbb; background: #fff; border-radius: 4px; cursor: pointer; }
+        .graph-controls button:hover { background: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <h1>Codebase Analysis Report</h1>
+    <div id="report-container">
+        <div id="graph-container">
+            <h2>Knowledge Graph</h2>
+            <div class="graph-controls">
+                <button id="zoom-in" title="Zoom in">+</button>
+                <button id="zoom-out" title="Zoom out">−</button>
+                <button id="fit" title="Fit to screen">Fit</button>
+                <button id="reset" title="Reset zoom">Reset</button>
+            </div>
+            <!-- The raw source for this graph is also saved in knowledge_graph.mmd -->
+            <pre class="mermaid">
+graph TD;
+    subgraph Core["Core & Foundation"]
+        crates_wami_core_src_arn_builder_rs["arn/builder.rs"]:::fileNode
+        crates_wami_core_src_arn_mod_rs["arn/mod.rs"]:::fileNode
+        crates_wami_core_src_arn_parser_rs["arn/parser.rs"]:::fileNode
+        crates_wami_core_src_arn_transformer_rs["arn/transformer.rs"]:::fileNode
+        crates_wami_core_src_arn_types_rs["arn/types.rs"]:::fileNode
+        crates_wami_core_src_context_rs["context.rs"]:::fileNode
+        crates_wami_core_src_error_rs["error.rs"]:::fileNode
+        crates_wami_core_src_error_helpers_rs["error/helpers.rs"]:::fileNode
+        crates_wami_core_src_lib_rs["lib.rs"]:::fileNode
+        crates_wami_core_src_types_rs["types.rs"]:::fileNode
+    end
+    subgraph Traits["Traits & Interfaces"]
+        crates_wami_traits_src_lib_rs["lib.rs"]:::fileNode
+    end
+    subgraph Provider["Cloud Provider Integration"]
+        crates_wami_provider_src_arn_builder_rs["arn_builder.rs"]:::fileNode
+        crates_wami_provider_src_aws_rs["aws.rs"]:::fileNode
+        crates_wami_provider_src_azure_rs["azure.rs"]:::fileNode
+        crates_wami_provider_src_custom_rs["custom.rs"]:::fileNode
+        crates_wami_provider_src_gcp_rs["gcp.rs"]:::fileNode
+        crates_wami_provider_src_lib_rs["lib.rs"]:::fileNode
+        crates_wami_provider_src_provider_arn_builder_rs["provider/arn_builder.rs"]:::fileNode
+        crates_wami_provider_src_provider_aws_rs["provider/aws.rs"]:::fileNode
+        crates_wami_provider_src_provider_azure_rs["provider/azure.rs"]:::fileNode
+        crates_wami_provider_src_provider_custom_rs["provider/custom.rs"]:::fileNode
+        crates_wami_provider_src_provider_gcp_rs["provider/gcp.rs"]:::fileNode
+        crates_wami_provider_src_provider_info_rs["provider_info.rs"]:::fileNode
+    end
+    subgraph Macros["Macros & Code Generation"]
+        crates_wami_macros_src_derive_service_rs["derive_service.rs"]:::fileNode
+        crates_wami_macros_src_lib_rs["lib.rs"]:::fileNode
+        crates_wami_macros_src_register_rs["register.rs"]:::fileNode
+        crates_wami_macros_src_service_attr_rs["service_attr.rs"]:::fileNode
+    end
+    subgraph Credentials["Credentials Domain"]
+        crates_wami_credentials_src_access_key_builder_rs["access_key/builder.rs"]:::fileNode
+        crates_wami_credentials_src_access_key_mod_rs["access_key/mod.rs"]:::fileNode
+        crates_wami_credentials_src_access_key_model_rs["access_key/model.rs"]:::fileNode
+        crates_wami_credentials_src_access_key_requests_rs["access_key/requests.rs"]:::fileNode
+        crates_wami_credentials_src_lib_rs["lib.rs"]:::fileNode
+        crates_wami_credentials_src_login_profile_builder_rs["login_profile/builder.rs"]:::fileNode
+        crates_wami_credentials_src_login_profile_mod_rs["login_profile/mod.rs"]:::fileNode
+        crates_wami_credentials_src_login_profile_model_rs["login_profile/model.rs"]:::fileNode
+        crates_wami_credentials_src_login_profile_requests_rs["login_profile/requests.rs"]:::fileNode
+        crates_wami_credentials_src_mfa_device_builder_rs["mfa_device/builder.rs"]:::fileNode
+        crates_wami_credentials_src_mfa_device_mod_rs["mfa_device/mod.rs"]:::fileNode
+        crates_wami_credentials_src_mfa_device_model_rs["mfa_device/model.rs"]:::fileNode
+        crates_wami_credentials_src_mfa_device_requests_rs["mfa_device/requests.rs"]:::fileNode
+        crates_wami_credentials_src_server_certificate_builder_rs["server_certificate/builder.rs"]:::fileNode
+        crates_wami_credentials_src_server_certificate_mod_rs["server_certificate/mod.rs"]:::fileNode
+        crates_wami_credentials_src_server_certificate_model_rs["server_certificate/model.rs"]:::fileNode
+        crates_wami_credentials_src_server_certificate_requests_rs["server_certificate/requests.rs"]:::fileNode
+        crates_wami_credentials_src_service_credential_builder_rs["service_credential/builder.rs"]:::fileNode
+        crates_wami_credentials_src_service_credential_mod_rs["service_credential/mod.rs"]:::fileNode
+        crates_wami_credentials_src_service_credential_model_rs["service_credential/model.rs"]:::fileNode
+        crates_wami_credentials_src_service_credential_requests_rs["service_credential/requests.rs"]:::fileNode
+        crates_wami_credentials_src_signing_certificate_builder_rs["signing_certificate/builder.rs"]:::fileNode
+        crates_wami_credentials_src_signing_certificate_mod_rs["signing_certificate/mod.rs"]:::fileNode
+        crates_wami_credentials_src_signing_certificate_model_rs["signing_certificate/model.rs"]:::fileNode
+        crates_wami_credentials_src_signing_certificate_requests_rs["signing_certificate/requests.rs"]:::fileNode
+    end
+    subgraph WAMIDomain["WAMI Domain Layer"]
+        src_wami_identity_group_builder_rs["src/wami/identity/group/builder.rs"]:::fileNode
+        src_wami_identity_group_mod_rs["src/wami/identity/group/mod.rs"]:::fileNode
+        src_wami_identity_group_model_rs["src/wami/identity/group/model.rs"]:::fileNode
+        src_wami_identity_group_operations_rs["src/wami/identity/group/operations.rs"]:::fileNode
+        src_wami_identity_group_requests_rs["src/wami/identity/group/requests.rs"]:::fileNode
+        src_wami_identity_identity_provider_builder_rs["src/wami/identity/identity_provider/builder.rs"]:::fileNode
+        src_wami_identity_identity_provider_mod_rs["src/wami/identity/identity_provider/mod.rs"]:::fileNode
+        src_wami_identity_identity_provider_model_rs["src/wami/identity/identity_provider/model.rs"]:::fileNode
+        src_wami_credentials_access_key_builder_rs["src/wami/credentials/access_key/builder.rs"]:::fileNode
+        src_wami_credentials_access_key_mod_rs["src/wami/credentials/access_key/mod.rs"]:::fileNode
+        src_wami_credentials_access_key_model_rs["src/wami/credentials/access_key/model.rs"]:::fileNode
+        src_wami_credentials_access_key_operations_rs["src/wami/credentials/access_key/operations.rs"]:::fileNode
+        src_wami_credentials_access_key_requests_rs["src/wami/credentials/access_key/requests.rs"]:::fileNode
+        src_wami_credentials_login_profile_builder_rs["src/wami/credentials/login_profile/builder.rs"]:::fileNode
+        src_wami_credentials_login_profile_mod_rs["src/wami/credentials/login_profile/mod.rs"]:::fileNode
+        src_wami_credentials_login_profile_model_rs["src/wami/credentials/login_profile/model.rs"]:::fileNode
+        src_wami_policies_attachment_mod_rs["src/wami/policies/attachment/mod.rs"]:::fileNode
+        src_wami_policies_attachment_model_rs["src/wami/policies/attachment/model.rs"]:::fileNode
+        src_wami_policies_attachment_requests_rs["src/wami/policies/attachment/requests.rs"]:::fileNode
+        src_wami_policies_attachment_responses_rs["src/wami/policies/attachment/responses.rs"]:::fileNode
+        src_wami_policies_evaluation_mod_rs["src/wami/policies/evaluation/mod.rs"]:::fileNode
+        src_wami_policies_evaluation_model_rs["src/wami/policies/evaluation/model.rs"]:::fileNode
+        src_wami_policies_evaluation_operations_rs["src/wami/policies/evaluation/operations.rs"]:::fileNode
+        src_wami_policies_evaluation_requests_rs["src/wami/policies/evaluation/requests.rs"]:::fileNode
+        src_wami_sts_assume_role_mod_rs["src/wami/sts/assume_role/mod.rs"]:::fileNode
+        src_wami_sts_assume_role_model_rs["src/wami/sts/assume_role/model.rs"]:::fileNode
+        src_wami_sts_assume_role_operations_rs["src/wami/sts/assume_role/operations.rs"]:::fileNode
+        src_wami_sts_assume_role_requests_rs["src/wami/sts/assume_role/requests.rs"]:::fileNode
+        src_wami_sts_credentials_builder_rs["src/wami/sts/credentials/builder.rs"]:::fileNode
+        src_wami_sts_credentials_mod_rs["src/wami/sts/credentials/mod.rs"]:::fileNode
+        src_wami_sts_credentials_model_rs["src/wami/sts/credentials/model.rs"]:::fileNode
+        src_wami_sts_federation_mod_rs["src/wami/sts/federation/mod.rs"]:::fileNode
+        src_wami_sso_admin_account_assignment_mod_rs["src/wami/sso_admin/account_assignment/mod.rs"]:::fileNode
+        src_wami_sso_admin_account_assignment_model_rs["src/wami/sso_admin/account_assignment/model.rs"]:::fileNode
+        src_wami_sso_admin_application_mod_rs["src/wami/sso_admin/application/mod.rs"]:::fileNode
+        src_wami_sso_admin_application_model_rs["src/wami/sso_admin/application/model.rs"]:::fileNode
+        src_wami_sso_admin_instance_mod_rs["src/wami/sso_admin/instance/mod.rs"]:::fileNode
+        src_wami_sso_admin_instance_model_rs["src/wami/sso_admin/instance/model.rs"]:::fileNode
+        src_wami_sso_admin_mod_rs["src/wami/sso_admin/mod.rs"]:::fileNode
+        src_wami_sso_admin_permission_set_mod_rs["src/wami/sso_admin/permission_set/mod.rs"]:::fileNode
+        src_wami_tenant_authorization_rs["src/wami/tenant/authorization.rs"]:::fileNode
+        src_wami_tenant_hierarchy_rs["src/wami/tenant/hierarchy.rs"]:::fileNode
+        src_wami_tenant_mod_rs["src/wami/tenant/mod.rs"]:::fileNode
+        src_wami_tenant_model_rs["src/wami/tenant/model.rs"]:::fileNode
+        src_wami_tenant_operations_rs["src/wami/tenant/operations.rs"]:::fileNode
+        src_wami_tenant_tests_rs["src/wami/tenant/tests.rs"]:::fileNode
+        src_wami_reports_credential_report_mod_rs["src/wami/reports/credential_report/mod.rs"]:::fileNode
+        src_wami_reports_credential_report_model_rs["src/wami/reports/credential_report/model.rs"]:::fileNode
+        src_wami_reports_credential_report_operations_rs["src/wami/reports/credential_report/operations.rs"]:::fileNode
+        src_wami_reports_credential_report_requests_rs["src/wami/reports/credential_report/requests.rs"]:::fileNode
+        src_wami_reports_mod_rs["src/wami/reports/mod.rs"]:::fileNode
+        src_wami_tags_mod_rs["src/wami/tags/mod.rs"]:::fileNode
+        src_wami_tags_operations_rs["src/wami/tags/operations.rs"]:::fileNode
+        src_wami_tags_requests_rs["src/wami/tags/requests.rs"]:::fileNode
+        src_wami_instance_bootstrap_rs["src/wami/instance/bootstrap.rs"]:::fileNode
+        src_wami_instance_mod_rs["src/wami/instance/mod.rs"]:::fileNode
+    end
+    subgraph Service["Service Layer"]
+        crates_wami_src_service_auth_authentication_rs["service/auth/authentication.rs"]:::fileNode
+        crates_wami_src_service_auth_authorization_rs["service/auth/authorization.rs"]:::fileNode
+        crates_wami_src_service_auth_mod_rs["service/auth/mod.rs"]:::fileNode
+        src_service_auth_authentication_rs["src/service/auth/authentication.rs"]:::fileNode
+        src_service_auth_authorization_rs["src/service/auth/authorization.rs"]:::fileNode
+        crates_wami_src_service_identity_group_rs["service/identity/group.rs"]:::fileNode
+        crates_wami_src_service_identity_identity_provider_rs["service/identity/identity_provider.rs"]:::fileNode
+        crates_wami_src_service_identity_mod_rs["service/identity/mod.rs"]:::fileNode
+        crates_wami_src_service_identity_role_rs["service/identity/role.rs"]:::fileNode
+        crates_wami_src_service_identity_service_linked_role_rs["service/identity/service_linked_role.rs"]:::fileNode
+        crates_wami_src_service_credentials_access_key_rs["service/credentials/access_key.rs"]:::fileNode
+        crates_wami_src_service_credentials_login_profile_rs["service/credentials/login_profile.rs"]:::fileNode
+        crates_wami_src_service_credentials_mfa_device_rs["service/credentials/mfa_device.rs"]:::fileNode
+        crates_wami_src_service_credentials_mod_rs["service/credentials/mod.rs"]:::fileNode
+        crates_wami_src_service_credentials_server_certificate_rs["service/credentials/server_certificate.rs"]:::fileNode
+        crates_wami_src_service_policies_attachment_rs["service/policies/attachment.rs"]:::fileNode
+        crates_wami_src_service_policies_evaluation_rs["service/policies/evaluation.rs"]:::fileNode
+        crates_wami_src_service_policies_inline_rs["service/policies/inline.rs"]:::fileNode
+        crates_wami_src_service_policies_mod_rs["service/policies/mod.rs"]:::fileNode
+        crates_wami_src_service_policies_permissions_boundary_rs["service/policies/permissions_boundary.rs"]:::fileNode
+        crates_wami_src_service_sts_assume_role_rs["service/sts/assume_role.rs"]:::fileNode
+        crates_wami_src_service_sts_federation_rs["service/sts/federation.rs"]:::fileNode
+        crates_wami_src_service_sts_identity_rs["service/sts/identity.rs"]:::fileNode
+        crates_wami_src_service_sts_mod_rs["service/sts/mod.rs"]:::fileNode
+        crates_wami_src_service_sts_session_rs["service/sts/session.rs"]:::fileNode
+        crates_wami_src_service_sso_admin_account_assignment_rs["service/sso_admin/account_assignment.rs"]:::fileNode
+        crates_wami_src_service_sso_admin_application_rs["service/sso_admin/application.rs"]:::fileNode
+        crates_wami_src_service_sso_admin_instance_rs["service/sso_admin/instance.rs"]:::fileNode
+        crates_wami_src_service_sso_admin_mod_rs["service/sso_admin/mod.rs"]:::fileNode
+        crates_wami_src_service_sso_admin_permission_set_rs["service/sso_admin/permission_set.rs"]:::fileNode
+        crates_wami_src_service_tenant_mod_rs["service/tenant/mod.rs"]:::fileNode
+        src_service_tenant_mod_rs["src/service/tenant/mod.rs"]:::fileNode
+        crates_wami_src_service_reports_credential_report_rs["service/reports/credential_report.rs"]:::fileNode
+        crates_wami_src_service_reports_mod_rs["service/reports/mod.rs"]:::fileNode
+        src_service_reports_credential_report_rs["src/service/reports/credential_report.rs"]:::fileNode
+        src_service_reports_mod_rs["src/service/reports/mod.rs"]:::fileNode
+    end
+    subgraph StoreTraits["Store Traits"]
+        crates_wami_src_store_traits_credentials_access_key_rs["store/traits/credentials/access_key.rs"]:::fileNode
+        crates_wami_src_store_traits_credentials_login_profile_rs["store/traits/credentials/login_profile.rs"]:::fileNode
+        crates_wami_src_store_traits_credentials_mfa_device_rs["store/traits/credentials/mfa_device.rs"]:::fileNode
+        crates_wami_src_store_traits_credentials_mod_rs["store/traits/credentials/mod.rs"]:::fileNode
+        crates_wami_src_store_traits_credentials_server_certificate_rs["store/traits/credentials/server_certificate.rs"]:::fileNode
+        crates_wami_src_store_traits_credentials_service_credential_rs["store/traits/credentials/service_credential.rs"]:::fileNode
+        crates_wami_src_store_traits_credentials_signing_certificate_rs["store/traits/credentials/signing_certificate.rs"]:::fileNode
+        crates_wami_src_store_traits_identity_group_rs["store/traits/identity/group.rs"]:::fileNode
+        crates_wami_src_store_traits_identity_identity_provider_rs["store/traits/identity/identity_provider.rs"]:::fileNode
+        crates_wami_src_store_traits_identity_mod_rs["store/traits/identity/mod.rs"]:::fileNode
+        crates_wami_src_store_traits_identity_role_rs["store/traits/identity/role.rs"]:::fileNode
+        crates_wami_src_store_traits_identity_service_linked_role_rs["store/traits/identity/service_linked_role.rs"]:::fileNode
+        crates_wami_src_store_traits_identity_user_rs["store/traits/identity/user.rs"]:::fileNode
+        crates_wami_src_store_traits_mod_rs["store/traits/mod.rs"]:::fileNode
+        crates_wami_src_store_traits_policies_mod_rs["store/traits/policies/mod.rs"]:::fileNode
+        crates_wami_src_store_traits_policies_policy_rs["store/traits/policies/policy.rs"]:::fileNode
+        crates_wami_src_store_traits_reports_credential_report_rs["store/traits/reports/credential_report.rs"]:::fileNode
+        crates_wami_src_store_traits_reports_mod_rs["store/traits/reports/mod.rs"]:::fileNode
+        crates_wami_src_store_traits_sso_admin_account_assignment_rs["store/traits/sso_admin/account_assignment.rs"]:::fileNode
+        crates_wami_src_store_traits_sso_admin_application_rs["store/traits/sso_admin/application.rs"]:::fileNode
+    end
+    subgraph StoreMemory["Store Implementation (Memory)"]
+        crates_wami_src_store_memory_credentials_access_key_rs["store/memory/credentials/access_key.rs"]:::fileNode
+        crates_wami_src_store_memory_credentials_login_profile_rs["store/memory/credentials/login_profile.rs"]:::fileNode
+        crates_wami_src_store_memory_credentials_mfa_device_rs["store/memory/credentials/mfa_device.rs"]:::fileNode
+        crates_wami_src_store_memory_credentials_mod_rs["store/memory/credentials/mod.rs"]:::fileNode
+        crates_wami_src_store_memory_credentials_server_certificate_rs["store/memory/credentials/server_certificate.rs"]:::fileNode
+        crates_wami_src_store_memory_credentials_service_credential_rs["store/memory/credentials/service_credential.rs"]:::fileNode
+        crates_wami_src_store_memory_credentials_signing_certificate_rs["store/memory/credentials/signing_certificate.rs"]:::fileNode
+        crates_wami_src_store_memory_credentials_tests_rs["store/memory/credentials/tests.rs"]:::fileNode
+        crates_wami_src_store_memory_identity_group_rs["store/memory/identity/group.rs"]:::fileNode
+        crates_wami_src_store_memory_identity_identity_provider_rs["store/memory/identity/identity_provider.rs"]:::fileNode
+        crates_wami_src_store_memory_identity_mod_rs["store/memory/identity/mod.rs"]:::fileNode
+        crates_wami_src_store_memory_identity_role_rs["store/memory/identity/role.rs"]:::fileNode
+        crates_wami_src_store_memory_identity_service_linked_role_rs["store/memory/identity/service_linked_role.rs"]:::fileNode
+        crates_wami_src_store_memory_identity_tests_rs["store/memory/identity/tests.rs"]:::fileNode
+        crates_wami_src_store_memory_identity_user_rs["store/memory/identity/user.rs"]:::fileNode
+        crates_wami_src_store_memory_mod_rs["store/memory/mod.rs"]:::fileNode
+        crates_wami_src_store_memory_policies_mod_rs["store/memory/policies/mod.rs"]:::fileNode
+        crates_wami_src_store_memory_policies_policy_rs["store/memory/policies/policy.rs"]:::fileNode
+        crates_wami_src_store_memory_policies_tests_rs["store/memory/policies/tests.rs"]:::fileNode
+        crates_wami_src_store_memory_reports_credential_report_rs["store/memory/reports/credential_report.rs"]:::fileNode
+    end
+    subgraph Config["Build & Dependencies"]
+        Cargo_toml["Cargo.toml"]:::fileNode
+        cliff_toml["cliff.toml"]:::fileNode
+        crates_wami_core_Cargo_toml["crates/wami-core/Cargo.toml"]:::fileNode
+        crates_wami_credentials_Cargo_toml["crates/wami-credentials/Cargo.toml"]:::fileNode
+        crates_wami_macros_Cargo_toml["crates/wami-macros/Cargo.toml"]:::fileNode
+        crates_wami_provider_Cargo_toml["crates/wami-provider/Cargo.toml"]:::fileNode
+        crates_wami_service_Cargo_toml["crates/wami-service/Cargo.toml"]:::fileNode
+        crates_wami_traits_Cargo_toml["crates/wami-traits/Cargo.toml"]:::fileNode
+        crates_wami_Cargo_toml["crates/wami/Cargo.toml"]:::fileNode
+    end
+
+    %% Relationships between layers
+    crates_wami_src_service_auth_authentication_rs --"uses"--> crates_wami_src_store_traits_credentials_access_key_rs
+    crates_wami_src_store_memory_credentials_access_key_rs --"implements"--> crates_wami_src_store_traits_credentials_access_key_rs
+    crates_wami_src_service_auth_authentication_rs --"uses"--> crates_wami_core_src_arn_builder_rs
+    crates_wami_provider_src_arn_builder_rs --"uses"--> crates_wami_core_src_arn_builder_rs
+    crates_wami_credentials_src_access_key_builder_rs --"uses"--> crates_wami_core_src_arn_builder_rs
+    crates_wami_src_store_traits_credentials_access_key_rs --"uses"--> crates_wami_core_src_arn_builder_rs
+            </pre>
+        </div>
+        <div id="sidebar">
+            <h2>Analysis & Refactoring</h2>
+            <div id="analysis-report">
+
+                <h3>Summary</h3>
+                <ul>
+                    <li><strong>Total Files Analyzed:</strong> 556</li>
+                    <li><strong>Analysis Date:</strong> 2025-11-05_07-48-24</li>
+                    <li><strong>Language:</strong> rust</li>
+                </ul>
+                <h3>Code Statistics</h3>
+                <ul>
+                    <li><strong>Total Structs:</strong> 261</li>
+                    <li><strong>Total Functions:</strong> 1842</li>
+                    <li><strong>Total Traits:</strong> 31</li>
+                    <li><strong>Total Enums:</strong> 19</li>
+                </ul>
+                <h3>Architecture Overview</h3>
+                <ul>
+                    <li><strong>Core Layer:</strong> 10 files - Foundation primitives (ARN, Context, Error, Types)</li>
+                    <li><strong>WAMI Domain:</strong> 260 files - Domain models and business logic</li>
+                    <li><strong>Service Layer:</strong> 76 files - High-level orchestration</li>
+                    <li><strong>Store Traits:</strong> 58 files - Storage interface definitions</li>
+                    <li><strong>Store Memory:</strong> 78 files - In-memory implementation</li>
+                    <li><strong>Provider:</strong> 12 files - Cloud provider integrations</li>
+                    <li><strong>Macros:</strong> 4 files - Code generation</li>
+                    <li><strong>Credentials:</strong> 25 files - Credential domain models</li>
+                </ul>
+                <h3>Refactoring Suggestions</h3>
+                <ul>
+                    <li>The codebase follows a clean layered architecture with clear separation between domain, service, and store layers.</li>
+                    <li>Consider extracting more domain-specific crates similar to wami-credentials for better modularity.</li>
+                    <li>The store trait system provides good flexibility for different storage backends.</li>
+                    <li>Service layer properly orchestrates between domain models and storage.</li>
+                </ul>
+
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            themeVariables: {
+                fontSize: '16px',
+                lineHeight: '1.2'
+            },
+            flowchart: {
+                htmlLabels: true,
+                useMaxWidth: true,
+                nodeSpacing: 40,
+                rankSpacing: 60,
+                curve: 'basis'
+            }
+        });
+
+        function initPanZoom() {
+            const svg = document.querySelector('#graph-container .mermaid svg');
+            if (!svg || !window.svgPanZoom) return;
+
+            const panZoom = window.svgPanZoom(svg, {
+                zoomEnabled: true,
+                controlIconsEnabled: false,
+                fit: true,
+                center: true,
+                minZoom: 0.2,
+                maxZoom: 20,
+                contain: false,
+                dblClickZoomEnabled: true,
+                mouseWheelZoomEnabled: true
+            });
+
+            panZoom.fit();
+            panZoom.center();
+            panZoom.zoomBy(1.3);
+
+            document.getElementById('zoom-in')?.addEventListener('click', () => panZoom.zoomBy(1.2));
+            document.getElementById('zoom-out')?.addEventListener('click', () => panZoom.zoomBy(1/1.2));
+            document.getElementById('reset')?.addEventListener('click', () => { panZoom.resetZoom(); panZoom.center(); });
+            document.getElementById('fit')?.addEventListener('click', () => { panZoom.fit(); panZoom.center(); });
+
+            const ro = new ResizeObserver(() => {
+                panZoom.resize();
+                panZoom.fit();
+                panZoom.center();
+            });
+            ro.observe(document.getElementById('graph-container'));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(initPanZoom, 150);
+        });
+    </script>
+</body>
+</html>

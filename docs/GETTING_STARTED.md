@@ -20,7 +20,7 @@ Add WAMI to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-wami = "0.8.0"
+wami = "0.11.0"
 tokio = { version = "1.0", features = ["full"] }
 ```
 
@@ -34,11 +34,14 @@ env_logger = "0.11"  # For debug logging
 ### 3. Import in your code
 
 ```rust
-use wami::wami::identity::user;
-use wami::store::memory::InMemoryWamiStore;
+use wami::arn::{TenantPath, WamiArn};
+use wami::context::WamiContext;
+use wami::store::memory::InMemoryStore;
 use wami::store::traits::UserStore;
-use wami::provider::aws::AwsProvider;
+use wami::wami::identity::user::builder::build_user;
 ```
+
+**Note**: WAMI is organized as a workspace of crates. For end users, import from the main `wami` crate which re-exports everything. For workspace internal code, import directly from `wami-core`, `wami-credentials`, etc.
 
 ---
 
@@ -49,27 +52,38 @@ use wami::provider::aws::AwsProvider;
 Create a new file `src/main.rs`:
 
 ```rust
-use wami::wami::identity::user;
-use wami::store::memory::InMemoryWamiStore;
+use wami::arn::{TenantPath, WamiArn};
+use wami::context::WamiContext;
+use wami::store::memory::InMemoryStore;
 use wami::store::traits::UserStore;
-use wami::provider::aws::AwsProvider;
+use wami::wami::identity::user::builder::build_user;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Initialize storage
-    let mut store = InMemoryWamiStore::new();
+    let mut store = InMemoryStore::default();
     
-    // 2. Choose a cloud provider
-    let provider = AwsProvider::new();
-    let account_id = "123456789012";
+    // 2. Create a WAMI context for operations
+    let context = WamiContext::builder()
+        .instance_id("123456789012")
+        .tenant_path(TenantPath::single(0)) // Root tenant
+        .caller_arn(
+            WamiArn::builder()
+                .service(wami::arn::Service::Iam)
+                .tenant_path(TenantPath::single(0))
+                .wami_instance("123456789012")
+                .resource("user", "admin")
+                .build()?,
+        )
+        .is_root(false)
+        .build()?;
     
     // 3. Build a user (pure function - no side effects)
-    let user = user::builder::build_user(
+    let user = build_user(
         "alice".to_string(),
         Some("/engineering/".to_string()),
-        &provider,
-        account_id
-    );
+        &context
+    )?;
     
     // 4. Store it
     let created = store.create_user(user).await?;
@@ -135,12 +149,11 @@ Output:
 ```rust
 // Create more users
 for name in ["bob", "charlie"] {
-    let user = user::builder::build_user(
+    let user = build_user(
         name.to_string(),
         Some("/engineering/".to_string()),
-        &provider,
-        account_id
-    );
+        &context
+    )?;
     store.create_user(user).await?;
 }
 
@@ -227,10 +240,10 @@ store.create_user(user).await?;
 ### Pattern 1: Build → Validate → Store
 
 ```rust
-use wami::wami::identity::user;
+use wami::wami::identity::user::builder::build_user;
 
-// 1. Build
-let user = user::builder::build_user("alice".into(), None, &provider, account);
+// 1. Build (using context)
+let user = build_user("alice".into(), None, &context)?;
 
 // 2. Validate (optional custom logic)
 if user.user_name.len() > 64 {
@@ -280,16 +293,15 @@ if has_more {
 ### Pattern 4: Groups and Memberships
 
 ```rust
-use wami::wami::identity::group;
+use wami::wami::identity::group::builder::build_group;
 use wami::store::traits::GroupStore;
 
 // Create group
-let admin_group = group::builder::build_group(
+let admin_group = build_group(
     "admins".to_string(),
     Some("/".to_string()),
-    &provider,
-    account_id
-);
+    &context
+)?;
 store.create_group(admin_group).await?;
 
 // Add user to group
@@ -306,7 +318,7 @@ store.remove_user_from_group("admins", "alice").await?;
 ### Pattern 5: Roles and Trust Policies
 
 ```rust
-use wami::wami::identity::role;
+use wami::wami::identity::role::builder::build_role;
 use wami::store::traits::RoleStore;
 
 // Define trust policy
@@ -320,15 +332,14 @@ let trust_policy = r#"{
 }"#;
 
 // Create role
-let lambda_role = role::builder::build_role(
+let lambda_role = build_role(
     "LambdaExecutionRole".to_string(),
     trust_policy.to_string(),
     Some("/service/".to_string()),
     Some("Role for Lambda functions".to_string()),
     None,  // tags
-    &provider,
-    account_id
-);
+    &context
+)?;
 
 let created_role = store.create_role(lambda_role).await?;
 println!("Created role: {}", created_role.arn);
@@ -337,15 +348,14 @@ println!("Created role: {}", created_role.arn);
 ### Pattern 6: Access Keys
 
 ```rust
-use wami::wami::credentials::access_key;
+use wami::wami::credentials::access_key::builder::build_access_key;
 use wami::store::traits::AccessKeyStore;
 
 // Create access key for user
-let key = access_key::builder::build_access_key(
+let key = build_access_key(
     "alice".to_string(),
-    &provider,
-    account_id
-);
+    &context
+)?;
 
 let created_key = store.create_access_key(key).await?;
 
@@ -361,30 +371,29 @@ println!("Alice has {} access keys", keys.len());
 ### Pattern 7: Temporary Sessions (STS)
 
 ```rust
-use wami::wami::sts::session;
+use wami::store::memory::InMemoryStore;
 use wami::store::traits::SessionStore;
-use wami::store::memory::InMemoryStsStore;
+use wami::wami::sts::session::builder::build_session;
 
-let mut sts_store = InMemoryStsStore::new();
+let mut store = InMemoryStore::default();
 
-// Create temporary session
-let session = session::builder::build_session(
+// Create temporary session (using service layer)
+let session = build_session(
     "session-abc123".to_string(),
     "AKIAIOSFODNN7EXAMPLE".to_string(),
     "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY".to_string(),
     3600,  // 1 hour
     Some("arn:aws:iam::123456789012:role/AdminRole".to_string()),
-    &provider,
-    account_id
-);
+    &context
+)?;
 
-let created_session = sts_store.create_session(session).await?;
+let created_session = store.create_session(session).await?;
 
 println!("Session token: {}", created_session.session_token);
 println!("Expires at: {}", created_session.expiration);
 
 // Check if session exists
-let retrieved = sts_store.get_session("session-abc123").await?;
+let retrieved = store.get_session("session-abc123").await?;
 assert!(retrieved.is_some());
 ```
 
@@ -392,10 +401,10 @@ assert!(retrieved.is_some());
 
 ```rust
 use wami::wami::tenant::{Tenant, TenantId, TenantQuotas, TenantStatus, TenantType, QuotaMode};
-use wami::store::memory::InMemoryTenantStore;
+use wami::store::memory::InMemoryStore;
 use wami::store::traits::TenantStore;
 
-let mut tenant_store = InMemoryTenantStore::new();
+let mut store = InMemoryStore::default();
 
 // Create root tenant
 let root_id = TenantId::root("acme-corp");
@@ -419,7 +428,7 @@ let root_tenant = Tenant {
     billing_info: None,
 };
 
-tenant_store.create_tenant(root_tenant).await?;
+store.create_tenant(root_tenant).await?;
 
 // Create child tenant
 let eng_id = root_id.child("engineering");
@@ -430,10 +439,10 @@ let eng_tenant = Tenant {
     // ... same fields as above
 };
 
-tenant_store.create_tenant(eng_tenant).await?;
+store.create_tenant(eng_tenant).await?;
 
 // Query hierarchy
-let children = tenant_store.list_child_tenants(&root_id).await?;
+let children = store.list_child_tenants(&root_id).await?;
 println!("Root tenant has {} children", children.len());
 ```
 
@@ -444,7 +453,7 @@ println!("Root tenant has {} children", children.len());
 WAMI uses `Result<T, AmiError>` for all operations:
 
 ```rust
-use wami::error::AmiError;
+use wami::AmiError;
 
 match store.get_user("nonexistent").await {
     Ok(Some(user)) => println!("Found: {}", user.user_name),
