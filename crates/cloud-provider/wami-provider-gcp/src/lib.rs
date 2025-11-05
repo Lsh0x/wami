@@ -15,8 +15,13 @@
 //! assert!(urn.contains("serviceAccounts"));
 //! ```
 
+<<<<<<<< HEAD:crates/cloud-provider/wami-provider-gcp/src/lib.rs
 use wami_core::error::Result;
 use wami_provider::{CloudProvider, ResourceLimits, ResourceType};
+========
+use super::{CloudProvider, ResourceLimits, ResourceType};
+use wami_core::error::Result;
+>>>>>>>> fcc0841 (Refactor: Reorganize codebase into workspace structure):crates/wami-provider/src/gcp.rs
 
 /// Google Cloud Platform provider implementation
 #[derive(Debug, Clone)]
@@ -27,6 +32,17 @@ pub struct GcpProvider {
 
 impl GcpProvider {
     /// Creates a new GCP provider for a specific project
+<<<<<<<< HEAD:crates/cloud-provider/wami-provider-gcp/src/lib.rs
+========
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use wami_provider::GcpProvider;
+    ///
+    /// let provider = GcpProvider::new("my-project-123");
+    /// ```
+>>>>>>>> fcc0841 (Refactor: Reorganize codebase into workspace structure):crates/wami-provider/src/gcp.rs
     pub fn new(project_id: impl Into<String>) -> Self {
         Self {
             project_id: project_id.into(),

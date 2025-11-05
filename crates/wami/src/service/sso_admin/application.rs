@@ -2,11 +2,11 @@
 //!
 //! Orchestrates application operations.
 
-use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::ApplicationStore;
 use crate::wami::sso_admin::application::Application;
 use std::sync::{Arc, RwLock};
 use wami_core::error::Result;
+use crate::provider::{AwsProvider, CloudProvider};
 
 /// Service for managing applications
 #[wami_macros::service(

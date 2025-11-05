@@ -1,0 +1,119 @@
+---
+description: Core engineering standards (branching, commits, documentation, quality gates, coding patterns)
+alwaysApply: true
+---
+
+## Branching
+- Never use git worktree; always create feature branches from main.
+- Branch names: {type}/{scope}-{short-desc} (e.g., feat/auth-session-timeout).
+- Never commit directly on main.
+
+## Atomic Commits
+- Commit after format+lint+tests+docs all pass.
+- Keep commits small and single-purpose.
+
+## Quality Gates
+- format → lint (warnings as errors) → run tests → update docs → then commit.
+
+## Documentation (ALWAYS)
+- Update README, architecture, and relevant docs for each change.
+- Add CHANGELOG entry for user-facing modifications.
+- Add ADR for design shifts.
+
+## Workflow Rules
+- Every task originates from a `docs/issues/todo/{type}/{slug}.md` file in the repository.
+- **CRITICAL**: Project issues MUST be in `docs/issues/todo/`, NOT in `.cursor/issues/` or `~/.cursor/issues/`.
+- Only workflow/rule violations belong in `~/.cursor/issues/`.
+- **MANDATORY PRE-WORK CHECK**: Before ANY code/file changes:
+  1. **STOP**: Do not touch any files until this check is complete
+  2. Verify issue exists in `docs/issues/todo/` or `docs/issues/in_progress/`
+  3. If no issue exists, STOP immediately and follow exploration workflow to create issue first
+  4. Read `agent-state.json` and linked issue file before proceeding
+  5. Refuse to make changes if issue is missing or in wrong state
+  6. **NO EXCEPTIONS**: This applies to configuration files, CI workflows, documentation, and ALL code changes
+- Files move along: todo → in_progress → done.
+- Roadmap and issue status must stay consistent.
+
+## ABSOLUTE RULE: NO CODE CHANGES WITHOUT ISSUE
+
+**⚠️ CRITICAL ENFORCEMENT:**
+- **NEVER** make code changes without an issue
+- **NEVER** make file modifications without an issue
+- **NEVER** skip issue creation for "quick fixes"
+- **NEVER** interpret user requests as approval to change code directly
+- **ALWAYS** create an issue first, then implement
+- **ALWAYS** verify issue exists before touching any files
+- This rule has **ZERO exceptions** - not for CI config, not for docs, not for anything
+
+## Work Without Issue Prevention
+
+**CRITICAL**: The agent MUST refuse to:
+- Make code changes without a linked issue file
+- Edit files when no issue exists in `docs/issues/todo/` or `docs/issues/in_progress/`
+- Proceed with implementation when issue is missing
+- Skip the exploration workflow for any task
+- **Create issue files without explicit user approval**
+- **Proceed to implementation without user-approved issue**
+
+**Issue Creation Requirements:**
+- **Agent MUST present proposal/summary before creating issue**
+- **Agent MUST wait for user approval language before creating any issue file**
+- Approval language includes: "yes", "approve", "go ahead", "create issue", "sounds good", "proceed", "that works"
+- If approval is unclear: STOP and ask for explicit confirmation
+- Issue creation requires approval, not just implementation
+
+**Exception**: Only READ-ONLY operations are allowed without an issue:
+- Reading files for analysis (using read_file, grep, codebase_search)
+- Discussing requirements
+- Exploring codebase structure
+- Answering questions about existing code
+- Running terminal commands that don't modify files (checking, testing, etc.)
+
+**NO EXCEPTION FOR CODE CHANGES**: Even if the change is:
+- A single line fix
+- A configuration file update
+- A CI/CD workflow change
+- A documentation fix
+- A "quick fix"
+- Requested by the user directly
+
+**ALL require an issue first.**
+
+**When user asks for work without issue:**
+1. Acknowledge the request
+2. Explain that work requires an issue first (per workflow rules)
+3. Follow exploration workflow: Discuss → Propose → **Get Approval** → Create Issue
+4. Do NOT proceed with any file modifications until issue is created and approved, and in `todo/` or `in_progress/`
+
+**When user asks to implement without prior discussion/approval:**
+1. STOP immediately
+2. Explain that discussion and approval are required first
+3. Require exploration workflow: Discuss → Propose → **Get Approval** → Create Issue → Implement
+
+**When discovering bugs/enhancements/refactors during unrelated work:**
+1. STOP and create a new issue for the discovery
+2. Document what was found, its impact, and proposed fix
+3. Continue with original work after issue is created
+4. Fix the bug/enhancement in a separate context (can be same session, but tracked separately)
+5. This ensures:
+   - Bugs get proper tracking and documentation
+   - Commits are focused and clear
+   - CHANGELOG entries are accurate
+   - Code review is easier
+
+## Workflow State & Handoffs
+- Before work: read `~/.cursor/repos/{{REPO_ID}}/agent-state.json` and the linked issue file; reconcile in favor of the issue.
+- Ensure stage order: plan → branch → code → review → format → lint → test → docs → coverage → commit → push → pr.
+- Block progress if any gate fails; report what is missing.
+- On completion: update `agent-state.json`, move issue to next folder, assign `currentAgent`, and add a handoff note.
+- On PR creation: include a state snapshot and links to the issue and roadmap.
+- If `agent-state.json` is missing/corrupted, rebuild it from the issue file and branch.
+- If branch differs from the issue, stop and request a decision; never proceed silently.
+
+## Coding Principles
+- Composition over inheritance.
+- SOLID, clean architecture, dependency inversion.
+- Avoid god objects, global mutable state, catch-all error handling.
+
+## Architecture
+- Hexagonal / CQRS when relevant; adapters at edges.

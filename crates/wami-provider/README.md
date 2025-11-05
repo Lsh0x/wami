@@ -18,12 +18,10 @@ limits for AWS, GCP, Azure, and custom environments.
 ```toml
 [dependencies]
 wami-provider = { path = "../wami-provider" }
-wami-provider-aws = { path = "../cloud-provider/wami-provider-aws" }
 ```
 
 ```rust
-use wami_provider::CloudProvider;
-use wami_provider_aws::AwsProvider;
+use wami_provider::{AwsProvider, CloudProvider};
 
 let provider = AwsProvider::new();
 let user_arn = provider.generate_resource_identifier(
@@ -37,16 +35,10 @@ assert_eq!(user_arn, "arn:aws:iam::123456789012:user/alice");
 
 ## Modules
 
+- `aws`, `gcp`, `azure` – Provider-specific implementations.
 - `arn_builder` – Parse and match provider ARNs.
+- `custom` – Build-your-own provider implementation with configurable limits.
 - `provider_info` – Metadata structures shared by services and stores.
-- `registry` – Provider registry for runtime loading.
-
-Provider implementations live in dedicated crates:
-
-- `wami-provider-aws`
-- `wami-provider-gcp`
-- `wami-provider-azure`
-- `wami-provider-custom`
 
 ## License
 

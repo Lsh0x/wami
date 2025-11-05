@@ -54,5 +54,3 @@ assert!(access_key.wami_arn.to_string().contains("access-key"));
 ## License
 
 Licensed under MIT. See [`../LICENSE`](../../LICENSE) for details.
-
-

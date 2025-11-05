@@ -54,5 +54,3 @@ assert!(user.wami_arn.to_string().contains("user/alice"));
 ## License
 
 Licensed under MIT. See [`../LICENSE`](../../LICENSE) for details.
-
-

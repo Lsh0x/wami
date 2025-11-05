@@ -38,10 +38,6 @@ getrandom = "0.2"
 roxmltree = "0.19"
 wami-traits = { path = "../wami-traits" }
 wami-provider = { path = "../wami-provider" }
-wami-provider-aws = { path = "../cloud-provider/wami-provider-aws" }
-wami-provider-gcp = { path = "../cloud-provider/wami-provider-gcp" }
-wami-provider-azure = { path = "../cloud-provider/wami-provider-azure" }
-wami-provider-custom = { path = "../cloud-provider/wami-provider-custom" }
 wami-credentials = { path = "../wami-credentials" }
 wami-core = { path = "../wami-core" }
 wami-macros = { path = "../wami-macros" }

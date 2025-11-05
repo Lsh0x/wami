@@ -1,0 +1,85 @@
+---
+description: LLM agent workflows (discussion, issue creation, implementation, PR)
+alwaysApply: false
+---
+
+## Exploration Workflow (MANDATORY FIRST STEP)
+
+**Before ANY implementation work, the exploration workflow MUST be completed.**
+
+**Required steps:**
+1. Discuss goals with the user.
+2. Critically analyze and refine requirements.
+3. Propose alternatives and clarify unknowns.
+4. Summarize consensus → update `docs/roadmap.md` (if needed).
+5. **Present proposal to user**: Provide a clear summary of what will be implemented, including scope, approach, and any risks.
+6. **WAIT for explicit user approval**: Agent MUST detect approval language before proceeding:
+   - Positive approval: "yes", "approve", "go ahead", "create issue", "sounds good", "proceed", "that works"
+   - If no clear approval detected: STOP and ask for explicit confirmation
+   - Agent MUST NOT proceed without unambiguous approval
+7. **ONLY AFTER approval**: For each approved actionable item, create `docs/issues/todo/{type}/{slug}.md` using template.
+   - **CRITICAL**: Issues MUST be created in `docs/issues/todo/{type}/` directory in the repository
+   - **NOT** in `.cursor/issues/` (workspace) or `~/.cursor/issues/` (home)
+   - Only workflow/rule violations go in `~/.cursor/issues/`
+8. Confirm issue creation with user.
+9. **ONLY THEN**: Proceed to implementation workflow (if user requests implementation).
+
+**CRITICAL RULES:**
+- **Agent MUST NOT create issue file without explicit user approval**
+- **Agent MUST NOT proceed to implementation without user-approved issue**
+- **Agent MUST NOT skip this workflow or proceed to implementation without an issue file**
+- **Agent MUST NOT make ANY code changes without an issue - NO EXCEPTIONS**
+- If user asks to implement without prior discussion/approval: STOP, explain, require exploration workflow first
+- If user says "fix this" or "do option X": Interpret as approval to CREATE ISSUE, not to make changes directly
+
+## Implementation Workflow
+
+**CRITICAL RULE: NO CODE CHANGES WITHOUT AN ISSUE - NEVER**
+
+**Prerequisites**: Issue file MUST exist in `docs/issues/todo/` before starting implementation.
+
+**MANDATORY PRE-IMPLEMENTATION CHECKLIST:**
+1. **Verify issue exists**: Check that linked issue file is in `docs/issues/todo/` or `docs/issues/in_progress/`.
+2. **STOP if missing**: If no issue exists, refuse to proceed and require exploration workflow first.
+3. **NO EXCEPTIONS**: This applies to ALL code changes including:
+   - Configuration files (`.yml`, `.toml`, `.json`, etc.)
+   - CI/CD workflows
+   - Documentation files (if they modify code examples)
+   - Any file modification in the repository
+   - Even "quick fixes" or "simple changes"
+4. Load linked issue file.
+5. Checkout or create branch specified inside.
+6. Move issue file → `in_progress/`.
+7. Prototype → tests → implementation → documentation.
+8. Mark progress checkboxes inside issue.
+9. After format+lint+tests+docs pass → commit + push.
+10. Move issue → `done/`.
+11. Create PR using `gh pr create` referencing issue path and summary.
+
+**IF USER ASKS FOR CODE CHANGES WITHOUT AN ISSUE:**
+1. **STOP immediately** - Do not make any file modifications
+2. Explain: "I cannot make code changes without an issue. Let me create an issue first."
+3. Follow exploration workflow to create issue
+4. Only after issue is created and approved, proceed with implementation
+
+**IF YOU DISCOVER BUGS/ENHANCEMENTS/REFACTORS DURING UNRELATED WORK:**
+1. **STOP immediately** - Do not fix the bug/enhancement directly
+2. **Create a new issue** in `docs/issues/todo/{type}/` (NOT in `.cursor/issues/` or `~/.cursor/issues/`) for the bug/enhancement/refactor:
+   - Document what was found
+   - Explain the impact
+   - Propose the fix/improvement
+3. **Continue with original work** - Do not let the discovery derail the current task
+4. **Fix in separate session** - The bug fix can be done in the same session, but:
+   - Must be tracked in its own issue
+   - Should have its own commit (or be clearly separated in commit message)
+   - Should reference the issue in the commit
+5. **Examples**:
+   - Finding a bug while adding tests → Create bug issue first
+   - Finding performance issue while refactoring → Create enhancement issue first
+   - Finding code smell while adding features → Create refactor issue first
+6. **Exception**: Only if the bug/enhancement blocks the current work, then fix it immediately but still create an issue to document it
+
+## PR Workflow
+- PR title = lead commit.
+- Body includes: summary, risks, tests, screenshots, docs updated.
+- Always link roadmap + issue path.

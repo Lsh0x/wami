@@ -2,7 +2,7 @@
 //!
 //! Orchestrates policy simulation and evaluation operations.
 
-use crate::provider::{AwsProvider, CloudProvider};
+use crate::provider::{CloudProvider, AwsProvider};
 use crate::store::traits::{PolicyStore, RoleStore, UserStore};
 use crate::wami::policies::evaluation::{
     EvaluationResult, SimulateCustomPolicyRequest, SimulatePolicyResponse,

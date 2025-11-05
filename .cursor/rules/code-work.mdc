@@ -1,0 +1,16 @@
+---
+description: Local code/test/doc standards; applies to code and test files
+globs: ["**/*.ts","**/*.tsx","**/*.js","**/*.jsx","**/*.py","**/*.go","**/*.rs","**/*.java","**/*.kt","**/*.cs","**/*.rb","**/*.php","**/*.exs","**/test.*","**/*.spec.*"]
+alwaysApply: false
+---
+
+- **FIRST**: Before any edit, verify linked issue file exists in `docs/issues/todo/` or `docs/issues/in_progress/`.
+- **STOP**: If no issue exists, refuse to make changes and require issue creation via exploration workflow.
+- Begin any edit by confirming the linked issue file and branch.
+- Keep diffs <300 LOC or <10 files; split larger work.
+- Add or update tests for every code change.
+- Update docstrings, README sections, and examples affected.
+- Early returns > deep nesting.
+- Avoid single-letter identifiers; prefer intention-revealing names.
+- After passing format+lint+tests+docs → commit immediately.
+- Each commit must reference an issue (e.g., "feat(api): add rate limiting (#12)").

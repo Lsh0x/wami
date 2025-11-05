@@ -27,5 +27,3 @@ cargo test
 ## License
 
 Licensed under MIT. See [`../../LICENSE`](../../LICENSE) for details.
-
-

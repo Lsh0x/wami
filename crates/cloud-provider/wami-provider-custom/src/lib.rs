@@ -29,10 +29,34 @@
 //! assert!(arn.contains("tenant-123"));
 //! ```
 
+<<<<<<<< HEAD:crates/cloud-provider/wami-provider-custom/src/lib.rs
 use wami_core::error::Result;
 use wami_provider::{CloudProvider, ResourceLimits, ResourceType};
 
 /// Custom provider implementation for user-defined cloud platforms
+========
+use super::{CloudProvider, ResourceLimits, ResourceType};
+use wami_core::error::Result;
+
+/// Custom provider implementation for user-defined cloud platforms
+///
+/// # Example
+///
+/// ```rust
+/// use wami_provider::{CustomProvider, ResourceLimits};
+///
+/// let provider = CustomProvider::builder()
+///     .name("mycloud")
+///     .arn_template("urn:{service}:{account}:{type}:{name}")
+///     .id_prefix("MC")
+///     .limits(ResourceLimits {
+///         max_access_keys_per_user: 5,
+///         max_tags_per_resource: 100,
+///         ..Default::default()
+///     })
+///     .build();
+/// ```
+>>>>>>>> fcc0841 (Refactor: Reorganize codebase into workspace structure):crates/wami-provider/src/custom.rs
 #[derive(Debug, Clone)]
 pub struct CustomProvider {
     name: String,

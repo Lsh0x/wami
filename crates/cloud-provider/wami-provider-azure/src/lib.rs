@@ -15,8 +15,13 @@
 //! assert!(id.contains("/subscriptions/sub-123/"));
 //! ```
 
+<<<<<<<< HEAD:crates/cloud-provider/wami-provider-azure/src/lib.rs
 use wami_core::error::Result;
 use wami_provider::{CloudProvider, ResourceLimits, ResourceType};
+========
+use super::{CloudProvider, ResourceLimits, ResourceType};
+use wami_core::error::Result;
+>>>>>>>> fcc0841 (Refactor: Reorganize codebase into workspace structure):crates/wami-provider/src/azure.rs
 
 /// Microsoft Azure provider implementation
 #[derive(Debug, Clone)]
@@ -28,6 +33,17 @@ pub struct AzureProvider {
 
 impl AzureProvider {
     /// Creates a new Azure provider
+<<<<<<<< HEAD:crates/cloud-provider/wami-provider-azure/src/lib.rs
+========
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use wami_provider::AzureProvider;
+    ///
+    /// let provider = AzureProvider::new("sub-123", "my-rg");
+    /// ```
+>>>>>>>> fcc0841 (Refactor: Reorganize codebase into workspace structure):crates/wami-provider/src/azure.rs
     pub fn new(subscription_id: impl Into<String>, resource_group: impl Into<String>) -> Self {
         Self {
             subscription_id: subscription_id.into(),

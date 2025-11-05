@@ -2,7 +2,6 @@
 //!
 //! Orchestrates credential report generation and account summary operations.
 
-use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::{
     AccessKeyStore, CredentialReportStore, GroupStore, LoginProfileStore, MfaDeviceStore,
     PolicyStore, RoleStore, ServerCertificateStore, UserStore,
@@ -14,6 +13,7 @@ use crate::wami::reports::credential_report::{
 };
 use std::sync::{Arc, RwLock};
 use wami_core::error::{AmiError, Result};
+use crate::provider::{AwsProvider, CloudProvider};
 
 pub trait CredentialReportServiceStore:
     CredentialReportStore

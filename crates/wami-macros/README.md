@@ -50,5 +50,3 @@ cargo test -p wami-macros
 ## License
 
 Licensed under MIT. See [`../LICENSE`](../../LICENSE) for details.
-
-

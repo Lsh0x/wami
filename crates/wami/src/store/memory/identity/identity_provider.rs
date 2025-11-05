@@ -376,7 +376,7 @@ mod tests {
         let context = test_context();
         let base_time = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
 
-        let mut providers = [
+        let mut providers = vec![
             builder::build_saml_provider("ProviderA".to_string(), "<A />".to_string(), &context)
                 .unwrap(),
             builder::build_saml_provider("ProviderB".to_string(), "<B />".to_string(), &context)
@@ -425,7 +425,7 @@ mod tests {
         let context = test_context();
         let base_time = Utc.with_ymd_and_hms(2025, 2, 2, 0, 0, 0).unwrap();
 
-        let mut providers = [
+        let mut providers = vec![
             builder::build_oidc_provider(
                 "https://idp-a.example.com".to_string(),
                 vec!["client-a".to_string()],
