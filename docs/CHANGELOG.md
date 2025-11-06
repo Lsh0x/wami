@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### 🔧 Refactoring
+
+- **provider**: Separate cloud provider implementations into individual crates
+  - Split `wami-provider` into separate crates: `wami-provider-aws`, `wami-provider-gcp`, `wami-provider-azure`, `wami-provider-custom`
+  - Provider implementations now live in `crates/cloud-provider/` directory
+  - Maintains backward compatibility through re-exports in `wami::provider` module
+  - Improves modularity and allows independent versioning of provider implementations
+
 ## [0.11.0] - 2025-10-30
 
 ### 🚀 Features

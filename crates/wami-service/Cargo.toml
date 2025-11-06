@@ -1,0 +1,13 @@
+[package]
+name = "wami-service"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Service registry and orchestration utilities for the WAMI workspace"
+
+[dependencies]
+wami-traits = { path = "../wami-traits" }
+
+[dev-dependencies]
+wami-core = { path = "../wami-core" }
+
