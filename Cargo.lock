@@ -2287,6 +2287,10 @@ dependencies = [
  "wami-credentials",
  "wami-macros",
  "wami-provider",
+ "wami-provider-aws",
+ "wami-provider-azure",
+ "wami-provider-custom",
+ "wami-provider-gcp",
  "wami-traits",
 ]
 
@@ -2332,8 +2336,43 @@ dependencies = [
  "regex",
  "serde",
  "sha2",
+ "wami-core",
+]
+
+[[package]]
+name = "wami-provider-aws"
+version = "0.1.0"
+dependencies = [
  "uuid",
  "wami-core",
+ "wami-provider",
+]
+
+[[package]]
+name = "wami-provider-azure"
+version = "0.1.0"
+dependencies = [
+ "uuid",
+ "wami-core",
+ "wami-provider",
+]
+
+[[package]]
+name = "wami-provider-custom"
+version = "0.1.0"
+dependencies = [
+ "uuid",
+ "wami-core",
+ "wami-provider",
+]
+
+[[package]]
+name = "wami-provider-gcp"
+version = "0.1.0"
+dependencies = [
+ "uuid",
+ "wami-core",
+ "wami-provider",
 ]
 
 [[package]]

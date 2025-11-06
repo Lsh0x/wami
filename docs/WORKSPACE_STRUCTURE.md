@@ -56,7 +56,6 @@ use wami_traits::ServiceRegistry;
 ---
 
 #### `wami-provider`
-<<<<<<< HEAD
 **Purpose**: Cloud provider abstraction layer
 
 **Contains**:
@@ -68,23 +67,10 @@ use wami_traits::ServiceRegistry;
 **Usage**:
 ```rust
 use wami_provider::{CloudProvider, ProviderConfig, ResourceType};
-=======
-**Purpose**: Cloud provider integrations (AWS, GCP, Azure)
-
-**Contains**:
-- Provider-specific ARN builders and transformers
-- Cloud provider configuration
-- Provider-specific implementations
-
-**Usage**:
-```rust
-use wami_provider::{AwsProvider, CloudProvider, ProviderConfig};
->>>>>>> fcc0841 (Refactor: Reorganize codebase into workspace structure)
 ```
 
 **Dependencies**: `wami-core`
 
-<<<<<<< HEAD
 **Note**: Concrete provider implementations live in separate crates under `crates/cloud-provider/`:
 - `wami-provider-aws` - AWS provider implementation
 - `wami-provider-gcp` - Google Cloud Platform provider implementation
@@ -105,8 +91,6 @@ let arn = provider.generate_resource_identifier(
 );
 ```
 
-=======
->>>>>>> fcc0841 (Refactor: Reorganize codebase into workspace structure)
 ---
 
 ### Domain Crates

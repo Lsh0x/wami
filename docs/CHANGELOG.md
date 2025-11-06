@@ -4,16 +4,6 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### 📚 Documentation
-
-- **docs**: Update documentation to align with current codebase
-  - Updated `API_REFERENCE.md` with correct builder signatures using `WamiContext` instead of `provider` and `account_id`
-  - Fixed module paths in API reference (noting re-exports vs direct module access)
-  - Updated `EXAMPLES.md` to use `InMemoryStore` instead of deprecated `InMemoryWamiStore`
-  - Updated `README.md` project structure to reflect cloud-provider separation
-  - Fixed `lib.rs` doc example to use `InMemoryStore` and correct store access patterns
-  - All documentation examples now compile successfully
-
 ### 🔧 Refactoring
 
 - **provider**: Separate cloud provider implementations into individual crates
