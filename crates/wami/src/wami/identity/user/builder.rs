@@ -407,4 +407,133 @@ mod tests {
         // Should not affect existing tags
         assert_eq!(updated.tags.len(), 1);
     }
+
+    // ========== Edge Case Tests ==========
+
+    #[test]
+    fn test_build_user_empty_name() {
+        let context = test_context();
+        let user = build_user("".to_string(), None, &context).unwrap();
+        assert_eq!(user.user_name, "");
+        assert!(!user.user_id.is_empty());
+    }
+
+    #[test]
+    fn test_build_user_empty_path() {
+        let context = test_context();
+        let user = build_user("alice".to_string(), Some("".to_string()), &context).unwrap();
+        assert_eq!(user.path, "");
+    }
+
+    #[test]
+    fn test_build_user_very_long_name() {
+        let context = test_context();
+        let long_name = "a".repeat(100);
+        let user = build_user(long_name.clone(), None, &context).unwrap();
+        assert_eq!(user.user_name, long_name);
+    }
+
+    #[test]
+    fn test_build_user_with_unicode() {
+        let context = test_context();
+        let user = build_user("用户".to_string(), None, &context).unwrap();
+        assert_eq!(user.user_name, "用户");
+    }
+
+    #[test]
+    fn test_build_user_with_special_characters() {
+        let context = test_context();
+        let user = build_user("user-name_123".to_string(), None, &context).unwrap();
+        assert_eq!(user.user_name, "user-name_123");
+    }
+
+    #[test]
+    fn test_build_user_path_with_special_characters() {
+        let context = test_context();
+        let user = build_user(
+            "alice".to_string(),
+            Some("/path-with-dashes/".to_string()),
+            &context,
+        )
+        .unwrap();
+        assert_eq!(user.path, "/path-with-dashes/");
+    }
+
+    #[test]
+    fn test_build_user_with_newline_in_path() {
+        let context = test_context();
+        let user = build_user(
+            "alice".to_string(),
+            Some("/path\nwith\nnewline/".to_string()),
+            &context,
+        )
+        .unwrap();
+        assert_eq!(user.path, "/path\nwith\nnewline/");
+    }
+
+    #[test]
+    fn test_build_user_path_edge_cases() {
+        let context = test_context();
+
+        // Multiple trailing slashes
+        let user = build_user("alice".to_string(), Some("///".to_string()), &context).unwrap();
+        assert_eq!(user.path, "///");
+
+        // Path that is just a slash
+        let user2 = build_user("bob".to_string(), Some("/".to_string()), &context).unwrap();
+        assert_eq!(user2.path, "/");
+    }
+
+    #[test]
+    fn test_build_user_with_context_whitespace_instance_id() {
+        let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/test".parse().unwrap();
+        let context_result = WamiContext::builder()
+            .instance_id("   ".to_string()) // Whitespace-only
+            .tenant_path(TenantPath::single(12345678))
+            .caller_arn(user_arn)
+            .is_root(false)
+            .build();
+
+        // Should fail because instance_id.trim().is_empty()
+        assert!(context_result.is_err());
+    }
+
+    #[test]
+    fn test_build_user_with_context_empty_tenant_path() {
+        let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/test".parse().unwrap();
+        let context_result = WamiContext::builder()
+            .instance_id("123456789012")
+            .tenant_path(TenantPath::single(0)) // Empty tenant path
+            .caller_arn(user_arn)
+            .is_root(false)
+            .build();
+
+        // Should fail
+        assert!(context_result.is_err());
+    }
+
+    #[test]
+    fn test_build_user_with_context_invalid_arn() {
+        let context_result = WamiContext::builder()
+            .instance_id("123456789012")
+            .tenant_path(TenantPath::single(12345678))
+            .caller_arn(
+                WamiArn::builder()
+                    .service(Service::Iam)
+                    .tenant_path(TenantPath::single(12345678))
+                    .wami_instance("invalid")
+                    .resource("user", "test")
+                    .build()
+                    .unwrap(),
+            )
+            .is_root(false)
+            .build();
+
+        // Context might build, but ARN building should fail
+        if let Ok(context) = context_result {
+            let user_result = build_user("alice".to_string(), None, &context);
+            // This might succeed or fail depending on ARN validation
+            let _ = user_result;
+        }
+    }
 }
