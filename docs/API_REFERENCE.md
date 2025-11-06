@@ -13,6 +13,11 @@ WAMI's API is organized into two main layers:
 
 ## Domain Layer (wami::*)
 
+**Note on Module Paths:**
+- Types are re-exported at the crate root: `wami::identity::{User, Group, Role}`
+- Builders are in the `wami::wami::` namespace: `wami::wami::identity::user::builder::build_user`
+- Credentials come from the `wami_credentials` crate: `wami_credentials::build_access_key`
+
 ### Identity Module (`wami::identity`)
 
 #### User (`wami::identity::user`)
@@ -115,9 +120,8 @@ pub enum AccessKeyStatus {
 ```rust
 pub fn build_access_key(
     user_name: String,
-    provider: &dyn CloudProvider,
-    account_id: &str,
-) -> AccessKey
+    context: &WamiContext,
+) -> Result<AccessKey>
 ```
 
 #### MFA Device (`wami::credentials::mfa_device`)
@@ -171,15 +175,13 @@ pub enum SessionStatus {
 **Builder**:
 ```rust
 pub fn build_session(
-    session_token: String,
-    access_key_id: String,
-    secret_access_key: String,
-    duration_seconds: i64,
-    assumed_role_arn: Option<String>,
-    provider: &dyn CloudProvider,
-    account_id: &str,
+    session_name: String,
+    role_arn: String,
+    credentials: Credentials,
 ) -> StsSession
 ```
+
+Note: Sessions are typically created through STS service operations rather than direct builder calls.
 
 #### Caller Identity (`wami::sts::identity`)
 
@@ -374,20 +376,25 @@ pub trait TenantStore: Send + Sync {
 
 ### In-Memory Store Implementations
 
-#### InMemoryWamiStore
+#### InMemoryStore
 
 ```rust
-pub struct InMemoryWamiStore {
-    // Internal HashMap-based storage
-    // Thread-safe with Arc<RwLock<T>>
+pub struct InMemoryStore {
+    pub wami_store: InMemoryWamiStore,
+    pub sts_store: InMemoryStsStore,
+    pub sso_admin_store: InMemorySsoAdminStore,
+    pub tenant_store: InMemoryTenantStore,
 }
 
-impl InMemoryWamiStore {
+impl InMemoryStore {
     pub fn new() -> Self;
+    pub fn default() -> Self;
 }
 
-// Automatically implements all WamiStore sub-traits
+// Implements Store trait with access to all sub-stores
 ```
+
+Note: `InMemoryStore` is the unified store that combines all sub-stores. For direct access to WAMI-specific operations, use `InMemoryWamiStore` directly.
 
 #### InMemoryStsStore
 
