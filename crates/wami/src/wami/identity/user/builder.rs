@@ -244,6 +244,149 @@ mod tests {
     }
 
     #[test]
+    fn test_build_user_empty_name() {
+        let context = test_context();
+        // Empty user name should still work (no validation in builder)
+        let user = build_user("".to_string(), None, &context).unwrap();
+        assert_eq!(user.user_name, "");
+        assert!(!user.user_id.is_empty());
+    }
+
+    #[test]
+    fn test_build_user_empty_path() {
+        let context = test_context();
+        // Empty string path is used as-is (only None defaults to "/")
+        let user = build_user("alice".to_string(), Some("".to_string()), &context).unwrap();
+        assert_eq!(user.path, "");
+    }
+
+    #[test]
+    fn test_build_user_invalid_path_format() {
+        let context = test_context();
+        // Path without leading slash should still work (builder doesn't validate format)
+        let user = build_user(
+            "alice".to_string(),
+            Some("engineering".to_string()),
+            &context,
+        )
+        .unwrap();
+        assert_eq!(user.path, "engineering");
+    }
+
+    #[test]
+    fn test_build_user_very_long_name() {
+        let context = test_context();
+        let long_name = "a".repeat(1000);
+        let user = build_user(long_name.clone(), None, &context).unwrap();
+        assert_eq!(user.user_name, long_name);
+    }
+
+    #[test]
+    fn test_build_user_special_characters_in_name() {
+        let context = test_context();
+        // User names with special characters should work
+        let user = build_user("user+test@example.com".to_string(), None, &context).unwrap();
+        assert_eq!(user.user_name, "user+test@example.com");
+    }
+
+    #[test]
+    fn test_build_user_with_whitespace_only_path() {
+        let context = test_context();
+        // Whitespace-only path should be used as-is (not defaulted)
+        let user = build_user("alice".to_string(), Some("   ".to_string()), &context).unwrap();
+        assert_eq!(user.path, "   ");
+    }
+
+    #[test]
+    fn test_build_user_with_newline_in_path() {
+        let context = test_context();
+        // Paths with newlines should be handled
+        let user = build_user(
+            "alice".to_string(),
+            Some("/path\nwith\nnewline/".to_string()),
+            &context,
+        )
+        .unwrap();
+        assert_eq!(user.path, "/path\nwith\nnewline/");
+    }
+
+    #[test]
+    fn test_build_user_with_unicode_in_name() {
+        let context = test_context();
+        // Unicode characters should be handled
+        let user = build_user("用户".to_string(), None, &context).unwrap();
+        assert_eq!(user.user_name, "用户");
+    }
+
+    #[test]
+    fn test_build_user_with_unicode_in_path() {
+        let context = test_context();
+        // Unicode in paths should be handled
+        let user = build_user("alice".to_string(), Some("/路径/".to_string()), &context).unwrap();
+        assert_eq!(user.path, "/路径/");
+    }
+
+    #[test]
+    fn test_build_user_path_with_trailing_slash_edge_cases() {
+        let context = test_context();
+        // Multiple trailing slashes
+        let user = build_user("alice".to_string(), Some("///".to_string()), &context).unwrap();
+        assert_eq!(user.path, "///");
+
+        // Path that is just a slash
+        let user2 = build_user("bob".to_string(), Some("/".to_string()), &context).unwrap();
+        assert_eq!(user2.path, "/");
+    }
+
+    #[test]
+    fn test_build_user_with_context_whitespace_instance_id() {
+        // This should fail when building context, but test what happens if it doesn't
+        let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/test".parse().unwrap();
+        let context_result = WamiContext::builder()
+            .instance_id("   ".to_string()) // Whitespace-only
+            .tenant_path(TenantPath::single(12345678))
+            .caller_arn(user_arn)
+            .is_root(false)
+            .build();
+
+        // Should fail because instance_id.trim().is_empty()
+        assert!(context_result.is_err());
+    }
+
+    #[test]
+    fn test_build_user_with_context_empty_instance_id_after_trim() {
+        let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/test".parse().unwrap();
+        let context_result = WamiContext::builder()
+            .instance_id("\t\n\r ".to_string()) // Only whitespace
+            .tenant_path(TenantPath::single(12345678))
+            .caller_arn(user_arn)
+            .is_root(false)
+            .build();
+
+        // Should fail
+        assert!(context_result.is_err());
+    }
+
+    #[test]
+    fn test_build_user_with_empty_tenant_path() {
+        // Test what happens if tenant_path is empty (should fail in ARN building)
+        let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/test".parse().unwrap();
+        let context_result = WamiContext::builder()
+            .instance_id("123456789012")
+            .tenant_path(TenantPath::new(vec![])) // Empty tenant path
+            .caller_arn(user_arn)
+            .is_root(false)
+            .build();
+
+        // Context might build, but ARN building should fail
+        if let Ok(context) = context_result {
+            let user_result = build_user("alice".to_string(), None, &context);
+            // ARN building should fail because tenant_path is empty
+            assert!(user_result.is_err());
+        }
+    }
+
+    #[test]
     fn test_add_provider_duplicate() {
         let context = test_context();
         let user = build_user("alice".to_string(), None, &context).unwrap();

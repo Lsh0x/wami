@@ -138,3 +138,4 @@ store.get_user(&name).await?
 ---
 
 *Analyse générée le 2025-01-XX basée sur `knowledge_graph.mmd`*
+

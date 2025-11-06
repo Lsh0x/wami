@@ -176,6 +176,95 @@ mod tests {
     }
 
     #[test]
+    fn test_build_group_empty_name() {
+        let context = test_context();
+        // Empty group name should still work
+        let group = build_group("".to_string(), None, &context).unwrap();
+        assert_eq!(group.group_name, "");
+        assert!(!group.group_id.is_empty());
+    }
+
+    #[test]
+    fn test_build_group_empty_path() {
+        let context = test_context();
+        // Empty string path is used as-is (only None defaults to "/")
+        let group = build_group("admins".to_string(), Some("".to_string()), &context).unwrap();
+        assert_eq!(group.path, "");
+    }
+
+    #[test]
+    fn test_build_group_invalid_path_format() {
+        let context = test_context();
+        // Path without leading slash should still work
+        let group = build_group(
+            "admins".to_string(),
+            Some("engineering".to_string()),
+            &context,
+        )
+        .unwrap();
+        assert_eq!(group.path, "engineering");
+    }
+
+    #[test]
+    fn test_build_group_very_long_name() {
+        let context = test_context();
+        let long_name = "a".repeat(1000);
+        let group = build_group(long_name.clone(), None, &context).unwrap();
+        assert_eq!(group.group_name, long_name);
+    }
+
+    #[test]
+    fn test_build_group_special_characters_in_name() {
+        let context = test_context();
+        let group = build_group("group+test@example.com".to_string(), None, &context).unwrap();
+        assert_eq!(group.group_name, "group+test@example.com");
+    }
+
+    #[test]
+    fn test_build_group_with_whitespace_only_path() {
+        let context = test_context();
+        let group = build_group("admins".to_string(), Some("   ".to_string()), &context).unwrap();
+        assert_eq!(group.path, "   ");
+    }
+
+    #[test]
+    fn test_build_group_with_unicode_in_name() {
+        let context = test_context();
+        let group = build_group("组".to_string(), None, &context).unwrap();
+        assert_eq!(group.group_name, "组");
+    }
+
+    #[test]
+    fn test_build_group_with_empty_tenant_path_context() {
+        // Test that empty tenant path causes ARN building to fail
+        let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/test".parse().unwrap();
+        let context_result = WamiContext::builder()
+            .instance_id("123456789012")
+            .tenant_path(TenantPath::new(vec![]))
+            .caller_arn(user_arn)
+            .is_root(false)
+            .build();
+
+        if let Ok(context) = context_result {
+            let group_result = build_group("admins".to_string(), None, &context);
+            assert!(group_result.is_err());
+        }
+    }
+
+    #[test]
+    fn test_build_group_path_with_null_bytes() {
+        let context = test_context();
+        // Paths with null bytes should be handled (though unusual)
+        let group = build_group(
+            "admins".to_string(),
+            Some("/path\0with\0null/".to_string()),
+            &context,
+        )
+        .unwrap();
+        assert_eq!(group.path, "/path\0with\0null/");
+    }
+
+    #[test]
     fn test_update_group_path() {
         let context = test_context();
         let group = build_group("admins".to_string(), None, &context).unwrap();

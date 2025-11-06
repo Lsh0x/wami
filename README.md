@@ -366,12 +366,13 @@ wami/
 │   │   ├── traits/       # Storage trait definitions
 │   │   └── memory/       # In-memory implementations
 │   │
-│   ├── provider/         # Cloud provider abstractions
-│   │   ├── aws.rs
-│   │   ├── gcp.rs
-│   │   └── azure.rs
-│   │
 │   └── error.rs          # Error types
+│
+├── crates/cloud-provider/ # Cloud provider implementations
+│   ├── wami-provider-aws/    # AWS provider
+│   ├── wami-provider-gcp/    # GCP provider
+│   ├── wami-provider-azure/  # Azure provider
+│   └── wami-provider-custom/ # Custom provider
 │
 ├── docs/                 # 📚 All documentation
 ├── examples/             # Working code examples

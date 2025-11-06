@@ -36,7 +36,12 @@ impl RoleStore for InMemoryWamiStore {
         let mut roles: Vec<Role> = self.roles.values().cloned().collect();
 
         if let Some(prefix) = path_prefix {
-            roles.retain(|role| role.path.starts_with(prefix));
+            // Empty string prefix should only match empty paths, not all paths
+            if prefix.is_empty() {
+                roles.retain(|role| role.path.is_empty());
+            } else {
+                roles.retain(|role| role.path.starts_with(prefix));
+            }
         }
 
         roles.sort_by(|a, b| a.role_name.cmp(&b.role_name));
@@ -46,10 +51,16 @@ impl RoleStore for InMemoryWamiStore {
 
         if let Some(pagination) = pagination {
             if let Some(max_items) = pagination.max_items {
-                if roles.len() > max_items as usize {
+                if max_items > 0 && roles.len() > max_items as usize {
                     roles.truncate(max_items as usize);
                     is_truncated = true;
-                    marker = Some(roles.last().unwrap().role_name.clone());
+                    if let Some(last_role) = roles.last() {
+                        marker = Some(last_role.role_name.clone());
+                    }
+                } else if max_items == 0 {
+                    // max_items = 0 means return empty list but indicate truncation if there are items
+                    is_truncated = !roles.is_empty();
+                    roles.clear();
                 }
             }
         }
