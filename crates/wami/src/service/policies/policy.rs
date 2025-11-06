@@ -217,4 +217,90 @@ mod tests {
         let (policies, _, _) = service.list_policies(list_request).await.unwrap();
         assert_eq!(policies.len(), 3);
     }
+
+    // ========== Error Path Tests ==========
+
+    #[tokio::test]
+    async fn test_update_policy_nonexistent() {
+        let service = setup_service();
+
+        let request = UpdatePolicyRequest {
+            policy_arn: "arn:aws:iam::123456789012:policy/Nonexistent".to_string(),
+            description: None,
+            default_version_id: None,
+        };
+
+        let result = service.update_policy(request).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_get_policy_nonexistent() {
+        let service = setup_service();
+
+        let result = service
+            .get_policy("arn:aws:iam::123456789012:policy/Nonexistent")
+            .await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn test_delete_policy_nonexistent() {
+        let service = setup_service();
+
+        let result = service
+            .delete_policy("arn:aws:iam::123456789012:policy/Nonexistent")
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_list_policies_empty_result() {
+        let service = setup_service();
+
+        let request = ListPoliciesRequest {
+            scope: None,
+            only_attached: None,
+            path_prefix: Some("/nonexistent/".to_string()),
+            pagination: None,
+        };
+
+        let (policies, _, _) = service.list_policies(request).await.unwrap();
+        assert_eq!(policies.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_list_policies_with_path_prefix() {
+        let service = setup_service();
+        let context = test_context();
+        let policy_doc = r#"{"Version":"2012-10-17"}"#.to_string();
+
+        // Create policies with different paths
+        for (name, path) in [
+            ("Policy1", "/admin/"),
+            ("Policy2", "/user/"),
+            ("Policy3", "/admin/"),
+        ] {
+            let request = CreatePolicyRequest {
+                policy_name: name.to_string(),
+                policy_document: policy_doc.clone(),
+                path: Some(path.to_string()),
+                description: None,
+                tags: None,
+            };
+            service.create_policy(&context, request).await.unwrap();
+        }
+
+        let request = ListPoliciesRequest {
+            scope: None,
+            only_attached: None,
+            path_prefix: Some("/admin/".to_string()),
+            pagination: None,
+        };
+
+        let (policies, _, _) = service.list_policies(request).await.unwrap();
+        assert_eq!(policies.len(), 2);
+        assert!(policies.iter().all(|p| p.path == "/admin/"));
+    }
 }

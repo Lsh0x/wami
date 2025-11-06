@@ -256,6 +256,113 @@ mod tests {
         assert_eq!(tags_after.len(), 0);
     }
 
+    // ========== Error Path Tests ==========
+
+    #[tokio::test]
+    async fn test_update_user_nonexistent() {
+        let service = setup_service();
+
+        let request = UpdateUserRequest {
+            user_name: "nonexistent".to_string(),
+            new_path: Some("/new/".to_string()),
+            new_user_name: None,
+        };
+
+        let result = service.update_user(request).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_tag_user_nonexistent() {
+        let service = setup_service();
+
+        let tags = vec![Tag {
+            key: "Key".to_string(),
+            value: "Value".to_string(),
+        }];
+
+        let result = service.tag_user("nonexistent", tags).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_list_user_tags_nonexistent() {
+        let service = setup_service();
+
+        let result = service.list_user_tags("nonexistent").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_untag_user_nonexistent() {
+        let service = setup_service();
+
+        let result = service
+            .untag_user("nonexistent", vec!["Key".to_string()])
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_list_users_empty_result() {
+        let service = setup_service();
+
+        let request = ListUsersRequest {
+            path_prefix: Some("/nonexistent/".to_string()),
+            pagination: None,
+        };
+
+        let (users, _, _) = service.list_users(request).await.unwrap();
+        assert_eq!(users.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_list_users_with_path_prefix_filtering() {
+        let service = setup_service();
+        let context = test_context();
+
+        // Create users with different paths
+        for (name, path) in [
+            ("user1", "/admin/"),
+            ("user2", "/user/"),
+            ("user3", "/admin/"),
+        ] {
+            let request = CreateUserRequest {
+                user_name: name.to_string(),
+                path: Some(path.to_string()),
+                permissions_boundary: None,
+                tags: None,
+            };
+            service.create_user(&context, request).await.unwrap();
+        }
+
+        let request = ListUsersRequest {
+            path_prefix: Some("/admin/".to_string()),
+            pagination: None,
+        };
+
+        let (users, _, _) = service.list_users(request).await.unwrap();
+        assert_eq!(users.len(), 2);
+        assert!(users.iter().all(|u| u.path == "/admin/"));
+    }
+
+    #[tokio::test]
+    async fn test_delete_user_nonexistent() {
+        let service = setup_service();
+
+        let result = service.delete_user("nonexistent").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_get_user_nonexistent() {
+        let service = setup_service();
+
+        let result = service.get_user("nonexistent").await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_none());
+    }
+
     // Note: test_with_provider removed as with_provider() method no longer exists
     // Provider selection is now handled through WamiContext and CloudMapping
 }

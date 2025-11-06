@@ -146,4 +146,51 @@ mod tests {
         let (keys, _, _) = service.list_access_keys(list_request).await.unwrap();
         assert_eq!(keys.len(), 3);
     }
+
+    // ========== Error Path Tests ==========
+
+    #[tokio::test]
+    async fn test_get_access_key_nonexistent() {
+        let service = setup_service();
+
+        let result = service.get_access_key("nonexistent-key-id").await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn test_delete_access_key_nonexistent() {
+        let service = setup_service();
+
+        let result = service.delete_access_key("nonexistent-key-id").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_list_access_keys_empty_result() {
+        let service = setup_service();
+
+        let request = ListAccessKeysRequest {
+            user_name: "nonexistent".to_string(),
+            pagination: None,
+        };
+
+        let (keys, _, _) = service.list_access_keys(request).await.unwrap();
+        assert_eq!(keys.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_update_access_key_nonexistent() {
+        let service = setup_service();
+        let context = test_context();
+
+        // Create an access key with a non-existent ID
+        use wami_credentials::build_access_key;
+        let access_key = build_access_key("alice".to_string(), &context).unwrap();
+        let mut nonexistent_key = access_key;
+        nonexistent_key.access_key_id = "nonexistent-key-id".to_string();
+
+        let result = service.update_access_key(nonexistent_key).await;
+        assert!(result.is_err());
+    }
 }
