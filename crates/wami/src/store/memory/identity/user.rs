@@ -41,7 +41,12 @@ impl UserStore for InMemoryWamiStore {
 
         // Apply path prefix filter
         if let Some(prefix) = path_prefix {
-            users.retain(|user| user.path.starts_with(prefix));
+            // Empty string prefix should only match empty paths, not all paths
+            if prefix.is_empty() {
+                users.retain(|user| user.path.is_empty());
+            } else {
+                users.retain(|user| user.path.starts_with(prefix));
+            }
         }
 
         // Sort by user name
@@ -53,10 +58,16 @@ impl UserStore for InMemoryWamiStore {
 
         if let Some(pagination) = pagination {
             if let Some(max_items) = pagination.max_items {
-                if users.len() > max_items as usize {
+                if max_items > 0 && users.len() > max_items as usize {
                     users.truncate(max_items as usize);
                     is_truncated = true;
-                    marker = Some(users.last().unwrap().user_name.clone());
+                    if let Some(last_user) = users.last() {
+                        marker = Some(last_user.user_name.clone());
+                    }
+                } else if max_items == 0 {
+                    // max_items = 0 means return empty list but indicate truncation if there are items
+                    is_truncated = !users.is_empty();
+                    users.clear();
                 }
             }
         }

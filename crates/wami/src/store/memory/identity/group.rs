@@ -39,8 +39,14 @@ impl GroupStore for InMemoryWamiStore {
     ) -> Result<(Vec<Group>, bool, Option<String>)> {
         let mut groups: Vec<Group> = self.groups.values().cloned().collect();
 
+        // Apply path prefix filter
         if let Some(prefix) = path_prefix {
-            groups.retain(|group| group.path.starts_with(prefix));
+            // Empty string prefix should only match empty paths, not all paths
+            if prefix.is_empty() {
+                groups.retain(|group| group.path.is_empty());
+            } else {
+                groups.retain(|group| group.path.starts_with(prefix));
+            }
         }
 
         groups.sort_by(|a, b| a.group_name.cmp(&b.group_name));
@@ -50,10 +56,16 @@ impl GroupStore for InMemoryWamiStore {
 
         if let Some(pagination) = pagination {
             if let Some(max_items) = pagination.max_items {
-                if groups.len() > max_items as usize {
+                if max_items > 0 && groups.len() > max_items as usize {
                     groups.truncate(max_items as usize);
                     is_truncated = true;
-                    marker = Some(groups.last().unwrap().group_name.clone());
+                    if let Some(last_group) = groups.last() {
+                        marker = Some(last_group.group_name.clone());
+                    }
+                } else if max_items == 0 {
+                    // max_items = 0 means return empty list but indicate truncation if there are items
+                    is_truncated = !groups.is_empty();
+                    groups.clear();
                 }
             }
         }
