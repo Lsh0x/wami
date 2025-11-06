@@ -488,7 +488,12 @@ fn matches_wildcard_pattern(value: &str, pattern: &str) -> bool {
                 if remaining_pattern.is_empty() {
                     return true; // * at end matches everything
                 }
-                // Try matching remaining pattern at each position
+                // Try matching remaining pattern at each position (including position 0)
+                let remaining_value: String = value_chars.as_str().chars().collect();
+                if matches_wildcard_pattern(&remaining_value, &remaining_pattern) {
+                    return true; // Try matching at current position (zero characters)
+                }
+                // Try matching at each subsequent position
                 while let Some(_) = value_chars.next() {
                     let remaining_value: String = value_chars.as_str().chars().collect();
                     if matches_wildcard_pattern(&remaining_value, &remaining_pattern) {

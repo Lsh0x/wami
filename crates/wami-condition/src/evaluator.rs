@@ -97,8 +97,11 @@ fn evaluate_operator_block(
     for (key, expected_value) in key_value_map {
         let actual_value = get_context_value(key, context)
             .map_err(|e| ConditionError::MissingContextKey(format!("{}: {}", key, e)))?;
-        if !super::operators::evaluate_operator(operator, actual_value, expected_value)? {
-            return Ok(false); // One key fails = operator block fails
+        // If operator evaluation fails (e.g., type mismatch), treat as condition failure
+        match super::operators::evaluate_operator(operator, actual_value, expected_value) {
+            Ok(true) => continue,          // Condition passes
+            Ok(false) => return Ok(false), // Condition fails
+            Err(_) => return Ok(false),    // Type mismatch or other error = condition fails
         }
     }
 
