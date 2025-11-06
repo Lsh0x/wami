@@ -764,3 +764,278 @@ async fn test_service_linked_role_deletion_task_nonexistent() {
         .unwrap();
     assert!(result.is_none());
 }
+
+// ========== Edge Case Tests ==========
+
+#[tokio::test]
+async fn test_user_list_path_prefix_empty_string() {
+    let mut store = InMemoryWamiStore::new();
+    let context = test_context();
+
+    let user1 =
+        user_builder::build_user("user1".to_string(), Some("".to_string()), &context).unwrap();
+    let user2 =
+        user_builder::build_user("user2".to_string(), Some("/".to_string()), &context).unwrap();
+    let user3 =
+        user_builder::build_user("user3".to_string(), Some("/admin/".to_string()), &context)
+            .unwrap();
+
+    store.create_user(user1).await.unwrap();
+    store.create_user(user2).await.unwrap();
+    store.create_user(user3).await.unwrap();
+
+    let (users, _, _) = store.list_users(Some(""), None).await.unwrap();
+    assert_eq!(users.len(), 1);
+    assert_eq!(users[0].user_name, "user1");
+}
+
+#[tokio::test]
+async fn test_user_list_pagination_max_items_zero() {
+    let mut store = InMemoryWamiStore::new();
+    let context = test_context();
+
+    for i in 0..5 {
+        let user = user_builder::build_user(format!("user{}", i), None, &context).unwrap();
+        store.create_user(user).await.unwrap();
+    }
+
+    let pagination = PaginationParams {
+        max_items: Some(0),
+        marker: None,
+    };
+
+    let (users, is_truncated, marker) = store.list_users(None, Some(&pagination)).await.unwrap();
+    assert_eq!(users.len(), 0);
+    assert!(is_truncated);
+    assert!(marker.is_none());
+}
+
+#[tokio::test]
+async fn test_user_list_pagination_max_items_one() {
+    let mut store = InMemoryWamiStore::new();
+    let context = test_context();
+
+    for i in 0..5 {
+        let user = user_builder::build_user(format!("user{}", i), None, &context).unwrap();
+        store.create_user(user).await.unwrap();
+    }
+
+    let pagination = PaginationParams {
+        max_items: Some(1),
+        marker: None,
+    };
+
+    let (users, is_truncated, marker) = store.list_users(None, Some(&pagination)).await.unwrap();
+    assert_eq!(users.len(), 1);
+    assert!(is_truncated);
+    assert!(marker.is_some());
+}
+
+#[tokio::test]
+async fn test_user_list_pagination_max_items_greater_than_total() {
+    let mut store = InMemoryWamiStore::new();
+    let context = test_context();
+
+    for i in 0..3 {
+        let user = user_builder::build_user(format!("user{}", i), None, &context).unwrap();
+        store.create_user(user).await.unwrap();
+    }
+
+    let pagination = PaginationParams {
+        max_items: Some(10),
+        marker: None,
+    };
+
+    let (users, is_truncated, marker) = store.list_users(None, Some(&pagination)).await.unwrap();
+    assert_eq!(users.len(), 3);
+    assert!(!is_truncated);
+    assert!(marker.is_none());
+}
+
+#[tokio::test]
+async fn test_user_tag_operations_edge_cases() {
+    let mut store = InMemoryWamiStore::new();
+    let context = test_context();
+
+    let user = user_builder::build_user("alice".to_string(), None, &context).unwrap();
+    store.create_user(user).await.unwrap();
+
+    // Tag with empty key should be handled
+    let tags = vec![Tag {
+        key: "".to_string(),
+        value: "value".to_string(),
+    }];
+    store.tag_user("alice", tags).await.unwrap();
+
+    // Untag with non-existent keys should not error
+    store
+        .untag_user("alice", vec!["NonexistentKey".to_string()])
+        .await
+        .unwrap();
+
+    let remaining_tags = store.list_user_tags("alice").await.unwrap();
+    assert_eq!(remaining_tags.len(), 1);
+}
+
+#[tokio::test]
+async fn test_user_list_path_prefix_case_sensitive() {
+    let mut store = InMemoryWamiStore::new();
+    let context = test_context();
+
+    let user1 =
+        user_builder::build_user("user1".to_string(), Some("/Admin/".to_string()), &context)
+            .unwrap();
+    let user2 =
+        user_builder::build_user("user2".to_string(), Some("/admin/".to_string()), &context)
+            .unwrap();
+
+    store.create_user(user1).await.unwrap();
+    store.create_user(user2).await.unwrap();
+
+    let (users, _, _) = store.list_users(Some("/admin/"), None).await.unwrap();
+    assert_eq!(users.len(), 1);
+    assert_eq!(users[0].user_name, "user2");
+}
+
+#[tokio::test]
+async fn test_user_list_path_prefix_partial_match() {
+    let mut store = InMemoryWamiStore::new();
+    let context = test_context();
+
+    let user1 =
+        user_builder::build_user("user1".to_string(), Some("/admin/".to_string()), &context)
+            .unwrap();
+    let user2 = user_builder::build_user(
+        "user2".to_string(),
+        Some("/admin/users/".to_string()),
+        &context,
+    )
+    .unwrap();
+    let user3 =
+        user_builder::build_user("user3".to_string(), Some("/admins/".to_string()), &context)
+            .unwrap();
+
+    store.create_user(user1).await.unwrap();
+    store.create_user(user2).await.unwrap();
+    store.create_user(user3).await.unwrap();
+
+    let (users, _, _) = store.list_users(Some("/admin/"), None).await.unwrap();
+    assert_eq!(users.len(), 2);
+    assert!(users.iter().all(|u| u.path.starts_with("/admin/")));
+}
+
+#[tokio::test]
+async fn test_group_list_path_prefix_empty_string() {
+    let mut store = InMemoryWamiStore::new();
+    let context = test_context();
+
+    let group1 =
+        group_builder::build_group("group1".to_string(), Some("".to_string()), &context).unwrap();
+    let group2 =
+        group_builder::build_group("group2".to_string(), Some("/".to_string()), &context).unwrap();
+    let group3 =
+        group_builder::build_group("group3".to_string(), Some("/admin/".to_string()), &context)
+            .unwrap();
+
+    store.create_group(group1).await.unwrap();
+    store.create_group(group2).await.unwrap();
+    store.create_group(group3).await.unwrap();
+
+    let (groups, _, _) = store.list_groups(Some(""), None).await.unwrap();
+    assert_eq!(groups.len(), 1);
+    assert_eq!(groups[0].group_name, "group1");
+}
+
+#[tokio::test]
+async fn test_group_list_pagination_max_items_zero() {
+    let mut store = InMemoryWamiStore::new();
+    let context = test_context();
+
+    for i in 0..5 {
+        let group = group_builder::build_group(format!("group{}", i), None, &context).unwrap();
+        store.create_group(group).await.unwrap();
+    }
+
+    let pagination = PaginationParams {
+        max_items: Some(0),
+        marker: None,
+    };
+
+    let (groups, is_truncated, marker) = store.list_groups(None, Some(&pagination)).await.unwrap();
+    assert_eq!(groups.len(), 0);
+    assert!(is_truncated);
+    assert!(marker.is_none());
+}
+
+#[tokio::test]
+async fn test_role_list_path_prefix_empty_string() {
+    let mut store = InMemoryWamiStore::new();
+    let context = test_context();
+    let trust_policy = r#"{"Version":"2012-10-17"}"#.to_string();
+
+    let role1 = role_builder::build_role(
+        "role1".to_string(),
+        trust_policy.clone(),
+        Some("".to_string()),
+        None,
+        None,
+        &context,
+    )
+    .unwrap();
+    let role2 = role_builder::build_role(
+        "role2".to_string(),
+        trust_policy.clone(),
+        Some("/".to_string()),
+        None,
+        None,
+        &context,
+    )
+    .unwrap();
+    let role3 = role_builder::build_role(
+        "role3".to_string(),
+        trust_policy,
+        Some("/admin/".to_string()),
+        None,
+        None,
+        &context,
+    )
+    .unwrap();
+
+    store.create_role(role1).await.unwrap();
+    store.create_role(role2).await.unwrap();
+    store.create_role(role3).await.unwrap();
+
+    let (roles, _, _) = store.list_roles(Some(""), None).await.unwrap();
+    assert_eq!(roles.len(), 1);
+    assert_eq!(roles[0].role_name, "role1");
+}
+
+#[tokio::test]
+async fn test_role_list_pagination_max_items_zero() {
+    let mut store = InMemoryWamiStore::new();
+    let context = test_context();
+    let trust_policy = r#"{"Version":"2012-10-17"}"#.to_string();
+
+    for i in 0..5 {
+        let role = role_builder::build_role(
+            format!("role{}", i),
+            trust_policy.clone(),
+            None,
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        store.create_role(role).await.unwrap();
+    }
+
+    let pagination = PaginationParams {
+        max_items: Some(0),
+        marker: None,
+    };
+
+    let (roles, is_truncated, marker) = store.list_roles(None, Some(&pagination)).await.unwrap();
+    assert_eq!(roles.len(), 0);
+    assert!(is_truncated);
+    assert!(marker.is_none());
+}
