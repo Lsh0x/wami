@@ -2,11 +2,11 @@
 //!
 //! Orchestrates SSO instance operations.
 
+use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::SsoInstanceStore;
 use crate::wami::sso_admin::instance::SsoInstance;
 use std::sync::{Arc, RwLock};
 use wami_core::error::Result;
-use crate::provider::{AwsProvider, CloudProvider};
 
 /// Service for managing SSO instances
 #[wami_macros::service(

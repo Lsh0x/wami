@@ -2,11 +2,11 @@
 //!
 //! Orchestrates caller identity operations.
 
+use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::{IdentityStore, UserStore};
 use crate::wami::sts::CallerIdentity;
 use std::sync::{Arc, RwLock};
 use wami_core::error::{AmiError, Result};
-use crate::provider::{AwsProvider, CloudProvider};
 
 pub trait StsIdentityServiceStore: IdentityStore + UserStore {}
 impl<T> StsIdentityServiceStore for T where T: IdentityStore + UserStore {}

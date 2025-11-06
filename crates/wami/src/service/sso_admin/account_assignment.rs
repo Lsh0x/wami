@@ -2,11 +2,11 @@
 //!
 //! Orchestrates account assignment operations.
 
+use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::AccountAssignmentStore;
 use crate::wami::sso_admin::account_assignment::AccountAssignment;
 use std::sync::{Arc, RwLock};
 use wami_core::error::Result;
-use crate::provider::{AwsProvider, CloudProvider};
 
 /// Service for managing account assignments
 #[wami_macros::service(

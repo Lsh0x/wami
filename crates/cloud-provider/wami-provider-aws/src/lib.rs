@@ -25,13 +25,8 @@
 //! );
 //! ```
 
-<<<<<<<< HEAD:crates/cloud-provider/wami-provider-aws/src/lib.rs
 use wami_core::error::{AmiError, Result};
 use wami_provider::{CloudProvider, ResourceLimits, ResourceType};
-========
-use super::{CloudProvider, ResourceLimits, ResourceType};
-use wami_core::error::{AmiError, Result};
->>>>>>>> fcc0841 (Refactor: Reorganize codebase into workspace structure):crates/wami-provider/src/aws.rs
 
 /// AWS cloud provider implementation
 ///
@@ -62,12 +57,6 @@ impl AwsProvider {
     /// Creates an AWS provider with custom resource limits
     ///
     /// ```rust
-<<<<<<<< HEAD:crates/cloud-provider/wami-provider-aws/src/lib.rs
-    /// use wami_provider::{ResourceLimits};
-    /// use wami_provider_aws::AwsProvider;
-========
-    /// use wami_provider::{AwsProvider, ResourceLimits};
->>>>>>>> fcc0841 (Refactor: Reorganize codebase into workspace structure):crates/wami-provider/src/aws.rs
     ///
     /// let limits = ResourceLimits {
     ///     max_access_keys_per_user: 5, // Custom limit
@@ -84,11 +73,6 @@ impl AwsProvider {
     /// ```rust
     /// use wami_provider_aws::AwsProvider;
     ///
-<<<<<<<< HEAD:crates/cloud-provider/wami-provider-aws/src/lib.rs
-========
-    /// ```
-    /// # use wami_provider::aws::AwsProvider;
->>>>>>>> fcc0841 (Refactor: Reorganize codebase into workspace structure):crates/wami-provider/src/aws.rs
     /// let service = AwsProvider::extract_service_name("elasticbeanstalk.amazonaws.com");
     /// assert_eq!(service, Some("elasticbeanstalk"));
     /// ```
@@ -101,11 +85,6 @@ impl AwsProvider {
     /// ```rust
     /// use wami_provider_aws::AwsProvider;
     ///
-<<<<<<<< HEAD:crates/cloud-provider/wami-provider-aws/src/lib.rs
-========
-    /// ```
-    /// # use wami_provider::aws::AwsProvider;
->>>>>>>> fcc0841 (Refactor: Reorganize codebase into workspace structure):crates/wami-provider/src/aws.rs
     /// let pascal = AwsProvider::to_pascal_case("elastic-beanstalk");
     /// assert_eq!(pascal, "ElasticBeanstalk");
     /// ```
