@@ -18,8 +18,8 @@
 //! ## Example
 //!
 //! ```rust
-//! use wami::store::memory::InMemoryWamiStore;
-//! use wami::store::traits::UserStore;
+//! use wami::store::memory::InMemoryStore;
+//! use wami::store::{Store, traits::UserStore};
 //! use wami::arn::{TenantPath, WamiArn};
 //! use wami::context::WamiContext;
 //! use wami::wami::identity::user::builder::build_user;
@@ -30,7 +30,7 @@
 //!     env_logger::init();
 //!     
 //!     // Initialize store
-//!     let mut store = InMemoryWamiStore::default();
+//!     let mut store = InMemoryStore::default();
 //!     
 //!     // Create WamiContext
 //!     let context = WamiContext::builder()
@@ -55,12 +55,12 @@
 //!     )?;
 //!     
 //!     // Store the user
-//!     let created_user = store.create_user(user).await?;
+//!     let created_user = store.wami_store().await?.create_user(user).await?;
 //!     println!("Created user: {}", created_user.user_name);
 //!     println!("User ARN: {}", created_user.arn);
 //!     
 //!     // Retrieve the user
-//!     let retrieved = store.get_user("alice").await?;
+//!     let retrieved = store.wami_store().await?.get_user("alice").await?;
 //!     if let Some(user) = retrieved {
 //!         println!("Retrieved user: {}", user.user_name);
 //!     }

@@ -153,43 +153,57 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Example 3: Access Keys and Credentials
 
 ```rust
-use wami::wami::identity::user;
-use wami::wami::credentials::access_key;
-use wami::store::memory::InMemoryWamiStore;
+use wami::arn::{TenantPath, WamiArn};
+use wami::context::WamiContext;
+use wami::wami::identity::user::builder::build_user;
+use wami_credentials::build_access_key;
+use wami::store::memory::InMemoryStore;
 use wami::store::traits::{UserStore, AccessKeyStore};
-use wami::provider::aws::AwsProvider;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut store = InMemoryWamiStore::new();
-    let provider = AwsProvider::new();
-    let account = "123456789012";
+    let mut store = InMemoryStore::default();
+    
+    // Create context
+    let context = WamiContext::builder()
+        .instance_id("123456789012")
+        .tenant_path(TenantPath::single(0))
+        .caller_arn(
+            WamiArn::builder()
+                .service(wami::arn::Service::Iam)
+                .tenant_path(TenantPath::single(0))
+                .wami_instance("123456789012")
+                .resource("user", "admin")
+                .build()?,
+        )
+        .is_root(false)
+        .build()?;
     
     // Create user
-    let user = user::builder::build_user(
+    let user = build_user(
         "service-account".to_string(),
         Some("/services/".to_string()),
-        &provider,
-        account
-    );
-    store.create_user(user).await?;
+        &context
+    )?;
+    store.wami_store().await?.create_user(user).await?;
     
     // Create 2 access keys
     for i in 1..=2 {
-        let key = access_key::builder::build_access_key(
+        let key = build_access_key(
             "service-account".to_string(),
-            &provider,
-            account
-        );
-        let created = store.create_access_key(key).await?;
+            &context
+        )?;
+        let created = store.wami_store().await?.create_access_key(key).await?;
         println!("\n🔑 Access Key #{}:", i);
         println!("   ID: {}", created.access_key_id);
-        println!("   Secret: {}", created.secret_access_key);
-        println!("   Status: {:?}", created.status);
+        if let Some(secret) = created.secret_access_key {
+            println!("   Secret: {}", secret);
+        }
+        println!("   Status: {}", created.status);
     }
     
     // List all keys
-    let keys = store.list_access_keys("service-account").await?;
+    let keys = store.wami_store().await?.list_access_keys("service-account", None).await?;
     println!("\n📊 Total keys for service-account: {}", keys.len());
     
     Ok(())
@@ -199,16 +213,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Example 4: Role with Trust Policy
 
 ```rust
-use wami::wami::identity::role;
-use wami::store::memory::InMemoryWamiStore;
+use wami::arn::{TenantPath, WamiArn};
+use wami::context::WamiContext;
+use wami::wami::identity::role::builder::build_role;
+use wami::store::memory::InMemoryStore;
 use wami::store::traits::RoleStore;
-use wami::provider::aws::AwsProvider;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut store = InMemoryWamiStore::new();
-    let provider = AwsProvider::new();
-    let account = "123456789012";
+    let mut store = InMemoryStore::default();
+    
+    // Create context
+    let context = WamiContext::builder()
+        .instance_id("123456789012")
+        .tenant_path(TenantPath::single(0))
+        .caller_arn(
+            WamiArn::builder()
+                .service(wami::arn::Service::Iam)
+                .tenant_path(TenantPath::single(0))
+                .wami_instance("123456789012")
+                .resource("user", "admin")
+                .build()?,
+        )
+        .is_root(false)
+        .build()?;
     
     // Lambda execution role
     let lambda_trust = r#"{
@@ -220,16 +248,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }]
     }"#;
     
-    let lambda_role = role::builder::build_role(
+    let lambda_role = build_role(
         "LambdaExecutionRole".to_string(),
         lambda_trust.to_string(),
         Some("/service-roles/".to_string()),
         Some("Allows Lambda to call AWS services".to_string()),
         None,
-        &provider,
-        account
-    );
-    let created = store.create_role(lambda_role).await?;
+        &context
+    )?;
+    let created = store.wami_store().await?.create_role(lambda_role).await?;
     println!("✅ Lambda role: {}", created.arn);
     
     // EC2 instance role
@@ -242,16 +269,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }]
     }"#;
     
-    let ec2_role = role::builder::build_role(
+    let ec2_role = build_role(
         "EC2InstanceRole".to_string(),
         ec2_trust.to_string(),
         Some("/service-roles/".to_string()),
         Some("Allows EC2 instances to call AWS services".to_string()),
         None,
-        &provider,
-        account
-    );
-    let created = store.create_role(ec2_role).await?;
+        &context
+    )?;
+    let created = store.wami_store().await?.create_role(ec2_role).await?;
     println!("✅ EC2 role: {}", created.arn);
     
     Ok(())
