@@ -43,5 +43,6 @@ wami-provider-gcp = { path = "../cloud-provider/wami-provider-gcp" }
 wami-provider-azure = { path = "../cloud-provider/wami-provider-azure" }
 wami-provider-custom = { path = "../cloud-provider/wami-provider-custom" }
 wami-credentials = { path = "../wami-credentials" }
+wami-condition = { path = "../wami-condition" }
 wami-core = { path = "../wami-core" }
 wami-macros = { path = "../wami-macros" }
