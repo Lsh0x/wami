@@ -242,4 +242,65 @@ mod tests {
         // Original should be unchanged
         assert_eq!(group.group_name, group_name);
     }
+
+    // ========== Edge Case Tests ==========
+
+    #[test]
+    fn test_build_group_empty_name() {
+        let context = test_context();
+        let group = build_group("".to_string(), None, &context).unwrap();
+        assert_eq!(group.group_name, "");
+        assert!(!group.group_id.is_empty());
+    }
+
+    #[test]
+    fn test_build_group_empty_path() {
+        let context = test_context();
+        let group = build_group("admins".to_string(), Some("".to_string()), &context).unwrap();
+        assert_eq!(group.path, "");
+    }
+
+    #[test]
+    fn test_build_group_very_long_name() {
+        let context = test_context();
+        let long_name = "a".repeat(100);
+        let group = build_group(long_name.clone(), None, &context).unwrap();
+        assert_eq!(group.group_name, long_name);
+    }
+
+    #[test]
+    fn test_build_group_with_unicode_in_name() {
+        let context = test_context();
+        let group = build_group("组".to_string(), None, &context).unwrap();
+        assert_eq!(group.group_name, "组");
+    }
+
+    #[test]
+    fn test_build_group_path_with_null_bytes() {
+        let context = test_context();
+        // Paths with null bytes should be handled (though unusual)
+        let group = build_group(
+            "admins".to_string(),
+            Some("/path\0with\0null/".to_string()),
+            &context,
+        )
+        .unwrap();
+        assert_eq!(group.path, "/path\0with\0null/");
+    }
+
+    #[test]
+    fn test_build_group_with_context_whitespace_instance_id() {
+        let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/test".parse().unwrap();
+        let context_result = WamiContext::builder()
+            .instance_id("   ".to_string()) // Whitespace-only
+            .tenant_path(TenantPath::single(12345678))
+            .caller_arn(user_arn)
+            .is_root(false)
+            .build();
+
+        if let Ok(context) = context_result {
+            let group_result = build_group("admins".to_string(), None, &context);
+            assert!(group_result.is_err());
+        }
+    }
 }

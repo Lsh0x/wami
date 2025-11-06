@@ -402,4 +402,203 @@ mod tests {
         assert_eq!(role.role_name, original_name);
         assert_eq!(role.max_session_duration, None);
     }
+
+    // ========== Edge Case Tests ==========
+
+    #[test]
+    fn test_build_role_empty_name() {
+        let context = test_context();
+        let role = build_role(
+            "".to_string(),
+            test_trust_policy(),
+            None,
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        assert_eq!(role.role_name, "");
+    }
+
+    #[test]
+    fn test_build_role_empty_path() {
+        let context = test_context();
+        let role = build_role(
+            "test-role".to_string(),
+            test_trust_policy(),
+            Some("".to_string()),
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        assert_eq!(role.path, "");
+    }
+
+    #[test]
+    fn test_build_role_invalid_json_trust_policy() {
+        let context = test_context();
+        let role = build_role(
+            "test-role".to_string(),
+            "not valid json".to_string(),
+            None,
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        assert_eq!(role.assume_role_policy_document, "not valid json");
+    }
+
+    #[test]
+    fn test_build_role_empty_trust_policy() {
+        let context = test_context();
+        let role = build_role(
+            "test-role".to_string(),
+            "".to_string(),
+            None,
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        assert_eq!(role.assume_role_policy_document, "");
+    }
+
+    #[test]
+    fn test_build_role_empty_description() {
+        let context = test_context();
+        let role = build_role(
+            "test-role".to_string(),
+            test_trust_policy(),
+            None,
+            Some("".to_string()),
+            None,
+            &context,
+        )
+        .unwrap();
+        assert_eq!(role.description, Some("".to_string()));
+    }
+
+    #[test]
+    fn test_build_role_zero_session_duration() {
+        let context = test_context();
+        let role = build_role(
+            "test-role".to_string(),
+            test_trust_policy(),
+            None,
+            None,
+            Some(0),
+            &context,
+        )
+        .unwrap();
+        assert_eq!(role.max_session_duration, Some(0));
+    }
+
+    #[test]
+    fn test_build_role_negative_session_duration() {
+        let context = test_context();
+        // Negative duration should be handled (though invalid)
+        let role = build_role(
+            "test-role".to_string(),
+            test_trust_policy(),
+            None,
+            None,
+            Some(-100),
+            &context,
+        )
+        .unwrap();
+        assert_eq!(role.max_session_duration, Some(-100));
+    }
+
+    #[test]
+    fn test_build_role_very_large_session_duration() {
+        let context = test_context();
+        let role = build_role(
+            "test-role".to_string(),
+            test_trust_policy(),
+            None,
+            None,
+            Some(999999),
+            &context,
+        )
+        .unwrap();
+        assert_eq!(role.max_session_duration, Some(999999));
+    }
+
+    #[test]
+    fn test_build_role_trust_policy_with_null_bytes() {
+        let context = test_context();
+        // Trust policy with null bytes should be handled
+        let policy =
+            r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow"}]}"#.replace('}', "\0}");
+        let role = build_role(
+            "test-role".to_string(),
+            policy.clone(),
+            None,
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        assert_eq!(role.assume_role_policy_document, policy);
+    }
+
+    #[test]
+    fn test_build_role_trust_policy_very_long() {
+        let context = test_context();
+        // Very long trust policy should be handled
+        let long_policy = format!(
+            r#"{{"Version":"2012-10-17","Statement":[{{"Effect":"Allow","Principal":{{"Service":"{}"}}}}]}}"#,
+            "a".repeat(10000)
+        );
+        let role = build_role(
+            "test-role".to_string(),
+            long_policy.clone(),
+            None,
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        assert_eq!(role.assume_role_policy_document, long_policy);
+    }
+
+    #[test]
+    fn test_build_role_with_unicode() {
+        let context = test_context();
+        let role = build_role(
+            "角色".to_string(),
+            test_trust_policy(),
+            None,
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        assert_eq!(role.role_name, "角色");
+    }
+
+    #[test]
+    fn test_build_role_with_context_whitespace_instance_id() {
+        let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/test".parse().unwrap();
+        let context_result = WamiContext::builder()
+            .instance_id("   ".to_string()) // Whitespace-only
+            .tenant_path(TenantPath::single(12345678))
+            .caller_arn(user_arn)
+            .is_root(false)
+            .build();
+
+        if let Ok(context) = context_result {
+            let role_result = build_role(
+                "test-role".to_string(),
+                test_trust_policy(),
+                None,
+                None,
+                None,
+                &context,
+            );
+            assert!(role_result.is_err());
+        }
+    }
 }
