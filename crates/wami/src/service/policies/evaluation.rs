@@ -1602,4 +1602,272 @@ mod tests {
         let response = service.simulate_custom_policy(request).await.unwrap();
         assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
     }
+
+    #[tokio::test]
+    async fn test_build_condition_context_with_string_list() {
+        let service = setup_service();
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![r#"{
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Action": "s3:*",
+                    "Resource": "*"
+                }]
+            }"#
+            .to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: Some(vec![ContextEntry {
+                context_key_name: "aws:TagKeys".to_string(),
+                context_key_values: vec!["Env".to_string(), "Owner".to_string()],
+                context_key_type: "StringList".to_string(),
+            }]),
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+    }
+
+    #[tokio::test]
+    async fn test_build_condition_context_with_numeric() {
+        let service = setup_service();
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![r#"{
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Action": "s3:*",
+                    "Resource": "*"
+                }]
+            }"#
+            .to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: Some(vec![ContextEntry {
+                context_key_name: "wami:RequestsPerMinute".to_string(),
+                context_key_values: vec!["50".to_string()],
+                context_key_type: "Numeric".to_string(),
+            }]),
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+    }
+
+    #[tokio::test]
+    async fn test_build_condition_context_with_boolean() {
+        let service = setup_service();
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![r#"{
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Action": "s3:*",
+                    "Resource": "*"
+                }]
+            }"#
+            .to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: Some(vec![ContextEntry {
+                context_key_name: "wami:VpnDetected".to_string(),
+                context_key_values: vec!["false".to_string()],
+                context_key_type: "Boolean".to_string(),
+            }]),
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+    }
+
+    #[tokio::test]
+    async fn test_build_condition_context_with_default_type() {
+        let service = setup_service();
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![r#"{
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Action": "s3:*",
+                    "Resource": "*"
+                }]
+            }"#
+            .to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: Some(vec![ContextEntry {
+                context_key_name: "custom:Key".to_string(),
+                context_key_values: vec!["value".to_string()],
+                context_key_type: "Unknown".to_string(),
+            }]),
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+    }
+
+    #[tokio::test]
+    async fn test_build_condition_context_with_principal_arn() {
+        let service = setup_service();
+        let request = SimulatePrincipalPolicyRequest {
+            policy_source_arn: "arn:aws:iam::123456789012:user/alice".to_string(),
+            policy_input_list: None,
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: None,
+        };
+
+        let response = service.simulate_principal_policy(request).await.unwrap();
+        // Should work even if principal ARN is provided
+        assert!(!response.evaluation_results.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_extract_account_id_from_arn() {
+        let service = setup_service();
+
+        // Valid ARN
+        let account_id =
+            service.extract_account_id_from_arn("arn:aws:iam::123456789012:user/alice");
+        assert_eq!(account_id, Some("123456789012".to_string()));
+
+        // ARN with path
+        let account_id =
+            service.extract_account_id_from_arn("arn:aws:iam::987654321098:role/path/MyRole");
+        assert_eq!(account_id, Some("987654321098".to_string()));
+
+        // Invalid ARN (too short)
+        let account_id = service.extract_account_id_from_arn("arn:aws:iam::123456789012");
+        assert_eq!(account_id, None);
+
+        // Invalid ARN (not enough parts)
+        let account_id = service.extract_account_id_from_arn("arn:aws:iam");
+        assert_eq!(account_id, None);
+    }
+
+    #[tokio::test]
+    async fn test_condition_evaluation_error_handling() {
+        let service = setup_service();
+
+        // Policy with invalid condition JSON
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": "s3:*",
+                "Resource": "*",
+                "Condition": {
+                    "StringEquals": {
+                        "invalid:key": null
+                    }
+                }
+            }]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        // Condition evaluation error should result in implicitDeny
+        assert_eq!(response.evaluation_results[0].eval_decision, "implicitDeny");
+    }
+
+    #[tokio::test]
+    async fn test_condition_with_wami_keys() {
+        let service = setup_service();
+
+        // Policy using WAMI-specific keys
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": "s3:*",
+                "Resource": "*",
+                "Condition": {
+                    "StringEquals": {
+                        "wami:ClientType": "web"
+                    },
+                    "NumericLessThan": {
+                        "wami:RequestsPerMinute": "100"
+                    }
+                }
+            }]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: Some(vec![
+                ContextEntry {
+                    context_key_name: "wami:ClientType".to_string(),
+                    context_key_values: vec!["web".to_string()],
+                    context_key_type: "String".to_string(),
+                },
+                ContextEntry {
+                    context_key_name: "wami:RequestsPerMinute".to_string(),
+                    context_key_values: vec!["50".to_string()],
+                    context_key_type: "Numeric".to_string(),
+                },
+            ]),
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+    }
+
+    #[tokio::test]
+    async fn test_condition_with_rate_limiting_keys() {
+        let service = setup_service();
+
+        // Policy using rate limiting keys
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": "s3:*",
+                "Resource": "*",
+                "Condition": {
+                    "NumericLessThan": {
+                        "wami:RequestsPerMinute": "60",
+                        "wami:BurstCapacityUsed": "0.8"
+                    },
+                    "NumericGreaterThan": {
+                        "wami:QuotaRemaining": "1000"
+                    }
+                }
+            }]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: Some(vec![
+                ContextEntry {
+                    context_key_name: "wami:RequestsPerMinute".to_string(),
+                    context_key_values: vec!["45".to_string()],
+                    context_key_type: "Numeric".to_string(),
+                },
+                ContextEntry {
+                    context_key_name: "wami:BurstCapacityUsed".to_string(),
+                    context_key_values: vec!["0.5".to_string()],
+                    context_key_type: "Numeric".to_string(),
+                },
+                ContextEntry {
+                    context_key_name: "wami:QuotaRemaining".to_string(),
+                    context_key_values: vec!["5000".to_string()],
+                    context_key_type: "Numeric".to_string(),
+                },
+            ]),
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+    }
 }
