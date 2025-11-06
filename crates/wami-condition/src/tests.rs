@@ -8006,3 +8006,46 @@ fn test_wami_condition_security_example() {
     let result = evaluate_condition_block(&condition, &context).unwrap();
     assert!(result);
 }
+
+// ============================================================================
+// Additional tests for coverage gaps
+// ============================================================================
+
+#[test]
+fn test_wami_requests_per_hour_key() {
+    let context = ConditionContext::builder().requests_per_hour(1000).build();
+    let value = get_context_value("wami:RequestsPerHour", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::Number(1000.0)));
+}
+
+#[test]
+fn test_wami_requests_per_day_key() {
+    let context = ConditionContext::builder().requests_per_day(10000).build();
+    let value = get_context_value("wami:RequestsPerDay", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::Number(10000.0)));
+}
+
+#[test]
+fn test_wami_quota_limit_key() {
+    let context = ConditionContext::builder().quota_limit(50000).build();
+    let value = get_context_value("wami:QuotaLimit", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::Number(50000.0)));
+}
+
+#[test]
+fn test_wami_data_residency_region_key() {
+    let context = ConditionContext::builder()
+        .data_residency_region("eu-west-1")
+        .build();
+    let value = get_context_value("wami:DataResidencyRegion", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::String("eu-west-1".to_string())));
+}
+
+#[test]
+fn test_wami_encryption_algorithm_key() {
+    let context = ConditionContext::builder()
+        .encryption_algorithm("AES-256")
+        .build();
+    let value = get_context_value("wami:EncryptionAlgorithm", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::String("AES-256".to_string())));
+}
