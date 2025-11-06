@@ -1,4 +1,3 @@
-
 // ============================================================================
 // Targeted branch coverage tests (operators.rs residuals)
 // ============================================================================
@@ -3807,6 +3806,683 @@ fn test_condition_value_from_json_edge_cases() {
         ConditionValue::Array(arr) => assert!(arr.is_empty()),
         _ => panic!("Expected Array"),
     }
+}
+
+// ============================================================================
+// Additional Coverage Tests for Remaining Uncovered Lines
+// ============================================================================
+
+#[test]
+fn test_ip_address_actual_not_string() {
+    // Line 608: actual is not String => Ok(false)
+    let context = ConditionContext::builder()
+        .custom_value("ip:key", crate::ConditionValue::Number(123.0))
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "IpAddress": {
+                "ip:key": "127.0.0.1"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_bool_operator_missing_key() {
+    // Line 823: None => Ok(false)
+    let context = ConditionContext::builder().build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "Bool": {
+                "aws:MultiFactorAuthPresent": "true"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_forallvalues_string_equals_missing_key() {
+    // Line 861: None => Ok(true) - vacuous truth
+    let context = ConditionContext::builder().build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAllValues:StringEquals": {
+                "aws:TagKeys": ["Env", "Owner"]
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_forallvalues_numeric_greater_than_empty_array() {
+    // Line 963: empty array => Ok(true)
+    let context = ConditionContext::builder()
+        .custom_value("nums", crate::ConditionValue::Array(vec![]))
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAllValues:NumericGreaterThan": {
+                "nums": "100"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_forallvalues_numeric_greater_than_string_actual_error() {
+    // Lines 974-983: String actual with parse error
+    let context = ConditionContext::builder()
+        .custom_value(
+            "nums",
+            crate::ConditionValue::String("not-a-number".to_string()),
+        )
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAllValues:NumericGreaterThan": {
+                "nums": "100"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context);
+    // Should error on parse failure
+    assert!(result.is_err() || !result.unwrap());
+}
+
+#[test]
+fn test_forallvalues_ip_address_actual_not_string_or_array() {
+    // Line 1013: _ => Ok(false)
+    let context = ConditionContext::builder()
+        .custom_value("ip:key", crate::ConditionValue::Number(123.0))
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAllValues:IpAddress": {
+                "ip:key": ["127.0.0.1"]
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_forallvalues_date_less_than_empty_array() {
+    // Line 1024: empty array => Ok(true)
+    let context = ConditionContext::builder()
+        .custom_value("dates", crate::ConditionValue::Array(vec![]))
+        .build();
+    let future = (chrono::Utc::now() + chrono::Duration::hours(1)).to_rfc3339();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAllValues:DateLessThan": {{
+                "dates": "{}"
+            }}
+        }}"#,
+        future
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_forallvalues_date_greater_than_empty_array() {
+    // Line 1050: empty array => Ok(true)
+    let context = ConditionContext::builder()
+        .custom_value("dates", crate::ConditionValue::Array(vec![]))
+        .build();
+    let past = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAllValues:DateGreaterThan": {{
+                "dates": "{}"
+            }}
+        }}"#,
+        past
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_forallvalues_date_greater_than_string_actual() {
+    // Lines 1059-1064: String actual case
+    let now = chrono::Utc::now();
+    let past = now - chrono::Duration::hours(1);
+    let context = ConditionContext::builder()
+        .custom_value("date:key", crate::ConditionValue::String(now.to_rfc3339()))
+        .build();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAllValues:DateGreaterThan": {{
+                "date:key": "{}"
+            }}
+        }}"#,
+        past.to_rfc3339()
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_foranyvalue_numeric_less_than_empty_array() {
+    // Line 1103: empty array => Ok(false) - already covered but ensuring it's tested
+    let context = ConditionContext::builder()
+        .custom_value("nums", crate::ConditionValue::Array(vec![]))
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAnyValue:NumericLessThan": {
+                "nums": "100"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_foranyvalue_numeric_greater_than_non_numeric_member() {
+    // Line 1185: non-numeric member in array => false
+    let context = ConditionContext::builder()
+        .custom_value(
+            "nums",
+            crate::ConditionValue::Array(vec!["abc".to_string(), "xyz".to_string()]),
+        )
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAnyValue:NumericGreaterThan": {
+                "nums": "100"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_foranyvalue_numeric_greater_than_string_actual_error() {
+    // Lines 1194-1195: String actual with parse error
+    let context = ConditionContext::builder()
+        .custom_value(
+            "nums",
+            crate::ConditionValue::String("not-a-number".to_string()),
+        )
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAnyValue:NumericGreaterThan": {
+                "nums": "100"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context);
+    // Should error on parse failure
+    assert!(result.is_err() || !result.unwrap());
+}
+
+#[test]
+fn test_foranyvalue_ip_address_actual_not_string_or_array() {
+    // Line 1228: _ => Ok(false)
+    let context = ConditionContext::builder()
+        .custom_value("ip:key", crate::ConditionValue::Number(123.0))
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAnyValue:IpAddress": {
+                "ip:key": ["127.0.0.1"]
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_foranyvalue_date_greater_than_empty_array() {
+    // Line 1265: empty array => Ok(false)
+    let context = ConditionContext::builder()
+        .custom_value("dates", crate::ConditionValue::Array(vec![]))
+        .build();
+    let past = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAnyValue:DateGreaterThan": {{
+                "dates": "{}"
+            }}
+        }}"#,
+        past
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_forallvalues_date_less_than_string_actual() {
+    // Test String actual case for ForAllValues:DateLessThan
+    let now = chrono::Utc::now();
+    let future = now + chrono::Duration::hours(1);
+    let context = ConditionContext::builder()
+        .custom_value("date:key", crate::ConditionValue::String(now.to_rfc3339()))
+        .build();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAllValues:DateLessThan": {{
+                "date:key": "{}"
+            }}
+        }}"#,
+        future.to_rfc3339()
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_foranyvalue_date_less_than_string_actual() {
+    // Test String actual case for ForAnyValue:DateLessThan
+    let now = chrono::Utc::now();
+    let future = now + chrono::Duration::hours(1);
+    let context = ConditionContext::builder()
+        .custom_value("date:key", crate::ConditionValue::String(now.to_rfc3339()))
+        .build();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAnyValue:DateLessThan": {{
+                "date:key": "{}"
+            }}
+        }}"#,
+        future.to_rfc3339()
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_foranyvalue_date_greater_than_string_actual() {
+    // Test String actual case for ForAnyValue:DateGreaterThan
+    let now = chrono::Utc::now();
+    let past = now - chrono::Duration::hours(1);
+    let context = ConditionContext::builder()
+        .custom_value("date:key", crate::ConditionValue::String(now.to_rfc3339()))
+        .build();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAnyValue:DateGreaterThan": {{
+                "date:key": "{}"
+            }}
+        }}"#,
+        past.to_rfc3339()
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_forallvalues_date_less_than_array_with_invalid_dates() {
+    // Test array with some invalid dates (parse_rfc3339 fails)
+    let context = ConditionContext::builder()
+        .custom_value(
+            "dates",
+            crate::ConditionValue::Array(vec![
+                "invalid-date".to_string(),
+                "also-invalid".to_string(),
+            ]),
+        )
+        .build();
+    let future = (chrono::Utc::now() + chrono::Duration::hours(1)).to_rfc3339();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAllValues:DateLessThan": {{
+                "dates": "{}"
+            }}
+        }}"#,
+        future
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    // Invalid dates should cause false (unwrap_or(false))
+    assert!(!result);
+}
+
+#[test]
+fn test_forallvalues_date_greater_than_array_with_invalid_dates() {
+    // Test array with some invalid dates
+    let context = ConditionContext::builder()
+        .custom_value(
+            "dates",
+            crate::ConditionValue::Array(vec![
+                "invalid-date".to_string(),
+                "also-invalid".to_string(),
+            ]),
+        )
+        .build();
+    let past = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAllValues:DateGreaterThan": {{
+                "dates": "{}"
+            }}
+        }}"#,
+        past
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    // Invalid dates should cause false
+    assert!(!result);
+}
+
+#[test]
+fn test_foranyvalue_date_less_than_array_with_invalid_dates() {
+    // Test array with invalid dates
+    let context = ConditionContext::builder()
+        .custom_value(
+            "dates",
+            crate::ConditionValue::Array(vec![
+                "invalid-date".to_string(),
+                "also-invalid".to_string(),
+            ]),
+        )
+        .build();
+    let future = (chrono::Utc::now() + chrono::Duration::hours(1)).to_rfc3339();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAnyValue:DateLessThan": {{
+                "dates": "{}"
+            }}
+        }}"#,
+        future
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    // Invalid dates should cause false
+    assert!(!result);
+}
+
+#[test]
+fn test_foranyvalue_date_greater_than_array_with_invalid_dates() {
+    // Test array with invalid dates
+    let context = ConditionContext::builder()
+        .custom_value(
+            "dates",
+            crate::ConditionValue::Array(vec![
+                "invalid-date".to_string(),
+                "also-invalid".to_string(),
+            ]),
+        )
+        .build();
+    let past = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAnyValue:DateGreaterThan": {{
+                "dates": "{}"
+            }}
+        }}"#,
+        past
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    // Invalid dates should cause false
+    assert!(!result);
+}
+
+#[test]
+fn test_ip_address_cidr_parse_failure() {
+    // Test CIDR parsing failure (invalid prefix length)
+    let context = ConditionContext::builder()
+        .source_ip("203.0.113.42")
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "IpAddress": {
+                "aws:SourceIp": "203.0.113.0/invalid"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    // Should fail to match due to invalid CIDR
+    assert!(!result);
+}
+
+#[test]
+fn test_ip_address_ipv4_parse_failure() {
+    // Test IPv4 parsing failure (not 4 parts)
+    let context = ConditionContext::builder().source_ip("203.0.113").build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "IpAddress": {
+                "aws:SourceIp": "203.0.113.0/24"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    // Should fail to match
+    assert!(!result);
+}
+
+#[test]
+fn test_ip_address_ipv6_no_colon() {
+    // Test IPv6 case where IP doesn't contain colon
+    let context = ConditionContext::builder()
+        .source_ip("203.0.113.42")
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "IpAddress": {
+                "aws:SourceIp": "2001:db8::/32"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    // IPv4 IP won't match IPv6 CIDR
+    assert!(!result);
+}
+
+#[test]
+fn test_ip_address_cidr_no_slash() {
+    // Test CIDR without slash (exact match path)
+    let context = ConditionContext::builder()
+        .source_ip("203.0.113.42")
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "IpAddress": {
+                "aws:SourceIp": "203.0.113.42"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_ip_address_cidr_prefix_len_too_large() {
+    // Test prefix_len > 32 for IPv4
+    let context = ConditionContext::builder()
+        .source_ip("203.0.113.42")
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "IpAddress": {
+                "aws:SourceIp": "203.0.113.0/33"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    // Should fail (prefix_len > 32)
+    assert!(!result);
+}
+
+#[test]
+fn test_ip_address_ipv6_prefix_len_edge_case() {
+    // Test IPv6 with prefix_len exactly 128
+    let ip = "2001:db8::1";
+    let context = ConditionContext::builder().source_ip(ip).build();
+    let condition = parse_condition_block_from_json(&format!(
+        r#"{{
+            "IpAddress": {{
+                "aws:SourceIp": "{}/128"
+            }}
+        }}"#,
+        ip
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_forallvalues_numeric_less_than_string_actual() {
+    // Test String actual case for ForAllValues:NumericLessThan
+    let context = ConditionContext::builder()
+        .custom_value("nums", crate::ConditionValue::String("50".to_string()))
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAllValues:NumericLessThan": {
+                "nums": "100"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_forallvalues_numeric_less_than_string_actual_error() {
+    // Test String actual with parse error for ForAllValues:NumericLessThan
+    let context = ConditionContext::builder()
+        .custom_value(
+            "nums",
+            crate::ConditionValue::String("not-a-number".to_string()),
+        )
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAllValues:NumericLessThan": {
+                "nums": "100"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context);
+    // Should error on parse failure
+    assert!(result.is_err() || !result.unwrap());
+}
+
+#[test]
+fn test_foranyvalue_numeric_less_than_string_actual_error() {
+    // Test String actual with parse error for ForAnyValue:NumericLessThan
+    let context = ConditionContext::builder()
+        .custom_value(
+            "nums",
+            crate::ConditionValue::String("not-a-number".to_string()),
+        )
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAnyValue:NumericLessThan": {
+                "nums": "100"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context);
+    // Should error on parse failure
+    assert!(result.is_err() || !result.unwrap());
+}
+
+#[test]
+fn test_forallvalues_date_less_than_string_actual_error() {
+    // Test String actual with parse error for ForAllValues:DateLessThan
+    let context = ConditionContext::builder()
+        .custom_value(
+            "date:key",
+            crate::ConditionValue::String("invalid-date".to_string()),
+        )
+        .build();
+    let future = (chrono::Utc::now() + chrono::Duration::hours(1)).to_rfc3339();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAllValues:DateLessThan": {{
+                "date:key": "{}"
+            }}
+        }}"#,
+        future
+    ));
+    let result = evaluate_condition_block(&condition, &context);
+    // Should error on parse failure
+    assert!(result.is_err() || !result.unwrap());
+}
+
+#[test]
+fn test_foranyvalue_date_less_than_string_actual_error() {
+    // Test String actual with parse error for ForAnyValue:DateLessThan
+    let context = ConditionContext::builder()
+        .custom_value(
+            "date:key",
+            crate::ConditionValue::String("invalid-date".to_string()),
+        )
+        .build();
+    let future = (chrono::Utc::now() + chrono::Duration::hours(1)).to_rfc3339();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAnyValue:DateLessThan": {{
+                "date:key": "{}"
+            }}
+        }}"#,
+        future
+    ));
+    let result = evaluate_condition_block(&condition, &context);
+    // Should error on parse failure
+    assert!(result.is_err() || !result.unwrap());
+}
+
+#[test]
+fn test_forallvalues_date_greater_than_string_actual_error() {
+    // Test String actual with parse error for ForAllValues:DateGreaterThan
+    let context = ConditionContext::builder()
+        .custom_value(
+            "date:key",
+            crate::ConditionValue::String("invalid-date".to_string()),
+        )
+        .build();
+    let past = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAllValues:DateGreaterThan": {{
+                "date:key": "{}"
+            }}
+        }}"#,
+        past
+    ));
+    let result = evaluate_condition_block(&condition, &context);
+    // Should error on parse failure
+    assert!(result.is_err() || !result.unwrap());
+}
+
+#[test]
+fn test_foranyvalue_date_greater_than_string_actual_error() {
+    // Test String actual with parse error for ForAnyValue:DateGreaterThan
+    let context = ConditionContext::builder()
+        .custom_value(
+            "date:key",
+            crate::ConditionValue::String("invalid-date".to_string()),
+        )
+        .build();
+    let past = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAnyValue:DateGreaterThan": {{
+                "date:key": "{}"
+            }}
+        }}"#,
+        past
+    ));
+    let result = evaluate_condition_block(&condition, &context);
+    // Should error on parse failure
+    assert!(result.is_err() || !result.unwrap());
 }
 
 // ============================================================================
