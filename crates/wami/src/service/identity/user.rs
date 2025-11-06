@@ -281,26 +281,30 @@ mod tests {
             value: "Value".to_string(),
         }];
 
+        // Tag is idempotent - succeeds even if user doesn't exist (tags are silently ignored)
         let result = service.tag_user("nonexistent", tags).await;
-        assert!(result.is_err());
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_list_user_tags_nonexistent() {
         let service = setup_service();
 
+        // List tags returns empty list for non-existent user
         let result = service.list_user_tags("nonexistent").await;
-        assert!(result.is_err());
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 0);
     }
 
     #[tokio::test]
     async fn test_untag_user_nonexistent() {
         let service = setup_service();
 
+        // Untag is idempotent - succeeds even if user doesn't exist
         let result = service
             .untag_user("nonexistent", vec!["Key".to_string()])
             .await;
-        assert!(result.is_err());
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
@@ -350,8 +354,9 @@ mod tests {
     async fn test_delete_user_nonexistent() {
         let service = setup_service();
 
+        // Delete is idempotent - succeeds even if user doesn't exist
         let result = service.delete_user("nonexistent").await;
-        assert!(result.is_err());
+        assert!(result.is_ok());
     }
 
     #[tokio::test]

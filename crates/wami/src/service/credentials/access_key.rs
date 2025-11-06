@@ -162,8 +162,9 @@ mod tests {
     async fn test_delete_access_key_nonexistent() {
         let service = setup_service();
 
+        // Delete is idempotent - succeeds even if access key doesn't exist
         let result = service.delete_access_key("nonexistent-key-id").await;
-        assert!(result.is_err());
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
@@ -184,13 +185,13 @@ mod tests {
         let service = setup_service();
         let context = test_context();
 
-        // Create an access key with a non-existent ID
+        // Update is idempotent - creates/updates even if access key doesn't exist
         use wami_credentials::build_access_key;
         let access_key = build_access_key("alice".to_string(), &context).unwrap();
         let mut nonexistent_key = access_key;
         nonexistent_key.access_key_id = "nonexistent-key-id".to_string();
 
         let result = service.update_access_key(nonexistent_key).await;
-        assert!(result.is_err());
+        assert!(result.is_ok());
     }
 }

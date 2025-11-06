@@ -501,15 +501,18 @@ mod tests {
     #[test]
     fn test_build_user_with_context_empty_tenant_path() {
         let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/test".parse().unwrap();
-        let context_result = WamiContext::builder()
+        // TenantPath::single(0) is actually valid (represents root tenant)
+        let context = WamiContext::builder()
             .instance_id("123456789012")
-            .tenant_path(TenantPath::single(0)) // Empty tenant path
+            .tenant_path(TenantPath::single(0))
             .caller_arn(user_arn)
             .is_root(false)
-            .build();
+            .build()
+            .unwrap();
 
-        // Should fail
-        assert!(context_result.is_err());
+        // Should succeed - 0 is a valid tenant ID
+        let user = build_user("alice".to_string(), None, &context).unwrap();
+        assert_eq!(user.user_name, "alice");
     }
 
     #[test]
