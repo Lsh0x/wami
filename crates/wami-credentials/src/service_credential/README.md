@@ -49,7 +49,7 @@ Creates a new `ServiceSpecificCredential` with context-based identifiers:
 
 ```rust
 use wami_core::context::WamiContext;
-use wami_credentials::service_credential::builder::build_service_credential;
+use wami_credentials::service_credential::build_service_credential;
 
 let context = WamiContext::builder()
     .instance_id("123456789012")
@@ -67,18 +67,22 @@ let credential = build_service_credential(
 
 ## Request Types
 
-The module provides request types for service credential operations:
+The module provides request and response types for service credential operations:
 - `CreateServiceSpecificCredentialRequest` – Request to create a service credential
+- `CreateServiceSpecificCredentialResponse` – Response containing the created credential with password
 - `ListServiceSpecificCredentialsRequest` – Request to list service credentials for a user
+- `ListServiceSpecificCredentialsResponse` – Response containing a list of credential metadata
 - `UpdateServiceSpecificCredentialRequest` – Request to update credential status
 - `DeleteServiceSpecificCredentialRequest` – Request to delete a service credential
+- `ResetServiceSpecificCredentialRequest` – Request to reset a credential's password
+- `ResetServiceSpecificCredentialResponse` – Response containing the credential with new password
 
 ## Usage Example
 
 ```rust
 use wami_core::context::WamiContext;
-use wami_credentials::service_credential::builder::build_service_credential;
-use wami_credentials::service_credential::ServiceSpecificCredential;
+use wami_credentials::service_credential::build_service_credential;
+use wami_credentials::ServiceSpecificCredential;
 
 let context = WamiContext::builder()
     .instance_id("123456789012")
