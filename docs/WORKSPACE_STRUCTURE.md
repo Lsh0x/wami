@@ -56,19 +56,40 @@ use wami_traits::ServiceRegistry;
 ---
 
 #### `wami-provider`
-**Purpose**: Cloud provider integrations (AWS, GCP, Azure)
+**Purpose**: Cloud provider abstraction layer
 
 **Contains**:
-- Provider-specific ARN builders and transformers
-- Cloud provider configuration
-- Provider-specific implementations
+- `CloudProvider` trait definition
+- Provider configuration structures (`ProviderConfig`, `ResourceLimits`, `ResourceType`)
+- ARN builder utilities
+- Provider registry for runtime loading
 
 **Usage**:
 ```rust
-use wami_provider::{AwsProvider, CloudProvider, ProviderConfig};
+use wami_provider::{CloudProvider, ProviderConfig, ResourceType};
 ```
 
 **Dependencies**: `wami-core`
+
+**Note**: Concrete provider implementations live in separate crates under `crates/cloud-provider/`:
+- `wami-provider-aws` - AWS provider implementation
+- `wami-provider-gcp` - Google Cloud Platform provider implementation
+- `wami-provider-azure` - Microsoft Azure provider implementation
+- `wami-provider-custom` - Custom provider builder for on-premise or other clouds
+
+**Provider Crate Usage**:
+```rust
+use wami_provider::CloudProvider;
+use wami_provider_aws::AwsProvider;
+
+let provider = AwsProvider::new();
+let arn = provider.generate_resource_identifier(
+    wami_provider::ResourceType::User,
+    "123456789012",
+    "/",
+    "alice",
+);
+```
 
 ---
 

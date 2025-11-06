@@ -6,39 +6,29 @@
 //!
 //! # Example
 //!
-//! ```rust
-//! use wami_provider::{AwsProvider, GcpProvider, CloudProvider};
+//! ```rust,no_run
+//! use wami_provider::{CloudProvider, ResourceType};
+//! // Provider implementations are in separate crates (e.g., wami-provider-aws)
+//! // use wami_provider_aws::AwsProvider;
 //!
 //! // Use AWS provider (default)
-//! let aws = AwsProvider::default();
-//! let user_arn = aws.generate_resource_identifier(
-//!     wami_provider::ResourceType::User,
-//!     "123456789012",
-//!     "/",
-//!     "alice"
-//! );
-//! // → "arn:aws:iam::123456789012:user/alice"
-//!
-//! // Use GCP provider
-//! let gcp = GcpProvider::new("my-project-123");
-//! let user_arn = gcp.generate_resource_identifier(
-//!     wami_provider::ResourceType::User,
-//!     "",
-//!     "",
-//!     "alice"
-//! );
-//! // → "projects/my-project-123/serviceAccounts/alice@my-project-123.iam.gserviceaccount.com"
+//! // let aws = AwsProvider::default();
+//! // let user_arn = aws.generate_resource_identifier(
+//! //     ResourceType::User,
+//! //     "123456789012",
+//! //     "/",
+//! //     "alice"
+//! // );
+//! // // → "arn:aws:iam::123456789012:user/alice"
 //! ```
 
 pub mod arn_builder;
-pub mod aws;
-pub mod azure;
-pub mod custom;
-pub mod gcp;
 pub mod provider_info;
+pub mod registry;
 
-// #[cfg(test)]
-// mod tests;  // TODO: Update tests after service layer rebuild
+pub use registry::ProviderRegistry;
+
+// Note: Tests are located in individual module files (e.g., aws.rs, gcp.rs, etc.)
 
 use serde::{Deserialize, Serialize};
 use wami_core::error::{AmiError, Result};
@@ -178,17 +168,18 @@ pub trait CloudProvider: Send + Sync + std::fmt::Debug {
     ///
     /// # Example
     ///
-    /// ```rust
-    /// use wami_provider::{AwsProvider, CloudProvider, ResourceType};
+    /// ```rust,no_run
+    /// use wami_provider::{CloudProvider, ResourceType};
+    /// // use wami_provider_aws::AwsProvider;
     ///
-    /// let provider = AwsProvider::default();
-    /// let arn = provider.generate_resource_identifier(
-    ///     ResourceType::User,
-    ///     "123456789012",
-    ///     "/engineering/",
-    ///     "alice"
-    /// );
-    /// assert_eq!(arn, "arn:aws:iam::123456789012:user/engineering/alice");
+    /// // let provider = AwsProvider::default();
+    /// // let arn = provider.generate_resource_identifier(
+    /// //     ResourceType::User,
+    /// //     "123456789012",
+    /// //     "/engineering/",
+    /// //     "alice"
+    /// // );
+    /// // assert_eq!(arn, "arn:aws:iam::123456789012:user/engineering/alice");
     /// ```
     fn generate_resource_identifier(
         &self,
@@ -210,13 +201,14 @@ pub trait CloudProvider: Send + Sync + std::fmt::Debug {
     ///
     /// # Example
     ///
-    /// ```rust
-    /// use wami_provider::{AwsProvider, CloudProvider, ResourceType};
+    /// ```rust,no_run
+    /// use wami_provider::{CloudProvider, ResourceType};
+    /// // use wami_provider_aws::AwsProvider;
     ///
-    /// let provider = AwsProvider::default();
-    /// let id = provider.generate_resource_id(ResourceType::User);
-    /// assert!(id.starts_with("AIDA")); // AWS format
-    /// assert_eq!(id.len(), 21); // AIDA + 17 chars
+    /// // let provider = AwsProvider::default();
+    /// // let id = provider.generate_resource_id(ResourceType::User);
+    /// // assert!(id.starts_with("AIDA")); // AWS format
+    /// // assert_eq!(id.len(), 21); // AIDA + 17 chars
     /// ```
     fn generate_resource_id(&self, resource_type: ResourceType) -> String;
 
@@ -224,12 +216,13 @@ pub trait CloudProvider: Send + Sync + std::fmt::Debug {
     ///
     /// # Example
     ///
-    /// ```rust
-    /// use wami_provider::{AwsProvider, CloudProvider};
+    /// ```rust,no_run
+    /// use wami_provider::CloudProvider;
+    /// // use wami_provider_aws::AwsProvider;
     ///
-    /// let provider = AwsProvider::default();
-    /// let limits = provider.resource_limits();
-    /// assert_eq!(limits.max_access_keys_per_user, 2); // AWS limit
+    /// // let provider = AwsProvider::default();
+    /// // let limits = provider.resource_limits();
+    /// // assert_eq!(limits.max_access_keys_per_user, 2); // AWS limit
     /// ```
     fn resource_limits(&self) -> &ResourceLimits;
 
@@ -329,17 +322,18 @@ pub trait CloudProvider: Send + Sync + std::fmt::Debug {
     ///
     /// # Example
     ///
-    /// ```rust
-    /// use wami_provider::{AwsProvider, CloudProvider, ResourceType};
+    /// ```rust,no_run
+    /// use wami_provider::{CloudProvider, ResourceType};
+    /// // use wami_provider_aws::AwsProvider;
     ///
-    /// let provider = AwsProvider::default();
-    /// let wami_arn = provider.generate_wami_arn(
-    ///     ResourceType::User,
-    ///     "123456789012",
-    ///     "/engineering/",
-    ///     "alice"
-    /// );
-    /// assert_eq!(wami_arn, "arn:wami:iam::123456789012:user/engineering/alice");
+    /// // let provider = AwsProvider::default();
+    /// // let wami_arn = provider.generate_wami_arn(
+    /// //     ResourceType::User,
+    /// //     "123456789012",
+    /// //     "/engineering/",
+    /// //     "alice"
+    /// // );
+    /// // assert_eq!(wami_arn, "arn:wami:iam::123456789012:user/engineering/alice");
     /// ```
     fn generate_wami_arn(
         &self,
@@ -391,15 +385,23 @@ pub trait CloudProvider: Send + Sync + std::fmt::Debug {
         let normalized_path = if path.is_empty() || path == "/" {
             String::new()
         } else {
-            let mut p = path.to_string();
-            if !p.starts_with('/') {
-                p.insert(0, '/');
+            // Normalize path format: /path/name/ -> path/name/
+            let trimmed = path.trim();
+            if trimmed.is_empty() || trimmed == "/" {
+                String::new()
+            } else {
+                let mut p = trimmed.to_string();
+                // Ensure starts with / (unless already normalized)
+                if !p.starts_with('/') {
+                    p.insert(0, '/');
+                }
+                // Ensure ends with /
+                if !p.ends_with('/') {
+                    p.push('/');
+                }
+                // Remove leading / for the final format since we add it in the format string
+                p[1..].to_string()
             }
-            if !p.ends_with('/') {
-                p.push('/');
-            }
-            // Remove leading / for the final format since we add it in the format string
-            p[1..].to_string()
         };
 
         if normalized_path.is_empty() {
@@ -470,13 +472,16 @@ impl dyn CloudProvider {
     /// assert_eq!(tenant, None);
     /// ```
     pub fn extract_tenant_from_path(path: &str) -> Option<String> {
-        if path.contains("/tenants/") {
-            let parts: Vec<&str> = path.split("/tenants/").collect();
-            if parts.len() > 1 {
-                let tenant_part = parts[1].trim_end_matches('/');
-                if !tenant_part.is_empty() {
-                    return Some(tenant_part.to_string());
-                }
+        // Look for /tenants/ pattern in the path
+        if let Some(tenant_start) = path.find("/tenants/") {
+            // Extract everything after "/tenants/"
+            let tenant_part = &path[tenant_start + "/tenants/".len()..];
+            // Get all non-empty segments after /tenants/ (stop at empty segment or end)
+            let segments: Vec<&str> = tenant_part.split('/').filter(|s| !s.is_empty()).collect();
+
+            if !segments.is_empty() {
+                // Join segments to support multi-level tenants (e.g., "acme/engineering")
+                return Some(segments.join("/"));
             }
         }
         None
@@ -484,7 +489,3 @@ impl dyn CloudProvider {
 }
 
 // Re-export provider implementations
-pub use aws::AwsProvider;
-pub use azure::AzureProvider;
-pub use custom::CustomProvider;
-pub use gcp::GcpProvider;

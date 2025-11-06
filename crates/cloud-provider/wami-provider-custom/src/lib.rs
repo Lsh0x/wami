@@ -1,29 +1,38 @@
 //! Custom Provider Implementation
 //!
-//! This module allows users to create their own custom provider implementations
+//! This crate allows users to create their own custom provider implementations
 //! with configurable ARN formats, ID prefixes, and resource limits.
+//!
+//! # Example
+//!
+//! ```rust
+//! use wami_provider::{CloudProvider, ResourceLimits, ResourceType};
+//! use wami_provider_custom::CustomProvider;
+//!
+//! let provider = CustomProvider::builder()
+//!     .name("mycloud")
+//!     .arn_template("urn:{service}:{account}:{type}:{name}")
+//!     .id_prefix("MC")
+//!     .limits(ResourceLimits {
+//!         max_access_keys_per_user: 5,
+//!         max_tags_per_resource: 100,
+//!         ..Default::default()
+//!     })
+//!     .build();
+//!
+//! let arn = provider.generate_resource_identifier(
+//!     ResourceType::User,
+//!     "tenant-123",
+//!     "/",
+//!     "alice",
+//! );
+//! assert!(arn.contains("tenant-123"));
+//! ```
 
-use super::{CloudProvider, ResourceLimits, ResourceType};
 use wami_core::error::Result;
+use wami_provider::{CloudProvider, ResourceLimits, ResourceType};
 
 /// Custom provider implementation for user-defined cloud platforms
-///
-/// # Example
-///
-/// ```rust
-/// use wami_provider::{CustomProvider, ResourceLimits};
-///
-/// let provider = CustomProvider::builder()
-///     .name("mycloud")
-///     .arn_template("urn:{service}:{account}:{type}:{name}")
-///     .id_prefix("MC")
-///     .limits(ResourceLimits {
-///         max_access_keys_per_user: 5,
-///         max_tags_per_resource: 100,
-///         ..Default::default()
-///     })
-///     .build();
-/// ```
 #[derive(Debug, Clone)]
 pub struct CustomProvider {
     name: String,
@@ -53,7 +62,6 @@ impl CloudProvider for CustomProvider {
     ) -> String {
         let resource_type_str = format!("{:?}", resource_type).to_lowercase();
 
-        // Simple template replacement
         self.arn_template
             .replace("{account}", account_id)
             .replace("{type}", &resource_type_str)
@@ -80,12 +88,10 @@ impl CloudProvider for CustomProvider {
     }
 
     fn validate_service_name(&self, _service: &str) -> Result<()> {
-        // Custom providers can define their own validation
         Ok(())
     }
 
     fn validate_path(&self, _path: &str) -> Result<()> {
-        // Custom providers can define their own validation
         Ok(())
     }
 
@@ -106,7 +112,7 @@ impl CloudProvider for CustomProvider {
     }
 }
 
-/// Builder for CustomProvider
+/// Builder for `CustomProvider`
 #[derive(Debug, Clone, Default)]
 pub struct CustomProviderBuilder {
     name: Option<String>,
@@ -122,14 +128,7 @@ impl CustomProviderBuilder {
         self
     }
 
-    /// Sets the ARN template
-    ///
-    /// Supported placeholders:
-    /// - `{service}` - Service name (e.g., "identity")
-    /// - `{account}` - Account ID
-    /// - `{type}` - Resource type
-    /// - `{path}` - Resource path
-    /// - `{name}` - Resource name
+    /// Sets the ARN template. Supported placeholders: `{service}`, `{account}`, `{type}`, `{path}`, `{name}`
     pub fn arn_template(mut self, template: impl Into<String>) -> Self {
         self.arn_template = Some(template.into());
         self
@@ -147,7 +146,7 @@ impl CustomProviderBuilder {
         self
     }
 
-    /// Builds the CustomProvider
+    /// Builds the `CustomProvider`
     pub fn build(self) -> CustomProvider {
         CustomProvider {
             name: self.name.unwrap_or_else(|| "custom".to_string()),
@@ -192,7 +191,7 @@ mod tests {
 
         let id = provider.generate_resource_id(ResourceType::User);
         assert!(id.starts_with("TEST"));
-        assert_eq!(id.len(), 21); // TEST (4) + 17 random chars
+        assert_eq!(id.len(), 21);
     }
 
     #[test]

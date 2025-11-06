@@ -1,23 +1,24 @@
 //! Microsoft Azure Provider Implementation
 //!
-//! This module contains the Azure-specific implementation of the CloudProvider trait.
+//! This crate contains the Azure-specific implementation of the `CloudProvider` trait.
 //! Currently a stub implementation - full Azure support to be added in future versions.
+//!
+//! # Example
+//!
+//! ```rust
+//! use wami_provider::{CloudProvider, ResourceLimits, ResourceType};
+//! use wami_provider_azure::AzureProvider;
+//!
+//! let provider = AzureProvider::new("sub-123", "rg-example");
+//! assert_eq!(provider.name(), "azure");
+//! let id = provider.generate_resource_identifier(ResourceType::User, "", "", "alice");
+//! assert!(id.contains("/subscriptions/sub-123/"));
+//! ```
 
-use super::{CloudProvider, ResourceLimits, ResourceType};
 use wami_core::error::Result;
+use wami_provider::{CloudProvider, ResourceLimits, ResourceType};
 
 /// Microsoft Azure provider implementation
-///
-/// # Status
-///
-/// ⚠️ **Stub Implementation** - This is a placeholder for future Azure support.
-///
-/// # Azure Differences from AWS
-///
-/// - Uses GUIDs for resource IDs
-/// - Resource ID format: `/subscriptions/{sub}/resourceGroups/{rg}/providers/{ns}/{type}/{name}`
-/// - Different resource limits
-/// - Role-based access control (RBAC) model
 #[derive(Debug, Clone)]
 pub struct AzureProvider {
     subscription_id: String,
@@ -27,20 +28,12 @@ pub struct AzureProvider {
 
 impl AzureProvider {
     /// Creates a new Azure provider
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use wami_provider::AzureProvider;
-    ///
-    /// let provider = AzureProvider::new("sub-123", "my-rg");
-    /// ```
     pub fn new(subscription_id: impl Into<String>, resource_group: impl Into<String>) -> Self {
         Self {
             subscription_id: subscription_id.into(),
             resource_group: resource_group.into(),
             limits: ResourceLimits {
-                max_tags_per_resource: 50, // Azure tag limit
+                max_tags_per_resource: 50,
                 ..Default::default()
             },
         }
@@ -68,7 +61,6 @@ impl CloudProvider for AzureProvider {
             _ => "resources",
         };
 
-        // Identity providers use Azure AD endpoint, not resource manager
         if matches!(
             resource_type,
             ResourceType::SamlProvider | ResourceType::OidcProvider
@@ -86,7 +78,6 @@ impl CloudProvider for AzureProvider {
     }
 
     fn generate_resource_id(&self, _resource_type: ResourceType) -> String {
-        // Azure uses GUIDs
         uuid::Uuid::new_v4().to_string()
     }
 
@@ -143,7 +134,6 @@ mod tests {
     fn test_generate_guid() {
         let provider = AzureProvider::new("sub-123", "my-rg");
         let id = provider.generate_resource_id(ResourceType::User);
-        // Should be a valid GUID
         assert!(uuid::Uuid::parse_str(&id).is_ok());
     }
 }

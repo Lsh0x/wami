@@ -1,10 +1,32 @@
 //! AWS Cloud Provider Implementation
 //!
-//! This module contains the AWS-specific implementation of the CloudProvider trait,
+//! This crate contains the AWS-specific implementation of the `CloudProvider` trait,
 //! including AWS ARN formats, ID generation patterns, and resource limits.
+//!
+//! # Example
+//!
+//! ```rust
+//! use wami_provider::{CloudProvider, ResourceLimits, ResourceType};
+//! use wami_provider_aws::AwsProvider;
+//!
+//! let provider = AwsProvider::with_limits(ResourceLimits {
+//!     max_access_keys_per_user: 5,
+//!     ..Default::default()
+//! });
+//! let user_arn = provider.generate_resource_identifier(
+//!     ResourceType::User,
+//!     "123456789012",
+//!     "/",
+//!     "alice",
+//! );
+//! assert_eq!(
+//!     user_arn,
+//!     "arn:aws:iam::123456789012:user/alice"
+//! );
+//! ```
 
-use super::{CloudProvider, ResourceLimits, ResourceType};
 use wami_core::error::{AmiError, Result};
+use wami_provider::{CloudProvider, ResourceLimits, ResourceType};
 
 /// AWS cloud provider implementation
 ///
@@ -34,10 +56,9 @@ impl AwsProvider {
 
     /// Creates an AWS provider with custom resource limits
     ///
-    /// # Example
-    ///
     /// ```rust
-    /// use wami_provider::{AwsProvider, ResourceLimits};
+    /// use wami_provider::{ResourceLimits};
+    /// use wami_provider_aws::AwsProvider;
     ///
     /// let limits = ResourceLimits {
     ///     max_access_keys_per_user: 5, // Custom limit
@@ -51,10 +72,9 @@ impl AwsProvider {
 
     /// Extracts service name from AWS service principal
     ///
-    /// # Example
+    /// ```rust
+    /// use wami_provider_aws::AwsProvider;
     ///
-    /// ```
-    /// # use wami_provider::aws::AwsProvider;
     /// let service = AwsProvider::extract_service_name("elasticbeanstalk.amazonaws.com");
     /// assert_eq!(service, Some("elasticbeanstalk"));
     /// ```
@@ -64,10 +84,9 @@ impl AwsProvider {
 
     /// Converts service name to PascalCase
     ///
-    /// # Example
+    /// ```rust
+    /// use wami_provider_aws::AwsProvider;
     ///
-    /// ```
-    /// # use wami_provider::aws::AwsProvider;
     /// let pascal = AwsProvider::to_pascal_case("elastic-beanstalk");
     /// assert_eq!(pascal, "ElasticBeanstalk");
     /// ```
@@ -83,14 +102,26 @@ impl AwsProvider {
             .collect()
     }
 
-    /// Generates a random alphanumeric string of specified length
+    /// Generates a random alphanumeric string of specified length using UUID entropy.
     fn random_alphanumeric(length: usize) -> String {
-        uuid::Uuid::new_v4()
-            .to_string()
-            .replace('-', "")
-            .chars()
-            .take(length)
-            .collect()
+        const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+        let mut result = String::with_capacity(length);
+        let mut chars_generated = 0;
+
+        while chars_generated < length {
+            let uuid = uuid::Uuid::new_v4();
+            for &byte in uuid.as_bytes().iter() {
+                if chars_generated >= length {
+                    break;
+                }
+                let char_index = (byte as usize) % CHARS.len();
+                result.push(CHARS[char_index] as char);
+                chars_generated += 1;
+            }
+        }
+
+        result
     }
 }
 
@@ -125,7 +156,6 @@ impl CloudProvider for AwsProvider {
             ResourceType::Tenant => ("organizations", "ou"),
         };
 
-        // AWS ARN format: arn:aws:<service>::account_id:resource_type/path/name
         format!(
             "arn:aws:{}::{}:{}{}{}",
             service, account_id, resource_name, path, name
@@ -133,7 +163,6 @@ impl CloudProvider for AwsProvider {
     }
 
     fn generate_resource_id(&self, resource_type: ResourceType) -> String {
-        // AWS uses specific 4-letter prefixes for different resource types
         let prefix = match resource_type {
             ResourceType::User => "AIDA",
             ResourceType::Group => "AGPA",
@@ -145,17 +174,14 @@ impl CloudProvider for AwsProvider {
             ResourceType::ServiceLinkedRole => "AROA",
             ResourceType::MfaDevice => "AMFA",
             ResourceType::SigningCertificate => "ASCA",
-            // Identity providers use their name/URL as identifier, not generated IDs
             ResourceType::SamlProvider => "SAML",
             ResourceType::OidcProvider => "OIDC",
-            // STS resources don't have AWS-issued IDs; use generic prefix
             ResourceType::StsAssumedRole
             | ResourceType::StsFederatedUser
             | ResourceType::StsSession => "ASTS",
             ResourceType::Tenant => "AORG",
         };
 
-        // AWS IDs are: 4-letter prefix + 17 random alphanumeric characters
         format!("{}{}", prefix, Self::random_alphanumeric(17))
     }
 
@@ -164,8 +190,6 @@ impl CloudProvider for AwsProvider {
     }
 
     fn validate_service_name(&self, service: &str) -> Result<()> {
-        // AWS service names must end with .amazonaws.com
-        // Common services: codecommit.amazonaws.com, cassandra.amazonaws.com
         if !service.ends_with(".amazonaws.com") {
             return Err(AmiError::InvalidParameter {
                 message: format!(
@@ -178,7 +202,6 @@ impl CloudProvider for AwsProvider {
     }
 
     fn validate_path(&self, path: &str) -> Result<()> {
-        // AWS paths must start and end with '/'
         if !path.starts_with('/') || !path.ends_with('/') {
             return Err(AmiError::InvalidParameter {
                 message: format!(
@@ -195,13 +218,9 @@ impl CloudProvider for AwsProvider {
         service_name: &str,
         custom_suffix: Option<&str>,
     ) -> String {
-        // Extract service name from full principal (e.g., "elasticbeanstalk.amazonaws.com" -> "elasticbeanstalk")
         let service = Self::extract_service_name(service_name).unwrap_or(service_name);
-
-        // Convert to PascalCase (e.g., "elastic-beanstalk" -> "ElasticBeanstalk")
         let pascal_name = Self::to_pascal_case(service);
 
-        // AWS service-linked role naming: AWSServiceRoleFor<ServiceName>[_<Suffix>]
         if let Some(suffix) = custom_suffix {
             format!("AWSServiceRoleFor{}_{}", pascal_name, suffix)
         } else {
@@ -210,7 +229,6 @@ impl CloudProvider for AwsProvider {
     }
 
     fn generate_service_linked_role_path(&self, service_name: &str) -> String {
-        // AWS service-linked role path format: /aws-service-role/<service-name>/
         format!("/aws-service-role/{}/", service_name)
     }
 }
@@ -262,7 +280,7 @@ mod tests {
         let provider = AwsProvider::new();
         let id = provider.generate_resource_id(ResourceType::User);
         assert!(id.starts_with("AIDA"));
-        assert_eq!(id.len(), 21); // AIDA + 17 chars
+        assert_eq!(id.len(), 21);
     }
 
     #[test]
@@ -332,11 +350,11 @@ mod tests {
     #[test]
     fn test_validate_session_duration() {
         let provider = AwsProvider::new();
-        assert!(provider.validate_session_duration(3600).is_ok()); // 1 hour (min)
-        assert!(provider.validate_session_duration(7200).is_ok()); // 2 hours
-        assert!(provider.validate_session_duration(43200).is_ok()); // 12 hours (max)
-        assert!(provider.validate_session_duration(3599).is_err()); // Too short
-        assert!(provider.validate_session_duration(43201).is_err()); // Too long
+        assert!(provider.validate_session_duration(3600).is_ok());
+        assert!(provider.validate_session_duration(7200).is_ok());
+        assert!(provider.validate_session_duration(43200).is_ok());
+        assert!(provider.validate_session_duration(3599).is_err());
+        assert!(provider.validate_session_duration(43201).is_err());
     }
 
     #[test]
