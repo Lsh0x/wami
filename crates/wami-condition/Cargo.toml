@@ -1,0 +1,16 @@
+[package]
+name = "wami-condition"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Policy condition key evaluation for WAMI"
+authors = ["LSH <github@lsh.tech>"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+wami-core = { path = "../wami-core" }
+
+[dev-dependencies]
+

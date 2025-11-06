@@ -8,6 +8,7 @@ members = [
     "crates/cloud-provider/wami-provider-azure",
     "crates/cloud-provider/wami-provider-custom",
     "crates/wami-credentials",
+    "crates/wami-condition",
     "crates/wami-service",
     "crates/wami",
     "crates/wami-macros",

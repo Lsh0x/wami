@@ -2283,6 +2283,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "uuid",
+ "wami-condition",
  "wami-core",
  "wami-credentials",
  "wami-macros",
@@ -2292,6 +2293,16 @@ dependencies = [
  "wami-provider-custom",
  "wami-provider-gcp",
  "wami-traits",
+]
+
+[[package]]
+name = "wami-condition"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "wami-core",
 ]
 
 [[package]]
