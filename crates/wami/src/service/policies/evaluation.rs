@@ -5,10 +5,13 @@
 use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::{PolicyStore, RoleStore, UserStore};
 use crate::wami::policies::evaluation::{
-    EvaluationResult, SimulateCustomPolicyRequest, SimulatePolicyResponse,
+    ContextEntry, EvaluationResult, SimulateCustomPolicyRequest, SimulatePolicyResponse,
     SimulatePrincipalPolicyRequest, StatementMatch,
 };
+use serde_json::Value;
 use std::sync::{Arc, RwLock};
+use wami_condition::evaluator::parse_condition_block;
+use wami_condition::{evaluate_condition_block, ConditionContext, ConditionValue};
 use wami_core::error::{AmiError, Result};
 use wami_core::types::PolicyDocument;
 
@@ -73,12 +76,23 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
             .resource_arns
             .unwrap_or_else(|| vec!["*".to_string()]);
 
+        // Build condition context from request context entries
+        let condition_context = self.build_condition_context(
+            request.context_entries.as_deref(),
+            None, // principal_arn not available in custom policy simulation
+            None, // resource_arn will be set per evaluation
+        );
+
         // Evaluate each action against each resource
         let mut results = Vec::new();
 
         for action in &request.action_names {
             for resource in &resources {
-                let decision = self.evaluate_action(&policies, action, resource);
+                // Update context with current resource
+                let mut context = condition_context.clone();
+                context.resource_arn = Some(resource.clone());
+
+                let decision = self.evaluate_action(&policies, action, resource, &context);
                 let matched_statements = self.find_matching_statements(&policies, action, resource);
 
                 results.push(EvaluationResult {
@@ -86,7 +100,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
                     eval_resource_name: resource.clone(),
                     eval_decision: decision,
                     matched_statements,
-                    missing_context_values: vec![], // TODO: Context evaluation
+                    missing_context_values: vec![], // TODO: Track missing context keys
                 });
             }
         }
@@ -134,17 +148,29 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
             .resource_arns
             .unwrap_or_else(|| vec!["*".to_string()]);
 
+        // Build condition context from request context entries and principal ARN
+        let condition_context = self.build_condition_context(
+            request.context_entries.as_deref(),
+            Some(&request.policy_source_arn),
+            None, // resource_arn will be set per evaluation
+        );
+
         // Evaluate each action against each resource
         let mut results = Vec::new();
 
         for action in &request.action_names {
             for resource in &resources {
+                // Update context with current resource
+                let mut context = condition_context.clone();
+                context.resource_arn = Some(resource.clone());
+
                 // Use boundary-aware evaluation if boundary exists
                 let decision = self.evaluate_action_with_boundary(
                     &policies,
                     action,
                     resource,
                     boundary.as_ref(),
+                    &context,
                 );
                 let matched_statements = self.find_matching_statements(&policies, action, resource);
 
@@ -153,7 +179,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
                     eval_resource_name: resource.clone(),
                     eval_decision: decision,
                     matched_statements,
-                    missing_context_values: vec![], // TODO: Context evaluation
+                    missing_context_values: vec![], // TODO: Track missing context keys
                 });
             }
         }
@@ -297,7 +323,13 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
     }
 
     /// Evaluate a single action/resource combination against policies
-    fn evaluate_action(&self, policies: &[PolicyDocument], action: &str, resource: &str) -> String {
+    fn evaluate_action(
+        &self,
+        policies: &[PolicyDocument],
+        action: &str,
+        resource: &str,
+        context: &ConditionContext,
+    ) -> String {
         let mut has_allow = false;
         let mut has_deny = false;
 
@@ -313,7 +345,18 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
                     .iter()
                     .any(|r| Self::matches_pattern(resource, r));
 
-                if action_matches && resource_matches {
+                // Check if conditions pass (if present)
+                let conditions_pass = if let Some(condition_value) = &statement.condition {
+                    match self.evaluate_statement_condition(condition_value, context) {
+                        Ok(true) => true,
+                        Ok(false) => false,
+                        Err(_) => false, // If condition evaluation fails, treat as non-match
+                    }
+                } else {
+                    true // No conditions = always pass
+                };
+
+                if action_matches && resource_matches && conditions_pass {
                     if statement.effect == "Deny" {
                         has_deny = true;
                     } else if statement.effect == "Allow" {
@@ -346,6 +389,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
         action: &str,
         resource: &str,
         boundary: Option<&crate::wami::policies::Policy>,
+        context: &ConditionContext,
     ) -> String {
         // Step 1: Check explicit deny in identity policies
         for policy in policies {
@@ -360,7 +404,22 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
                     .iter()
                     .any(|r| Self::matches_pattern(resource, r));
 
-                if action_matches && resource_matches && statement.effect == "Deny" {
+                // Check conditions
+                let conditions_pass = if let Some(condition_value) = &statement.condition {
+                    match self.evaluate_statement_condition(condition_value, context) {
+                        Ok(true) => true,
+                        Ok(false) => false,
+                        Err(_) => false,
+                    }
+                } else {
+                    true
+                };
+
+                if action_matches
+                    && resource_matches
+                    && conditions_pass
+                    && statement.effect == "Deny"
+                {
                     return "denied".to_string();
                 }
             }
@@ -378,7 +437,18 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
                     .iter()
                     .any(|r| Self::matches_pattern(resource, r));
 
-                action_matches && resource_matches && statement.effect == "Allow"
+                // Check conditions
+                let conditions_pass = if let Some(condition_value) = &statement.condition {
+                    match self.evaluate_statement_condition(condition_value, context) {
+                        Ok(true) => true,
+                        Ok(false) => false,
+                        Err(_) => false,
+                    }
+                } else {
+                    true
+                };
+
+                action_matches && resource_matches && conditions_pass && statement.effect == "Allow"
             })
         });
 
@@ -387,6 +457,8 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
         }
 
         // Step 3: Check permissions boundary (if present)
+        // Note: Boundary evaluation doesn't currently support conditions, but we should
+        // check if the boundary policy document has conditions and evaluate them
         if let Some(boundary_policy) = boundary {
             match crate::wami::policies::permissions_boundary::operations::is_allowed_by_boundary(
                 action,
@@ -455,6 +527,132 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
         }
 
         value == pattern
+    }
+
+    /// Build a ConditionContext from request context entries
+    fn build_condition_context(
+        &self,
+        context_entries: Option<&[ContextEntry]>,
+        principal_arn: Option<&str>,
+        resource_arn: Option<&str>,
+    ) -> ConditionContext {
+        let mut builder = ConditionContext::builder().current_time(chrono::Utc::now());
+
+        if let Some(arn) = resource_arn {
+            builder = builder.resource_arn(arn);
+        }
+
+        // Set principal ARN if provided
+        if let Some(arn) = principal_arn {
+            builder = builder.principal_arn(arn);
+            // Extract account ID from ARN if possible
+            if let Some(account_id) = self.extract_account_id_from_arn(arn) {
+                builder = builder.principal_account(account_id);
+            }
+        }
+
+        // Process context entries from request
+        if let Some(entries) = context_entries {
+            for entry in entries {
+                let key = &entry.context_key_name;
+                let values = &entry.context_key_values;
+
+                // Convert context entry to condition context based on key type
+                match entry.context_key_type.as_str() {
+                    "String" | "StringList" => {
+                        if let Some(first_value) = values.first() {
+                            let condition_value = if values.len() == 1 {
+                                ConditionValue::String(first_value.clone())
+                            } else {
+                                ConditionValue::Array(values.clone())
+                            };
+                            builder = builder.custom_value(key.clone(), condition_value);
+                        }
+                    }
+                    "Numeric" => {
+                        if let Some(first_value) = values.first() {
+                            if let Ok(num) = first_value.parse::<f64>() {
+                                builder =
+                                    builder.custom_value(key.clone(), ConditionValue::Number(num));
+                            }
+                        }
+                    }
+                    "Boolean" => {
+                        if let Some(first_value) = values.first() {
+                            if let Ok(b) = first_value.parse::<bool>() {
+                                builder =
+                                    builder.custom_value(key.clone(), ConditionValue::Boolean(b));
+                            }
+                        }
+                    }
+                    _ => {
+                        // Default to string
+                        if let Some(first_value) = values.first() {
+                            builder = builder.custom_value(
+                                key.clone(),
+                                ConditionValue::String(first_value.clone()),
+                            );
+                        }
+                    }
+                }
+
+                // Map common AWS context keys to ConditionContext fields
+                match key.as_str() {
+                    "aws:SourceIp" => {
+                        if let Some(ip) = values.first() {
+                            builder = builder.source_ip(ip.clone());
+                        }
+                    }
+                    "aws:CurrentTime" => {
+                        if let Some(time_str) = values.first() {
+                            if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(time_str) {
+                                builder = builder.current_time(dt.with_timezone(&chrono::Utc));
+                            }
+                        }
+                    }
+                    "aws:RequestedRegion" => {
+                        if let Some(region) = values.first() {
+                            builder = builder.requested_region(region.clone());
+                        }
+                    }
+                    "aws:MultiFactorAuthPresent" => {
+                        if let Some(val) = values.first() {
+                            if let Ok(b) = val.parse::<bool>() {
+                                builder = builder.mfa_present(b);
+                            }
+                        }
+                    }
+                    _ => {
+                        // Already handled in custom_values above
+                    }
+                }
+            }
+        }
+
+        builder.build()
+    }
+
+    /// Extract account ID from ARN (e.g., "arn:aws:iam::123456789012:user/alice" -> "123456789012")
+    fn extract_account_id_from_arn(&self, arn: &str) -> Option<String> {
+        let parts: Vec<&str> = arn.split(':').collect();
+        if parts.len() >= 5 {
+            Some(parts[4].to_string())
+        } else {
+            None
+        }
+    }
+
+    /// Evaluate a statement's condition block
+    fn evaluate_statement_condition(
+        &self,
+        condition_value: &Value,
+        context: &ConditionContext,
+    ) -> std::result::Result<bool, wami_condition::ConditionError> {
+        // Parse the condition block from JSON
+        let condition_block = parse_condition_block(condition_value)?;
+
+        // Evaluate the condition block
+        evaluate_condition_block(&condition_block, context)
     }
 }
 
@@ -1243,5 +1441,165 @@ mod tests {
         assert_eq!(response.evaluation_results[4].eval_decision, "allowed"); // PutObject, bucket2
         assert_eq!(response.evaluation_results[5].eval_decision, "implicitDeny");
         // PutObject, bucket3
+    }
+
+    #[tokio::test]
+    async fn test_policy_with_condition_source_ip() {
+        let service = setup_service();
+
+        // Policy that allows S3 access only from specific IP
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": "s3:GetObject",
+                "Resource": "*",
+                "Condition": {
+                    "IpAddress": {
+                        "aws:SourceIp": "203.0.113.0/24"
+                    }
+                }
+            }]
+        }"#;
+
+        // Test with matching IP
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: Some(vec![ContextEntry {
+                context_key_name: "aws:SourceIp".to_string(),
+                context_key_values: vec!["203.0.113.42".to_string()],
+                context_key_type: "String".to_string(),
+            }]),
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+
+        // Test with non-matching IP
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: Some(vec![ContextEntry {
+                context_key_name: "aws:SourceIp".to_string(),
+                context_key_values: vec!["198.51.100.42".to_string()],
+                context_key_type: "String".to_string(),
+            }]),
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "implicitDeny");
+    }
+
+    #[tokio::test]
+    async fn test_policy_with_condition_date() {
+        let service = setup_service();
+
+        // Policy that allows access only during business hours (9 AM - 5 PM UTC)
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": "s3:GetObject",
+                "Resource": "*",
+                "Condition": {
+                    "DateGreaterThan": {
+                        "aws:CurrentTime": "2024-01-01T09:00:00Z"
+                    },
+                    "DateLessThan": {
+                        "aws:CurrentTime": "2024-01-01T17:00:00Z"
+                    }
+                }
+            }]
+        }"#;
+
+        // Test with time during business hours
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: Some(vec![ContextEntry {
+                context_key_name: "aws:CurrentTime".to_string(),
+                context_key_values: vec!["2024-01-01T12:00:00Z".to_string()],
+                context_key_type: "String".to_string(),
+            }]),
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+
+        // Test with time outside business hours
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: Some(vec![ContextEntry {
+                context_key_name: "aws:CurrentTime".to_string(),
+                context_key_values: vec!["2024-01-01T20:00:00Z".to_string()],
+                context_key_type: "String".to_string(),
+            }]),
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "implicitDeny");
+    }
+
+    #[tokio::test]
+    async fn test_policy_with_condition_deny() {
+        let service = setup_service();
+
+        // Policy that allows S3 access but denies from specific IP
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": "s3:*",
+                    "Resource": "*"
+                },
+                {
+                    "Effect": "Deny",
+                    "Action": "s3:*",
+                    "Resource": "*",
+                    "Condition": {
+                        "IpAddress": {
+                            "aws:SourceIp": "198.51.100.0/24"
+                        }
+                    }
+                }
+            ]
+        }"#;
+
+        // Test with blocked IP - deny should win
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: Some(vec![ContextEntry {
+                context_key_name: "aws:SourceIp".to_string(),
+                context_key_values: vec!["198.51.100.42".to_string()],
+                context_key_type: "String".to_string(),
+            }]),
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "denied");
+
+        // Test with allowed IP
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: Some(vec![ContextEntry {
+                context_key_name: "aws:SourceIp".to_string(),
+                context_key_values: vec!["203.0.113.42".to_string()],
+                context_key_type: "String".to_string(),
+            }]),
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
     }
 }
