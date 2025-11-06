@@ -680,4 +680,568 @@ mod tests {
         // Path is /department/team/ and name is alice
         assert_eq!(principal_name, "alice");
     }
+
+    // ========== Complex Policy Evaluation Tests ==========
+
+    #[tokio::test]
+    async fn test_multiple_policies_deny_wins() {
+        let service = setup_service();
+
+        // Policy 1: Allows all S3 actions
+        let policy1 = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": "s3:*",
+                "Resource": "*"
+            }]
+        }"#;
+
+        // Policy 2: Denies DeleteObject
+        let policy2 = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Deny",
+                "Action": "s3:DeleteObject",
+                "Resource": "*"
+            }]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy1.to_string(), policy2.to_string()],
+            action_names: vec!["s3:DeleteObject".to_string()],
+            resource_arns: Some(vec!["arn:aws:s3:::bucket/key".to_string()]),
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "denied");
+    }
+
+    #[tokio::test]
+    async fn test_multiple_statements_in_single_policy() {
+        let service = setup_service();
+
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": "s3:GetObject",
+                    "Resource": "arn:aws:s3:::bucket1/*"
+                },
+                {
+                    "Effect": "Allow",
+                    "Action": "s3:PutObject",
+                    "Resource": "arn:aws:s3:::bucket2/*"
+                },
+                {
+                    "Effect": "Deny",
+                    "Action": "s3:DeleteObject",
+                    "Resource": "*"
+                }
+            ]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec![
+                "s3:GetObject".to_string(),
+                "s3:PutObject".to_string(),
+                "s3:DeleteObject".to_string(),
+            ],
+            resource_arns: Some(vec![
+                "arn:aws:s3:::bucket1/file".to_string(),
+                "arn:aws:s3:::bucket2/file".to_string(),
+                "arn:aws:s3:::bucket1/file".to_string(),
+            ]),
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        // 3 actions × 3 resources = 9 results
+        assert_eq!(response.evaluation_results.len(), 9);
+        // GetObject on bucket1/file - allowed
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+        // GetObject on bucket2/file - implicitDeny (bucket2 doesn't match bucket1/*)
+        assert_eq!(response.evaluation_results[1].eval_decision, "implicitDeny");
+        // GetObject on bucket1/file (duplicate) - allowed
+        assert_eq!(response.evaluation_results[2].eval_decision, "allowed");
+        // PutObject on bucket1/file - implicitDeny (bucket1 doesn't match bucket2/*)
+        assert_eq!(response.evaluation_results[3].eval_decision, "implicitDeny");
+        // PutObject on bucket2/file - allowed
+        assert_eq!(response.evaluation_results[4].eval_decision, "allowed");
+        // PutObject on bucket1/file - implicitDeny
+        assert_eq!(response.evaluation_results[5].eval_decision, "implicitDeny");
+        // DeleteObject on bucket1/file - denied
+        assert_eq!(response.evaluation_results[6].eval_decision, "denied");
+        // DeleteObject on bucket2/file - denied
+        assert_eq!(response.evaluation_results[7].eval_decision, "denied");
+        // DeleteObject on bucket1/file (duplicate) - denied
+        assert_eq!(response.evaluation_results[8].eval_decision, "denied");
+    }
+
+    #[tokio::test]
+    async fn test_wildcard_prefix_matching() {
+        let service = setup_service();
+
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": "s3:Get*",
+                "Resource": "arn:aws:s3:::bucket/*"
+            }]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec![
+                "s3:GetObject".to_string(),
+                "s3:GetObjectVersion".to_string(),
+                "s3:PutObject".to_string(),
+            ],
+            resource_arns: Some(vec!["arn:aws:s3:::bucket/file".to_string()]),
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results.len(), 3);
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+        assert_eq!(response.evaluation_results[1].eval_decision, "allowed");
+        assert_eq!(response.evaluation_results[2].eval_decision, "implicitDeny");
+    }
+
+    #[tokio::test]
+    async fn test_multiple_actions_in_statement() {
+        let service = setup_service();
+
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+                "Resource": "*"
+            }]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec![
+                "s3:GetObject".to_string(),
+                "s3:PutObject".to_string(),
+                "s3:ListBucket".to_string(),
+                "s3:DeleteObject".to_string(),
+            ],
+            resource_arns: None,
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results.len(), 4);
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+        assert_eq!(response.evaluation_results[1].eval_decision, "allowed");
+        assert_eq!(response.evaluation_results[2].eval_decision, "allowed");
+        assert_eq!(response.evaluation_results[3].eval_decision, "implicitDeny");
+    }
+
+    #[tokio::test]
+    async fn test_multiple_resources_in_statement() {
+        let service = setup_service();
+
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": "s3:GetObject",
+                "Resource": [
+                    "arn:aws:s3:::bucket1/*",
+                    "arn:aws:s3:::bucket2/*"
+                ]
+            }]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: Some(vec![
+                "arn:aws:s3:::bucket1/file".to_string(),
+                "arn:aws:s3:::bucket2/file".to_string(),
+                "arn:aws:s3:::bucket3/file".to_string(),
+            ]),
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results.len(), 3);
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+        assert_eq!(response.evaluation_results[1].eval_decision, "allowed");
+        assert_eq!(response.evaluation_results[2].eval_decision, "implicitDeny");
+    }
+
+    #[tokio::test]
+    async fn test_empty_policy_list() {
+        let service = setup_service();
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results.len(), 1);
+        assert_eq!(response.evaluation_results[0].eval_decision, "implicitDeny");
+    }
+
+    #[tokio::test]
+    async fn test_invalid_json_policy() {
+        let service = setup_service();
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec!["{ invalid json }".to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: None,
+        };
+
+        let result = service.simulate_custom_policy(request).await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Invalid policy document"));
+    }
+
+    #[tokio::test]
+    async fn test_wildcard_resource_matching() {
+        let service = setup_service();
+
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": "s3:*",
+                "Resource": "arn:aws:s3:::mybucket/*"
+            }]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: Some(vec![
+                "arn:aws:s3:::mybucket/file".to_string(),
+                "arn:aws:s3:::mybucket/subdir/file".to_string(),
+                "arn:aws:s3:::otherbucket/file".to_string(),
+            ]),
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results.len(), 3);
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+        assert_eq!(response.evaluation_results[1].eval_decision, "allowed");
+        assert_eq!(response.evaluation_results[2].eval_decision, "implicitDeny");
+    }
+
+    #[tokio::test]
+    async fn test_exact_vs_wildcard_precedence() {
+        let service = setup_service();
+
+        // Policy with both exact and wildcard actions
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": "s3:GetObject",
+                    "Resource": "*"
+                },
+                {
+                    "Effect": "Deny",
+                    "Action": "s3:*",
+                    "Resource": "arn:aws:s3:::restricted/*"
+                }
+            ]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: Some(vec![
+                "arn:aws:s3:::allowed/file".to_string(),
+                "arn:aws:s3:::restricted/file".to_string(),
+            ]),
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results.len(), 2);
+        // Deny should win for restricted bucket
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+        assert_eq!(response.evaluation_results[1].eval_decision, "denied");
+    }
+
+    #[tokio::test]
+    async fn test_action_wildcard_edge_cases() {
+        let service = setup_service();
+
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": "s3:List*",
+                "Resource": "*"
+            }]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec![
+                "s3:ListBucket".to_string(),
+                "s3:ListBucketVersions".to_string(),
+                "s3:ListMultipartUploads".to_string(),
+                "s3:GetObject".to_string(), // Should not match
+            ],
+            resource_arns: None,
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results.len(), 4);
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+        assert_eq!(response.evaluation_results[1].eval_decision, "allowed");
+        assert_eq!(response.evaluation_results[2].eval_decision, "allowed");
+        assert_eq!(response.evaluation_results[3].eval_decision, "implicitDeny");
+    }
+
+    #[tokio::test]
+    async fn test_resource_wildcard_edge_cases() {
+        let service = setup_service();
+
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": "s3:*",
+                "Resource": "arn:aws:s3:::bucket/prefix/*"
+            }]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: Some(vec![
+                "arn:aws:s3:::bucket/prefix/file".to_string(),
+                "arn:aws:s3:::bucket/prefix/subdir/file".to_string(),
+                "arn:aws:s3:::bucket/prefix".to_string(), // Should not match (no trailing slash)
+                "arn:aws:s3:::bucket/other/file".to_string(), // Should not match
+            ]),
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results.len(), 4);
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+        assert_eq!(response.evaluation_results[1].eval_decision, "allowed");
+        assert_eq!(response.evaluation_results[2].eval_decision, "implicitDeny");
+        assert_eq!(response.evaluation_results[3].eval_decision, "implicitDeny");
+    }
+
+    #[tokio::test]
+    async fn test_multiple_policies_allow_combination() {
+        let service = setup_service();
+
+        // Policy 1: Allows GetObject on bucket1
+        let policy1 = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::bucket1/*"
+            }]
+        }"#;
+
+        // Policy 2: Allows PutObject on bucket2
+        let policy2 = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": "s3:PutObject",
+                "Resource": "arn:aws:s3:::bucket2/*"
+            }]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy1.to_string(), policy2.to_string()],
+            action_names: vec!["s3:GetObject".to_string(), "s3:PutObject".to_string()],
+            resource_arns: Some(vec![
+                "arn:aws:s3:::bucket1/file".to_string(),
+                "arn:aws:s3:::bucket2/file".to_string(),
+            ]),
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        // 2 actions × 2 resources = 4 results
+        assert_eq!(response.evaluation_results.len(), 4);
+        // GetObject on bucket1/file - allowed
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+        // GetObject on bucket2/file - implicitDeny (bucket2 doesn't match bucket1/*)
+        assert_eq!(response.evaluation_results[1].eval_decision, "implicitDeny");
+        // PutObject on bucket1/file - implicitDeny (bucket1 doesn't match bucket2/*)
+        assert_eq!(response.evaluation_results[2].eval_decision, "implicitDeny");
+        // PutObject on bucket2/file - allowed
+        assert_eq!(response.evaluation_results[3].eval_decision, "allowed");
+    }
+
+    #[tokio::test]
+    async fn test_empty_action_list() {
+        let service = setup_service();
+
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": [],
+                "Resource": "*"
+            }]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "implicitDeny");
+    }
+
+    #[tokio::test]
+    async fn test_empty_resource_list() {
+        let service = setup_service();
+
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": "s3:GetObject",
+                "Resource": []
+            }]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string()],
+            resource_arns: None,
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "implicitDeny");
+    }
+
+    #[tokio::test]
+    async fn test_deny_before_allow_in_same_policy() {
+        let service = setup_service();
+
+        // Deny statement comes first, but should still win
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Deny",
+                    "Action": "s3:DeleteObject",
+                    "Resource": "*"
+                },
+                {
+                    "Effect": "Allow",
+                    "Action": "s3:*",
+                    "Resource": "*"
+                }
+            ]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:DeleteObject".to_string()],
+            resource_arns: None,
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "denied");
+    }
+
+    #[tokio::test]
+    async fn test_allow_before_deny_in_same_policy() {
+        let service = setup_service();
+
+        // Allow statement comes first, but Deny should still win
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": "s3:*",
+                    "Resource": "*"
+                },
+                {
+                    "Effect": "Deny",
+                    "Action": "s3:DeleteObject",
+                    "Resource": "*"
+                }
+            ]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:DeleteObject".to_string()],
+            resource_arns: None,
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "denied");
+    }
+
+    #[tokio::test]
+    async fn test_multiple_actions_and_resources_combination() {
+        let service = setup_service();
+
+        let policy = r#"{
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Action": ["s3:GetObject", "s3:PutObject"],
+                "Resource": ["arn:aws:s3:::bucket1/*", "arn:aws:s3:::bucket2/*"]
+            }]
+        }"#;
+
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![policy.to_string()],
+            action_names: vec!["s3:GetObject".to_string(), "s3:PutObject".to_string()],
+            resource_arns: Some(vec![
+                "arn:aws:s3:::bucket1/file".to_string(),
+                "arn:aws:s3:::bucket2/file".to_string(),
+                "arn:aws:s3:::bucket3/file".to_string(),
+            ]),
+            context_entries: None,
+        };
+
+        let response = service.simulate_custom_policy(request).await.unwrap();
+        assert_eq!(response.evaluation_results.len(), 6); // 2 actions × 3 resources
+                                                          // All combinations with bucket1 and bucket2 should be allowed
+                                                          // bucket3 should be denied
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed"); // GetObject, bucket1
+        assert_eq!(response.evaluation_results[1].eval_decision, "allowed"); // GetObject, bucket2
+        assert_eq!(response.evaluation_results[2].eval_decision, "implicitDeny"); // GetObject, bucket3
+        assert_eq!(response.evaluation_results[3].eval_decision, "allowed"); // PutObject, bucket1
+        assert_eq!(response.evaluation_results[4].eval_decision, "allowed"); // PutObject, bucket2
+        assert_eq!(response.evaluation_results[5].eval_decision, "implicitDeny");
+        // PutObject, bucket3
+    }
 }
