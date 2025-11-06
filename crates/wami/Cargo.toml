@@ -1,0 +1,47 @@
+[package]
+name = "wami"
+version = "0.11.0"
+authors = ["LSH <github@lsh.tech>"]
+edition = "2021"
+rust-version = "1.90.0"
+description = "Who Am I - Multicloud Identity, IAM, STS, and SSO operations library for Rust"
+license = "MIT"
+repository = "https://github.com/Lsh0x/wami"
+homepage = "https://github.com/Lsh0x/wami"
+documentation = "https://docs.rs/wami"
+readme = "../README.md"
+keywords = ["iam", "sso", "identity", "multicloud", "aws"]
+categories = ["api-bindings", "authentication", "development-tools"]
+
+[dependencies]
+aws-sdk-iam = "1.0"
+aws-sdk-sts = "1.0"
+aws-sdk-ssoadmin = "1.0"
+aws-config = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+thiserror = "2.0"
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+async-trait = "0.1"
+log = "0.4"
+env_logger = "0.11"
+base64 = "0.22"
+sha2 = "0.10"
+hex = "0.4"
+regex = "1.10"
+bcrypt = "0.15"
+rand = "0.8"
+getrandom = "0.2"
+roxmltree = "0.19"
+wami-traits = { path = "../wami-traits" }
+wami-provider = { path = "../wami-provider" }
+wami-provider-aws = { path = "../cloud-provider/wami-provider-aws" }
+wami-provider-gcp = { path = "../cloud-provider/wami-provider-gcp" }
+wami-provider-azure = { path = "../cloud-provider/wami-provider-azure" }
+wami-provider-custom = { path = "../cloud-provider/wami-provider-custom" }
+wami-credentials = { path = "../wami-credentials" }
+wami-core = { path = "../wami-core" }
+wami-macros = { path = "../wami-macros" }

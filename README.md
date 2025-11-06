@@ -31,6 +31,7 @@
 
 ### Getting Started
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** - Step-by-step tutorial for your first WAMI app
+- **[Workspace Structure](docs/WORKSPACE_STRUCTURE.md)** - Understanding the modular crate architecture
 - **[Examples](examples/README.md)** - 24 working examples demonstrating all major features
 
 ### Core Concepts
@@ -69,19 +70,21 @@ wami = "0.11.0"
 tokio = { version = "1.0", features = ["full"] }
 ```
 
+**Note**: WAMI is organized as a **workspace of crates** for better modularity. The main `wami` crate re-exports everything, so you can use it exactly as before. For details, see [Workspace Structure](docs/WORKSPACE_STRUCTURE.md).
+
 ### Your First Example
 
 ```rust
 use wami::arn::{TenantPath, WamiArn};
 use wami::context::WamiContext;
-use wami::store::memory::InMemoryWamiStore;
+use wami::store::memory::InMemoryStore;
 use wami::store::traits::UserStore;
 use wami::wami::identity::user::builder::build_user;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize storage
-    let mut store = InMemoryWamiStore::default();
+    let mut store = InMemoryStore::default();
     
     // Create WAMI context with ARN (using numeric tenant IDs)
     let context = WamiContext::builder()

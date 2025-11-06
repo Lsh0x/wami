@@ -36,9 +36,8 @@ pub struct User {
 pub fn build_user(
     user_name: String,
     path: Option<String>,
-    provider: &dyn CloudProvider,
-    account_id: &str,
-) -> User
+    context: &WamiContext,
+) -> Result<User>
 ```
 
 #### Group (`wami::identity::group`)
@@ -60,9 +59,8 @@ pub struct Group {
 pub fn build_group(
     group_name: String,
     path: Option<String>,
-    provider: &dyn CloudProvider,
-    account_id: &str,
-) -> Group
+    context: &WamiContext,
+) -> Result<Group>
 ```
 
 #### Role (`wami::identity::role`)
@@ -88,9 +86,8 @@ pub fn build_role(
     path: Option<String>,
     description: Option<String>,
     tags: Option<Vec<Tag>>,
-    provider: &dyn CloudProvider,
-    account_id: &str,
-) -> Role
+    context: &WamiContext,
+) -> Result<Role>
 ```
 
 ### Credentials Module (`wami::credentials`)
