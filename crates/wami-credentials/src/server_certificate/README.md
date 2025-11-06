@@ -46,7 +46,7 @@ Creates a new `ServerCertificate` with context-based identifiers:
 
 ```rust
 use wami_core::context::WamiContext;
-use wami_credentials::build_server_certificate;
+use wami_credentials::server_certificate::builder::build_server_certificate;
 
 let context = WamiContext::builder()
     .instance_id("123456789012")
@@ -67,21 +67,19 @@ let certificate = build_server_certificate(
 
 ## Request Types
 
-The module provides request and response types for server certificate operations:
-- `UploadServerCertificateRequest` – Request to upload a server certificate
-- `UploadServerCertificateResponse` – Response containing the uploaded certificate metadata
+The module provides request types for server certificate operations:
+- `CreateServerCertificateRequest` – Request to upload a server certificate
 - `GetServerCertificateRequest` – Request to retrieve a server certificate
-- `GetServerCertificateResponse` – Response containing the server certificate
 - `ListServerCertificatesRequest` – Request to list server certificates
-- `ListServerCertificatesResponse` – Response containing a list of certificate metadata
 - `DeleteServerCertificateRequest` – Request to delete a server certificate
-- `UpdateServerCertificateRequest` – Request to update certificate metadata (name or path)
+- `UpdateServerCertificateRequest` – Request to update certificate metadata
 
 ## Usage Example
 
 ```rust
 use wami_core::context::WamiContext;
-use wami_credentials::{build_server_certificate, ServerCertificate};
+use wami_credentials::server_certificate::builder::build_server_certificate;
+use wami_credentials::server_certificate::ServerCertificate;
 
 let context = WamiContext::builder()
     .instance_id("123456789012")

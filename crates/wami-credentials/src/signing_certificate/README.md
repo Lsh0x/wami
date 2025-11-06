@@ -43,7 +43,7 @@ Creates a new `SigningCertificate` with context-based identifiers:
 
 ```rust
 use wami_core::context::WamiContext;
-use wami_credentials::build_signing_certificate;
+use wami_credentials::signing_certificate::builder::build_signing_certificate;
 
 let context = WamiContext::builder()
     .instance_id("123456789012")
@@ -61,11 +61,9 @@ let certificate = build_signing_certificate(
 
 ## Request Types
 
-The module provides request and response types for signing certificate operations:
+The module provides request types for signing certificate operations:
 - `UploadSigningCertificateRequest` – Request to upload a signing certificate
-- `UploadSigningCertificateResponse` – Response containing the uploaded certificate
 - `ListSigningCertificatesRequest` – Request to list signing certificates for a user
-- `ListSigningCertificatesResponse` – Response containing a list of signing certificates
 - `UpdateSigningCertificateRequest` – Request to update certificate status
 - `DeleteSigningCertificateRequest` – Request to delete a signing certificate
 
@@ -73,8 +71,8 @@ The module provides request and response types for signing certificate operation
 
 ```rust
 use wami_core::context::WamiContext;
-use wami_credentials::{build_signing_certificate, SigningCertificate};
-use wami_credentials::signing_certificate::CertificateStatus;
+use wami_credentials::signing_certificate::builder::build_signing_certificate;
+use wami_credentials::signing_certificate::{SigningCertificate, CertificateStatus};
 
 let context = WamiContext::builder()
     .instance_id("123456789012")
