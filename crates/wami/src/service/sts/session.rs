@@ -2,11 +2,11 @@
 //!
 //! Orchestrates STS session management operations.
 
+use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::SessionStore;
 use crate::wami::sts::StsSession;
 use std::sync::{Arc, RwLock};
 use wami_core::error::Result;
-use wami_provider::{AwsProvider, CloudProvider};
 
 /// Service for managing STS sessions
 ///

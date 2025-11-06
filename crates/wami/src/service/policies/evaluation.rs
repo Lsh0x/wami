@@ -2,6 +2,7 @@
 //!
 //! Orchestrates policy simulation and evaluation operations.
 
+use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::{PolicyStore, RoleStore, UserStore};
 use crate::wami::policies::evaluation::{
     EvaluationResult, SimulateCustomPolicyRequest, SimulatePolicyResponse,
@@ -10,7 +11,6 @@ use crate::wami::policies::evaluation::{
 use std::sync::{Arc, RwLock};
 use wami_core::error::{AmiError, Result};
 use wami_core::types::PolicyDocument;
-use wami_provider::{AwsProvider, CloudProvider};
 
 pub trait EvaluationServiceStore: UserStore + RoleStore + PolicyStore {}
 impl<T> EvaluationServiceStore for T where T: UserStore + RoleStore + PolicyStore {}

@@ -2,11 +2,11 @@
 //!
 //! Orchestrates permission set operations.
 
+use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::PermissionSetStore;
 use crate::wami::sso_admin::permission_set::PermissionSet;
 use std::sync::{Arc, RwLock};
 use wami_core::error::Result;
-use wami_provider::{AwsProvider, CloudProvider};
 
 /// Service for managing permission sets
 #[wami_macros::service(

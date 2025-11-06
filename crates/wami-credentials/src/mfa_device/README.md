@@ -33,7 +33,7 @@ Creates a new `MfaDevice` with context-based identifiers:
 
 ```rust
 use wami_core::context::WamiContext;
-use wami_credentials::mfa_device::builder::build_mfa_device;
+use wami_credentials::build_mfa_device;
 
 let context = WamiContext::builder()
     .instance_id("123456789012")
@@ -54,7 +54,7 @@ let mfa_device = build_mfa_device(
 Adds a provider configuration to an MFA device:
 
 ```rust
-use wami_credentials::mfa_device::builder::add_provider_to_mfa_device;
+use wami_credentials::add_provider_to_mfa_device;
 use wami_provider::ProviderConfig;
 
 let config = ProviderConfig::aws(/* ... */);
@@ -63,15 +63,15 @@ let mfa_device = add_provider_to_mfa_device(mfa_device, config);
 
 ## Request Types
 
-- `EnableMfaDeviceRequest` – Request to enable an MFA device for a user
+The module provides request types for MFA device operations:
+- `EnableMfaDeviceRequest` – Request to enable an MFA device for a user (requires authentication codes)
 - `ListMfaDevicesRequest` – Request to list MFA devices for a user
 
 ## Usage Example
 
 ```rust
 use wami_core::context::WamiContext;
-use wami_credentials::mfa_device::builder::build_mfa_device;
-use wami_credentials::mfa_device::MfaDevice;
+use wami_credentials::{build_mfa_device, MfaDevice};
 
 let context = WamiContext::builder()
     .instance_id("123456789012")

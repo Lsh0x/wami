@@ -33,7 +33,7 @@ Creates a new `LoginProfile` with context-based identifiers:
 
 ```rust
 use wami_core::context::WamiContext;
-use wami_credentials::login_profile::builder::build_login_profile;
+use wami_credentials::build_login_profile;
 
 let context = WamiContext::builder()
     .instance_id("123456789012")
@@ -54,7 +54,7 @@ let login_profile = build_login_profile(
 Updates a login profile's properties:
 
 ```rust
-use wami_credentials::login_profile::builder::update_login_profile;
+use wami_credentials::update_login_profile;
 
 // Update password reset requirement
 let login_profile = update_login_profile(
@@ -68,7 +68,7 @@ let login_profile = update_login_profile(
 Adds a provider configuration to a login profile:
 
 ```rust
-use wami_credentials::login_profile::builder::add_provider_to_login_profile;
+use wami_credentials::add_provider_to_login_profile;
 use wami_provider::ProviderConfig;
 
 let config = ProviderConfig::aws(/* ... */);
@@ -77,16 +77,16 @@ let login_profile = add_provider_to_login_profile(login_profile, config);
 
 ## Request Types
 
-- `CreateLoginProfileRequest` – Request to create a new login profile
+The module provides request types for login profile operations:
+- `CreateLoginProfileRequest` – Request to create a new login profile with password
 - `GetLoginProfileRequest` – Request to retrieve a login profile
-- `UpdateLoginProfileRequest` – Request to update a login profile
+- `UpdateLoginProfileRequest` – Request to update a login profile (password or reset requirement)
 
 ## Usage Example
 
 ```rust
 use wami_core::context::WamiContext;
-use wami_credentials::login_profile::builder::build_login_profile;
-use wami_credentials::login_profile::LoginProfile;
+use wami_credentials::{build_login_profile, LoginProfile};
 
 let context = WamiContext::builder()
     .instance_id("123456789012")

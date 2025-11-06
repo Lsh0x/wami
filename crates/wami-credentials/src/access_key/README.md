@@ -44,7 +44,7 @@ Creates a new `AccessKey` with context-based identifiers:
 
 ```rust
 use wami_core::context::WamiContext;
-use wami_credentials::access_key::builder::build_access_key;
+use wami_credentials::build_access_key;
 
 let context = WamiContext::builder()
     .instance_id("123456789012")
@@ -61,7 +61,7 @@ let access_key = build_access_key("alice".into(), &context)?;
 Updates the status of an access key:
 
 ```rust
-use wami_credentials::access_key::builder::update_access_key_status;
+use wami_credentials::update_access_key_status;
 
 let access_key = update_access_key_status(access_key, "Inactive".to_string());
 ```
@@ -71,7 +71,7 @@ let access_key = update_access_key_status(access_key, "Inactive".to_string());
 Adds a provider configuration to an access key:
 
 ```rust
-use wami_credentials::access_key::builder::add_provider_to_access_key;
+use wami_credentials::add_provider_to_access_key;
 use wami_provider::ProviderConfig;
 
 let config = ProviderConfig::aws(/* ... */);
@@ -80,17 +80,17 @@ let access_key = add_provider_to_access_key(access_key, config);
 
 ## Request Types
 
+The module provides request and response types for access key operations:
 - `CreateAccessKeyRequest` – Request to create a new access key
 - `ListAccessKeysRequest` – Request to list access keys for a user
-- `ListAccessKeysResponse` – Response containing a list of access keys
+- `ListAccessKeysResponse` – Response containing a list of access keys and pagination info
 - `UpdateAccessKeyRequest` – Request to update an access key's status
 
 ## Usage Example
 
 ```rust
 use wami_core::context::WamiContext;
-use wami_credentials::access_key::builder::build_access_key;
-use wami_credentials::access_key::AccessKey;
+use wami_credentials::{build_access_key, AccessKey};
 
 let context = WamiContext::builder()
     .instance_id("123456789012")
