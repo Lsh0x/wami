@@ -1,7 +1,314 @@
-//! Comprehensive Test Suite for Condition Key Evaluation
-//!
-//! This test suite follows TDD principles - tests are written before implementation.
-//! It covers all operators, condition keys, edge cases, and corner cases.
+
+// ============================================================================
+// Targeted branch coverage tests (operators.rs residuals)
+// ============================================================================
+
+#[test]
+fn test_ip_address_expected_type_mismatch() {
+    // expected is a number (not string/array) => operator returns false
+    let context = ConditionContext::builder().source_ip("127.0.0.1").build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "IpAddress": {
+                "aws:SourceIp": 123
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_ip_address_ipv6_fallback_exact_match() {
+    // prefix_len > 128 triggers IPv6 fallback branch returning ip == network
+    let ip = "2001:db8::";
+    let context = ConditionContext::builder().source_ip(ip).build();
+    let condition = parse_condition_block_from_json(&format!(
+        r#"{{
+            "IpAddress": {{
+                "aws:SourceIp": "{}/255"
+            }}
+        }}"#,
+        ip
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_forallvalues_numeric_less_than_empty_actual() {
+    // Empty actual array => vacuous truth (true)
+    let context = ConditionContext::builder()
+        .custom_value("numeric:values", crate::ConditionValue::Array(vec![]))
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAllValues:NumericLessThan": {"numeric:values": "500"}
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_forallvalues_numeric_greater_than_non_numeric_member() {
+    // Non-numeric in actual array should cause overall false (not error)
+    let context = ConditionContext::builder()
+        .custom_value(
+            "numeric:values",
+            crate::ConditionValue::Array(vec!["abc".to_string()]),
+        )
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAllValues:NumericGreaterThan": {"numeric:values": "50"}
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_foranyvalue_numeric_less_than_empty_actual() {
+    // Empty actual array => false for ForAnyValue
+    let context = ConditionContext::builder()
+        .custom_value("numeric:values", crate::ConditionValue::Array(vec![]))
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAnyValue:NumericLessThan": {"numeric:values": "10"}
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_foranyvalue_numeric_less_than_single_string_actual() {
+    // Single string actual coerced to number and compared
+    let context = ConditionContext::builder().username("100").build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAnyValue:NumericLessThan": {"aws:username": "150"}
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_forallvalues_ip_address_missing_key_passes() {
+    // Missing key with ForAllValues => true (vacuous truth)
+    let context = ConditionContext::builder().build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAllValues:IpAddress": {"aws:SourceIp": ["10.0.0.0/24"]}
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_foranyvalue_ip_address_missing_key_fails() {
+    // Missing key with ForAnyValue => false
+    let context = ConditionContext::builder().build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAnyValue:IpAddress": {"aws:SourceIp": ["10.0.0.0/24"]}
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_foranyvalue_date_less_than_missing_key_fails() {
+    let future = (chrono::Utc::now() + chrono::Duration::hours(1)).to_rfc3339();
+    let context = ConditionContext::builder().build();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAnyValue:DateLessThan": {{
+                "aws:TokenIssueTime": "{}"
+            }}
+        }}"#,
+        future
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_foranyvalue_date_greater_than_single_string_actual() {
+    // Single date string actual (CurrentTime) compared to earlier timestamp
+    let now = chrono::Utc::now();
+    let past = (now - chrono::Duration::hours(1)).to_rfc3339();
+    let context = ConditionContext::builder().current_time(now).build();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAnyValue:DateGreaterThan": {{
+                "aws:CurrentTime": "{}"
+            }}
+        }}"#,
+        past
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_string_like_missing_key_returns_false() {
+    let context = ConditionContext::builder().build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "StringLike": {"aws:username": "a*"}
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_date_equals_missing_key_returns_false() {
+    let context = ConditionContext::builder().build();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "DateEquals": {{"aws:TokenIssueTime": "{}"}}
+        }}"#,
+        chrono::Utc::now().to_rfc3339()
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_forallvalues_string_like_empty_actual_true() {
+    let context = ConditionContext::builder()
+        .custom_value("str:vals", crate::ConditionValue::Array(vec![]))
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAllValues:StringLike": {"str:vals": ["a*"]}
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_forallvalues_ip_address_empty_actual_true() {
+    let context = ConditionContext::builder()
+        .custom_value("ip:vals", crate::ConditionValue::Array(vec![]))
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAllValues:IpAddress": {"ip:vals": ["10.0.0.0/24"]}
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_foranyvalue_string_equals_empty_actual_false() {
+    let context = ConditionContext::builder()
+        .custom_value("str:vals", crate::ConditionValue::Array(vec![]))
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAnyValue:StringEquals": {"str:vals": ["x"]}
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_foranyvalue_string_like_missing_key_false() {
+    let context = ConditionContext::builder().build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAnyValue:StringLike": {"aws:username": ["a*"]}
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_foranyvalue_numeric_greater_than_empty_actual_false() {
+    let context = ConditionContext::builder()
+        .custom_value("num:vals", crate::ConditionValue::Array(vec![]))
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAnyValue:NumericGreaterThan": {"num:vals": "10"}
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_foranyvalue_numeric_less_than_non_numeric_member_false() {
+    let context = ConditionContext::builder()
+        .custom_value(
+            "num:vals",
+            crate::ConditionValue::Array(vec!["abc".to_string()]),
+        )
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAnyValue:NumericLessThan": {"num:vals": "10"}
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_foranyvalue_numeric_greater_than_single_string_actual() {
+    let context = ConditionContext::builder().username("200").build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAnyValue:NumericGreaterThan": {"aws:username": "150"}
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_foranyvalue_ip_address_empty_actual_false() {
+    let context = ConditionContext::builder()
+        .custom_value("ip:vals", crate::ConditionValue::Array(vec![]))
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "ForAnyValue:IpAddress": {"ip:vals": ["10.0.0.0/24"]}
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+#[test]
+fn test_foranyvalue_date_greater_than_missing_key_false() {
+    let context = ConditionContext::builder().build();
+    let condition = parse_condition_block_from_string(format!(
+        r#"{{
+            "ForAnyValue:DateGreaterThan": {{"aws:TokenIssueTime": "{}"}}
+        }}"#,
+        chrono::Utc::now().to_rfc3339()
+    ));
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(!result);
+}
+
+// Comprehensive Test Suite for Condition Key Evaluation
+//
+// This test suite follows TDD principles - tests are written before implementation.
+// It covers all operators, condition keys, edge cases, and corner cases.
 
 use crate::wami::policies::condition::{
     evaluator::{evaluate_condition_block, parse_condition_block},
