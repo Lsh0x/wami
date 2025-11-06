@@ -309,9 +309,9 @@ fn test_foranyvalue_date_greater_than_missing_key_false() {
 // This test suite follows TDD principles - tests are written before implementation.
 // It covers all operators, condition keys, edge cases, and corner cases.
 
-use crate::wami::policies::condition::{
-    evaluator::{evaluate_condition_block, parse_condition_block},
-    ConditionBlock, ConditionContext,
+use crate::{
+    evaluate_condition_block, evaluator::parse_condition_block, get_context_value, ConditionBlock,
+    ConditionContext, ConditionValue,
 };
 use serde_json::Value;
 
@@ -7521,4 +7521,488 @@ fn test_not_ip_address_ifexists_type_mismatch() {
 
     let result = evaluate_condition_block(&condition, &context).unwrap();
     assert!(result); // Type mismatch returns false, so NotIpAddress returns true
+}
+
+// ============================================================================
+// Tests for WAMI-specific condition keys (general purpose)
+// ============================================================================
+
+#[test]
+fn test_wami_request_method_key() {
+    let context = ConditionContext::builder().request_method("POST").build();
+    let value = get_context_value("wami:RequestMethod", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::String("POST".to_string())));
+}
+
+#[test]
+fn test_wami_request_path_key() {
+    let context = ConditionContext::builder()
+        .request_path("/api/v1/users")
+        .build();
+    let value = get_context_value("wami:RequestPath", &context).unwrap();
+    assert_eq!(
+        value,
+        Some(ConditionValue::String("/api/v1/users".to_string()))
+    );
+}
+
+#[test]
+fn test_wami_api_version_key() {
+    let context = ConditionContext::builder().api_version("v2").build();
+    let value = get_context_value("wami:ApiVersion", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::String("v2".to_string())));
+}
+
+#[test]
+fn test_wami_client_type_key() {
+    let context = ConditionContext::builder().client_type("web").build();
+    let value = get_context_value("wami:ClientType", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::String("web".to_string())));
+}
+
+#[test]
+fn test_wami_platform_key() {
+    let context = ConditionContext::builder().platform("ios").build();
+    let value = get_context_value("wami:Platform", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::String("ios".to_string())));
+}
+
+#[test]
+fn test_wami_device_type_key() {
+    let context = ConditionContext::builder().device_type("mobile").build();
+    let value = get_context_value("wami:DeviceType", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::String("mobile".to_string())));
+}
+
+#[test]
+fn test_wami_session_age_key() {
+    let context = ConditionContext::builder().session_age(3600).build();
+    let value = get_context_value("wami:SessionAge", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::Number(3600.0)));
+}
+
+#[test]
+fn test_wami_authentication_method_key() {
+    let context = ConditionContext::builder()
+        .authentication_method("oauth")
+        .build();
+    let value = get_context_value("wami:AuthenticationMethod", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::String("oauth".to_string())));
+}
+
+#[test]
+fn test_wami_authentication_strength_key() {
+    let context = ConditionContext::builder()
+        .authentication_strength("high")
+        .build();
+    let value = get_context_value("wami:AuthenticationStrength", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::String("high".to_string())));
+}
+
+#[test]
+fn test_wami_session_risk_score_key() {
+    let context = ConditionContext::builder().session_risk_score(0.75).build();
+    let value = get_context_value("wami:SessionRiskScore", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::Number(0.75)));
+}
+
+#[test]
+fn test_wami_source_country_key() {
+    let context = ConditionContext::builder()
+        .geolocation_country("US")
+        .build();
+    let value = get_context_value("wami:SourceCountry", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::String("US".to_string())));
+}
+
+#[test]
+fn test_wami_source_city_key() {
+    let context = ConditionContext::builder()
+        .geolocation_city("San Francisco")
+        .build();
+    let value = get_context_value("wami:SourceCity", &context).unwrap();
+    assert_eq!(
+        value,
+        Some(ConditionValue::String("San Francisco".to_string()))
+    );
+}
+
+#[test]
+fn test_wami_vpn_detected_key() {
+    let context = ConditionContext::builder().vpn_detected(true).build();
+    let value = get_context_value("wami:VpnDetected", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::Boolean(true)));
+}
+
+#[test]
+fn test_wami_proxy_detected_key() {
+    let context = ConditionContext::builder().proxy_detected(false).build();
+    let value = get_context_value("wami:ProxyDetected", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::Boolean(false)));
+}
+
+#[test]
+fn test_wami_requests_per_minute_key() {
+    let context = ConditionContext::builder().requests_per_minute(100).build();
+    let value = get_context_value("wami:RequestsPerMinute", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::Number(100.0)));
+}
+
+#[test]
+fn test_wami_quota_remaining_key() {
+    let context = ConditionContext::builder().quota_remaining(5000).build();
+    let value = get_context_value("wami:QuotaRemaining", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::Number(5000.0)));
+}
+
+#[test]
+fn test_wami_burst_capacity_used_key() {
+    let context = ConditionContext::builder()
+        .burst_capacity_used(0.85)
+        .build();
+    let value = get_context_value("wami:BurstCapacityUsed", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::Number(0.85)));
+}
+
+#[test]
+fn test_wami_request_id_key() {
+    let context = ConditionContext::builder().request_id("req-12345").build();
+    let value = get_context_value("wami:RequestId", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::String("req-12345".to_string())));
+}
+
+#[test]
+fn test_wami_trace_id_key() {
+    let context = ConditionContext::builder().trace_id("trace-abc123").build();
+    let value = get_context_value("wami:TraceId", &context).unwrap();
+    assert_eq!(
+        value,
+        Some(ConditionValue::String("trace-abc123".to_string()))
+    );
+}
+
+#[test]
+fn test_wami_debug_mode_enabled_key() {
+    let context = ConditionContext::builder().debug_mode(true).build();
+    let value = get_context_value("wami:DebugModeEnabled", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::Boolean(true)));
+}
+
+#[test]
+fn test_wami_dry_run_mode_key() {
+    let context = ConditionContext::builder().dry_run_mode(false).build();
+    let value = get_context_value("wami:DryRunMode", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::Boolean(false)));
+}
+
+#[test]
+fn test_wami_data_classification_key() {
+    let context = ConditionContext::builder()
+        .data_classification("confidential")
+        .build();
+    let value = get_context_value("wami:ResourceDataClassification", &context).unwrap();
+    assert_eq!(
+        value,
+        Some(ConditionValue::String("confidential".to_string()))
+    );
+}
+
+#[test]
+fn test_wami_encryption_required_key() {
+    let context = ConditionContext::builder()
+        .encryption_required(true)
+        .build();
+    let value = get_context_value("wami:EncryptionRequired", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::Boolean(true)));
+}
+
+#[test]
+fn test_wami_tenant_name_key() {
+    let context = ConditionContext::builder().tenant_name("acme-corp").build();
+    let value = get_context_value("wami:TenantName", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::String("acme-corp".to_string())));
+}
+
+#[test]
+fn test_wami_cross_tenant_request_key() {
+    let context = ConditionContext::builder()
+        .cross_tenant_request(true)
+        .build();
+    let value = get_context_value("wami:CrossTenantRequest", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::Boolean(true)));
+}
+
+#[test]
+fn test_wami_provider_region_key() {
+    let context = ConditionContext::builder()
+        .provider_region("us-east-1")
+        .build();
+    let value = get_context_value("wami:ProviderRegion", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::String("us-east-1".to_string())));
+}
+
+#[test]
+fn test_wami_cross_provider_request_key() {
+    let context = ConditionContext::builder()
+        .cross_provider_request(false)
+        .build();
+    let value = get_context_value("wami:CrossProviderRequest", &context).unwrap();
+    assert_eq!(value, Some(ConditionValue::Boolean(false)));
+}
+
+#[test]
+fn test_wami_condition_with_request_method() {
+    // Test condition evaluation with request method
+    let context = ConditionContext::builder().request_method("POST").build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "StringEquals": {
+                "wami:RequestMethod": "POST"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_wami_condition_with_client_type() {
+    // Test condition evaluation with client type
+    let context = ConditionContext::builder().client_type("mobile").build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "StringEquals": {
+                "wami:ClientType": "mobile"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_wami_condition_with_platform() {
+    // Test condition evaluation with platform
+    let context = ConditionContext::builder().platform("ios").build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "StringEquals": {
+                "wami:Platform": "ios"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_wami_condition_with_session_age() {
+    // Test condition evaluation with session age
+    let context = ConditionContext::builder()
+        .session_age(1800) // 30 minutes
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "NumericLessThan": {
+                "wami:SessionAge": "3600"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result); // 1800 < 3600
+}
+
+#[test]
+fn test_wami_condition_with_rate_limiting() {
+    // Test condition evaluation with rate limiting
+    let context = ConditionContext::builder()
+        .requests_per_minute(50)
+        .quota_remaining(1000)
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "NumericLessThan": {
+                "wami:RequestsPerMinute": "100"
+            },
+            "NumericGreaterThan": {
+                "wami:QuotaRemaining": "500"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result); // Both conditions pass
+}
+
+#[test]
+fn test_wami_condition_with_geolocation() {
+    // Test condition evaluation with geolocation
+    let context = ConditionContext::builder()
+        .geolocation_country("US")
+        .geolocation_city("New York")
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "StringEquals": {
+                "wami:SourceCountry": "US"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_wami_condition_with_security_flags() {
+    // Test condition evaluation with security flags
+    let context = ConditionContext::builder()
+        .vpn_detected(false)
+        .proxy_detected(false)
+        .session_risk_score(0.2)
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "Bool": {
+                "wami:VpnDetected": "false"
+            },
+            "NumericLessThan": {
+                "wami:SessionRiskScore": "0.5"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_wami_condition_with_authentication() {
+    // Test condition evaluation with authentication method and strength
+    let context = ConditionContext::builder()
+        .authentication_method("oauth")
+        .authentication_strength("high")
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "StringEquals": {
+                "wami:AuthenticationMethod": "oauth",
+                "wami:AuthenticationStrength": "high"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_wami_condition_with_data_classification() {
+    // Test condition evaluation with data classification
+    let context = ConditionContext::builder()
+        .data_classification("confidential")
+        .encryption_required(true)
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "StringEquals": {
+                "wami:ResourceDataClassification": "confidential"
+            },
+            "Bool": {
+                "wami:EncryptionRequired": "true"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_wami_condition_web_app_example() {
+    // Example: Web app restricting admin access to specific client types
+    let context = ConditionContext::builder()
+        .client_type("web")
+        .platform("web")
+        .request_method("POST")
+        .request_path("/api/admin/users")
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "StringEquals": {
+                "wami:ClientType": "web",
+                "wami:Platform": "web"
+            },
+            "StringLike": {
+                "wami:RequestPath": "/api/admin/*"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_wami_condition_mobile_app_example() {
+    // Example: Mobile app with device restrictions
+    let context = ConditionContext::builder()
+        .client_type("mobile")
+        .platform("ios")
+        .device_type("mobile")
+        .application_version("2.0.0")
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "StringEquals": {
+                "wami:ClientType": "mobile",
+                "wami:Platform": "ios"
+            },
+            "StringLike": {
+                "wami:ApplicationVersion": "2.*"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_wami_condition_api_rate_limit_example() {
+    // Example: API rate limiting based on request rate
+    let context = ConditionContext::builder()
+        .requests_per_minute(45)
+        .quota_remaining(500)
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "NumericLessThan": {
+                "wami:RequestsPerMinute": "60"
+            },
+            "NumericGreaterThan": {
+                "wami:QuotaRemaining": "0"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
+}
+
+#[test]
+fn test_wami_condition_security_example() {
+    // Example: Security policy requiring low risk and no VPN
+    let context = ConditionContext::builder()
+        .session_risk_score(0.15)
+        .vpn_detected(false)
+        .authentication_strength("high")
+        .build();
+    let condition = parse_condition_block_from_json(
+        r#"{
+            "NumericLessThan": {
+                "wami:SessionRiskScore": "0.3"
+            },
+            "Bool": {
+                "wami:VpnDetected": "false"
+            },
+            "StringEquals": {
+                "wami:AuthenticationStrength": "high"
+            }
+        }"#,
+    );
+    let result = evaluate_condition_block(&condition, &context).unwrap();
+    assert!(result);
 }
