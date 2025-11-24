@@ -14,7 +14,7 @@ keywords = ["iam", "sso", "identity", "multicloud", "aws"]
 categories = ["api-bindings", "authentication", "development-tools"]
 
 [dependencies]
-aws-sdk-iam = "1.0"
+aws-sdk-iam = "1.98"
 aws-sdk-sts = "1.0"
 aws-sdk-ssoadmin = "1.91"
 aws-config = "1.0"
