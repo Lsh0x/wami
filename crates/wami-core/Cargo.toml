@@ -6,7 +6,7 @@ license = "MIT"
 description = "Core primitives shared across the WAMI workspace"
 
 [dependencies]
-aws-sdk-iam = "1.0"
+aws-sdk-iam = "1.95"
 aws-sdk-sts = "1.0"
 aws-sdk-ssoadmin = "1.91"
 chrono = { version = "0.4", features = ["serde"] }
