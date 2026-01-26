@@ -6,7 +6,7 @@ license = "MIT"
 description = "Microsoft Azure provider implementation for WAMI"
 
 [dependencies]
-uuid = { version = "1.0", features = ["v4"] }
+uuid = { version = "1.20", features = ["v4"] }
 wami-core = { path = "../../wami-core" }
 wami-provider = { path = "../../wami-provider" }
 
