@@ -33,7 +33,7 @@ sha2 = "0.10"
 hex = "0.4"
 regex = "1.10"
 bcrypt = "0.15"
-rand = "0.8"
+rand = "0.10"
 getrandom = "0.2"
 roxmltree = "0.21"
 wami-traits = { path = "../wami-traits" }
