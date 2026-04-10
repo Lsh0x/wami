@@ -3,6 +3,7 @@
 //! Orchestrates session token generation operations.
 
 use crate::store::traits::SessionStore;
+use crate::wami::sts::jwt::{self, KeyManager};
 use crate::wami::sts::session::SessionStatus;
 use crate::wami::sts::session_token::GetSessionTokenRequest;
 use crate::wami::sts::{Credentials, StsSession};
@@ -35,6 +36,21 @@ impl<S: SessionStore> SessionTokenService<S> {
         context: &WamiContext,
         request: GetSessionTokenRequest,
         principal_arn: &str,
+    ) -> Result<GetSessionTokenResponse> {
+        self.get_session_token_with_signing(context, request, principal_arn, None)
+            .await
+    }
+
+    /// Get a session token with optional JWT signing.
+    ///
+    /// When a `KeyManager` is provided, the returned credentials will include
+    /// a signed JWT (`signed_token`) that can be verified offline.
+    pub async fn get_session_token_with_signing(
+        &self,
+        context: &WamiContext,
+        request: GetSessionTokenRequest,
+        principal_arn: &str,
+        key_manager: Option<&KeyManager>,
     ) -> Result<GetSessionTokenResponse> {
         // Validate request
         request.validate()?;
@@ -73,6 +89,32 @@ impl<S: SessionStore> SessionTokenService<S> {
             .resource("session", &session_token[..16])
             .build()?;
 
+        // Sign credentials with JWT if key_manager is available
+        let signed_token = if let Some(km) = key_manager {
+            let claims_ctx = jwt::StsClaimsContext {
+                principal_arn: principal_arn.to_string(),
+                issuer: "wami-sts".to_string(),
+                audience: "wami".to_string(),
+                scoped_actions: vec![],
+                scoped_resources: vec![],
+            };
+            let temp_creds = Credentials {
+                access_key_id: access_key_id.clone(),
+                secret_access_key: String::new(),
+                session_token: String::new(),
+                expiration,
+                arn: session_arn.clone(),
+                wami_arn: wami_arn.clone(),
+                providers: vec![],
+                tenant_id: None,
+                signed_token: None,
+            };
+            let claims = jwt::build_sts_claims(&temp_creds, &claims_ctx);
+            km.sign_claims(&claims).ok()
+        } else {
+            None
+        };
+
         let credentials = Credentials {
             access_key_id: access_key_id.clone(),
             secret_access_key: secret_access_key.clone(),
@@ -82,6 +124,7 @@ impl<S: SessionStore> SessionTokenService<S> {
             wami_arn: wami_arn.clone(),
             providers: vec![],
             tenant_id: None,
+            signed_token,
         };
 
         // Create and store session

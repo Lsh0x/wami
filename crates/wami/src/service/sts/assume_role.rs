@@ -4,6 +4,8 @@
 
 use crate::store::traits::{RoleStore, SessionStore};
 use crate::wami::sts::assume_role::{AssumeRoleRequest, AssumeRoleResponse, AssumedRoleUser};
+use crate::wami::sts::jwt;
+use crate::wami::sts::jwt::KeyManager;
 use crate::wami::sts::session::SessionStatus;
 use crate::wami::sts::{Credentials, StsSession};
 use chrono::{Duration, Utc};
@@ -32,6 +34,21 @@ impl<S: AssumeRoleServiceStore> AssumeRoleService<S> {
         context: &WamiContext,
         request: AssumeRoleRequest,
         principal_arn: &str,
+    ) -> Result<AssumeRoleResponse> {
+        self.assume_role_with_signing(context, request, principal_arn, None)
+            .await
+    }
+
+    /// Assume an IAM role with optional JWT signing.
+    ///
+    /// When a `KeyManager` is provided, the returned credentials will include
+    /// a signed JWT (`signed_token`) that can be verified offline.
+    pub async fn assume_role_with_signing(
+        &self,
+        context: &WamiContext,
+        request: AssumeRoleRequest,
+        principal_arn: &str,
+        key_manager: Option<&KeyManager>,
     ) -> Result<AssumeRoleResponse> {
         // Validate request
         request.validate()?;
@@ -105,6 +122,33 @@ impl<S: AssumeRoleServiceStore> AssumeRoleService<S> {
             )
             .build()?;
 
+        // Sign credentials with JWT if key_manager is available
+        let signed_token = if let Some(km) = key_manager {
+            let claims_ctx = jwt::StsClaimsContext {
+                principal_arn: principal_arn.to_string(),
+                issuer: "wami-sts".to_string(),
+                audience: "wami".to_string(),
+                scoped_actions: vec![],
+                scoped_resources: vec![],
+            };
+            // Build temporary credentials to extract claims, then sign
+            let temp_creds = Credentials {
+                access_key_id: access_key_id.clone(),
+                secret_access_key: String::new(),
+                session_token: String::new(),
+                expiration,
+                arn: session_arn.clone(),
+                wami_arn: wami_arn.clone(),
+                providers: vec![],
+                tenant_id: None,
+                signed_token: None,
+            };
+            let claims = jwt::build_sts_claims(&temp_creds, &claims_ctx);
+            km.sign_claims(&claims).ok()
+        } else {
+            None
+        };
+
         let credentials = Credentials {
             access_key_id: access_key_id.clone(),
             secret_access_key: secret_access_key.clone(),
@@ -114,6 +158,7 @@ impl<S: AssumeRoleServiceStore> AssumeRoleService<S> {
             wami_arn: wami_arn.clone(),
             providers: vec![],
             tenant_id: None,
+            signed_token,
         };
 
         // Create assumed role user

@@ -35,6 +35,8 @@ regex = "1.10"
 bcrypt = "0.15"
 rand = "0.8"
 getrandom = "0.2"
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+jsonwebtoken = "9"
 roxmltree = "0.21"
 wami-traits = { path = "../wami-traits" }
 wami-provider = { path = "../wami-provider" }
