@@ -102,10 +102,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Add users to group
     group_service
-        .add_user_to_group("emergency-responders", "admin")
+        .add_user_to_group(&aws_context, "emergency-responders", "admin")
         .await?;
     group_service
-        .add_user_to_group("emergency-responders", "operator")
+        .add_user_to_group(&aws_context, "emergency-responders", "operator")
         .await?;
     println!("✓ Added users to group");
 
@@ -149,10 +149,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Replicate group membership
     group_service
-        .add_user_to_group("emergency-responders", "admin")
+        .add_user_to_group(&gcp_context, "emergency-responders", "admin")
         .await?;
     group_service
-        .add_user_to_group("emergency-responders", "operator")
+        .add_user_to_group(&gcp_context, "emergency-responders", "operator")
         .await?;
     println!("✓ Replicated group membership");
 
@@ -171,7 +171,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n\nStep 4: Disaster recovery status...\n");
 
     let (all_users, _, _) = user_service
-        .list_users(ListUsersRequest {
+        .list_users(&aws_context, ListUsersRequest {
             path_prefix: Some("/critical/".to_string()),
             pagination: None,
         })

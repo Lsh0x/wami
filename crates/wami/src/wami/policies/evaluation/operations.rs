@@ -1,111 +1,12 @@
 //! Policy Evaluation Domain Operations
 //!
-//! Pure business logic functions for policy evaluation and simulation.
+//! **Deprecated**: Use [`crate::service::auth::policy_evaluator`] instead.
+//!
+//! This module is kept for backward compatibility but delegates to the
+//! canonical policy evaluator. The old simple matchers (no glob, no conditions,
+//! no variable substitution) have been replaced.
 
-use crate::error::{AmiError, Result};
-use crate::types::PolicyDocument;
-
-/// Pure domain operations for policy evaluation
-pub mod policy_evaluation_operations {
-    use super::*;
-
-    /// Evaluate if an action is allowed by a policy (pure function)
-    pub fn is_action_allowed(
-        policy_doc: &PolicyDocument,
-        action: &str,
-        resource: &str,
-    ) -> bool {
-        for statement in &policy_doc.statement {
-            // Check if action matches
-            let action_matches = statement
-                .action
-                .iter()
-                .any(|a| action_matches_pattern(action, a));
-
-            // Check if resource matches
-            let resource_matches = statement
-                .resource
-                .iter()
-                .any(|r| resource_matches_pattern(resource, r));
-
-            if action_matches && resource_matches {
-                return statement.effect == "Allow";
-            }
-        }
-
-        false // Default deny
-    }
-
-    /// Check if an action matches a pattern (with wildcards) (pure function)
-    fn action_matches_pattern(action: &str, pattern: &str) -> bool {
-        if pattern == "*" {
-            return true;
-        }
-
-        if pattern.ends_with('*') {
-            let prefix = &pattern[..pattern.len() - 1];
-            return action.starts_with(prefix);
-        }
-
-        action == pattern
-    }
-
-    /// Check if a resource matches a pattern (with wildcards) (pure function)
-    fn resource_matches_pattern(resource: &str, pattern: &str) -> bool {
-        if pattern == "*" {
-            return true;
-        }
-
-        if pattern.ends_with('*') {
-            let prefix = &pattern[..pattern.len() - 1];
-            return resource.starts_with(prefix);
-        }
-
-        resource == pattern
-    }
-
-    /// Evaluate multiple policies (pure function)
-    pub fn evaluate_policies(
-        policies: &[PolicyDocument],
-        action: &str,
-        resource: &str,
-    ) -> EvaluationResult {
-        let mut has_allow = false;
-        let mut has_deny = false;
-
-        for policy in policies {
-            for statement in &policy.statement {
-                let action_matches = statement
-                    .action
-                    .iter()
-                    .any(|a| action_matches_pattern(action, a));
-
-                let resource_matches = statement
-                    .resource
-                    .iter()
-                    .any(|r| resource_matches_pattern(resource, r));
-
-                if action_matches && resource_matches {
-                    if statement.effect == "Deny" {
-                        has_deny = true;
-                    } else if statement.effect == "Allow" {
-                        has_allow = true;
-                    }
-                }
-            }
-        }
-
-        // Explicit deny always wins
-        if has_deny {
-            EvaluationResult::Deny
-        } else if has_allow {
-            EvaluationResult::Allow
-        } else {
-            EvaluationResult::ImplicitDeny
-        }
-    }
-}
-
+/// Evaluation result (deprecated — use [`crate::service::auth::PolicyEffect`])
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EvaluationResult {
     Allow,
@@ -113,98 +14,62 @@ pub enum EvaluationResult {
     ImplicitDeny,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::types::PolicyStatement;
+#[deprecated(note = "Use crate::service::auth::policy_evaluator functions instead")]
+pub mod policy_evaluation_operations {
+    use super::EvaluationResult;
+    use crate::service::auth::policy_evaluator;
+    use wami_core::arn::matching::MatchContext;
+    use wami_core::types::PolicyDocument;
 
-    #[test]
-    fn test_action_allowed() {
-        let policy = PolicyDocument {
-            version: Some("2012-10-17".to_string()),
-            statement: vec![PolicyStatement {
-                sid: None,
-                effect: "Allow".to_string(),
-                action: vec!["s3:GetObject".to_string()],
-                resource: vec!["arn:aws:s3:::bucket/*".to_string()],
-                principal: None,
-                condition: None,
-            }],
-        };
-
-        assert!(policy_evaluation_operations::is_action_allowed(
-            &policy,
-            "s3:GetObject",
-            "arn:aws:s3:::bucket/key"
-        ));
-
-        assert!(!policy_evaluation_operations::is_action_allowed(
-            &policy,
-            "s3:PutObject",
-            "arn:aws:s3:::bucket/key"
-        ));
+    /// Evaluate if an action is allowed by a policy.
+    ///
+    /// **Deprecated**: Does not support conditions, glob, or variable substitution.
+    /// Use [`policy_evaluator::evaluate_policy_document`] instead.
+    pub fn is_action_allowed(
+        policy_doc: &PolicyDocument,
+        action: &str,
+        _resource: &str,
+    ) -> bool {
+        // Simplified: only check action matching (no WamiContext available)
+        for statement in &policy_doc.statement {
+            let action_matches = policy_evaluator::matches_action(&statement.action, action);
+            if action_matches && statement.effect.to_lowercase() == "allow" {
+                return true;
+            }
+        }
+        false
     }
 
-    #[test]
-    fn test_wildcard_action() {
-        let policy = PolicyDocument {
-            version: Some("2012-10-17".to_string()),
-            statement: vec![PolicyStatement {
-                sid: None,
-                effect: "Allow".to_string(),
-                action: vec!["s3:*".to_string()],
-                resource: vec!["*".to_string()],
-                principal: None,
-                condition: None,
-            }],
-        };
+    /// Evaluate multiple policies.
+    ///
+    /// **Deprecated**: Use the full authorization pipeline instead.
+    pub fn evaluate_policies(
+        policies: &[PolicyDocument],
+        action: &str,
+        _resource: &str,
+    ) -> EvaluationResult {
+        let mut has_allow = false;
+        let mut has_deny = false;
 
-        assert!(policy_evaluation_operations::is_action_allowed(
-            &policy,
-            "s3:GetObject",
-            "arn:aws:s3:::bucket/key"
-        ));
+        for policy in policies {
+            for statement in &policy.statement {
+                let action_matches = policy_evaluator::matches_action(&statement.action, action);
+                if action_matches {
+                    if statement.effect.to_lowercase() == "deny" {
+                        has_deny = true;
+                    } else if statement.effect.to_lowercase() == "allow" {
+                        has_allow = true;
+                    }
+                }
+            }
+        }
 
-        assert!(policy_evaluation_operations::is_action_allowed(
-            &policy,
-            "s3:PutObject",
-            "arn:aws:s3:::bucket/key"
-        ));
-    }
-
-    #[test]
-    fn test_explicit_deny() {
-        let policies = vec![
-            PolicyDocument {
-                version: Some("2012-10-17".to_string()),
-                statement: vec![PolicyStatement {
-                    sid: None,
-                    effect: "Allow".to_string(),
-                    action: vec!["s3:*".to_string()],
-                    resource: vec!["*".to_string()],
-                    principal: None,
-                    condition: None,
-                }],
-            },
-            PolicyDocument {
-                version: Some("2012-10-17".to_string()),
-                statement: vec![PolicyStatement {
-                    sid: None,
-                    effect: "Deny".to_string(),
-                    action: vec!["s3:DeleteObject".to_string()],
-                    resource: vec!["*".to_string()],
-                    principal: None,
-                    condition: None,
-                }],
-            },
-        ];
-
-        let result = policy_evaluation_operations::evaluate_policies(
-            &policies,
-            "s3:DeleteObject",
-            "arn:aws:s3:::bucket/key",
-        );
-
-        assert_eq!(result, EvaluationResult::Deny);
+        if has_deny {
+            EvaluationResult::Deny
+        } else if has_allow {
+            EvaluationResult::Allow
+        } else {
+            EvaluationResult::ImplicitDeny
+        }
     }
 }

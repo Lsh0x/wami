@@ -199,6 +199,11 @@ impl KeyManager {
     pub fn public_key_bytes(&self) -> [u8; 32] {
         self.verifying_key.to_bytes()
     }
+
+    /// Return the raw 32-byte secret key (for persistence).
+    pub fn secret_bytes(&self) -> [u8; 32] {
+        self.signing_key.to_bytes()
+    }
 }
 
 /// Errors that can occur during JWT operations.

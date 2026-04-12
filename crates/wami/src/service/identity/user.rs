@@ -2,30 +2,60 @@
 //!
 //! Orchestrates user management operations by combining wami builders with store persistence.
 
+use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::UserStore;
+use crate::wami::identity::root_user::ROOT_USER_NAME;
 use crate::wami::identity::user::{
     builder as user_builder, CreateUserRequest, ListUsersRequest, UpdateUserRequest, User,
 };
 use std::sync::{Arc, RwLock};
+use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
-use wami_core::error::Result;
+use wami_core::error::{AmiError, Result};
 use wami_core::types::Tag;
 
 /// Service for managing IAM users
 ///
 /// Provides high-level operations that combine wami pure functions with store persistence.
-#[wami_macros::service(store_trait = "crate::store::traits::UserStore")]
+/// Optionally holds an [`Authorizer`] for authorization guards on every method.
+#[wami_macros::service(store_trait = "crate::store::traits::UserStore", generate_new = false)]
 pub struct UserService<S> {
     store: Arc<RwLock<S>>,
+    authz: Option<Arc<dyn Authorizer>>,
 }
 
 impl<S: UserStore> UserService<S> {
+    /// Create a new UserService without authorization guards (backward compatible).
+    pub fn new(store: Arc<RwLock<S>>) -> Self {
+        Self { store, authz: None }
+    }
+
+    /// Create a new UserService with an authorization guard.
+    pub fn with_authorizer(store: Arc<RwLock<S>>, authz: Arc<dyn Authorizer>) -> Self {
+        Self {
+            store,
+            authz: Some(authz),
+        }
+    }
+
+    /// Internal: check authorization if an authorizer is set.
+    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+        if let Some(authz) = &self.authz {
+            let arn = iam_resource_arn(context, resource_type, resource_id)?;
+            authz.check_or_deny(context, action.as_str(), &arn).await?;
+        }
+        Ok(())
+    }
+
     /// Create a new user
     pub async fn create_user(
         &self,
         context: &WamiContext,
         request: CreateUserRequest,
     ) -> Result<User> {
+        // Authorization guard
+        self.guard(context, WamiAction::IamCreateUser, "user", &request.user_name).await?;
+
         // Use wami builder to create user with context
         let mut user = user_builder::build_user(request.user_name, request.path, context)?;
 
@@ -46,12 +76,28 @@ impl<S: UserStore> UserService<S> {
     }
 
     /// Get a user by name
-    pub async fn get_user(&self, user_name: &str) -> Result<Option<User>> {
+    pub async fn get_user(&self, context: &WamiContext, user_name: &str) -> Result<Option<User>> {
+        self.guard(context, WamiAction::IamReadUser, "user", user_name).await?;
         self.read_store().get_user(user_name).await
     }
 
     /// Update a user
-    pub async fn update_user(&self, request: UpdateUserRequest) -> Result<User> {
+    ///
+    /// The root user cannot be renamed (but path and other attributes can be updated).
+    pub async fn update_user(&self, context: &WamiContext, request: UpdateUserRequest) -> Result<User> {
+        self.guard(context, WamiAction::IamUpdateUser, "user", &request.user_name).await?;
+
+        // Protect root user from being renamed
+        if request.user_name == ROOT_USER_NAME {
+            if let Some(ref new_name) = request.new_user_name {
+                if new_name != ROOT_USER_NAME {
+                    return Err(AmiError::InvalidParameter {
+                        message: "Cannot rename the root user".to_string(),
+                    });
+                }
+            }
+        }
+
         // Get existing user
         let mut user = self
             .store
@@ -59,7 +105,7 @@ impl<S: UserStore> UserService<S> {
             .unwrap()
             .get_user(&request.user_name)
             .await?
-            .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
+            .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("User: {}", request.user_name),
             })?;
 
@@ -77,32 +123,47 @@ impl<S: UserStore> UserService<S> {
     }
 
     /// Delete a user
-    pub async fn delete_user(&self, user_name: &str) -> Result<()> {
+    ///
+    /// The root user cannot be deleted.
+    pub async fn delete_user(&self, context: &WamiContext, user_name: &str) -> Result<()> {
+        // Protect root user from deletion
+        if user_name == ROOT_USER_NAME {
+            return Err(AmiError::InvalidParameter {
+                message: "Cannot delete the root user".to_string(),
+            });
+        }
+
+        self.guard(context, WamiAction::IamDeleteUser, "user", user_name).await?;
         self.write_store().delete_user(user_name).await
     }
 
     /// List users with optional filtering
     pub async fn list_users(
         &self,
+        context: &WamiContext,
         request: ListUsersRequest,
     ) -> Result<(Vec<User>, bool, Option<String>)> {
+        self.guard(context, WamiAction::IamListUsers, "user", "*").await?;
         self.read_store()
             .list_users(request.path_prefix.as_deref(), request.pagination.as_ref())
             .await
     }
 
     /// Tag a user
-    pub async fn tag_user(&self, user_name: &str, tags: Vec<Tag>) -> Result<()> {
+    pub async fn tag_user(&self, context: &WamiContext, user_name: &str, tags: Vec<Tag>) -> Result<()> {
+        self.guard(context, WamiAction::IamUpdateUser, "user", user_name).await?;
         self.write_store().tag_user(user_name, tags).await
     }
 
     /// List tags for a user
-    pub async fn list_user_tags(&self, user_name: &str) -> Result<Vec<Tag>> {
+    pub async fn list_user_tags(&self, context: &WamiContext, user_name: &str) -> Result<Vec<Tag>> {
+        self.guard(context, WamiAction::IamReadUser, "user", user_name).await?;
         self.read_store().list_user_tags(user_name).await
     }
 
     /// Untag a user
-    pub async fn untag_user(&self, user_name: &str, tag_keys: Vec<String>) -> Result<()> {
+    pub async fn untag_user(&self, context: &WamiContext, user_name: &str, tag_keys: Vec<String>) -> Result<()> {
+        self.guard(context, WamiAction::IamUpdateUser, "user", user_name).await?;
         self.write_store().untag_user(user_name, tag_keys).await
     }
 }
@@ -148,7 +209,7 @@ mod tests {
         assert_eq!(user.user_name, "alice");
         assert_eq!(user.path, "/engineering/");
 
-        let retrieved = service.get_user("alice").await.unwrap();
+        let retrieved = service.get_user(&context, "alice").await.unwrap();
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().user_name, "alice");
     }
@@ -173,7 +234,7 @@ mod tests {
             new_user_name: Some("robert".to_string()),
             new_path: Some("/admin/".to_string()),
         };
-        let updated = service.update_user(update_request).await.unwrap();
+        let updated = service.update_user(&context, update_request).await.unwrap();
         assert_eq!(updated.user_name, "robert");
         assert_eq!(updated.path, "/admin/");
     }
@@ -181,6 +242,7 @@ mod tests {
     #[tokio::test]
     async fn test_delete_user() {
         let service = setup_service();
+        let context = test_context();
 
         let request = CreateUserRequest {
             user_name: "charlie".to_string(),
@@ -188,18 +250,18 @@ mod tests {
             permissions_boundary: None,
             tags: None,
         };
-        let context = test_context();
         service.create_user(&context, request).await.unwrap();
 
-        service.delete_user("charlie").await.unwrap();
+        service.delete_user(&context, "charlie").await.unwrap();
 
-        let retrieved = service.get_user("charlie").await.unwrap();
+        let retrieved = service.get_user(&context, "charlie").await.unwrap();
         assert!(retrieved.is_none());
     }
 
     #[tokio::test]
     async fn test_list_users() {
         let service = setup_service();
+        let context = test_context();
 
         // Create multiple users
         for name in ["user1", "user2", "user3"] {
@@ -209,7 +271,6 @@ mod tests {
                 permissions_boundary: None,
                 tags: None,
             };
-            let context = test_context();
             service.create_user(&context, request).await.unwrap();
         }
 
@@ -217,13 +278,14 @@ mod tests {
             path_prefix: Some("/test/".to_string()),
             pagination: None,
         };
-        let (users, _, _) = service.list_users(list_request).await.unwrap();
+        let (users, _, _) = service.list_users(&context, list_request).await.unwrap();
         assert_eq!(users.len(), 3);
     }
 
     #[tokio::test]
     async fn test_tag_operations() {
         let service = setup_service();
+        let context = test_context();
 
         let request = CreateUserRequest {
             user_name: "tagged_user".to_string(),
@@ -231,7 +293,6 @@ mod tests {
             permissions_boundary: None,
             tags: None,
         };
-        let context = test_context();
         service.create_user(&context, request).await.unwrap();
 
         // Tag user
@@ -239,20 +300,20 @@ mod tests {
             key: "Environment".to_string(),
             value: "Production".to_string(),
         }];
-        service.tag_user("tagged_user", tags).await.unwrap();
+        service.tag_user(&context, "tagged_user", tags).await.unwrap();
 
         // List tags
-        let retrieved_tags = service.list_user_tags("tagged_user").await.unwrap();
+        let retrieved_tags = service.list_user_tags(&context, "tagged_user").await.unwrap();
         assert_eq!(retrieved_tags.len(), 1);
         assert_eq!(retrieved_tags[0].key, "Environment");
 
         // Untag
         service
-            .untag_user("tagged_user", vec!["Environment".to_string()])
+            .untag_user(&context, "tagged_user", vec!["Environment".to_string()])
             .await
             .unwrap();
 
-        let tags_after = service.list_user_tags("tagged_user").await.unwrap();
+        let tags_after = service.list_user_tags(&context, "tagged_user").await.unwrap();
         assert_eq!(tags_after.len(), 0);
     }
 
@@ -261,6 +322,7 @@ mod tests {
     #[tokio::test]
     async fn test_update_user_nonexistent() {
         let service = setup_service();
+        let context = test_context();
 
         let request = UpdateUserRequest {
             user_name: "nonexistent".to_string(),
@@ -268,13 +330,14 @@ mod tests {
             new_user_name: None,
         };
 
-        let result = service.update_user(request).await;
+        let result = service.update_user(&context, request).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_tag_user_nonexistent() {
         let service = setup_service();
+        let context = test_context();
 
         let tags = vec![Tag {
             key: "Key".to_string(),
@@ -282,16 +345,17 @@ mod tests {
         }];
 
         // Tag is idempotent - succeeds even if user doesn't exist (tags are silently ignored)
-        let result = service.tag_user("nonexistent", tags).await;
+        let result = service.tag_user(&context, "nonexistent", tags).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_list_user_tags_nonexistent() {
         let service = setup_service();
+        let context = test_context();
 
         // List tags returns empty list for non-existent user
-        let result = service.list_user_tags("nonexistent").await;
+        let result = service.list_user_tags(&context, "nonexistent").await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap().len(), 0);
     }
@@ -299,10 +363,11 @@ mod tests {
     #[tokio::test]
     async fn test_untag_user_nonexistent() {
         let service = setup_service();
+        let context = test_context();
 
         // Untag is idempotent - succeeds even if user doesn't exist
         let result = service
-            .untag_user("nonexistent", vec!["Key".to_string()])
+            .untag_user(&context, "nonexistent", vec!["Key".to_string()])
             .await;
         assert!(result.is_ok());
     }
@@ -310,13 +375,14 @@ mod tests {
     #[tokio::test]
     async fn test_list_users_empty_result() {
         let service = setup_service();
+        let context = test_context();
 
         let request = ListUsersRequest {
             path_prefix: Some("/nonexistent/".to_string()),
             pagination: None,
         };
 
-        let (users, _, _) = service.list_users(request).await.unwrap();
+        let (users, _, _) = service.list_users(&context, request).await.unwrap();
         assert_eq!(users.len(), 0);
     }
 
@@ -345,7 +411,7 @@ mod tests {
             pagination: None,
         };
 
-        let (users, _, _) = service.list_users(request).await.unwrap();
+        let (users, _, _) = service.list_users(&context, request).await.unwrap();
         assert_eq!(users.len(), 2);
         assert!(users.iter().all(|u| u.path == "/admin/"));
     }
@@ -353,21 +419,84 @@ mod tests {
     #[tokio::test]
     async fn test_delete_user_nonexistent() {
         let service = setup_service();
+        let context = test_context();
 
         // Delete is idempotent - succeeds even if user doesn't exist
-        let result = service.delete_user("nonexistent").await;
+        let result = service.delete_user(&context, "nonexistent").await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_get_user_nonexistent() {
         let service = setup_service();
+        let context = test_context();
 
-        let result = service.get_user("nonexistent").await;
+        let result = service.get_user(&context, "nonexistent").await;
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
     }
 
-    // Note: test_with_provider removed as with_provider() method no longer exists
-    // Provider selection is now handled through WamiContext and CloudMapping
+    // ========== Root User Protection Tests ==========
+
+    #[tokio::test]
+    async fn test_delete_root_user_is_denied() {
+        let service = setup_service();
+        let context = test_context();
+
+        let result = service.delete_user(&context, "root").await;
+        assert!(result.is_err());
+        let err_msg = format!("{}", result.unwrap_err());
+        assert!(err_msg.contains("Cannot delete the root user"));
+    }
+
+    #[tokio::test]
+    async fn test_rename_root_user_is_denied() {
+        let service = setup_service();
+        let context = test_context();
+
+        // First create a root user in the store
+        let request = CreateUserRequest {
+            user_name: "root".to_string(),
+            path: Some("/".to_string()),
+            permissions_boundary: None,
+            tags: None,
+        };
+        service.create_user(&context, request).await.unwrap();
+
+        // Try to rename root
+        let update_request = UpdateUserRequest {
+            user_name: "root".to_string(),
+            new_user_name: Some("not-root".to_string()),
+            new_path: None,
+        };
+        let result = service.update_user(&context, update_request).await;
+        assert!(result.is_err());
+        let err_msg = format!("{}", result.unwrap_err());
+        assert!(err_msg.contains("Cannot rename the root user"));
+    }
+
+    #[tokio::test]
+    async fn test_update_root_user_path_is_allowed() {
+        let service = setup_service();
+        let context = test_context();
+
+        // Create a root user
+        let request = CreateUserRequest {
+            user_name: "root".to_string(),
+            path: Some("/".to_string()),
+            permissions_boundary: None,
+            tags: None,
+        };
+        service.create_user(&context, request).await.unwrap();
+
+        // Changing path (not name) should be allowed
+        let update_request = UpdateUserRequest {
+            user_name: "root".to_string(),
+            new_user_name: None,
+            new_path: Some("/admin/".to_string()),
+        };
+        let result = service.update_user(&context, update_request).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().path, "/admin/");
+    }
 }

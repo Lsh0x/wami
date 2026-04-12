@@ -2,30 +2,59 @@
 //!
 //! Orchestrates policy management operations.
 
+use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::PolicyStore;
 use crate::wami::policies::policy::{
     builder as policy_builder, CreatePolicyRequest, ListPoliciesRequest, Policy,
     UpdatePolicyRequest,
 };
 use std::sync::{Arc, RwLock};
+use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
 
 /// Service for managing IAM policies
 ///
 /// Provides high-level operations for policy management.
-#[wami_macros::service(store_trait = "crate::store::traits::PolicyStore")]
+/// Optionally holds an [`Authorizer`] for authorization guards on every method.
+#[wami_macros::service(store_trait = "crate::store::traits::PolicyStore", generate_new = false)]
 pub struct PolicyService<S> {
     store: Arc<RwLock<S>>,
+    authz: Option<Arc<dyn Authorizer>>,
 }
 
 impl<S: PolicyStore> PolicyService<S> {
+    /// Create a new PolicyService without authorization guards (backward compatible).
+    pub fn new(store: Arc<RwLock<S>>) -> Self {
+        Self { store, authz: None }
+    }
+
+    /// Create a new PolicyService with an authorization guard.
+    pub fn with_authorizer(store: Arc<RwLock<S>>, authz: Arc<dyn Authorizer>) -> Self {
+        Self {
+            store,
+            authz: Some(authz),
+        }
+    }
+
+    /// Internal: check authorization if an authorizer is set.
+    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+        if let Some(authz) = &self.authz {
+            let arn = iam_resource_arn(context, resource_type, resource_id)?;
+            authz.check_or_deny(context, action.as_str(), &arn).await?;
+        }
+        Ok(())
+    }
+
     /// Create a new policy
     pub async fn create_policy(
         &self,
         context: &WamiContext,
         request: CreatePolicyRequest,
     ) -> Result<Policy> {
+        // Authorization guard
+        self.guard(context, WamiAction::IamCreatePolicy, "policy", &request.policy_name).await?;
+
         // Use wami builder to create policy (includes tags)
         let policy = policy_builder::build_policy(
             request.policy_name,
@@ -41,12 +70,15 @@ impl<S: PolicyStore> PolicyService<S> {
     }
 
     /// Get a policy by ARN
-    pub async fn get_policy(&self, policy_arn: &str) -> Result<Option<Policy>> {
+    pub async fn get_policy(&self, context: &WamiContext, policy_arn: &str) -> Result<Option<Policy>> {
+        self.guard(context, WamiAction::IamReadPolicy, "policy", policy_arn).await?;
         self.read_store().get_policy(policy_arn).await
     }
 
     /// Update a policy
-    pub async fn update_policy(&self, request: UpdatePolicyRequest) -> Result<Policy> {
+    pub async fn update_policy(&self, context: &WamiContext, request: UpdatePolicyRequest) -> Result<Policy> {
+        self.guard(context, WamiAction::IamCreatePolicy, "policy", &request.policy_arn).await?;
+
         // Get existing policy
         let policy = self
             .store
@@ -71,15 +103,18 @@ impl<S: PolicyStore> PolicyService<S> {
     }
 
     /// Delete a policy
-    pub async fn delete_policy(&self, policy_arn: &str) -> Result<()> {
+    pub async fn delete_policy(&self, context: &WamiContext, policy_arn: &str) -> Result<()> {
+        self.guard(context, WamiAction::IamDeletePolicy, "policy", policy_arn).await?;
         self.write_store().delete_policy(policy_arn).await
     }
 
     /// List policies with optional filtering
     pub async fn list_policies(
         &self,
+        context: &WamiContext,
         request: ListPoliciesRequest,
     ) -> Result<(Vec<Policy>, bool, Option<String>)> {
+        self.guard(context, WamiAction::IamReadPolicy, "policy", "*").await?;
         self.store
             .read()
             .unwrap()
@@ -115,6 +150,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_and_get_policy() {
         let service = setup_service();
+        let context = test_context();
 
         let policy_doc = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":"*"}]}"#;
         let request = CreatePolicyRequest {
@@ -125,7 +161,6 @@ mod tests {
             tags: None,
         };
 
-        let context = test_context();
         let policy = service.create_policy(&context, request).await.unwrap();
         assert_eq!(policy.policy_name, "S3FullAccess");
         assert_eq!(policy.path, "/service/");
@@ -134,7 +169,7 @@ mod tests {
             Some("Full S3 access policy".to_string())
         );
 
-        let retrieved = service.get_policy(&policy.arn).await.unwrap();
+        let retrieved = service.get_policy(&context, &policy.arn).await.unwrap();
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().policy_name, "S3FullAccess");
     }
@@ -142,6 +177,7 @@ mod tests {
     #[tokio::test]
     async fn test_update_policy() {
         let service = setup_service();
+        let context = test_context();
 
         // Create policy
         let policy_doc = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"ec2:*","Resource":"*"}]}"#;
@@ -152,7 +188,6 @@ mod tests {
             description: Some("Original description".to_string()),
             tags: None,
         };
-        let context = test_context();
         let policy = service
             .create_policy(&context, create_request)
             .await
@@ -164,7 +199,7 @@ mod tests {
             description: Some("Updated description".to_string()),
             default_version_id: Some("v2".to_string()),
         };
-        let updated = service.update_policy(update_request).await.unwrap();
+        let updated = service.update_policy(&context, update_request).await.unwrap();
         assert_eq!(updated.description, Some("Updated description".to_string()));
         assert_eq!(updated.default_version_id, "v2");
     }
@@ -172,6 +207,7 @@ mod tests {
     #[tokio::test]
     async fn test_delete_policy() {
         let service = setup_service();
+        let context = test_context();
 
         let policy_doc = r#"{"Version":"2012-10-17","Statement":[]}"#;
         let request = CreatePolicyRequest {
@@ -181,18 +217,18 @@ mod tests {
             description: None,
             tags: None,
         };
-        let context = test_context();
         let policy = service.create_policy(&context, request).await.unwrap();
 
-        service.delete_policy(&policy.arn).await.unwrap();
+        service.delete_policy(&context, &policy.arn).await.unwrap();
 
-        let retrieved = service.get_policy(&policy.arn).await.unwrap();
+        let retrieved = service.get_policy(&context, &policy.arn).await.unwrap();
         assert!(retrieved.is_none());
     }
 
     #[tokio::test]
     async fn test_list_policies() {
         let service = setup_service();
+        let context = test_context();
 
         // Create multiple policies
         for i in 0..3 {
@@ -204,7 +240,6 @@ mod tests {
                 description: None,
                 tags: None,
             };
-            let context = test_context();
             service.create_policy(&context, request).await.unwrap();
         }
 
@@ -214,7 +249,7 @@ mod tests {
             path_prefix: Some("/test/".to_string()),
             pagination: None,
         };
-        let (policies, _, _) = service.list_policies(list_request).await.unwrap();
+        let (policies, _, _) = service.list_policies(&context, list_request).await.unwrap();
         assert_eq!(policies.len(), 3);
     }
 
@@ -223,6 +258,7 @@ mod tests {
     #[tokio::test]
     async fn test_update_policy_nonexistent() {
         let service = setup_service();
+        let context = test_context();
 
         let request = UpdatePolicyRequest {
             policy_arn: "arn:aws:iam::123456789012:policy/Nonexistent".to_string(),
@@ -230,16 +266,17 @@ mod tests {
             default_version_id: None,
         };
 
-        let result = service.update_policy(request).await;
+        let result = service.update_policy(&context, request).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_policy_nonexistent() {
         let service = setup_service();
+        let context = test_context();
 
         let result = service
-            .get_policy("arn:aws:iam::123456789012:policy/Nonexistent")
+            .get_policy(&context, "arn:aws:iam::123456789012:policy/Nonexistent")
             .await;
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
@@ -248,10 +285,11 @@ mod tests {
     #[tokio::test]
     async fn test_delete_policy_nonexistent() {
         let service = setup_service();
+        let context = test_context();
 
         // Delete is idempotent - succeeds even if policy doesn't exist
         let result = service
-            .delete_policy("arn:aws:iam::123456789012:policy/Nonexistent")
+            .delete_policy(&context, "arn:aws:iam::123456789012:policy/Nonexistent")
             .await;
         assert!(result.is_ok());
     }
@@ -259,6 +297,7 @@ mod tests {
     #[tokio::test]
     async fn test_list_policies_empty_result() {
         let service = setup_service();
+        let context = test_context();
 
         let request = ListPoliciesRequest {
             scope: None,
@@ -267,7 +306,7 @@ mod tests {
             pagination: None,
         };
 
-        let (policies, _, _) = service.list_policies(request).await.unwrap();
+        let (policies, _, _) = service.list_policies(&context, request).await.unwrap();
         assert_eq!(policies.len(), 0);
     }
 
@@ -302,7 +341,7 @@ mod tests {
             pagination: None,
         };
 
-        let (policies, _, _) = service.list_policies(request).await.unwrap();
+        let (policies, _, _) = service.list_policies(&context, request).await.unwrap();
         // All 3 policies are returned (path_prefix filtering not implemented in service layer)
         assert_eq!(policies.len(), 3);
     }

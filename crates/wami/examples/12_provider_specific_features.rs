@@ -177,7 +177,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n\nStep 5: Unified view across providers...\n");
 
     let (all_roles, _, _) = role_service
-        .list_roles(ListRolesRequest {
+        .list_roles(&aws_context, ListRolesRequest {
             path_prefix: None,
             pagination: None,
         })

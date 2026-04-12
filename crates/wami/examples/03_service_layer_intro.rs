@@ -99,7 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n\nStep 3: Reading resources via services...\n");
 
     // Get specific user
-    let alice_retrieved = user_service.get_user("alice").await?;
+    let alice_retrieved = user_service.get_user(&context, "alice").await?;
     if let Some(user) = alice_retrieved {
         println!("✓ Retrieved user 'alice':");
         println!("  - User ID: {}", user.user_id);
@@ -108,7 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // List users
     let users = user_service
-        .list_users(ListUsersRequest {
+        .list_users(&context, ListUsersRequest {
             path_prefix: None,
             pagination: None,
         })
@@ -127,17 +127,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         new_user_name: None,
         new_path: Some("/admin-users/".to_string()),
     };
-    user_service.update_user(update_req).await?;
+    user_service.update_user(&context, update_req).await?;
     println!("✓ Updated alice's path to '/admin-users/'");
 
     // === DELETE Operations via Services ===
     println!("\n\nStep 5: Deleting resources via services...\n");
 
-    user_service.delete_user("bob").await?;
+    user_service.delete_user(&context, "bob").await?;
     println!("✓ Deleted user 'bob'");
 
     // Verify deletion
-    let bob_check = user_service.get_user("bob").await?;
+    let bob_check = user_service.get_user(&context, "bob").await?;
     if bob_check.is_none() {
         println!("  Verified: bob no longer exists");
     }

@@ -78,7 +78,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n\nStep 4: Listing all users...\n");
 
     let (users, _, _) = user_service
-        .list_users(ListUsersRequest {
+        .list_users(&context, ListUsersRequest {
             path_prefix: None,
             pagination: None,
         })

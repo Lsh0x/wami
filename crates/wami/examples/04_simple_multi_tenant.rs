@@ -161,7 +161,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // List all users (cross-tenant view - usually restricted in production)
     let (all_users, _, _) = user_service
-        .list_users(ListUsersRequest {
+        .list_users(&root_context, ListUsersRequest {
             path_prefix: None,
             pagination: None,
         })
@@ -170,7 +170,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Company A can only see its users (using company-a context)
     let (company_a_users, _, _) = user_service
-        .list_users(ListUsersRequest {
+        .list_users(&company_a_context, ListUsersRequest {
             path_prefix: Some("/company-a/".to_string()),
             pagination: None,
         })
@@ -185,7 +185,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Company B can only see its users (using company-b context)
     let (company_b_users, _, _) = user_service
-        .list_users(ListUsersRequest {
+        .list_users(&company_b_context, ListUsersRequest {
             path_prefix: Some("/company-b/".to_string()),
             pagination: None,
         })

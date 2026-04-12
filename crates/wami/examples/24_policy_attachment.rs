@@ -86,7 +86,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         user_name: "alice".to_string(),
         policy_arn: policy.arn.clone(),
     };
-    let attach_resp = attachment_service.attach_user_policy(attach_req).await?;
+    let attach_resp = attachment_service.attach_user_policy(&context, attach_req).await?;
     println!("   {}\n", attach_resp.message);
 
     // Step 4: List attached policies
@@ -95,7 +95,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         user_name: "alice".to_string(),
     };
     let list_resp = attachment_service
-        .list_attached_user_policies(list_req)
+        .list_attached_user_policies(&context, list_req)
         .await?;
     println!(
         "   Found {} attached policies:",
@@ -123,7 +123,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         policy_name: "DenyDelete".to_string(),
         policy_document: inline_doc.to_string(),
     };
-    let put_resp = inline_service.put_user_policy(put_inline_req).await?;
+    let put_resp = inline_service.put_user_policy(&context, put_inline_req).await?;
     println!("   {}\n", put_resp.message);
 
     // Step 6: List inline policies
@@ -131,7 +131,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let list_inline_req = ListUserPoliciesRequest {
         user_name: "alice".to_string(),
     };
-    let list_inline_resp = inline_service.list_user_policies(list_inline_req).await?;
+    let list_inline_resp = inline_service.list_user_policies(&context, list_inline_req).await?;
     println!(
         "   Found {} inline policies:",
         list_inline_resp.policy_names.len()
@@ -147,7 +147,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         user_name: "alice".to_string(),
         policy_name: "DenyDelete".to_string(),
     };
-    let get_resp = inline_service.get_user_policy(get_inline_req).await?;
+    let get_resp = inline_service.get_user_policy(&context, get_inline_req).await?;
     println!("   Policy document:\n{}\n", get_resp.policy_document);
 
     println!("=== Summary ===");

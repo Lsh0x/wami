@@ -2,31 +2,62 @@
 //!
 //! Service for managing inline policies on users, groups, and roles.
 
+use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::{GroupStore, RoleStore, UserStore};
 use crate::wami::policies::inline::*;
 use std::sync::{Arc, RwLock};
+use wami_core::actions::WamiAction;
+use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
 
 pub trait InlinePolicyServiceStore: UserStore + GroupStore + RoleStore {}
 impl<T> InlinePolicyServiceStore for T where T: UserStore + GroupStore + RoleStore {}
 
 /// Service for managing inline policies
-#[wami_macros::service(store_trait = "crate::service::policies::inline::InlinePolicyServiceStore")]
+///
+/// Optionally holds an [`Authorizer`] for authorization guards on every method.
+#[wami_macros::service(store_trait = "crate::service::policies::inline::InlinePolicyServiceStore", generate_new = false)]
 pub struct InlinePolicyService<S> {
     store: Arc<RwLock<S>>,
+    authz: Option<Arc<dyn Authorizer>>,
 }
 
 impl<S> InlinePolicyService<S>
 where
     S: InlinePolicyServiceStore,
 {
+    /// Create a new InlinePolicyService without authorization guards (backward compatible).
+    pub fn new(store: Arc<RwLock<S>>) -> Self {
+        Self { store, authz: None }
+    }
+
+    /// Create a new InlinePolicyService with an authorization guard.
+    pub fn with_authorizer(store: Arc<RwLock<S>>, authz: Arc<dyn Authorizer>) -> Self {
+        Self {
+            store,
+            authz: Some(authz),
+        }
+    }
+
+    /// Internal: check authorization if an authorizer is set.
+    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+        if let Some(authz) = &self.authz {
+            let arn = iam_resource_arn(context, resource_type, resource_id)?;
+            authz.check_or_deny(context, action.as_str(), &arn).await?;
+        }
+        Ok(())
+    }
+
     // User inline policy methods
 
     /// Put an inline policy on a user
     pub async fn put_user_policy(
         &self,
+        context: &WamiContext,
         request: PutUserPolicyRequest,
     ) -> Result<PutUserPolicyResponse> {
+        self.guard(context, WamiAction::IamCreatePolicy, "user", &request.user_name).await?;
+
         let mut store = self.write_store();
 
         // Verify user exists
@@ -64,8 +95,11 @@ where
     /// Get an inline policy from a user
     pub async fn get_user_policy(
         &self,
+        context: &WamiContext,
         request: GetUserPolicyRequest,
     ) -> Result<GetUserPolicyResponse> {
+        self.guard(context, WamiAction::IamReadPolicy, "user", &request.user_name).await?;
+
         let store = self.read_store();
 
         // Verify user exists
@@ -97,8 +131,11 @@ where
     /// Delete an inline policy from a user
     pub async fn delete_user_policy(
         &self,
+        context: &WamiContext,
         request: DeleteUserPolicyRequest,
     ) -> Result<DeleteUserPolicyResponse> {
+        self.guard(context, WamiAction::IamDeletePolicy, "user", &request.user_name).await?;
+
         let mut store = self.write_store();
 
         // Verify user exists
@@ -125,8 +162,11 @@ where
     /// List inline policies for a user
     pub async fn list_user_policies(
         &self,
+        context: &WamiContext,
         request: ListUserPoliciesRequest,
     ) -> Result<ListUserPoliciesResponse> {
+        self.guard(context, WamiAction::IamReadPolicy, "user", &request.user_name).await?;
+
         let store = self.read_store();
 
         // Verify user exists
@@ -148,8 +188,11 @@ where
     /// Put an inline policy on a group
     pub async fn put_group_policy(
         &self,
+        context: &WamiContext,
         request: PutGroupPolicyRequest,
     ) -> Result<PutGroupPolicyResponse> {
+        self.guard(context, WamiAction::IamCreatePolicy, "group", &request.group_name).await?;
+
         let mut store = self.write_store();
 
         // Verify group exists
@@ -187,8 +230,11 @@ where
     /// Get an inline policy from a group
     pub async fn get_group_policy(
         &self,
+        context: &WamiContext,
         request: GetGroupPolicyRequest,
     ) -> Result<GetGroupPolicyResponse> {
+        self.guard(context, WamiAction::IamReadPolicy, "group", &request.group_name).await?;
+
         let store = self.read_store();
 
         // Verify group exists
@@ -220,8 +266,11 @@ where
     /// Delete an inline policy from a group
     pub async fn delete_group_policy(
         &self,
+        context: &WamiContext,
         request: DeleteGroupPolicyRequest,
     ) -> Result<DeleteGroupPolicyResponse> {
+        self.guard(context, WamiAction::IamDeletePolicy, "group", &request.group_name).await?;
+
         let mut store = self.write_store();
 
         // Verify group exists
@@ -248,8 +297,11 @@ where
     /// List inline policies for a group
     pub async fn list_group_policies(
         &self,
+        context: &WamiContext,
         request: ListGroupPoliciesRequest,
     ) -> Result<ListGroupPoliciesResponse> {
+        self.guard(context, WamiAction::IamReadPolicy, "group", &request.group_name).await?;
+
         let store = self.read_store();
 
         // Verify group exists
@@ -271,8 +323,11 @@ where
     /// Put an inline policy on a role
     pub async fn put_role_policy(
         &self,
+        context: &WamiContext,
         request: PutRolePolicyRequest,
     ) -> Result<PutRolePolicyResponse> {
+        self.guard(context, WamiAction::IamCreatePolicy, "role", &request.role_name).await?;
+
         let mut store = self.write_store();
 
         // Verify role exists
@@ -310,8 +365,11 @@ where
     /// Get an inline policy from a role
     pub async fn get_role_policy(
         &self,
+        context: &WamiContext,
         request: GetRolePolicyRequest,
     ) -> Result<GetRolePolicyResponse> {
+        self.guard(context, WamiAction::IamReadPolicy, "role", &request.role_name).await?;
+
         let store = self.read_store();
 
         // Verify role exists
@@ -343,8 +401,11 @@ where
     /// Delete an inline policy from a role
     pub async fn delete_role_policy(
         &self,
+        context: &WamiContext,
         request: DeleteRolePolicyRequest,
     ) -> Result<DeleteRolePolicyResponse> {
+        self.guard(context, WamiAction::IamDeletePolicy, "role", &request.role_name).await?;
+
         let mut store = self.write_store();
 
         // Verify role exists
@@ -371,8 +432,11 @@ where
     /// List inline policies for a role
     pub async fn list_role_policies(
         &self,
+        context: &WamiContext,
         request: ListRolePoliciesRequest,
     ) -> Result<ListRolePoliciesResponse> {
+        self.guard(context, WamiAction::IamReadPolicy, "role", &request.role_name).await?;
+
         let store = self.read_store();
 
         // Verify role exists
@@ -433,7 +497,7 @@ mod tests {
             policy_name: "MyInlinePolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
-        let response = service.put_user_policy(request).await.unwrap();
+        let response = service.put_user_policy(&context, request).await.unwrap();
         assert!(response.message.contains("added"));
     }
 
@@ -451,13 +515,13 @@ mod tests {
             policy_name: "MyInlinePolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
-        service.put_user_policy(put_request).await.unwrap();
+        service.put_user_policy(&context, put_request).await.unwrap();
 
         let get_request = GetUserPolicyRequest {
             user_name: "alice".to_string(),
             policy_name: "MyInlinePolicy".to_string(),
         };
-        let response = service.get_user_policy(get_request).await.unwrap();
+        let response = service.get_user_policy(&context, get_request).await.unwrap();
         assert_eq!(response.policy_name, "MyInlinePolicy");
         assert!(response.policy_document.contains("Version"));
     }
@@ -476,13 +540,13 @@ mod tests {
             policy_name: "MyInlinePolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
-        service.put_user_policy(put_request).await.unwrap();
+        service.put_user_policy(&context, put_request).await.unwrap();
 
         let delete_request = DeleteUserPolicyRequest {
             user_name: "alice".to_string(),
             policy_name: "MyInlinePolicy".to_string(),
         };
-        let response = service.delete_user_policy(delete_request).await.unwrap();
+        let response = service.delete_user_policy(&context, delete_request).await.unwrap();
         assert!(response.message.contains("deleted"));
     }
 
@@ -500,19 +564,19 @@ mod tests {
             policy_name: "Policy1".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
-        service.put_user_policy(put_request1).await.unwrap();
+        service.put_user_policy(&context, put_request1).await.unwrap();
 
         let put_request2 = PutUserPolicyRequest {
             user_name: "alice".to_string(),
             policy_name: "Policy2".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
-        service.put_user_policy(put_request2).await.unwrap();
+        service.put_user_policy(&context, put_request2).await.unwrap();
 
         let list_request = ListUserPoliciesRequest {
             user_name: "alice".to_string(),
         };
-        let response = service.list_user_policies(list_request).await.unwrap();
+        let response = service.list_user_policies(&context, list_request).await.unwrap();
         assert_eq!(response.policy_names.len(), 2);
     }
 
@@ -530,7 +594,7 @@ mod tests {
             policy_name: "MyInlinePolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
-        let response = service.put_group_policy(request).await.unwrap();
+        let response = service.put_group_policy(&context, request).await.unwrap();
         assert!(response.message.contains("added"));
     }
 
@@ -556,7 +620,7 @@ mod tests {
             policy_name: "MyInlinePolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
-        let response = service.put_role_policy(request).await.unwrap();
+        let response = service.put_role_policy(&context, request).await.unwrap();
         assert!(response.message.contains("added"));
     }
 
@@ -574,7 +638,7 @@ mod tests {
             policy_name: "MyInlinePolicy".to_string(),
             policy_document: "invalid json".to_string(),
         };
-        let result = service.put_user_policy(request).await;
+        let result = service.put_user_policy(&context, request).await;
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
@@ -588,6 +652,7 @@ mod tests {
     async fn test_put_user_policy_nonexistent_user() {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
         let service = InlinePolicyService::new(store);
+        let context = create_test_context().await;
 
         let request = PutUserPolicyRequest {
             user_name: "nonexistent".to_string(),
@@ -595,7 +660,7 @@ mod tests {
             policy_document: r#"{"Version":"2012-10-17"}"#.to_string(),
         };
 
-        let result = service.put_user_policy(request).await;
+        let result = service.put_user_policy(&context, request).await;
         assert!(result.is_err());
     }
 
@@ -603,13 +668,14 @@ mod tests {
     async fn test_get_user_policy_nonexistent_user() {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
         let service = InlinePolicyService::new(store);
+        let context = create_test_context().await;
 
         let request = GetUserPolicyRequest {
             user_name: "nonexistent".to_string(),
             policy_name: "Policy".to_string(),
         };
 
-        let result = service.get_user_policy(request).await;
+        let result = service.get_user_policy(&context, request).await;
         assert!(result.is_err());
     }
 
@@ -627,7 +693,7 @@ mod tests {
             policy_name: "NonexistentPolicy".to_string(),
         };
 
-        let result = service.get_user_policy(request).await;
+        let result = service.get_user_policy(&context, request).await;
         assert!(result.is_err());
     }
 
@@ -635,13 +701,14 @@ mod tests {
     async fn test_delete_user_policy_nonexistent_user() {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
         let service = InlinePolicyService::new(store);
+        let context = create_test_context().await;
 
         let request = DeleteUserPolicyRequest {
             user_name: "nonexistent".to_string(),
             policy_name: "Policy".to_string(),
         };
 
-        let result = service.delete_user_policy(request).await;
+        let result = service.delete_user_policy(&context, request).await;
         assert!(result.is_err());
     }
 
@@ -649,12 +716,13 @@ mod tests {
     async fn test_list_user_policies_nonexistent_user() {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
         let service = InlinePolicyService::new(store);
+        let context = create_test_context().await;
 
         let request = ListUserPoliciesRequest {
             user_name: "nonexistent".to_string(),
         };
 
-        let result = service.list_user_policies(request).await;
+        let result = service.list_user_policies(&context, request).await;
         assert!(result.is_err());
     }
 
@@ -662,6 +730,7 @@ mod tests {
     async fn test_put_group_policy_nonexistent_group() {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
         let service = InlinePolicyService::new(store);
+        let context = create_test_context().await;
 
         let request = PutGroupPolicyRequest {
             group_name: "nonexistent".to_string(),
@@ -669,7 +738,7 @@ mod tests {
             policy_document: r#"{"Version":"2012-10-17"}"#.to_string(),
         };
 
-        let result = service.put_group_policy(request).await;
+        let result = service.put_group_policy(&context, request).await;
         assert!(result.is_err());
     }
 
@@ -677,6 +746,7 @@ mod tests {
     async fn test_put_role_policy_nonexistent_role() {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
         let service = InlinePolicyService::new(store);
+        let context = create_test_context().await;
 
         let request = PutRolePolicyRequest {
             role_name: "nonexistent".to_string(),
@@ -684,7 +754,7 @@ mod tests {
             policy_document: r#"{"Version":"2012-10-17"}"#.to_string(),
         };
 
-        let result = service.put_role_policy(request).await;
+        let result = service.put_role_policy(&context, request).await;
         assert!(result.is_err());
     }
 }

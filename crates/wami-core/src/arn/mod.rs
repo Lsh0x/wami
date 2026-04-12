@@ -89,12 +89,14 @@
 //! ```
 
 pub mod builder;
+pub mod matching;
 pub mod parser;
 pub mod transformer;
 pub mod types;
 
 // Re-export key types and functions
 pub use builder::ArnBuilder;
+pub use matching::{glob_match, matches_arn_pattern, MatchContext};
 pub use parser::{parse_arn, ArnParseError};
 pub use transformer::{
     get_transformer, ArnTransformer, AwsArnTransformer, AzureArnTransformer, GcpArnTransformer,
