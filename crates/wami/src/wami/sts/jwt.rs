@@ -3,7 +3,11 @@
 //! When a signing keypair is configured, STS services produce a signed JWT
 //! alongside the opaque session token. The JWT contains structured claims
 //! (StsClaims) verifiable offline by any party holding the public key.
+//!
+//! This module requires the `sts-jwt` feature (enabled by default).
 
+use ed25519_dalek::pkcs8::EncodePrivateKey;
+use ed25519_dalek::pkcs8::spki::EncodePublicKey;
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use rand::rngs::OsRng;
@@ -29,6 +33,14 @@ pub struct StsClaims {
     /// Optional tenant ID for multi-tenant isolation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tenant_id: Option<String>,
+    /// Optional Space ID — set when the JWT is scoped to a specific Space.
+    /// Determines which Space's resources the bearer can access.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub space_id: Option<String>,
+    /// The bearer's role within the Space (e.g. "owner", "admin", "member", "viewer").
+    /// Only meaningful when `space_id` is set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub space_role: Option<String>,
     /// Actions the credential is scoped to
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub scoped_actions: Vec<String>,
@@ -61,6 +73,8 @@ pub fn build_sts_claims(credentials: &Credentials, context: &StsClaimsContext) -
         iat: chrono::Utc::now().timestamp(),
         jti: credentials.access_key_id.clone(),
         tenant_id: credentials.tenant_id.as_ref().map(|t| t.to_string()),
+        space_id: None,
+        space_role: None,
         scoped_actions: context.scoped_actions.clone(),
         scoped_resources: context.scoped_resources.clone(),
     }
@@ -94,105 +108,72 @@ impl KeyManager {
     }
 
     /// Sign claims and produce a JWT string.
+    ///
+    /// Uses standard PKCS#8 DER encoding for the Ed25519 signing key.
     pub fn sign_claims(&self, claims: &StsClaims) -> Result<String, JwtError> {
         let header = Header::new(Algorithm::EdDSA);
-        let pkcs8_der = self.signing_key_pkcs8_der();
-        let encoding_key = EncodingKey::from_ed_der(&pkcs8_der);
+        let pkcs8_der = self
+            .signing_key
+            .to_pkcs8_der()
+            .map_err(|e| JwtError::KeyEncoding(e.to_string()))?;
+        let encoding_key = EncodingKey::from_ed_der(pkcs8_der.as_bytes());
         encode(&header, claims, &encoding_key).map_err(JwtError::Encode)
     }
 
     /// Verify a JWT token and return the claims.
+    ///
+    /// Note: `jsonwebtoken` with the `ring` backend expects raw 32-byte Ed25519
+    /// public keys via `from_ed_der` (despite the function name suggesting DER).
+    /// The audience claim is validated against `["wami"]`.
     pub fn verify_token(&self, token: &str) -> Result<StsClaims, JwtError> {
-        // Ring expects raw 32-byte public key for Ed25519 verification
+        // jsonwebtoken + ring expects raw 32-byte Ed25519 public key, not SPKI DER.
+        // This is a known quirk of the `from_ed_der` API naming.
         let decoding_key = DecodingKey::from_ed_der(&self.verifying_key.to_bytes());
         let mut validation = Validation::new(Algorithm::EdDSA);
         validation.set_required_spec_claims(&["exp", "iat", "sub", "iss", "aud"]);
         validation.set_audience(&["wami"]);
-        // We validate audience manually via required claims; allow any single issuer
-        validation.validate_aud = false;
+        // validate_aud defaults to true and set_audience configures the expected
+        // values — audience IS validated.
         let token_data =
             decode::<StsClaims>(token, &decoding_key, &validation).map_err(JwtError::Decode)?;
         Ok(token_data.claims)
     }
 
-    /// Encode the signing key as PKCS8 v2 DER (Ed25519).
+    /// Return the public key as standard SPKI PEM (SubjectPublicKeyInfo).
     ///
-    /// PKCS8 v2 structure for Ed25519:
-    ///   SEQUENCE {
-    ///     INTEGER 1  (version v2)
-    ///     SEQUENCE { OID 1.3.101.112 }
-    ///     OCTET STRING { OCTET STRING { private key bytes } }
-    ///     [1] { BIT STRING { public key bytes } }
-    ///   }
-    fn signing_key_pkcs8_der(&self) -> Vec<u8> {
-        let secret = self.signing_key.to_bytes();
-        let public = self.verifying_key.to_bytes();
-
-        // Inner OCTET STRING wrapping 32-byte private key
-        let inner_octet = Self::der_octet_string(&secret);
-
-        // Algorithm identifier: SEQUENCE { OID 1.3.101.112 }
-        let oid_bytes: &[u8] = &[0x06, 0x03, 0x2b, 0x65, 0x70]; // OID 1.3.101.112
-        let algo_id = Self::der_sequence(oid_bytes);
-
-        // Version INTEGER 1 (v2 for public key inclusion)
-        let version: &[u8] = &[0x02, 0x01, 0x01];
-
-        // Private key OCTET STRING
-        let private_key_octet = Self::der_octet_string(&inner_octet);
-
-        // Public key: context-specific tag [1], explicit, containing BIT STRING
-        let mut bit_string = vec![0x03, (public.len() + 1) as u8, 0x00];
-        bit_string.extend_from_slice(&public);
-        let mut public_key_tagged = vec![0xa1, bit_string.len() as u8];
-        public_key_tagged.extend_from_slice(&bit_string);
-
-        // Outer SEQUENCE
-        let mut inner = Vec::new();
-        inner.extend_from_slice(version);
-        inner.extend_from_slice(&algo_id);
-        inner.extend_from_slice(&private_key_octet);
-        inner.extend_from_slice(&public_key_tagged);
-
-        Self::der_sequence(&inner)
-    }
-
-    fn der_sequence(content: &[u8]) -> Vec<u8> {
-        let mut result = vec![0x30];
-        Self::der_push_length(&mut result, content.len());
-        result.extend_from_slice(content);
-        result
-    }
-
-    fn der_octet_string(content: &[u8]) -> Vec<u8> {
-        let mut result = vec![0x04];
-        Self::der_push_length(&mut result, content.len());
-        result.extend_from_slice(content);
-        result
-    }
-
-    fn der_push_length(buf: &mut Vec<u8>, len: usize) {
-        if len < 0x80 {
-            buf.push(len as u8);
-        } else if len < 0x100 {
-            buf.push(0x81);
-            buf.push(len as u8);
-        } else {
-            buf.push(0x82);
-            buf.push((len >> 8) as u8);
-            buf.push(len as u8);
-        }
-    }
-
-    /// Return the public key as PEM-encoded string.
-    pub fn public_key_pem(&self) -> String {
-        // Ed25519 public key in a simple PEM-like format
-        let bytes = self.verifying_key.to_bytes();
-        let encoded = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, bytes);
-        format!(
+    /// The returned PEM can be consumed by standard tools (openssl, external JWT
+    /// libraries) to verify tokens produced by this KeyManager.
+    pub fn public_key_pem(&self) -> Result<String, JwtError> {
+        let spki_der = self
+            .verifying_key
+            .to_public_key_der()
+            .map_err(|e| JwtError::KeyEncoding(e.to_string()))?;
+        let b64 = base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            spki_der.as_ref(),
+        );
+        // PEM wraps base64 at 64 characters per line
+        let lines: Vec<&str> = b64
+            .as_bytes()
+            .chunks(64)
+            .map(|c| std::str::from_utf8(c).unwrap())
+            .collect();
+        Ok(format!(
             "-----BEGIN PUBLIC KEY-----\n{}\n-----END PUBLIC KEY-----",
-            encoded
-        )
+            lines.join("\n")
+        ))
+    }
+
+    /// Return the public key as SPKI DER bytes (SubjectPublicKeyInfo).
+    ///
+    /// This is the standard DER encoding suitable for interoperability with
+    /// external verification libraries.
+    pub fn public_key_spki_der(&self) -> Result<Vec<u8>, JwtError> {
+        let spki_der = self
+            .verifying_key
+            .to_public_key_der()
+            .map_err(|e| JwtError::KeyEncoding(e.to_string()))?;
+        Ok(spki_der.as_ref().to_vec())
     }
 
     /// Return the raw 32-byte public key.
@@ -213,6 +194,8 @@ pub enum JwtError {
     Encode(jsonwebtoken::errors::Error),
     #[error("JWT decoding error: {0}")]
     Decode(jsonwebtoken::errors::Error),
+    #[error("Key encoding error: {0}")]
+    KeyEncoding(String),
 }
 
 #[cfg(test)]
@@ -322,6 +305,8 @@ mod tests {
             iat: (chrono::Utc::now() - chrono::Duration::hours(2)).timestamp(),
             jti: "AKIAEXPIRED".to_string(),
             tenant_id: None,
+            space_id: None,
+            space_role: None,
             scoped_actions: vec![],
             scoped_resources: vec![],
         };
@@ -375,10 +360,48 @@ mod tests {
     }
 
     #[test]
-    fn test_public_key_pem() {
+    fn test_public_key_pem_is_standard_spki() {
         let km = KeyManager::generate();
-        let pem = km.public_key_pem();
+        let pem = km.public_key_pem().expect("PEM generation should succeed");
+
+        // Standard SPKI PEM format
         assert!(pem.starts_with("-----BEGIN PUBLIC KEY-----"));
         assert!(pem.ends_with("-----END PUBLIC KEY-----"));
+
+        // Extract base64 content and verify it decodes to valid SPKI DER
+        let b64_content: String = pem
+            .lines()
+            .filter(|l| !l.starts_with("-----"))
+            .collect();
+        let der_bytes = base64::Engine::decode(
+            &base64::engine::general_purpose::STANDARD,
+            &b64_content,
+        )
+        .expect("PEM content should be valid base64");
+
+        // SPKI DER for Ed25519 is 44 bytes (12-byte header + 32-byte key)
+        assert_eq!(der_bytes.len(), 44, "SPKI DER should be 44 bytes for Ed25519");
+
+        // Verify the SPKI DER matches what public_key_spki_der returns
+        let spki_der = km
+            .public_key_spki_der()
+            .expect("SPKI DER generation should succeed");
+        assert_eq!(der_bytes, spki_der);
+    }
+
+    #[test]
+    fn test_public_key_spki_der() {
+        let km = KeyManager::generate();
+        let spki_der = km
+            .public_key_spki_der()
+            .expect("SPKI DER generation should succeed");
+
+        // Ed25519 SPKI DER: 44 bytes total
+        // SEQUENCE { SEQUENCE { OID 1.3.101.112 }, BIT STRING { raw 32 bytes } }
+        assert_eq!(spki_der.len(), 44);
+
+        // Verify the raw public key bytes are embedded at the end
+        let raw_bytes = km.public_key_bytes();
+        assert_eq!(&spki_der[12..], &raw_bytes);
     }
 }

@@ -6,7 +6,6 @@ use crate::store::traits::SessionStore;
 use crate::wami::sts::federation::{
     FederatedUser, GetFederationTokenRequest, GetFederationTokenResponse,
 };
-use crate::wami::sts::jwt::{self, KeyManager};
 use crate::wami::sts::session::SessionStatus;
 use crate::wami::sts::{Credentials, StsSession};
 use chrono::{Duration, Utc};
@@ -14,6 +13,9 @@ use std::sync::{Arc, RwLock};
 use wami_core::arn::{Service, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
+
+#[cfg(feature = "sts-jwt")]
+use crate::wami::sts::jwt::{self, KeyManager};
 
 /// Service for generating federated user tokens
 ///
@@ -33,7 +35,7 @@ impl<S: SessionStore> FederationService<S> {
         request: GetFederationTokenRequest,
         principal_arn: &str,
     ) -> Result<GetFederationTokenResponse> {
-        self.get_federation_token_with_signing(context, request, principal_arn, None)
+        self.get_federation_token_inner(context, request, principal_arn)
             .await
     }
 
@@ -41,12 +43,37 @@ impl<S: SessionStore> FederationService<S> {
     ///
     /// When a `KeyManager` is provided, the returned credentials will include
     /// a signed JWT (`signed_token`) that can be verified offline.
+    #[cfg(feature = "sts-jwt")]
     pub async fn get_federation_token_with_signing(
         &self,
         context: &WamiContext,
         request: GetFederationTokenRequest,
         principal_arn: &str,
         key_manager: Option<&KeyManager>,
+    ) -> Result<GetFederationTokenResponse> {
+        let mut response = self
+            .get_federation_token_inner(context, request, principal_arn)
+            .await?;
+        if let Some(km) = key_manager {
+            let claims_ctx = jwt::StsClaimsContext {
+                principal_arn: principal_arn.to_string(),
+                issuer: "wami-sts".to_string(),
+                audience: "wami".to_string(),
+                scoped_actions: vec![],
+                scoped_resources: vec![],
+            };
+            let claims = jwt::build_sts_claims(&response.credentials, &claims_ctx);
+            response.credentials.signed_token = km.sign_claims(&claims).ok();
+        }
+        Ok(response)
+    }
+
+    /// Core federation token logic (no JWT signing).
+    async fn get_federation_token_inner(
+        &self,
+        context: &WamiContext,
+        request: GetFederationTokenRequest,
+        principal_arn: &str,
     ) -> Result<GetFederationTokenResponse> {
         // Validate request
         request.validate()?;
@@ -85,32 +112,6 @@ impl<S: SessionStore> FederationService<S> {
             .resource("federated-user", &request.name)
             .build()?;
 
-        // Sign credentials with JWT if key_manager is available
-        let signed_token = if let Some(km) = key_manager {
-            let claims_ctx = jwt::StsClaimsContext {
-                principal_arn: principal_arn.to_string(),
-                issuer: "wami-sts".to_string(),
-                audience: "wami".to_string(),
-                scoped_actions: vec![],
-                scoped_resources: vec![],
-            };
-            let temp_creds = Credentials {
-                access_key_id: access_key_id.clone(),
-                secret_access_key: String::new(),
-                session_token: String::new(),
-                expiration,
-                arn: session_arn.clone(),
-                wami_arn: wami_arn.clone(),
-                providers: vec![],
-                tenant_id: None,
-                signed_token: None,
-            };
-            let claims = jwt::build_sts_claims(&temp_creds, &claims_ctx);
-            km.sign_claims(&claims).ok()
-        } else {
-            None
-        };
-
         let credentials = Credentials {
             access_key_id: access_key_id.clone(),
             secret_access_key: secret_access_key.clone(),
@@ -120,7 +121,7 @@ impl<S: SessionStore> FederationService<S> {
             wami_arn: wami_arn.clone(),
             providers: vec![],
             tenant_id: None,
-            signed_token,
+            signed_token: None,
         };
 
         // Create federated user
@@ -207,7 +208,6 @@ mod tests {
 
         assert!(!response.credentials.access_key_id.is_empty());
         assert!(!response.credentials.session_token.is_empty());
-        assert!(response.federated_user.arn.contains("federated-user"));
         assert!(response.federated_user.arn.contains("federated-user"));
     }
 
@@ -306,5 +306,42 @@ mod tests {
             .unwrap();
 
         assert!(!response.federated_user.federated_user_id.is_empty());
+    }
+
+    #[cfg(feature = "sts-jwt")]
+    #[tokio::test]
+    async fn test_get_federation_token_with_jwt_signing() {
+        use crate::wami::sts::jwt::KeyManager;
+
+        let service = setup_service();
+        let context = test_context();
+        let km = KeyManager::generate();
+
+        let request = GetFederationTokenRequest {
+            name: "jwt-fed-user".to_string(),
+            duration_seconds: Some(3600),
+            policy: None,
+        };
+
+        let response = service
+            .get_federation_token_with_signing(
+                &context,
+                request,
+                "arn:aws:iam::123456789012:user/alice",
+                Some(&km),
+            )
+            .await
+            .unwrap();
+
+        let signed_token = response
+            .credentials
+            .signed_token
+            .as_ref()
+            .expect("signed_token should be present");
+        let claims = km
+            .verify_token(signed_token)
+            .expect("token should be verifiable");
+        assert_eq!(claims.sub, "arn:aws:iam::123456789012:user/alice");
+        assert_eq!(claims.iss, "wami-sts");
     }
 }

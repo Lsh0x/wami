@@ -4,8 +4,6 @@
 
 use crate::store::traits::{RoleStore, SessionStore};
 use crate::wami::sts::assume_role::{AssumeRoleRequest, AssumeRoleResponse, AssumedRoleUser};
-use crate::wami::sts::jwt;
-use crate::wami::sts::jwt::KeyManager;
 use crate::wami::sts::session::SessionStatus;
 use crate::wami::sts::{Credentials, StsSession};
 use chrono::{Duration, Utc};
@@ -13,6 +11,11 @@ use std::sync::{Arc, RwLock};
 use wami_core::arn::{Service, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
+
+#[cfg(feature = "sts-jwt")]
+use crate::wami::sts::jwt;
+#[cfg(feature = "sts-jwt")]
+use crate::wami::sts::jwt::KeyManager;
 
 pub trait AssumeRoleServiceStore: SessionStore + RoleStore {}
 impl<T> AssumeRoleServiceStore for T where T: SessionStore + RoleStore {}
@@ -35,7 +38,7 @@ impl<S: AssumeRoleServiceStore> AssumeRoleService<S> {
         request: AssumeRoleRequest,
         principal_arn: &str,
     ) -> Result<AssumeRoleResponse> {
-        self.assume_role_with_signing(context, request, principal_arn, None)
+        self.assume_role_inner(context, request, principal_arn)
             .await
     }
 
@@ -43,12 +46,37 @@ impl<S: AssumeRoleServiceStore> AssumeRoleService<S> {
     ///
     /// When a `KeyManager` is provided, the returned credentials will include
     /// a signed JWT (`signed_token`) that can be verified offline.
+    #[cfg(feature = "sts-jwt")]
     pub async fn assume_role_with_signing(
         &self,
         context: &WamiContext,
         request: AssumeRoleRequest,
         principal_arn: &str,
         key_manager: Option<&KeyManager>,
+    ) -> Result<AssumeRoleResponse> {
+        let mut response = self
+            .assume_role_inner(context, request, principal_arn)
+            .await?;
+        if let Some(km) = key_manager {
+            let claims_ctx = jwt::StsClaimsContext {
+                principal_arn: principal_arn.to_string(),
+                issuer: "wami-sts".to_string(),
+                audience: "wami".to_string(),
+                scoped_actions: vec![],
+                scoped_resources: vec![],
+            };
+            let claims = jwt::build_sts_claims(&response.credentials, &claims_ctx);
+            response.credentials.signed_token = km.sign_claims(&claims).ok();
+        }
+        Ok(response)
+    }
+
+    /// Core assume-role logic (no JWT signing).
+    async fn assume_role_inner(
+        &self,
+        context: &WamiContext,
+        request: AssumeRoleRequest,
+        principal_arn: &str,
     ) -> Result<AssumeRoleResponse> {
         // Validate request
         request.validate()?;
@@ -122,33 +150,6 @@ impl<S: AssumeRoleServiceStore> AssumeRoleService<S> {
             )
             .build()?;
 
-        // Sign credentials with JWT if key_manager is available
-        let signed_token = if let Some(km) = key_manager {
-            let claims_ctx = jwt::StsClaimsContext {
-                principal_arn: principal_arn.to_string(),
-                issuer: "wami-sts".to_string(),
-                audience: "wami".to_string(),
-                scoped_actions: vec![],
-                scoped_resources: vec![],
-            };
-            // Build temporary credentials to extract claims, then sign
-            let temp_creds = Credentials {
-                access_key_id: access_key_id.clone(),
-                secret_access_key: String::new(),
-                session_token: String::new(),
-                expiration,
-                arn: session_arn.clone(),
-                wami_arn: wami_arn.clone(),
-                providers: vec![],
-                tenant_id: None,
-                signed_token: None,
-            };
-            let claims = jwt::build_sts_claims(&temp_creds, &claims_ctx);
-            km.sign_claims(&claims).ok()
-        } else {
-            None
-        };
-
         let credentials = Credentials {
             access_key_id: access_key_id.clone(),
             secret_access_key: secret_access_key.clone(),
@@ -158,7 +159,7 @@ impl<S: AssumeRoleServiceStore> AssumeRoleService<S> {
             wami_arn: wami_arn.clone(),
             providers: vec![],
             tenant_id: None,
-            signed_token,
+            signed_token: None,
         };
 
         // Create assumed role user
@@ -208,11 +209,6 @@ impl<S: AssumeRoleServiceStore> AssumeRoleService<S> {
         // Try parsing as WAMI ARN first
         if let Ok(wami_arn) = arn.parse::<crate::arn::WamiArn>() {
             if wami_arn.resource.resource_type == "role" {
-                // For WAMI ARN, we need to get the role by its resource_id and look up the role_name
-                // But since we only have resource_id, we'll need to search by it or modify the lookup
-                // For now, we'll use the resource_id as identifier and search in store
-                // The store.get_role() uses role_name, so we need a different approach
-                // Actually, we should parse the WAMI ARN and extract resource_id, then search
                 return Ok(wami_arn.resource.resource_id);
             }
         }
@@ -450,5 +446,67 @@ mod tests {
             .extract_role_name_from_arn("arn:aws:iam::123456789012:role/path/to/MyRole")
             .unwrap();
         assert_eq!(name_with_path, "path/to/MyRole");
+    }
+
+    #[cfg(feature = "sts-jwt")]
+    #[tokio::test]
+    async fn test_assume_role_with_jwt_signing() {
+        use crate::wami::sts::jwt::KeyManager;
+
+        let service = setup_service();
+        let context = test_context();
+
+        // Create a role
+        let trust_policy = r#"{"Version":"2012-10-17","Statement":[]}"#;
+        let role = build_role(
+            "JwtRole".to_string(),
+            trust_policy.to_string(),
+            Some("/".to_string()),
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+
+        let role_arn = role.wami_arn.to_string();
+        service
+            .store
+            .write()
+            .unwrap()
+            .create_role(role)
+            .await
+            .unwrap();
+
+        let km = KeyManager::generate();
+        let request = AssumeRoleRequest {
+            role_arn,
+            role_session_name: "jwt-session".to_string(),
+            duration_seconds: Some(3600),
+            external_id: None,
+            policy: None,
+        };
+
+        let response = service
+            .assume_role_with_signing(
+                &context,
+                request,
+                "arn:aws:iam::123456789012:user/alice",
+                Some(&km),
+            )
+            .await
+            .unwrap();
+
+        // Verify signed_token is present and valid
+        let signed_token = response
+            .credentials
+            .signed_token
+            .as_ref()
+            .expect("signed_token should be present");
+        let claims = km
+            .verify_token(signed_token)
+            .expect("token should be verifiable");
+        assert_eq!(claims.sub, "arn:aws:iam::123456789012:user/alice");
+        assert_eq!(claims.iss, "wami-sts");
+        assert_eq!(claims.aud, "wami");
     }
 }
