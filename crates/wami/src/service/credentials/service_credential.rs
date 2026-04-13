@@ -307,4 +307,129 @@ mod tests {
             .unwrap();
         assert_eq!(credentials.len(), 3);
     }
+
+    // ========== Authorization Guard Tests ==========
+
+    use crate::service::auth::authorizer::Authorizer;
+    use async_trait::async_trait;
+
+    struct DenyAllAuthorizer;
+
+    #[async_trait]
+    impl Authorizer for DenyAllAuthorizer {
+        async fn authorize(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<bool> {
+            Ok(false)
+        }
+        async fn check_or_deny(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<()> {
+            Err(wami_core::error::AmiError::AccessDenied {
+                message: "denied by mock".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_guard_create_service_specific_credential_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = ServiceCredentialService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = CreateServiceSpecificCredentialRequest {
+            user_name: "alice".to_string(),
+            service_name: "codecommit.amazonaws.com".to_string(),
+        };
+
+        let result = service
+            .create_service_specific_credential(&context, request)
+            .await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_get_service_specific_credential_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = ServiceCredentialService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let result = service
+            .get_service_specific_credential(&context, "some-id")
+            .await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_update_service_specific_credential_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = ServiceCredentialService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = UpdateServiceSpecificCredentialRequest {
+            user_name: "alice".to_string(),
+            service_specific_credential_id: "some-id".to_string(),
+            status: "Inactive".to_string(),
+        };
+
+        let result = service
+            .update_service_specific_credential(&context, request)
+            .await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_delete_service_specific_credential_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = ServiceCredentialService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = DeleteServiceSpecificCredentialRequest {
+            user_name: "alice".to_string(),
+            service_specific_credential_id: "some-id".to_string(),
+        };
+
+        let result = service
+            .delete_service_specific_credential(&context, request)
+            .await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_list_service_specific_credentials_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = ServiceCredentialService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = ListServiceSpecificCredentialsRequest {
+            user_name: Some("alice".to_string()),
+            service_name: None,
+        };
+
+        let result = service
+            .list_service_specific_credentials(&context, request)
+            .await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
 }

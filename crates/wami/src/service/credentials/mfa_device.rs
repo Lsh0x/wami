@@ -223,4 +223,96 @@ mod tests {
             .unwrap();
         assert_eq!(devices.len(), 3);
     }
+
+    // ========== Authorization Guard Tests ==========
+
+    use crate::service::auth::authorizer::Authorizer;
+    use async_trait::async_trait;
+
+    struct DenyAllAuthorizer;
+
+    #[async_trait]
+    impl Authorizer for DenyAllAuthorizer {
+        async fn authorize(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<bool> {
+            Ok(false)
+        }
+        async fn check_or_deny(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<()> {
+            Err(wami_core::error::AmiError::AccessDenied {
+                message: "denied by mock".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_guard_create_mfa_device_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = MfaDeviceService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = EnableMfaDeviceRequest {
+            user_name: "alice".to_string(),
+            serial_number: "arn:aws:iam::123456789012:mfa/alice-device".to_string(),
+            authentication_code_1: "123456".to_string(),
+            authentication_code_2: "789012".to_string(),
+        };
+
+        let result = service.create_mfa_device(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_get_mfa_device_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = MfaDeviceService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let result = service.get_mfa_device(&context, "some-serial").await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_delete_mfa_device_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = MfaDeviceService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let result = service.delete_mfa_device(&context, "some-serial").await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_list_mfa_devices_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = MfaDeviceService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = ListMfaDevicesRequest {
+            user_name: "alice".to_string(),
+        };
+
+        let result = service.list_mfa_devices(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
 }

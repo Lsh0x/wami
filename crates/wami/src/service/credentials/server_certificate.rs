@@ -311,4 +311,124 @@ mod tests {
             .unwrap();
         assert_eq!(certs.len(), 3);
     }
+
+    // ========== Authorization Guard Tests ==========
+
+    use crate::service::auth::authorizer::Authorizer;
+    use async_trait::async_trait;
+    use wami_core::arn::WamiArn;
+
+    struct DenyAllAuthorizer;
+
+    #[async_trait]
+    impl Authorizer for DenyAllAuthorizer {
+        async fn authorize(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<bool> {
+            Ok(false)
+        }
+        async fn check_or_deny(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<()> {
+            Err(wami_core::error::AmiError::AccessDenied {
+                message: "denied by mock".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_guard_upload_server_certificate_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = ServerCertificateService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = UploadServerCertificateRequest {
+            server_certificate_name: "test-cert".to_string(),
+            certificate_body: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"
+                .to_string(),
+            private_key: "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----"
+                .to_string(),
+            certificate_chain: None,
+            path: None,
+            tags: None,
+        };
+
+        let result = service.upload_server_certificate(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_get_server_certificate_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = ServerCertificateService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let result = service.get_server_certificate(&context, "test-cert").await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_update_server_certificate_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = ServerCertificateService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = UpdateServerCertificateRequest {
+            server_certificate_name: "test-cert".to_string(),
+            new_server_certificate_name: None,
+            new_path: None,
+        };
+
+        let result = service.update_server_certificate(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_delete_server_certificate_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = ServerCertificateService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let result = service
+            .delete_server_certificate(&context, "test-cert")
+            .await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_list_server_certificates_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = ServerCertificateService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = ListServerCertificatesRequest {
+            path_prefix: None,
+            marker: None,
+            max_items: None,
+        };
+
+        let result = service.list_server_certificates(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
 }

@@ -298,4 +298,119 @@ mod tests {
         assert_eq!(role.tags.len(), 1);
         assert_eq!(role.tags[0].key, "Environment");
     }
+
+    // ========== Authorization Guard Tests ==========
+
+    use crate::service::auth::authorizer::Authorizer;
+    use async_trait::async_trait;
+
+    struct DenyAllAuthorizer;
+
+    #[async_trait]
+    impl Authorizer for DenyAllAuthorizer {
+        async fn authorize(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<bool> {
+            Ok(false)
+        }
+        async fn check_or_deny(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<()> {
+            Err(wami_core::error::AmiError::AccessDenied {
+                message: "denied by mock".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_guard_create_role_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = RoleService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = CreateRoleRequest {
+            role_name: "admin-role".to_string(),
+            assume_role_policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+            path: None,
+            description: None,
+            max_session_duration: None,
+            permissions_boundary: None,
+            tags: None,
+        };
+
+        let result = service.create_role(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_get_role_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = RoleService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let result = service.get_role(&context, "admin-role").await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_update_role_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = RoleService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = UpdateRoleRequest {
+            role_name: "admin-role".to_string(),
+            description: Some("Updated".to_string()),
+            max_session_duration: None,
+        };
+
+        let result = service.update_role(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_delete_role_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = RoleService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let result = service.delete_role(&context, "admin-role").await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_list_roles_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = RoleService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = ListRolesRequest {
+            path_prefix: None,
+            pagination: None,
+        };
+
+        let result = service.list_roles(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
 }

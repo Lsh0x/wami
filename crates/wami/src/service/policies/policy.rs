@@ -380,4 +380,123 @@ mod tests {
         // All 3 policies are returned (path_prefix filtering not implemented in service layer)
         assert_eq!(policies.len(), 3);
     }
+
+    // ========== Authorization Guard Tests ==========
+
+    use crate::service::auth::authorizer::Authorizer;
+    use async_trait::async_trait;
+
+    struct DenyAllAuthorizer;
+
+    #[async_trait]
+    impl Authorizer for DenyAllAuthorizer {
+        async fn authorize(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<bool> {
+            Ok(false)
+        }
+        async fn check_or_deny(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<()> {
+            Err(wami_core::error::AmiError::AccessDenied {
+                message: "denied by mock".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_guard_create_policy_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = PolicyService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = CreatePolicyRequest {
+            policy_name: "TestPolicy".to_string(),
+            policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+            path: None,
+            description: None,
+            tags: None,
+        };
+
+        let result = service.create_policy(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_get_policy_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = PolicyService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let result = service
+            .get_policy(&context, "arn:aws:iam::123456789012:policy/TestPolicy")
+            .await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_update_policy_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = PolicyService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = UpdatePolicyRequest {
+            policy_arn: "arn:aws:iam::123456789012:policy/TestPolicy".to_string(),
+            description: Some("Updated".to_string()),
+            default_version_id: None,
+        };
+
+        let result = service.update_policy(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_delete_policy_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = PolicyService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let result = service
+            .delete_policy(&context, "arn:aws:iam::123456789012:policy/TestPolicy")
+            .await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_list_policies_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = PolicyService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = ListPoliciesRequest {
+            scope: None,
+            only_attached: None,
+            path_prefix: None,
+            pagination: None,
+        };
+
+        let result = service.list_policies(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
 }

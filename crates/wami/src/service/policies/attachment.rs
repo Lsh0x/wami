@@ -857,4 +857,68 @@ mod tests {
             Err(wami_core::error::AmiError::AccessDenied { .. })
         ));
     }
+
+    #[tokio::test]
+    async fn test_guard_detach_group_policy_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            AttachmentService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
+        let context = create_test_context().await;
+        let request = DetachGroupPolicyRequest {
+            group_name: "admins".to_string(),
+            policy_arn: "arn:wami:iam:0:wami:123456789012:policy/test".to_string(),
+        };
+        assert!(matches!(
+            service.detach_group_policy(&context, request).await,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_list_attached_group_policies_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            AttachmentService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
+        let context = create_test_context().await;
+        let request = ListAttachedGroupPoliciesRequest {
+            group_name: "admins".to_string(),
+        };
+        assert!(matches!(
+            service
+                .list_attached_group_policies(&context, request)
+                .await,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_detach_role_policy_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            AttachmentService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
+        let context = create_test_context().await;
+        let request = DetachRolePolicyRequest {
+            role_name: "admin-role".to_string(),
+            policy_arn: "arn:wami:iam:0:wami:123456789012:policy/test".to_string(),
+        };
+        assert!(matches!(
+            service.detach_role_policy(&context, request).await,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_list_attached_role_policies_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            AttachmentService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
+        let context = create_test_context().await;
+        let request = ListAttachedRolePoliciesRequest {
+            role_name: "admin-role".to_string(),
+        };
+        assert!(matches!(
+            service.list_attached_role_policies(&context, request).await,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
 }

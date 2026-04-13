@@ -307,4 +307,125 @@ mod tests {
             .unwrap();
         assert_eq!(certificates.len(), 3);
     }
+
+    // ========== Authorization Guard Tests ==========
+
+    use crate::service::auth::authorizer::Authorizer;
+    use async_trait::async_trait;
+    use wami_core::arn::WamiArn;
+
+    struct DenyAllAuthorizer;
+
+    #[async_trait]
+    impl Authorizer for DenyAllAuthorizer {
+        async fn authorize(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<bool> {
+            Ok(false)
+        }
+        async fn check_or_deny(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<()> {
+            Err(wami_core::error::AmiError::AccessDenied {
+                message: "denied by mock".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_guard_upload_signing_certificate_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service =
+            SigningCertificateService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = UploadSigningCertificateRequest {
+            user_name: "alice".to_string(),
+            certificate_body: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"
+                .to_string(),
+        };
+
+        let result = service.upload_signing_certificate(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_get_signing_certificate_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service =
+            SigningCertificateService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let result = service.get_signing_certificate(&context, "some-id").await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_update_signing_certificate_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service =
+            SigningCertificateService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = UpdateSigningCertificateRequest {
+            user_name: "alice".to_string(),
+            certificate_id: "some-id".to_string(),
+            status: CertificateStatus::Inactive,
+        };
+
+        let result = service.update_signing_certificate(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_delete_signing_certificate_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service =
+            SigningCertificateService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = DeleteSigningCertificateRequest {
+            user_name: "alice".to_string(),
+            certificate_id: "some-id".to_string(),
+        };
+
+        let result = service.delete_signing_certificate(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_list_signing_certificates_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service =
+            SigningCertificateService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = ListSigningCertificatesRequest {
+            user_name: Some("alice".to_string()),
+        };
+
+        let result = service.list_signing_certificates(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
 }

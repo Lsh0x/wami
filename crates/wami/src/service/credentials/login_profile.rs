@@ -239,4 +239,97 @@ mod tests {
             .unwrap();
         assert!(retrieved.is_none());
     }
+
+    // ========== Authorization Guard Tests ==========
+
+    use crate::service::auth::authorizer::Authorizer;
+    use async_trait::async_trait;
+
+    struct DenyAllAuthorizer;
+
+    #[async_trait]
+    impl Authorizer for DenyAllAuthorizer {
+        async fn authorize(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<bool> {
+            Ok(false)
+        }
+        async fn check_or_deny(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<()> {
+            Err(wami_core::error::AmiError::AccessDenied {
+                message: "denied by mock".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_guard_create_login_profile_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = LoginProfileService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = CreateLoginProfileRequest {
+            user_name: "alice".to_string(),
+            password: "P@ssw0rd123!".to_string(),
+            password_reset_required: false,
+        };
+
+        let result = service.create_login_profile(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_get_login_profile_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = LoginProfileService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let result = service.get_login_profile(&context, "alice").await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_update_login_profile_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = LoginProfileService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = UpdateLoginProfileRequest {
+            user_name: "alice".to_string(),
+            password: None,
+            password_reset_required: Some(true),
+        };
+
+        let result = service.update_login_profile(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_delete_login_profile_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = LoginProfileService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let result = service.delete_login_profile(&context, "alice").await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
 }

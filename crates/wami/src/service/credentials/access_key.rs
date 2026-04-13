@@ -287,4 +287,109 @@ mod tests {
         let result = service.update_access_key(&context, nonexistent_key).await;
         assert!(result.is_ok());
     }
+
+    // ========== Authorization Guard Tests ==========
+
+    use crate::service::auth::authorizer::Authorizer;
+    use async_trait::async_trait;
+
+    struct DenyAllAuthorizer;
+
+    #[async_trait]
+    impl Authorizer for DenyAllAuthorizer {
+        async fn authorize(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<bool> {
+            Ok(false)
+        }
+        async fn check_or_deny(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<()> {
+            Err(wami_core::error::AmiError::AccessDenied {
+                message: "denied by mock".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_guard_create_access_key_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = AccessKeyService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = CreateAccessKeyRequest {
+            user_name: "alice".to_string(),
+        };
+
+        let result = service.create_access_key(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_get_access_key_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = AccessKeyService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let result = service.get_access_key(&context, "some-key-id").await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_update_access_key_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = AccessKeyService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let access_key = wami_credentials::build_access_key("alice".to_string(), &context).unwrap();
+
+        let result = service.update_access_key(&context, access_key).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_delete_access_key_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = AccessKeyService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let result = service.delete_access_key(&context, "some-key-id").await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_list_access_keys_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = AccessKeyService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+
+        let request = ListAccessKeysRequest {
+            user_name: "alice".to_string(),
+            pagination: None,
+        };
+
+        let result = service.list_access_keys(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
 }
