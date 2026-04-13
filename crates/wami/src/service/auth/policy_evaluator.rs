@@ -165,3 +165,335 @@ pub fn parse_policy_doc(json: &str) -> PolicyDocument {
         statement: vec![],
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wami_core::arn::TenantPath;
+
+    fn make_context() -> WamiContext {
+        let arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
+        WamiContext::builder()
+            .instance_id("999")
+            .tenant_path(TenantPath::single(12345678))
+            .caller_arn(arn)
+            .is_root(false)
+            .build()
+            .unwrap()
+    }
+
+    fn make_policy(effect: &str, actions: &[&str], resources: &[&str]) -> PolicyDocument {
+        PolicyDocument {
+            version: "2012-10-17".to_string(),
+            statement: vec![PolicyStatement {
+                effect: effect.to_string(),
+                action: actions.iter().map(|a| a.to_string()).collect(),
+                resource: resources.iter().map(|r| r.to_string()).collect(),
+                condition: None,
+            }],
+        }
+    }
+
+    fn make_statement(
+        effect: &str,
+        actions: &[&str],
+        resources: &[&str],
+        condition: Option<serde_json::Value>,
+    ) -> PolicyStatement {
+        PolicyStatement {
+            effect: effect.to_string(),
+            action: actions.iter().map(|a| a.to_string()).collect(),
+            resource: resources.iter().map(|r| r.to_string()).collect(),
+            condition,
+        }
+    }
+
+    // ─── matches_action ───────────────────────────────────────
+
+    #[test]
+    fn matches_action_exact() {
+        let actions = vec!["iam:GetUser".to_string()];
+        assert!(matches_action(&actions, "iam:GetUser"));
+    }
+
+    #[test]
+    fn matches_action_wildcard_star() {
+        let actions = vec!["*".to_string()];
+        assert!(matches_action(&actions, "iam:GetUser"));
+        assert!(matches_action(&actions, "sts:AssumeRole"));
+    }
+
+    #[test]
+    fn matches_action_prefix_wildcard() {
+        let actions = vec!["iam:Get*".to_string()];
+        assert!(matches_action(&actions, "iam:GetUser"));
+        assert!(matches_action(&actions, "iam:GetRole"));
+        assert!(!matches_action(&actions, "iam:PutUser"));
+    }
+
+    #[test]
+    fn matches_action_no_match() {
+        let actions = vec!["iam:GetUser".to_string()];
+        assert!(!matches_action(&actions, "iam:DeleteUser"));
+    }
+
+    #[test]
+    fn matches_action_multiple_patterns() {
+        let actions = vec!["iam:GetUser".to_string(), "iam:ListUsers".to_string()];
+        assert!(matches_action(&actions, "iam:GetUser"));
+        assert!(matches_action(&actions, "iam:ListUsers"));
+        assert!(!matches_action(&actions, "iam:DeleteUser"));
+    }
+
+    #[test]
+    fn matches_action_service_wildcard() {
+        let actions = vec!["iam:*".to_string()];
+        assert!(matches_action(&actions, "iam:GetUser"));
+        assert!(matches_action(&actions, "iam:DeleteRole"));
+        assert!(!matches_action(&actions, "sts:AssumeRole"));
+    }
+
+    // ─── matches_resource ─────────────────────────────────────
+
+    #[test]
+    fn matches_resource_wildcard() {
+        let resources = vec!["*".to_string()];
+        let ctx = MatchContext {
+            tenant: None,
+            principal: None,
+            service: None,
+        };
+        assert!(matches_resource(
+            &resources,
+            "arn:wami:iam:123:wami:999:user/bob",
+            &ctx
+        ));
+    }
+
+    #[test]
+    fn matches_resource_exact() {
+        let resources = vec!["arn:wami:iam:12345678:wami:999:user/bob".to_string()];
+        let ctx = MatchContext {
+            tenant: None,
+            principal: None,
+            service: None,
+        };
+        assert!(matches_resource(
+            &resources,
+            "arn:wami:iam:12345678:wami:999:user/bob",
+            &ctx
+        ));
+        assert!(!matches_resource(
+            &resources,
+            "arn:wami:iam:12345678:wami:999:user/alice",
+            &ctx
+        ));
+    }
+
+    #[test]
+    fn matches_resource_no_match() {
+        let resources = vec!["arn:wami:iam:999:wami:1:role/admin".to_string()];
+        let ctx = MatchContext {
+            tenant: None,
+            principal: None,
+            service: None,
+        };
+        assert!(!matches_resource(
+            &resources,
+            "arn:wami:iam:12345678:wami:999:user/bob",
+            &ctx
+        ));
+    }
+
+    #[test]
+    fn matches_resource_multiple() {
+        let resources = vec![
+            "arn:wami:iam:12345678:wami:999:user/alice".to_string(),
+            "arn:wami:iam:12345678:wami:999:user/bob".to_string(),
+        ];
+        let ctx = MatchContext {
+            tenant: None,
+            principal: None,
+            service: None,
+        };
+        assert!(matches_resource(
+            &resources,
+            "arn:wami:iam:12345678:wami:999:user/bob",
+            &ctx
+        ));
+    }
+
+    // ─── matches_condition ────────────────────────────────────
+
+    #[test]
+    fn matches_condition_no_condition() {
+        let stmt = make_statement("Allow", &["iam:*"], &["*"], None);
+        let cond_ctx = ConditionContext::builder().build();
+        assert!(matches_condition(&stmt, &cond_ctx));
+    }
+
+    #[test]
+    fn matches_condition_null_condition() {
+        let stmt = make_statement("Allow", &["iam:*"], &["*"], Some(serde_json::Value::Null));
+        let cond_ctx = ConditionContext::builder().build();
+        assert!(matches_condition(&stmt, &cond_ctx));
+    }
+
+    #[test]
+    fn matches_condition_invalid_json() {
+        // A non-null, non-object value that can't be parsed as a condition block
+        let stmt = make_statement(
+            "Allow",
+            &["iam:*"],
+            &["*"],
+            Some(serde_json::json!("not a condition")),
+        );
+        let cond_ctx = ConditionContext::builder().build();
+        assert!(!matches_condition(&stmt, &cond_ctx));
+    }
+
+    // ─── parse_policy_doc ─────────────────────────────────────
+
+    #[test]
+    fn parse_policy_doc_valid() {
+        let json = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["iam:GetUser"],"Resource":["*"]}]}"#;
+        let doc = parse_policy_doc(json);
+        assert_eq!(doc.statement.len(), 1);
+        assert_eq!(doc.statement[0].effect, "Allow");
+    }
+
+    #[test]
+    fn parse_policy_doc_invalid_returns_empty() {
+        let doc = parse_policy_doc("not json at all");
+        assert_eq!(doc.version, "2012-10-17");
+        assert!(doc.statement.is_empty());
+    }
+
+    #[test]
+    fn parse_policy_doc_empty_string() {
+        let doc = parse_policy_doc("");
+        assert!(doc.statement.is_empty());
+    }
+
+    // ─── evaluate_policy_document ─────────────────────────────
+
+    #[test]
+    fn evaluate_allow_policy() {
+        let ctx = make_context();
+        let policy = make_policy("Allow", &["iam:GetUser"], &["*"]);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        assert_eq!(
+            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx),
+            PolicyEffect::Allow
+        );
+    }
+
+    #[test]
+    fn evaluate_deny_overrides_allow() {
+        let ctx = make_context();
+        let policy = PolicyDocument {
+            version: "2012-10-17".to_string(),
+            statement: vec![
+                make_statement("Allow", &["iam:*"], &["*"], None),
+                make_statement("Deny", &["iam:DeleteUser"], &["*"], None),
+            ],
+        };
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        assert_eq!(
+            evaluate_policy_document(&policy, "iam:DeleteUser", &resource, &ctx),
+            PolicyEffect::Deny
+        );
+    }
+
+    #[test]
+    fn evaluate_no_match() {
+        let ctx = make_context();
+        let policy = make_policy("Allow", &["sts:AssumeRole"], &["*"]);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        assert_eq!(
+            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx),
+            PolicyEffect::NoMatch
+        );
+    }
+
+    #[test]
+    fn evaluate_deny_only() {
+        let ctx = make_context();
+        let policy = make_policy("Deny", &["iam:*"], &["*"]);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        assert_eq!(
+            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx),
+            PolicyEffect::Deny
+        );
+    }
+
+    #[test]
+    fn evaluate_empty_statements() {
+        let ctx = make_context();
+        let policy = PolicyDocument {
+            version: "2012-10-17".to_string(),
+            statement: vec![],
+        };
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        assert_eq!(
+            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx),
+            PolicyEffect::NoMatch
+        );
+    }
+
+    #[test]
+    fn evaluate_wildcard_action_and_resource() {
+        let ctx = make_context();
+        let policy = make_policy("Allow", &["*"], &["*"]);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        assert_eq!(
+            evaluate_policy_document(&policy, "anything:Here", &resource, &ctx),
+            PolicyEffect::Allow
+        );
+    }
+
+    // ─── build_condition_context ──────────────────────────────
+
+    #[test]
+    fn build_condition_context_populates_fields() {
+        let ctx = make_context();
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        let cond_ctx = build_condition_context(&ctx, &resource);
+        // Verify the context was built (non-panicking is the test)
+        // The builder returns a ConditionContext with the fields set
+        let _ = cond_ctx;
+    }
+
+    #[test]
+    fn build_condition_context_with_source_ip() {
+        let arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
+        let ctx = WamiContext::builder()
+            .instance_id("999")
+            .tenant_path(TenantPath::single(12345678))
+            .caller_arn(arn)
+            .is_root(false)
+            .source_ip("10.0.0.1")
+            .build()
+            .unwrap();
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        let cond_ctx = build_condition_context(&ctx, &resource);
+        let _ = cond_ctx;
+    }
+
+    #[test]
+    fn build_condition_context_with_mfa() {
+        let arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
+        let ctx = WamiContext::builder()
+            .instance_id("999")
+            .tenant_path(TenantPath::single(12345678))
+            .caller_arn(arn)
+            .is_root(false)
+            .mfa_present(true)
+            .secure_transport(true)
+            .build()
+            .unwrap();
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        let cond_ctx = build_condition_context(&ctx, &resource);
+        let _ = cond_ctx;
+    }
+}

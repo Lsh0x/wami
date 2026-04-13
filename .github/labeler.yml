@@ -51,5 +51,4 @@
 
 'breaking-change':
   - head-branch: ['^breaking', 'breaking-']
-  - body-contains: ['BREAKING CHANGE', 'breaking change']
 
