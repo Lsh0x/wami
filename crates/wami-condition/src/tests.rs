@@ -5341,14 +5341,11 @@ fn test_ip_parsing_edge_cases() {
         let condition = parse_condition_block_from_string(condition_json);
         let result = evaluate_condition_block(&condition, &context);
         // Some may error, some may return false
-        if result.is_ok() {
+        if let Ok(val) = result {
             assert_eq!(
-                result.unwrap(),
-                expected,
+                val, expected,
                 "IP {} in CIDR {} should be {}",
-                ip,
-                cidr,
-                expected
+                ip, cidr, expected
             );
         }
     }
@@ -6160,14 +6157,11 @@ fn test_ipv4_parsing_edge_cases() {
         );
         let condition = parse_condition_block_from_string(condition_json);
         let result = evaluate_condition_block(&condition, &context);
-        if result.is_ok() {
+        if let Ok(val) = result {
             assert_eq!(
-                result.unwrap(),
-                expected,
+                val, expected,
                 "IP {} in CIDR {} should be {}",
-                ip,
-                cidr,
-                expected
+                ip, cidr, expected
             );
         } else {
             // Some invalid cases may error, which is acceptable
@@ -6198,14 +6192,11 @@ fn test_ipv6_basic_matching() {
         );
         let condition = parse_condition_block_from_string(condition_json);
         let result = evaluate_condition_block(&condition, &context);
-        if result.is_ok() {
+        if let Ok(val) = result {
             assert_eq!(
-                result.unwrap(),
-                expected,
+                val, expected,
                 "IP {} in CIDR {} should be {}",
-                ip,
-                cidr,
-                expected
+                ip, cidr, expected
             );
         }
     }

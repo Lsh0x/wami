@@ -49,9 +49,11 @@ use crate::arn::{Service, TenantPath, WamiArn};
 use crate::credentials::AccessKey;
 use crate::error::{AmiError, Result};
 use crate::service::auth::authentication::hash_secret;
-use crate::store::traits::{AccessKeyStore, UserStore};
+use crate::store::traits::{AccessKeyStore, PolicyStore, RoleStore, UserStore};
+use crate::wami::identity::role::builder as role_builder;
 use crate::wami::identity::root_user::{ROOT_TENANT_ID, ROOT_USER_ID, ROOT_USER_NAME};
 use crate::wami::identity::User;
+use crate::wami::policies::policy::builder as policy_builder;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -135,7 +137,7 @@ impl InstanceBootstrap {
         instance_id: impl Into<String>,
     ) -> Result<RootCredentials>
     where
-        S: UserStore + AccessKeyStore + Send + Sync,
+        S: UserStore + AccessKeyStore + RoleStore + PolicyStore + Send + Sync,
     {
         let instance_id = instance_id.into();
 
@@ -204,6 +206,9 @@ impl InstanceBootstrap {
         // Store access key
         store_guard.create_access_key(access_key).await?;
 
+        // Create platform bootstrap roles and their policies
+        Self::create_platform_roles(&mut *store_guard, &instance_id).await?;
+
         // Return credentials (secret in plaintext - ONLY TIME IT'S VISIBLE!)
         Ok(RootCredentials {
             access_key_id,
@@ -245,6 +250,120 @@ impl InstanceBootstrap {
                 CHARSET[idx] as char
             })
             .collect()
+    }
+
+    /// Create platform bootstrap roles with their policies
+    ///
+    /// Creates 3 default roles:
+    /// - `platform-admin`: Full access to all actions (*)
+    /// - `platform-space-creator`: Can create spaces + manage IAM within own spaces
+    /// - `platform-user`: Minimal read-only access
+    async fn create_platform_roles<S>(store: &mut S, instance_id: &str) -> Result<()>
+    where
+        S: RoleStore + PolicyStore + Send + Sync,
+    {
+        use crate::wami::identity::root_user::ROOT_TENANT_ID;
+
+        // Build a root context for creating bootstrap resources
+        let root_arn = WamiArn::builder()
+            .service(Service::Iam)
+            .tenant_path(TenantPath::single(ROOT_TENANT_ID))
+            .wami_instance(instance_id)
+            .resource("user", ROOT_USER_ID)
+            .build()?;
+
+        let ctx = crate::context::WamiContext::builder()
+            .instance_id(instance_id)
+            .tenant_path(TenantPath::single(ROOT_TENANT_ID))
+            .caller_arn(root_arn)
+            .is_root(true)
+            .build()?;
+
+        // ── 1. platform-admin: full access ──────────────────────
+        let admin_policy_doc = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["*"],"Resource":["*"]}]}"#;
+
+        let admin_policy = policy_builder::build_policy(
+            "PlatformAdminPolicy".to_string(),
+            admin_policy_doc.to_string(),
+            Some("/platform/".to_string()),
+            Some("Full access to all platform actions".to_string()),
+            None,
+            &ctx,
+        )?;
+        let admin_policy_arn = admin_policy.arn.clone();
+        store.create_policy(admin_policy).await?;
+
+        let admin_assume = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"wami.local"},"Action":"sts:AssumeRole"}]}"#;
+        let admin_role = role_builder::build_role(
+            "platform-admin".to_string(),
+            admin_assume.to_string(),
+            Some("/platform/".to_string()),
+            Some("Full platform administrator — unrestricted access".to_string()),
+            None,
+            &ctx,
+        )?;
+        store.create_role(admin_role).await?;
+        store
+            .attach_role_policy("platform-admin", &admin_policy_arn)
+            .await?;
+
+        // ── 2. platform-space-creator: create spaces + scoped IAM ──
+        let creator_policy_doc = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["space:Create","space:Read","space:Update","space:Delete","iam:CreateRole","iam:DeleteRole","iam:CreateUser","iam:ReadUser","iam:ReadRole","iam:ListUsers","iam:ManageGroupMembers"],"Resource":["*"]}]}"#;
+
+        let creator_policy = policy_builder::build_policy(
+            "PlatformSpaceCreatorPolicy".to_string(),
+            creator_policy_doc.to_string(),
+            Some("/platform/".to_string()),
+            Some("Can create and manage spaces with scoped IAM".to_string()),
+            None,
+            &ctx,
+        )?;
+        let creator_policy_arn = creator_policy.arn.clone();
+        store.create_policy(creator_policy).await?;
+
+        let creator_assume = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"wami.local"},"Action":"sts:AssumeRole"}]}"#;
+        let creator_role = role_builder::build_role(
+            "platform-space-creator".to_string(),
+            creator_assume.to_string(),
+            Some("/platform/".to_string()),
+            Some("Can create spaces and manage IAM within owned spaces".to_string()),
+            None,
+            &ctx,
+        )?;
+        store.create_role(creator_role).await?;
+        store
+            .attach_role_policy("platform-space-creator", &creator_policy_arn)
+            .await?;
+
+        // ── 3. platform-user: minimal read access ──────────────
+        let user_policy_doc = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["iam:ReadUser","iam:ReadRole","iam:ListUsers","space:Read","chat:Send","chat:Read"],"Resource":["*"]}]}"#;
+
+        let user_policy = policy_builder::build_policy(
+            "PlatformUserPolicy".to_string(),
+            user_policy_doc.to_string(),
+            Some("/platform/".to_string()),
+            Some("Minimal read-only access for regular users".to_string()),
+            None,
+            &ctx,
+        )?;
+        let user_policy_arn = user_policy.arn.clone();
+        store.create_policy(user_policy).await?;
+
+        let user_assume = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"wami.local"},"Action":"sts:AssumeRole"}]}"#;
+        let user_role = role_builder::build_role(
+            "platform-user".to_string(),
+            user_assume.to_string(),
+            Some("/platform/".to_string()),
+            Some("Standard platform user with minimal permissions".to_string()),
+            None,
+            &ctx,
+        )?;
+        store.create_role(user_role).await?;
+        store
+            .attach_role_policy("platform-user", &user_policy_arn)
+            .await?;
+
+        Ok(())
     }
 
     /// Check if an instance is already initialized (has a root user)
@@ -386,5 +505,69 @@ mod tests {
         assert!(secret
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '/'));
+    }
+
+    #[tokio::test]
+    async fn test_bootstrap_creates_platform_roles() {
+        use crate::store::traits::{PolicyStore, RoleStore};
+
+        let store = Arc::new(tokio::sync::RwLock::new(InMemoryWamiStore::default()));
+
+        InstanceBootstrap::initialize_instance(store.clone(), "999888777")
+            .await
+            .unwrap();
+
+        let s = store.read().await;
+
+        // Verify 3 platform roles exist
+        let admin_role = s.get_role("platform-admin").await.unwrap();
+        assert!(admin_role.is_some(), "platform-admin role should exist");
+        let admin_role = admin_role.unwrap();
+        assert_eq!(admin_role.path, "/platform/");
+
+        let creator_role = s.get_role("platform-space-creator").await.unwrap();
+        assert!(
+            creator_role.is_some(),
+            "platform-space-creator role should exist"
+        );
+
+        let user_role = s.get_role("platform-user").await.unwrap();
+        assert!(user_role.is_some(), "platform-user role should exist");
+
+        // Verify each role has an attached policy
+        let admin_policies = s
+            .list_attached_role_policies("platform-admin")
+            .await
+            .unwrap();
+        assert_eq!(
+            admin_policies.len(),
+            1,
+            "platform-admin should have 1 attached policy"
+        );
+
+        let creator_policies = s
+            .list_attached_role_policies("platform-space-creator")
+            .await
+            .unwrap();
+        assert_eq!(
+            creator_policies.len(),
+            1,
+            "platform-space-creator should have 1 attached policy"
+        );
+
+        let user_policies = s
+            .list_attached_role_policies("platform-user")
+            .await
+            .unwrap();
+        assert_eq!(
+            user_policies.len(),
+            1,
+            "platform-user should have 1 attached policy"
+        );
+
+        // Verify admin policy grants full access
+        let admin_policy = s.get_policy(&admin_policies[0]).await.unwrap().unwrap();
+        assert!(admin_policy.policy_document.contains(r#""Action":["*"]"#));
+        assert!(admin_policy.policy_document.contains(r#""Resource":["*"]"#));
     }
 }

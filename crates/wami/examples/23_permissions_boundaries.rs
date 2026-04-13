@@ -168,7 +168,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         permissions_boundary: s3_boundary.arn.clone(),
     };
     boundary_service
-        .put_permissions_boundary(put_boundary_req)
+        .put_permissions_boundary(&context, put_boundary_req)
         .await?;
     println!("✅ Attached permissions boundary to alice");
     println!("   Boundary: {}", s3_boundary.arn);
@@ -277,7 +277,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         permissions_boundary: read_only_boundary.arn.clone(),
     };
     boundary_service
-        .put_permissions_boundary(put_role_boundary)
+        .put_permissions_boundary(&context, put_role_boundary)
         .await?;
     println!("✅ Attached read-only boundary to DeveloperRole\n");
 
@@ -322,7 +322,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         principal_name: "alice".to_string(),
     };
     boundary_service
-        .delete_permissions_boundary(delete_user_boundary)
+        .delete_permissions_boundary(&context, delete_user_boundary)
         .await?;
     println!("✅ Removed boundary from alice");
     println!("   Effect: Alice now has full admin permissions again\n");
@@ -332,7 +332,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         principal_name: "DeveloperRole".to_string(),
     };
     boundary_service
-        .delete_permissions_boundary(delete_role_boundary)
+        .delete_permissions_boundary(&context, delete_role_boundary)
         .await?;
     println!("✅ Removed boundary from DeveloperRole\n");
 

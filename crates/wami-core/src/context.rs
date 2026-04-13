@@ -79,6 +79,18 @@ pub struct WamiContext {
 
     /// Optional session information for temporary credentials
     session_info: Option<SessionInfo>,
+
+    /// Source IP address of the request (for condition evaluation)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source_ip: Option<String>,
+
+    /// Whether MFA was used for authentication (for condition evaluation)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mfa_present: Option<bool>,
+
+    /// Whether the request was made over a secure transport (HTTPS)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    secure_transport: Option<bool>,
 }
 
 impl WamiContext {
@@ -119,6 +131,21 @@ impl WamiContext {
         self.session_info.as_ref()
     }
 
+    /// Get the source IP address (if set)
+    pub fn source_ip(&self) -> Option<&str> {
+        self.source_ip.as_deref()
+    }
+
+    /// Check if MFA was used for this request (if known)
+    pub fn mfa_present(&self) -> Option<bool> {
+        self.mfa_present
+    }
+
+    /// Check if the request uses secure transport (if known)
+    pub fn secure_transport(&self) -> Option<bool> {
+        self.secure_transport
+    }
+
     /// Check if this context can access a specific tenant path
     ///
     /// A context can access:
@@ -154,6 +181,9 @@ pub struct WamiContextBuilder {
     is_root: bool,
     region: Option<String>,
     session_info: Option<SessionInfo>,
+    source_ip: Option<String>,
+    mfa_present: Option<bool>,
+    secure_transport: Option<bool>,
 }
 
 impl WamiContextBuilder {
@@ -193,6 +223,24 @@ impl WamiContextBuilder {
         self
     }
 
+    /// Set the source IP address of the request
+    pub fn source_ip(mut self, ip: impl Into<String>) -> Self {
+        self.source_ip = Some(ip.into());
+        self
+    }
+
+    /// Set whether MFA was used for authentication
+    pub fn mfa_present(mut self, present: bool) -> Self {
+        self.mfa_present = Some(present);
+        self
+    }
+
+    /// Set whether the request uses secure transport (HTTPS)
+    pub fn secure_transport(mut self, secure: bool) -> Self {
+        self.secure_transport = Some(secure);
+        self
+    }
+
     /// Build the WamiContext
     #[allow(clippy::result_large_err)]
     pub fn build(self) -> Result<WamiContext> {
@@ -222,6 +270,9 @@ impl WamiContextBuilder {
             is_root: self.is_root,
             region: self.region,
             session_info: self.session_info,
+            source_ip: self.source_ip,
+            mfa_present: self.mfa_present,
+            secure_transport: self.secure_transport,
         })
     }
 }

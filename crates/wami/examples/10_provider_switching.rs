@@ -78,10 +78,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n\nStep 4: Listing all users...\n");
 
     let (users, _, _) = user_service
-        .list_users(ListUsersRequest {
-            path_prefix: None,
-            pagination: None,
-        })
+        .list_users(
+            &context,
+            ListUsersRequest {
+                path_prefix: None,
+                pagination: None,
+            },
+        )
         .await?;
     println!("✓ Found {} users:", users.len());
     for user in &users {

@@ -130,7 +130,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  - ARN: {}", old_group.arn);
 
     // Add user to group
-    group_service.add_user_to_group("developers", "bob").await?;
+    group_service
+        .add_user_to_group(&old_tenant_context, "developers", "bob")
+        .await?;
     println!("\n✓ Added bob to developers group in old-tenant");
 
     // === MIGRATE TO NEW TENANT ===
@@ -167,7 +169,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Re-establish group membership
     println!("\nRestoring group membership...");
-    group_service.add_user_to_group("developers", "bob").await?;
+    group_service
+        .add_user_to_group(&new_tenant_context, "developers", "bob")
+        .await?;
     println!("✓ Re-added bob to developers group in new-tenant");
 
     // === CLEANUP OLD TENANT (Optional) ===
@@ -181,27 +185,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("- Update application configurations");
 
     // Example cleanup (commented to preserve state for demonstration)
-    // old_group_service.remove_user_from_group("developers", "bob").await?;
+    // old_group_service.remove_user_from_group(&old_tenant_context, "developers", "bob").await?;
     // old_user_service.delete_user("bob").await?;
-    // old_group_service.delete_group("developers").await?;
+    // old_group_service.delete_group(&old_tenant_context, "developers").await?;
     println!("\n(Cleanup skipped for demonstration purposes)");
 
     // === VERIFICATION ===
     println!("\n\nStep 5: Verifying migration...\n");
 
     let (old_users, _, _) = user_service
-        .list_users(ListUsersRequest {
-            path_prefix: Some("/users/".to_string()),
-            pagination: None,
-        })
+        .list_users(
+            &old_tenant_context,
+            ListUsersRequest {
+                path_prefix: Some("/users/".to_string()),
+                pagination: None,
+            },
+        )
         .await?;
     println!("Users remaining in old-tenant: {}", old_users.len());
 
     let (new_users, _, _) = user_service
-        .list_users(ListUsersRequest {
-            path_prefix: Some("/users/".to_string()),
-            pagination: None,
-        })
+        .list_users(
+            &new_tenant_context,
+            ListUsersRequest {
+                path_prefix: Some("/users/".to_string()),
+                pagination: None,
+            },
+        )
         .await?;
     println!("Users now in new-tenant: {}", new_users.len());
     for user in &new_users {

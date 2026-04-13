@@ -1,101 +1,69 @@
 //! Policy Evaluation Domain Operations
 //!
-//! Pure business logic functions for policy evaluation and simulation.
+//! **Deprecated**: Use [`crate::service::auth::policy_evaluator`] instead.
+//!
+//! This module is kept for backward compatibility but delegates to the
+//! canonical policy evaluator. The old simple matchers (no glob, no conditions,
+//! no variable substitution) have been replaced.
 
-use crate::error::{AmiError, Result};
-use crate::types::PolicyDocument;
+/// Evaluation result (deprecated — use [`crate::service::auth::PolicyEffect`])
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EvaluationResult {
+    Allow,
+    Deny,
+    ImplicitDeny,
+}
 
-/// Pure domain operations for policy evaluation
+#[deprecated(note = "Use crate::service::auth::policy_evaluator functions instead")]
 pub mod policy_evaluation_operations {
-    use super::*;
+    use super::EvaluationResult;
+    use crate::service::auth::policy_evaluator;
+    use wami_core::arn::matching::MatchContext;
+    use wami_core::types::PolicyDocument;
 
-    /// Evaluate if an action is allowed by a policy (pure function)
+    /// Evaluate if an action is allowed by a policy.
+    ///
+    /// **Deprecated**: Does not support conditions, glob, or variable substitution.
+    /// Use [`policy_evaluator::evaluate_policy_document`] instead.
     pub fn is_action_allowed(
         policy_doc: &PolicyDocument,
         action: &str,
-        resource: &str,
+        _resource: &str,
     ) -> bool {
+        // Simplified: only check action matching (no WamiContext available)
         for statement in &policy_doc.statement {
-            // Check if action matches
-            let action_matches = statement
-                .action
-                .iter()
-                .any(|a| action_matches_pattern(action, a));
-
-            // Check if resource matches
-            let resource_matches = statement
-                .resource
-                .iter()
-                .any(|r| resource_matches_pattern(resource, r));
-
-            if action_matches && resource_matches {
-                return statement.effect == "Allow";
+            let action_matches = policy_evaluator::matches_action(&statement.action, action);
+            if action_matches && statement.effect.to_lowercase() == "allow" {
+                return true;
             }
         }
-
-        false // Default deny
+        false
     }
 
-    /// Check if an action matches a pattern (with wildcards) (pure function)
-    fn action_matches_pattern(action: &str, pattern: &str) -> bool {
-        if pattern == "*" {
-            return true;
-        }
-
-        if pattern.ends_with('*') {
-            let prefix = &pattern[..pattern.len() - 1];
-            return action.starts_with(prefix);
-        }
-
-        action == pattern
-    }
-
-    /// Check if a resource matches a pattern (with wildcards) (pure function)
-    fn resource_matches_pattern(resource: &str, pattern: &str) -> bool {
-        if pattern == "*" {
-            return true;
-        }
-
-        if pattern.ends_with('*') {
-            let prefix = &pattern[..pattern.len() - 1];
-            return resource.starts_with(prefix);
-        }
-
-        resource == pattern
-    }
-
-    /// Evaluate multiple policies (pure function)
+    /// Evaluate multiple policies.
+    ///
+    /// **Deprecated**: Use the full authorization pipeline instead.
     pub fn evaluate_policies(
         policies: &[PolicyDocument],
         action: &str,
-        resource: &str,
+        _resource: &str,
     ) -> EvaluationResult {
         let mut has_allow = false;
         let mut has_deny = false;
 
         for policy in policies {
             for statement in &policy.statement {
-                let action_matches = statement
-                    .action
-                    .iter()
-                    .any(|a| action_matches_pattern(action, a));
-
-                let resource_matches = statement
-                    .resource
-                    .iter()
-                    .any(|r| resource_matches_pattern(resource, r));
-
-                if action_matches && resource_matches {
-                    if statement.effect == "Deny" {
+                let action_matches = policy_evaluator::matches_action(&statement.action, action);
+                if action_matches {
+                    if statement.effect.to_lowercase() == "deny" {
                         has_deny = true;
-                    } else if statement.effect == "Allow" {
+                    } else if statement.effect.to_lowercase() == "allow" {
                         has_allow = true;
                     }
                 }
             }
         }
 
-        // Explicit deny always wins
         if has_deny {
             EvaluationResult::Deny
         } else if has_allow {
@@ -106,105 +74,143 @@ pub mod policy_evaluation_operations {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum EvaluationResult {
-    Allow,
-    Deny,
-    ImplicitDeny,
-}
-
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use super::*;
-    use crate::types::PolicyStatement;
+    use policy_evaluation_operations::*;
+    use wami_core::types::{PolicyDocument, PolicyStatement};
 
-    #[test]
-    fn test_action_allowed() {
-        let policy = PolicyDocument {
-            version: Some("2012-10-17".to_string()),
+    fn make_policy(effect: &str, actions: &[&str]) -> PolicyDocument {
+        PolicyDocument {
+            version: "2012-10-17".to_string(),
             statement: vec![PolicyStatement {
-                sid: None,
-                effect: "Allow".to_string(),
-                action: vec!["s3:GetObject".to_string()],
-                resource: vec!["arn:aws:s3:::bucket/*".to_string()],
-                principal: None,
-                condition: None,
-            }],
-        };
-
-        assert!(policy_evaluation_operations::is_action_allowed(
-            &policy,
-            "s3:GetObject",
-            "arn:aws:s3:::bucket/key"
-        ));
-
-        assert!(!policy_evaluation_operations::is_action_allowed(
-            &policy,
-            "s3:PutObject",
-            "arn:aws:s3:::bucket/key"
-        ));
-    }
-
-    #[test]
-    fn test_wildcard_action() {
-        let policy = PolicyDocument {
-            version: Some("2012-10-17".to_string()),
-            statement: vec![PolicyStatement {
-                sid: None,
-                effect: "Allow".to_string(),
-                action: vec!["s3:*".to_string()],
+                effect: effect.to_string(),
+                action: actions.iter().map(|a| a.to_string()).collect(),
                 resource: vec!["*".to_string()],
-                principal: None,
                 condition: None,
             }],
-        };
+        }
+    }
 
-        assert!(policy_evaluation_operations::is_action_allowed(
-            &policy,
-            "s3:GetObject",
-            "arn:aws:s3:::bucket/key"
-        ));
+    // ─── is_action_allowed ────────────────────────────────────
 
-        assert!(policy_evaluation_operations::is_action_allowed(
-            &policy,
-            "s3:PutObject",
-            "arn:aws:s3:::bucket/key"
-        ));
+    #[test]
+    fn is_action_allowed_matching() {
+        let policy = make_policy("Allow", &["iam:GetUser"]);
+        assert!(is_action_allowed(&policy, "iam:GetUser", "*"));
     }
 
     #[test]
-    fn test_explicit_deny() {
-        let policies = vec![
-            PolicyDocument {
-                version: Some("2012-10-17".to_string()),
-                statement: vec![PolicyStatement {
-                    sid: None,
-                    effect: "Allow".to_string(),
-                    action: vec!["s3:*".to_string()],
-                    resource: vec!["*".to_string()],
-                    principal: None,
-                    condition: None,
-                }],
-            },
-            PolicyDocument {
-                version: Some("2012-10-17".to_string()),
-                statement: vec![PolicyStatement {
-                    sid: None,
-                    effect: "Deny".to_string(),
-                    action: vec!["s3:DeleteObject".to_string()],
-                    resource: vec!["*".to_string()],
-                    principal: None,
-                    condition: None,
-                }],
-            },
-        ];
+    fn is_action_allowed_no_match() {
+        let policy = make_policy("Allow", &["iam:GetUser"]);
+        assert!(!is_action_allowed(&policy, "iam:DeleteUser", "*"));
+    }
 
-        let result = policy_evaluation_operations::evaluate_policies(
-            &policies,
-            "s3:DeleteObject",
-            "arn:aws:s3:::bucket/key",
+    #[test]
+    fn is_action_allowed_wildcard() {
+        let policy = make_policy("Allow", &["*"]);
+        assert!(is_action_allowed(&policy, "iam:GetUser", "*"));
+        assert!(is_action_allowed(&policy, "sts:AssumeRole", "*"));
+    }
+
+    #[test]
+    fn is_action_allowed_deny_effect_returns_false() {
+        let policy = make_policy("Deny", &["iam:GetUser"]);
+        assert!(!is_action_allowed(&policy, "iam:GetUser", "*"));
+    }
+
+    #[test]
+    fn is_action_allowed_prefix_wildcard() {
+        let policy = make_policy("Allow", &["iam:Get*"]);
+        assert!(is_action_allowed(&policy, "iam:GetUser", "*"));
+        assert!(is_action_allowed(&policy, "iam:GetRole", "*"));
+        assert!(!is_action_allowed(&policy, "iam:PutUser", "*"));
+    }
+
+    // ─── evaluate_policies ────────────────────────────────────
+
+    #[test]
+    fn evaluate_single_allow() {
+        let policies = vec![make_policy("Allow", &["iam:GetUser"])];
+        assert_eq!(
+            evaluate_policies(&policies, "iam:GetUser", "*"),
+            EvaluationResult::Allow
         );
+    }
 
-        assert_eq!(result, EvaluationResult::Deny);
+    #[test]
+    fn evaluate_single_deny() {
+        let policies = vec![make_policy("Deny", &["iam:GetUser"])];
+        assert_eq!(
+            evaluate_policies(&policies, "iam:GetUser", "*"),
+            EvaluationResult::Deny
+        );
+    }
+
+    #[test]
+    fn evaluate_deny_overrides_allow() {
+        let policies = vec![
+            make_policy("Allow", &["iam:GetUser"]),
+            make_policy("Deny", &["iam:GetUser"]),
+        ];
+        assert_eq!(
+            evaluate_policies(&policies, "iam:GetUser", "*"),
+            EvaluationResult::Deny
+        );
+    }
+
+    #[test]
+    fn evaluate_no_match_implicit_deny() {
+        let policies = vec![make_policy("Allow", &["sts:AssumeRole"])];
+        assert_eq!(
+            evaluate_policies(&policies, "iam:GetUser", "*"),
+            EvaluationResult::ImplicitDeny
+        );
+    }
+
+    #[test]
+    fn evaluate_empty_policies() {
+        let policies: Vec<PolicyDocument> = vec![];
+        assert_eq!(
+            evaluate_policies(&policies, "iam:GetUser", "*"),
+            EvaluationResult::ImplicitDeny
+        );
+    }
+
+    #[test]
+    fn evaluate_mixed_policies() {
+        let policies = vec![
+            make_policy("Allow", &["iam:*"]),
+            make_policy("Deny", &["iam:DeleteUser"]),
+        ];
+        // GetUser matches allow but not deny
+        assert_eq!(
+            evaluate_policies(&policies, "iam:GetUser", "*"),
+            EvaluationResult::Allow
+        );
+        // DeleteUser matches both → deny wins
+        assert_eq!(
+            evaluate_policies(&policies, "iam:DeleteUser", "*"),
+            EvaluationResult::Deny
+        );
+    }
+
+    // ─── EvaluationResult ─────────────────────────────────────
+
+    #[test]
+    fn evaluation_result_debug() {
+        assert_eq!(format!("{:?}", EvaluationResult::Allow), "Allow");
+        assert_eq!(format!("{:?}", EvaluationResult::Deny), "Deny");
+        assert_eq!(
+            format!("{:?}", EvaluationResult::ImplicitDeny),
+            "ImplicitDeny"
+        );
+    }
+
+    #[test]
+    fn evaluation_result_eq() {
+        assert_eq!(EvaluationResult::Allow, EvaluationResult::Allow);
+        assert_ne!(EvaluationResult::Allow, EvaluationResult::Deny);
     }
 }

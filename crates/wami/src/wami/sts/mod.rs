@@ -4,6 +4,8 @@ pub mod assume_role;
 pub mod credentials;
 pub mod federation;
 pub mod identity;
+#[cfg(feature = "sts-jwt")]
+pub mod jwt;
 pub mod session;
 pub mod session_token;
 

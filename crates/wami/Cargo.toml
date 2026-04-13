@@ -35,6 +35,8 @@ regex = "1.10"
 bcrypt = "0.15"
 rand = "0.8"
 getrandom = "0.2"
+ed25519-dalek = { version = "2", features = ["rand_core", "pkcs8"], optional = true }
+jsonwebtoken = { version = "9", optional = true }
 roxmltree = "0.21"
 wami-traits = { path = "../wami-traits" }
 wami-provider = { path = "../wami-provider" }
@@ -46,3 +48,7 @@ wami-credentials = { path = "../wami-credentials" }
 wami-condition = { path = "../wami-condition" }
 wami-core = { path = "../wami-core" }
 wami-macros = { path = "../wami-macros" }
+
+[features]
+default = ["sts-jwt"]
+sts-jwt = ["dep:ed25519-dalek", "dep:jsonwebtoken"]

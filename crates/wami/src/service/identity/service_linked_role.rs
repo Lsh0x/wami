@@ -2,6 +2,7 @@
 //!
 //! Orchestrates service-linked role management operations.
 
+use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::{RoleStore, ServiceLinkedRoleStore};
 use crate::wami::identity::role::builder as role_builder;
 use crate::wami::identity::service_linked_role::{
@@ -9,6 +10,7 @@ use crate::wami::identity::service_linked_role::{
 };
 use crate::wami::identity::Role;
 use std::sync::{Arc, RwLock};
+use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
 
@@ -19,61 +21,92 @@ impl<T> ServiceLinkedRoleServiceStore for T where T: RoleStore + ServiceLinkedRo
 ///
 /// Service-linked roles are predefined AWS roles that are linked to specific AWS services.
 #[wami_macros::service(
-    store_trait = "crate::service::identity::service_linked_role::ServiceLinkedRoleServiceStore"
+    store_trait = "crate::service::identity::service_linked_role::ServiceLinkedRoleServiceStore",
+    generate_new = false
 )]
 pub struct ServiceLinkedRoleService<S> {
     store: Arc<RwLock<S>>,
+    authz: Option<Arc<dyn Authorizer>>,
 }
 
 impl<S: ServiceLinkedRoleServiceStore> ServiceLinkedRoleService<S> {
+    pub fn new(store: Arc<RwLock<S>>) -> Self {
+        Self { store, authz: None }
+    }
+
+    pub fn with_authorizer(store: Arc<RwLock<S>>, authz: Arc<dyn Authorizer>) -> Self {
+        Self {
+            store,
+            authz: Some(authz),
+        }
+    }
+
+    async fn guard(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<()> {
+        if let Some(authz) = &self.authz {
+            let arn = iam_resource_arn(context, resource_type, resource_id)?;
+            authz.check_or_deny(context, action.as_str(), &arn).await?;
+        }
+        Ok(())
+    }
+
     /// Create a service-linked role
     pub async fn create_service_linked_role(
         &self,
         context: &WamiContext,
         request: CreateServiceLinkedRoleRequest,
     ) -> Result<Role> {
-        // Validate service name
+        self.guard(
+            context,
+            WamiAction::IamCreateRole,
+            "role",
+            &request.aws_service_name,
+        )
+        .await?;
+
         slr_ops::service_linked_role_operations::validate_service_name(&request.aws_service_name)?;
 
-        // Validate custom suffix if provided
         if let Some(ref suffix) = request.custom_suffix {
             slr_ops::service_linked_role_operations::validate_custom_suffix(suffix)?;
         }
 
-        // Generate role name
         let role_name = slr_ops::service_linked_role_operations::generate_role_name(
             &request.aws_service_name,
             request.custom_suffix.as_deref(),
         );
 
-        // Service-linked roles use a fixed path
         let path = "/aws-service-role/".to_string() + &request.aws_service_name + "/";
 
-        // Build assume role policy document for service-linked role
         let assume_role_policy = format!(
             r#"{{"Version":"2012-10-17","Statement":[{{"Effect":"Allow","Principal":{{"Service":"{}"}},"Action":"sts:AssumeRole"}}]}}"#,
             request.aws_service_name
         );
 
-        // Use wami role builder to create the role with context
         let role = role_builder::build_role(
             role_name,
             assume_role_policy,
             Some(path),
             request.description,
-            None, // max_session_duration
+            None,
             context,
         )?;
 
-        // Store it (service-linked roles are stored as regular roles)
         self.write_store().create_role(role).await
     }
 
     /// Get the status of a service-linked role deletion task
     pub async fn get_service_linked_role_deletion_task(
         &self,
+        context: &WamiContext,
         deletion_task_id: &str,
     ) -> Result<Option<DeletionTaskInfo>> {
+        self.guard(context, WamiAction::IamReadRole, "role", deletion_task_id)
+            .await?;
         self.store
             .read()
             .unwrap()
@@ -110,6 +143,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_service_linked_role() {
         let service = setup_service();
+        let context = test_context();
 
         let request = CreateServiceLinkedRoleRequest {
             aws_service_name: "elasticbeanstalk.amazonaws.com".to_string(),
@@ -117,7 +151,6 @@ mod tests {
             custom_suffix: None,
         };
 
-        let context = test_context();
         let role = service
             .create_service_linked_role(&context, request)
             .await
@@ -132,6 +165,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_service_linked_role_with_custom_suffix() {
         let service = setup_service();
+        let context = test_context();
 
         let request = CreateServiceLinkedRoleRequest {
             aws_service_name: "autoscaling.amazonaws.com".to_string(),
@@ -139,7 +173,6 @@ mod tests {
             custom_suffix: Some("MyApp".to_string()),
         };
 
-        let context = test_context();
         let role = service
             .create_service_linked_role(&context, request)
             .await
@@ -150,6 +183,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_service_linked_role_invalid_service() {
         let service = setup_service();
+        let context = test_context();
 
         let request = CreateServiceLinkedRoleRequest {
             aws_service_name: "invalid-service".to_string(),
@@ -157,7 +191,6 @@ mod tests {
             custom_suffix: None,
         };
 
-        let context = test_context();
         let result = service.create_service_linked_role(&context, request).await;
         assert!(result.is_err());
     }
@@ -165,22 +198,20 @@ mod tests {
     #[tokio::test]
     async fn test_get_deletion_task() {
         let service = setup_service();
+        let context = test_context();
 
-        // Create a role first (in real scenario, deletion would create a task)
         let request = CreateServiceLinkedRoleRequest {
             aws_service_name: "elasticbeanstalk.amazonaws.com".to_string(),
             description: None,
             custom_suffix: None,
         };
-        let context = test_context();
         service
             .create_service_linked_role(&context, request)
             .await
             .unwrap();
 
-        // Try to get a nonexistent deletion task
         let task = service
-            .get_service_linked_role_deletion_task("task-123")
+            .get_service_linked_role_deletion_task(&context, "task-123")
             .await
             .unwrap();
         assert!(task.is_none());

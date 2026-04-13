@@ -53,6 +53,13 @@
 
 pub mod authentication;
 pub mod authorization;
+pub mod authorizer;
+pub mod policy_evaluator;
 
 pub use authentication::{hash_secret, verify_secret, AuthenticationService};
 pub use authorization::AuthorizationService;
+pub use authorizer::{iam_resource_arn, into_authorizer, Authorizer};
+pub use policy_evaluator::{
+    build_condition_context, evaluate_policy_document, matches_action, matches_condition,
+    matches_resource, parse_policy_doc, PolicyEffect,
+};

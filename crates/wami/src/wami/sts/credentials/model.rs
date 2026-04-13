@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 ///     wami_arn: "arn:wami:.*:0:wami:123456789012:credentials/session-id".parse().unwrap(),
 ///     providers: vec![],
 ///     tenant_id: None,
+///     signed_token: None,
 /// };
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,6 +41,9 @@ pub struct Credentials {
     pub providers: Vec<crate::provider::ProviderConfig>,
     /// Optional tenant ID for multi-tenant isolation
     pub tenant_id: Option<crate::wami::tenant::TenantId>,
+    /// Optional signed JWT (Ed25519) for offline verification
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signed_token: Option<String>,
 }
 
 impl Credentials {
@@ -95,6 +99,7 @@ mod tests {
             wami_arn: wami_arn.clone(),
             providers: vec![],
             tenant_id: None,
+            signed_token: None,
         };
         assert!(expired.is_expired());
 
@@ -108,6 +113,7 @@ mod tests {
             wami_arn: wami_arn.clone(),
             providers: vec![],
             tenant_id: None,
+            signed_token: None,
         };
         assert!(!valid.is_expired());
     }
@@ -131,6 +137,7 @@ mod tests {
             wami_arn,
             providers: vec![],
             tenant_id: None,
+            signed_token: None,
         };
 
         let remaining = creds.time_remaining();
@@ -157,6 +164,7 @@ mod tests {
             wami_arn,
             providers: vec![],
             tenant_id: None,
+            signed_token: None,
         };
 
         assert!(creds.expires_within(chrono::Duration::hours(1)));

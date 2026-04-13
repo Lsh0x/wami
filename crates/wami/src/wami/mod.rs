@@ -78,6 +78,9 @@ pub mod tags;
 /// Tenant management and multi-tenancy
 pub mod tenant;
 
+/// GDPR compliance, consent management, audit trail, and data rights
+pub mod gdpr;
+
 // Client operations (IAM operations)
 // Operations moved to service/ layer
 // pub mod operations;

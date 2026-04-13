@@ -12,6 +12,9 @@ use wami_core::arn::{Service, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
 
+#[cfg(feature = "sts-jwt")]
+use crate::wami::sts::jwt::{self, KeyManager};
+
 /// Response from getting a session token
 #[derive(Debug, Clone)]
 pub struct GetSessionTokenResponse {
@@ -31,6 +34,46 @@ impl<S: SessionStore> SessionTokenService<S> {
     ///
     /// Generates temporary credentials for the current user.
     pub async fn get_session_token(
+        &self,
+        context: &WamiContext,
+        request: GetSessionTokenRequest,
+        principal_arn: &str,
+    ) -> Result<GetSessionTokenResponse> {
+        self.get_session_token_inner(context, request, principal_arn)
+            .await
+    }
+
+    /// Get a session token with optional JWT signing.
+    ///
+    /// When a `KeyManager` is provided, the returned credentials will include
+    /// a signed JWT (`signed_token`) that can be verified offline.
+    #[cfg(feature = "sts-jwt")]
+    pub async fn get_session_token_with_signing(
+        &self,
+        context: &WamiContext,
+        request: GetSessionTokenRequest,
+        principal_arn: &str,
+        key_manager: Option<&KeyManager>,
+    ) -> Result<GetSessionTokenResponse> {
+        let mut response = self
+            .get_session_token_inner(context, request, principal_arn)
+            .await?;
+        if let Some(km) = key_manager {
+            let claims_ctx = jwt::StsClaimsContext {
+                principal_arn: principal_arn.to_string(),
+                issuer: "wami-sts".to_string(),
+                audience: "wami".to_string(),
+                scoped_actions: vec![],
+                scoped_resources: vec![],
+            };
+            let claims = jwt::build_sts_claims(&response.credentials, &claims_ctx);
+            response.credentials.signed_token = km.sign_claims(&claims).ok();
+        }
+        Ok(response)
+    }
+
+    /// Core session token logic (no JWT signing).
+    async fn get_session_token_inner(
         &self,
         context: &WamiContext,
         request: GetSessionTokenRequest,
@@ -82,6 +125,7 @@ impl<S: SessionStore> SessionTokenService<S> {
             wami_arn: wami_arn.clone(),
             providers: vec![],
             tenant_id: None,
+            signed_token: None,
         };
 
         // Create and store session
@@ -219,5 +263,42 @@ mod tests {
             sessions[0].session_token,
             response.credentials.session_token
         );
+    }
+
+    #[cfg(feature = "sts-jwt")]
+    #[tokio::test]
+    async fn test_get_session_token_with_jwt_signing() {
+        use crate::wami::sts::jwt::KeyManager;
+
+        let service = setup_service();
+        let context = test_context();
+        let km = KeyManager::generate();
+
+        let request = GetSessionTokenRequest {
+            duration_seconds: Some(3600),
+            serial_number: None,
+            token_code: None,
+        };
+
+        let response = service
+            .get_session_token_with_signing(
+                &context,
+                request,
+                "arn:aws:iam::123456789012:user/alice",
+                Some(&km),
+            )
+            .await
+            .unwrap();
+
+        let signed_token = response
+            .credentials
+            .signed_token
+            .as_ref()
+            .expect("signed_token should be present");
+        let claims = km
+            .verify_token(signed_token)
+            .expect("token should be verifiable");
+        assert_eq!(claims.sub, "arn:aws:iam::123456789012:user/alice");
+        assert_eq!(claims.iss, "wami-sts");
     }
 }

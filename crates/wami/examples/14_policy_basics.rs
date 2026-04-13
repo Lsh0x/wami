@@ -150,12 +150,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n\nStep 5: Listing all policies...\n");
 
     let (policies, _, _) = policy_service
-        .list_policies(ListPoliciesRequest {
-            scope: None,
-            only_attached: None,
-            path_prefix: None,
-            pagination: None,
-        })
+        .list_policies(
+            &context,
+            ListPoliciesRequest {
+                scope: None,
+                only_attached: None,
+                path_prefix: None,
+                pagination: None,
+            },
+        )
         .await?;
     println!("✓ Found {} policies:", policies.len());
     for policy in &policies {
