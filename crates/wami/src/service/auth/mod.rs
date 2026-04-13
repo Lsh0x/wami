@@ -58,8 +58,8 @@ pub mod policy_evaluator;
 
 pub use authentication::{hash_secret, verify_secret, AuthenticationService};
 pub use authorization::AuthorizationService;
-pub use authorizer::{into_authorizer, iam_resource_arn, Authorizer};
+pub use authorizer::{iam_resource_arn, into_authorizer, Authorizer};
 pub use policy_evaluator::{
-    evaluate_policy_document, matches_action, matches_resource, matches_condition,
-    build_condition_context, parse_policy_doc, PolicyEffect,
+    build_condition_context, evaluate_policy_document, matches_action, matches_condition,
+    matches_resource, parse_policy_doc, PolicyEffect,
 };

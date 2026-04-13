@@ -17,7 +17,10 @@ use wami_credentials::signing_certificate::{
 ///
 /// Provides high-level operations for X.509 certificate management.
 /// Optionally holds an [`Authorizer`] for authorization guards on every method.
-#[wami_macros::service(store_trait = "crate::store::traits::SigningCertificateStore", generate_new = false)]
+#[wami_macros::service(
+    store_trait = "crate::store::traits::SigningCertificateStore",
+    generate_new = false
+)]
 pub struct SigningCertificateService<S> {
     store: Arc<RwLock<S>>,
     authz: Option<Arc<dyn Authorizer>>,
@@ -38,7 +41,13 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
     }
 
     /// Internal: check authorization if an authorizer is set.
-    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+    async fn guard(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<()> {
         if let Some(authz) = &self.authz {
             let arn = iam_resource_arn(context, resource_type, resource_id)?;
             authz.check_or_deny(context, action.as_str(), &arn).await?;
@@ -53,7 +62,13 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
         request: UploadSigningCertificateRequest,
     ) -> Result<SigningCertificate> {
         // Authorization guard
-        self.guard(context, WamiAction::IamManageCredentials, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         // Use wami builder to create certificate
         let certificate = cert_builder::build_signing_certificate(
@@ -74,7 +89,13 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
         context: &WamiContext,
         certificate_id: &str,
     ) -> Result<Option<SigningCertificate>> {
-        self.guard(context, WamiAction::IamManageCredentials, "credential", certificate_id).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "credential",
+            certificate_id,
+        )
+        .await?;
         self.read_store()
             .get_signing_certificate(certificate_id)
             .await
@@ -86,7 +107,13 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
         context: &WamiContext,
         request: UpdateSigningCertificateRequest,
     ) -> Result<SigningCertificate> {
-        self.guard(context, WamiAction::IamManageCredentials, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         // Get existing certificate
         let mut certificate = self
@@ -112,7 +139,13 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
         context: &WamiContext,
         request: DeleteSigningCertificateRequest,
     ) -> Result<()> {
-        self.guard(context, WamiAction::IamManageCredentials, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            &request.user_name,
+        )
+        .await?;
         self.write_store()
             .delete_signing_certificate(&request.certificate_id)
             .await
@@ -125,7 +158,8 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
         request: ListSigningCertificatesRequest,
     ) -> Result<Vec<SigningCertificate>> {
         let user_name = request.user_name.as_deref().unwrap_or("*");
-        self.guard(context, WamiAction::IamManageCredentials, "user", user_name).await?;
+        self.guard(context, WamiAction::IamManageCredentials, "user", user_name)
+            .await?;
         self.read_store()
             .list_signing_certificates(request.user_name.as_deref())
             .await

@@ -729,9 +729,7 @@ impl WamiAction {
             // Global wildcard matches everything
             Self::All => true,
             // Service wildcard matches anything in the same prefix
-            Self::ServiceAll(prefix) => {
-                requested.prefix().map_or(false, |rp| rp == *prefix)
-            }
+            Self::ServiceAll(prefix) => requested.prefix() == Some(*prefix),
             // Exact match
             other => other == requested,
         }
@@ -740,7 +738,7 @@ impl WamiAction {
     /// Check whether a policy action **string** matches a requested action string.
     ///
     /// This provides backward compatibility with the existing `Vec<String>` in
-    /// [`PolicyStatement`] without requiring a full migration to the enum.
+    /// `PolicyStatement` without requiring a full migration to the enum.
     ///
     /// Supports: `"*"`, `"service:*"`, and exact strings like `"db:Query"`.
     pub fn matches_str(policy_action: &str, requested: &str) -> bool {
@@ -804,15 +802,31 @@ static REGISTRY: LazyLock<Vec<ActionInfo>> = LazyLock::new(|| {
     vec![
         // Platform
         ai("platform:Admin", "Full platform administration", "platform"),
-        ai("platform:ViewSettings", "View platform settings and stats", "platform"),
-        ai("platform:UpdateSettings", "Update platform configuration", "platform"),
-        ai("platform:ViewAuditLog", "View platform audit logs", "platform"),
+        ai(
+            "platform:ViewSettings",
+            "View platform settings and stats",
+            "platform",
+        ),
+        ai(
+            "platform:UpdateSettings",
+            "Update platform configuration",
+            "platform",
+        ),
+        ai(
+            "platform:ViewAuditLog",
+            "View platform audit logs",
+            "platform",
+        ),
         // Space
         ai("space:Create", "Create a new Space", "space"),
         ai("space:Delete", "Delete a Space", "space"),
         ai("space:Read", "Read Space metadata", "space"),
         ai("space:Update", "Update Space settings", "space"),
-        ai("space:Configure", "Configure Space domain and port", "space"),
+        ai(
+            "space:Configure",
+            "Configure Space domain and port",
+            "space",
+        ),
         ai("space:ManageMembers", "Manage Space members", "space"),
         ai("space:Suspend", "Suspend / reactivate a Space", "space"),
         ai("space:List", "List all Spaces", "space"),
@@ -823,7 +837,11 @@ static REGISTRY: LazyLock<Vec<ActionInfo>> = LazyLock::new(|| {
         ai("tenant:CreateSubTenant", "Create sub-tenant", "tenant"),
         ai("tenant:ManageUsers", "Manage users within tenant", "tenant"),
         ai("tenant:ManageRoles", "Manage roles within tenant", "tenant"),
-        ai("tenant:ManagePolicies", "Manage policies within tenant", "tenant"),
+        ai(
+            "tenant:ManagePolicies",
+            "Manage policies within tenant",
+            "tenant",
+        ),
         // IAM
         ai("iam:CreateUser", "Create IAM user", "iam"),
         ai("iam:DeleteUser", "Delete IAM user", "iam"),
@@ -876,19 +894,43 @@ static REGISTRY: LazyLock<Vec<ActionInfo>> = LazyLock::new(|| {
         // Inference
         ai("inference:ListModels", "List available models", "inference"),
         ai("inference:Invoke", "Invoke a model", "inference"),
-        ai("inference:ConfigureRouter", "Configure model routing", "inference"),
+        ai(
+            "inference:ConfigureRouter",
+            "Configure model routing",
+            "inference",
+        ),
         ai("inference:ViewUsage", "View model usage", "inference"),
         // Analytics
         ai("analytics:ViewUsage", "View usage analytics", "analytics"),
-        ai("analytics:ViewConversations", "View conversation analytics", "analytics"),
+        ai(
+            "analytics:ViewConversations",
+            "View conversation analytics",
+            "analytics",
+        ),
         ai("analytics:Export", "Export analytics reports", "analytics"),
         ai("analytics:ViewActivity", "View user activity", "analytics"),
         // Integration
-        ai("integration:Create", "Create integration bridge", "integration"),
-        ai("integration:Delete", "Delete integration bridge", "integration"),
-        ai("integration:Configure", "Configure integration", "integration"),
+        ai(
+            "integration:Create",
+            "Create integration bridge",
+            "integration",
+        ),
+        ai(
+            "integration:Delete",
+            "Delete integration bridge",
+            "integration",
+        ),
+        ai(
+            "integration:Configure",
+            "Configure integration",
+            "integration",
+        ),
         ai("integration:List", "List integrations", "integration"),
-        ai("integration:Receive", "Receive inbound messages", "integration"),
+        ai(
+            "integration:Receive",
+            "Receive inbound messages",
+            "integration",
+        ),
         ai("integration:Send", "Send outbound messages", "integration"),
         // Cognitive
         ai("cognitive:Read", "Read cognitive state", "cognitive"),
@@ -1027,7 +1069,11 @@ mod tests {
     fn registry() {
         let all = ActionRegistry::list_actions();
         // We have ~74 concrete actions (excluding wildcards)
-        assert!(all.len() >= 70, "Expected at least 70 actions, got {}", all.len());
+        assert!(
+            all.len() >= 70,
+            "Expected at least 70 actions, got {}",
+            all.len()
+        );
 
         let db_actions = ActionRegistry::list_by_prefix(WamiServicePrefix::Db);
         assert_eq!(db_actions.len(), 9);

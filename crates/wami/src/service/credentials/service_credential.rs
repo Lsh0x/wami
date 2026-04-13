@@ -18,7 +18,10 @@ use wami_credentials::service_credential::{
 ///
 /// Provides high-level operations for AWS service credentials (e.g., CodeCommit).
 /// Optionally holds an [`Authorizer`] for authorization guards on every method.
-#[wami_macros::service(store_trait = "crate::store::traits::ServiceCredentialStore", generate_new = false)]
+#[wami_macros::service(
+    store_trait = "crate::store::traits::ServiceCredentialStore",
+    generate_new = false
+)]
 pub struct ServiceCredentialService<S> {
     store: Arc<RwLock<S>>,
     authz: Option<Arc<dyn Authorizer>>,
@@ -39,7 +42,13 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
     }
 
     /// Internal: check authorization if an authorizer is set.
-    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+    async fn guard(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<()> {
         if let Some(authz) = &self.authz {
             let arn = iam_resource_arn(context, resource_type, resource_id)?;
             authz.check_or_deny(context, action.as_str(), &arn).await?;
@@ -54,7 +63,13 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
         request: CreateServiceSpecificCredentialRequest,
     ) -> Result<ServiceSpecificCredential> {
         // Authorization guard
-        self.guard(context, WamiAction::IamManageCredentials, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         // Use wami builder to create credential
         let credential = cred_builder::build_service_credential(
@@ -75,7 +90,13 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
         context: &WamiContext,
         credential_id: &str,
     ) -> Result<Option<ServiceSpecificCredential>> {
-        self.guard(context, WamiAction::IamManageCredentials, "credential", credential_id).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "credential",
+            credential_id,
+        )
+        .await?;
         self.read_store()
             .get_service_specific_credential(credential_id)
             .await
@@ -87,7 +108,13 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
         context: &WamiContext,
         request: UpdateServiceSpecificCredentialRequest,
     ) -> Result<ServiceSpecificCredential> {
-        self.guard(context, WamiAction::IamManageCredentials, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         // Get existing credential
         let mut credential = self
@@ -116,7 +143,13 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
         context: &WamiContext,
         request: DeleteServiceSpecificCredentialRequest,
     ) -> Result<()> {
-        self.guard(context, WamiAction::IamManageCredentials, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            &request.user_name,
+        )
+        .await?;
         self.write_store()
             .delete_service_specific_credential(&request.service_specific_credential_id)
             .await
@@ -129,7 +162,13 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
         request: ListServiceSpecificCredentialsRequest,
     ) -> Result<Vec<ServiceSpecificCredential>> {
         let user_name = request.user_name.as_deref().unwrap_or("");
-        self.guard(context, WamiAction::IamManageCredentials, "user", if user_name.is_empty() { "*" } else { user_name }).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            if user_name.is_empty() { "*" } else { user_name },
+        )
+        .await?;
         self.read_store()
             .list_service_specific_credentials(user_name)
             .await

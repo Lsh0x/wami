@@ -233,10 +233,13 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n\nStep 4: Unified view across hybrid environment...\n");
 
     let (all_users, _, _) = user_service
-        .list_users(&onprem_context, ListUsersRequest {
-            path_prefix: None,
-            pagination: None,
-        })
+        .list_users(
+            &onprem_context,
+            ListUsersRequest {
+                path_prefix: None,
+                pagination: None,
+            },
+        )
         .await?;
     println!(
         "✓ Total users across hybrid environment: {}",

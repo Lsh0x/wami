@@ -171,10 +171,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n\nStep 4: Disaster recovery status...\n");
 
     let (all_users, _, _) = user_service
-        .list_users(&aws_context, ListUsersRequest {
-            path_prefix: Some("/critical/".to_string()),
-            pagination: None,
-        })
+        .list_users(
+            &aws_context,
+            ListUsersRequest {
+                path_prefix: Some("/critical/".to_string()),
+                pagination: None,
+            },
+        )
         .await?;
 
     let aws_users: Vec<_> = all_users

@@ -33,7 +33,13 @@ impl<S: RoleStore> RoleService<S> {
         }
     }
 
-    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+    async fn guard(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<()> {
         if let Some(authz) = &self.authz {
             let arn = iam_resource_arn(context, resource_type, resource_id)?;
             authz.check_or_deny(context, action.as_str(), &arn).await?;
@@ -47,7 +53,13 @@ impl<S: RoleStore> RoleService<S> {
         context: &WamiContext,
         request: CreateRoleRequest,
     ) -> Result<Role> {
-        self.guard(context, WamiAction::IamCreateRole, "role", &request.role_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamCreateRole,
+            "role",
+            &request.role_name,
+        )
+        .await?;
 
         let mut role = role_builder::build_role(
             request.role_name,
@@ -73,13 +85,24 @@ impl<S: RoleStore> RoleService<S> {
 
     /// Get a role by name
     pub async fn get_role(&self, context: &WamiContext, role_name: &str) -> Result<Option<Role>> {
-        self.guard(context, WamiAction::IamReadRole, "role", role_name).await?;
+        self.guard(context, WamiAction::IamReadRole, "role", role_name)
+            .await?;
         self.read_store().get_role(role_name).await
     }
 
     /// Update a role
-    pub async fn update_role(&self, context: &WamiContext, request: UpdateRoleRequest) -> Result<Role> {
-        self.guard(context, WamiAction::IamCreateRole, "role", &request.role_name).await?;
+    pub async fn update_role(
+        &self,
+        context: &WamiContext,
+        request: UpdateRoleRequest,
+    ) -> Result<Role> {
+        self.guard(
+            context,
+            WamiAction::IamCreateRole,
+            "role",
+            &request.role_name,
+        )
+        .await?;
 
         let mut role = self
             .store
@@ -104,7 +127,8 @@ impl<S: RoleStore> RoleService<S> {
 
     /// Delete a role
     pub async fn delete_role(&self, context: &WamiContext, role_name: &str) -> Result<()> {
-        self.guard(context, WamiAction::IamDeleteRole, "role", role_name).await?;
+        self.guard(context, WamiAction::IamDeleteRole, "role", role_name)
+            .await?;
         self.write_store().delete_role(role_name).await
     }
 
@@ -114,7 +138,8 @@ impl<S: RoleStore> RoleService<S> {
         context: &WamiContext,
         request: ListRolesRequest,
     ) -> Result<(Vec<Role>, bool, Option<String>)> {
-        self.guard(context, WamiAction::IamReadRole, "role", "*").await?;
+        self.guard(context, WamiAction::IamReadRole, "role", "*")
+            .await?;
         self.store
             .read()
             .unwrap()

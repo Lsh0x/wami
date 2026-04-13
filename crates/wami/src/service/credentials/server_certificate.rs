@@ -18,7 +18,10 @@ use wami_credentials::server_certificate::{
 ///
 /// Provides high-level operations for server certificate management.
 /// Optionally holds an [`Authorizer`] for authorization guards on every method.
-#[wami_macros::service(store_trait = "crate::store::traits::ServerCertificateStore", generate_new = false)]
+#[wami_macros::service(
+    store_trait = "crate::store::traits::ServerCertificateStore",
+    generate_new = false
+)]
 pub struct ServerCertificateService<S> {
     store: Arc<RwLock<S>>,
     authz: Option<Arc<dyn Authorizer>>,
@@ -39,7 +42,13 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
     }
 
     /// Internal: check authorization if an authorizer is set.
-    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+    async fn guard(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<()> {
         if let Some(authz) = &self.authz {
             let arn = iam_resource_arn(context, resource_type, resource_id)?;
             authz.check_or_deny(context, action.as_str(), &arn).await?;
@@ -54,7 +63,13 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         request: UploadServerCertificateRequest,
     ) -> Result<ServerCertificateMetadata> {
         // Authorization guard
-        self.guard(context, WamiAction::IamManageCredentials, "credential", &request.server_certificate_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "credential",
+            &request.server_certificate_name,
+        )
+        .await?;
 
         // Use wami builder to create certificate
         let certificate = cert_builder::build_server_certificate(
@@ -78,7 +93,13 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         context: &WamiContext,
         certificate_name: &str,
     ) -> Result<Option<ServerCertificateMetadata>> {
-        self.guard(context, WamiAction::IamManageCredentials, "credential", certificate_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "credential",
+            certificate_name,
+        )
+        .await?;
         self.read_store()
             .get_server_certificate(certificate_name)
             .await
@@ -90,7 +111,13 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         context: &WamiContext,
         request: UpdateServerCertificateRequest,
     ) -> Result<ServerCertificateMetadata> {
-        self.guard(context, WamiAction::IamManageCredentials, "credential", &request.server_certificate_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "credential",
+            &request.server_certificate_name,
+        )
+        .await?;
 
         // Get existing certificate
         let mut certificate = self
@@ -117,8 +144,18 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
     }
 
     /// Delete a server certificate
-    pub async fn delete_server_certificate(&self, context: &WamiContext, certificate_name: &str) -> Result<()> {
-        self.guard(context, WamiAction::IamManageCredentials, "credential", certificate_name).await?;
+    pub async fn delete_server_certificate(
+        &self,
+        context: &WamiContext,
+        certificate_name: &str,
+    ) -> Result<()> {
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "credential",
+            certificate_name,
+        )
+        .await?;
         self.write_store()
             .delete_server_certificate(certificate_name)
             .await
@@ -130,7 +167,8 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         context: &WamiContext,
         request: ListServerCertificatesRequest,
     ) -> Result<(Vec<ServerCertificateMetadata>, bool, Option<String>)> {
-        self.guard(context, WamiAction::IamManageCredentials, "credential", "*").await?;
+        self.guard(context, WamiAction::IamManageCredentials, "credential", "*")
+            .await?;
 
         let pagination = if request.marker.is_some() || request.max_items.is_some() {
             Some(PaginationParams {
@@ -199,7 +237,10 @@ mod tests {
         assert_eq!(metadata.server_certificate_name, "test-cert");
         assert_eq!(metadata.path, "/certs/");
 
-        let retrieved = service.get_server_certificate(&context, "test-cert").await.unwrap();
+        let retrieved = service
+            .get_server_certificate(&context, "test-cert")
+            .await
+            .unwrap();
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().server_certificate_name, "test-cert");
     }
@@ -229,7 +270,10 @@ mod tests {
             .await
             .unwrap();
 
-        let retrieved = service.get_server_certificate(&context, "delete-me").await.unwrap();
+        let retrieved = service
+            .get_server_certificate(&context, "delete-me")
+            .await
+            .unwrap();
         assert!(retrieved.is_none());
     }
 

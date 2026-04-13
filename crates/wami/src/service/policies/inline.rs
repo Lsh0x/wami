@@ -16,7 +16,10 @@ impl<T> InlinePolicyServiceStore for T where T: UserStore + GroupStore + RoleSto
 /// Service for managing inline policies
 ///
 /// Optionally holds an [`Authorizer`] for authorization guards on every method.
-#[wami_macros::service(store_trait = "crate::service::policies::inline::InlinePolicyServiceStore", generate_new = false)]
+#[wami_macros::service(
+    store_trait = "crate::service::policies::inline::InlinePolicyServiceStore",
+    generate_new = false
+)]
 pub struct InlinePolicyService<S> {
     store: Arc<RwLock<S>>,
     authz: Option<Arc<dyn Authorizer>>,
@@ -40,7 +43,13 @@ where
     }
 
     /// Internal: check authorization if an authorizer is set.
-    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+    async fn guard(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<()> {
         if let Some(authz) = &self.authz {
             let arn = iam_resource_arn(context, resource_type, resource_id)?;
             authz.check_or_deny(context, action.as_str(), &arn).await?;
@@ -56,7 +65,13 @@ where
         context: &WamiContext,
         request: PutUserPolicyRequest,
     ) -> Result<PutUserPolicyResponse> {
-        self.guard(context, WamiAction::IamCreatePolicy, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamCreatePolicy,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         let mut store = self.write_store();
 
@@ -98,7 +113,13 @@ where
         context: &WamiContext,
         request: GetUserPolicyRequest,
     ) -> Result<GetUserPolicyResponse> {
-        self.guard(context, WamiAction::IamReadPolicy, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamReadPolicy,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         let store = self.read_store();
 
@@ -134,7 +155,13 @@ where
         context: &WamiContext,
         request: DeleteUserPolicyRequest,
     ) -> Result<DeleteUserPolicyResponse> {
-        self.guard(context, WamiAction::IamDeletePolicy, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamDeletePolicy,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         let mut store = self.write_store();
 
@@ -165,7 +192,13 @@ where
         context: &WamiContext,
         request: ListUserPoliciesRequest,
     ) -> Result<ListUserPoliciesResponse> {
-        self.guard(context, WamiAction::IamReadPolicy, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamReadPolicy,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         let store = self.read_store();
 
@@ -191,7 +224,13 @@ where
         context: &WamiContext,
         request: PutGroupPolicyRequest,
     ) -> Result<PutGroupPolicyResponse> {
-        self.guard(context, WamiAction::IamCreatePolicy, "group", &request.group_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamCreatePolicy,
+            "group",
+            &request.group_name,
+        )
+        .await?;
 
         let mut store = self.write_store();
 
@@ -233,7 +272,13 @@ where
         context: &WamiContext,
         request: GetGroupPolicyRequest,
     ) -> Result<GetGroupPolicyResponse> {
-        self.guard(context, WamiAction::IamReadPolicy, "group", &request.group_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamReadPolicy,
+            "group",
+            &request.group_name,
+        )
+        .await?;
 
         let store = self.read_store();
 
@@ -269,7 +314,13 @@ where
         context: &WamiContext,
         request: DeleteGroupPolicyRequest,
     ) -> Result<DeleteGroupPolicyResponse> {
-        self.guard(context, WamiAction::IamDeletePolicy, "group", &request.group_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamDeletePolicy,
+            "group",
+            &request.group_name,
+        )
+        .await?;
 
         let mut store = self.write_store();
 
@@ -300,7 +351,13 @@ where
         context: &WamiContext,
         request: ListGroupPoliciesRequest,
     ) -> Result<ListGroupPoliciesResponse> {
-        self.guard(context, WamiAction::IamReadPolicy, "group", &request.group_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamReadPolicy,
+            "group",
+            &request.group_name,
+        )
+        .await?;
 
         let store = self.read_store();
 
@@ -326,7 +383,13 @@ where
         context: &WamiContext,
         request: PutRolePolicyRequest,
     ) -> Result<PutRolePolicyResponse> {
-        self.guard(context, WamiAction::IamCreatePolicy, "role", &request.role_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamCreatePolicy,
+            "role",
+            &request.role_name,
+        )
+        .await?;
 
         let mut store = self.write_store();
 
@@ -368,7 +431,13 @@ where
         context: &WamiContext,
         request: GetRolePolicyRequest,
     ) -> Result<GetRolePolicyResponse> {
-        self.guard(context, WamiAction::IamReadPolicy, "role", &request.role_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamReadPolicy,
+            "role",
+            &request.role_name,
+        )
+        .await?;
 
         let store = self.read_store();
 
@@ -404,7 +473,13 @@ where
         context: &WamiContext,
         request: DeleteRolePolicyRequest,
     ) -> Result<DeleteRolePolicyResponse> {
-        self.guard(context, WamiAction::IamDeletePolicy, "role", &request.role_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamDeletePolicy,
+            "role",
+            &request.role_name,
+        )
+        .await?;
 
         let mut store = self.write_store();
 
@@ -435,7 +510,13 @@ where
         context: &WamiContext,
         request: ListRolePoliciesRequest,
     ) -> Result<ListRolePoliciesResponse> {
-        self.guard(context, WamiAction::IamReadPolicy, "role", &request.role_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamReadPolicy,
+            "role",
+            &request.role_name,
+        )
+        .await?;
 
         let store = self.read_store();
 
@@ -515,13 +596,19 @@ mod tests {
             policy_name: "MyInlinePolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
-        service.put_user_policy(&context, put_request).await.unwrap();
+        service
+            .put_user_policy(&context, put_request)
+            .await
+            .unwrap();
 
         let get_request = GetUserPolicyRequest {
             user_name: "alice".to_string(),
             policy_name: "MyInlinePolicy".to_string(),
         };
-        let response = service.get_user_policy(&context, get_request).await.unwrap();
+        let response = service
+            .get_user_policy(&context, get_request)
+            .await
+            .unwrap();
         assert_eq!(response.policy_name, "MyInlinePolicy");
         assert!(response.policy_document.contains("Version"));
     }
@@ -540,13 +627,19 @@ mod tests {
             policy_name: "MyInlinePolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
-        service.put_user_policy(&context, put_request).await.unwrap();
+        service
+            .put_user_policy(&context, put_request)
+            .await
+            .unwrap();
 
         let delete_request = DeleteUserPolicyRequest {
             user_name: "alice".to_string(),
             policy_name: "MyInlinePolicy".to_string(),
         };
-        let response = service.delete_user_policy(&context, delete_request).await.unwrap();
+        let response = service
+            .delete_user_policy(&context, delete_request)
+            .await
+            .unwrap();
         assert!(response.message.contains("deleted"));
     }
 
@@ -564,19 +657,28 @@ mod tests {
             policy_name: "Policy1".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
-        service.put_user_policy(&context, put_request1).await.unwrap();
+        service
+            .put_user_policy(&context, put_request1)
+            .await
+            .unwrap();
 
         let put_request2 = PutUserPolicyRequest {
             user_name: "alice".to_string(),
             policy_name: "Policy2".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
-        service.put_user_policy(&context, put_request2).await.unwrap();
+        service
+            .put_user_policy(&context, put_request2)
+            .await
+            .unwrap();
 
         let list_request = ListUserPoliciesRequest {
             user_name: "alice".to_string(),
         };
-        let response = service.list_user_policies(&context, list_request).await.unwrap();
+        let response = service
+            .list_user_policies(&context, list_request)
+            .await
+            .unwrap();
         assert_eq!(response.policy_names.len(), 2);
     }
 

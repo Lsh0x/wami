@@ -16,7 +16,10 @@ use wami_credentials::login_profile::{
 ///
 /// Provides high-level operations for console password management.
 /// Optionally holds an [`Authorizer`] for authorization guards on every method.
-#[wami_macros::service(store_trait = "crate::store::traits::LoginProfileStore", generate_new = false)]
+#[wami_macros::service(
+    store_trait = "crate::store::traits::LoginProfileStore",
+    generate_new = false
+)]
 pub struct LoginProfileService<S> {
     store: Arc<RwLock<S>>,
     authz: Option<Arc<dyn Authorizer>>,
@@ -37,7 +40,13 @@ impl<S: LoginProfileStore> LoginProfileService<S> {
     }
 
     /// Internal: check authorization if an authorizer is set.
-    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+    async fn guard(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<()> {
         if let Some(authz) = &self.authz {
             let arn = iam_resource_arn(context, resource_type, resource_id)?;
             authz.check_or_deny(context, action.as_str(), &arn).await?;
@@ -52,7 +61,13 @@ impl<S: LoginProfileStore> LoginProfileService<S> {
         request: CreateLoginProfileRequest,
     ) -> Result<LoginProfile> {
         // Authorization guard
-        self.guard(context, WamiAction::IamManageCredentials, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         // Use wami builder to create login profile
         // Note: Password is validated but not stored in the model for security
@@ -67,8 +82,13 @@ impl<S: LoginProfileStore> LoginProfileService<S> {
     }
 
     /// Get a login profile for a user
-    pub async fn get_login_profile(&self, context: &WamiContext, user_name: &str) -> Result<Option<LoginProfile>> {
-        self.guard(context, WamiAction::IamManageCredentials, "user", user_name).await?;
+    pub async fn get_login_profile(
+        &self,
+        context: &WamiContext,
+        user_name: &str,
+    ) -> Result<Option<LoginProfile>> {
+        self.guard(context, WamiAction::IamManageCredentials, "user", user_name)
+            .await?;
         self.read_store().get_login_profile(user_name).await
     }
 
@@ -78,7 +98,13 @@ impl<S: LoginProfileStore> LoginProfileService<S> {
         context: &WamiContext,
         request: UpdateLoginProfileRequest,
     ) -> Result<LoginProfile> {
-        self.guard(context, WamiAction::IamManageCredentials, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         // Get existing profile
         let profile = self
@@ -102,7 +128,8 @@ impl<S: LoginProfileStore> LoginProfileService<S> {
 
     /// Delete a login profile
     pub async fn delete_login_profile(&self, context: &WamiContext, user_name: &str) -> Result<()> {
-        self.guard(context, WamiAction::IamManageCredentials, "user", user_name).await?;
+        self.guard(context, WamiAction::IamManageCredentials, "user", user_name)
+            .await?;
         self.write_store().delete_login_profile(user_name).await
     }
 }
@@ -178,7 +205,10 @@ mod tests {
             password: Some("NewP@ssw0rd456!".to_string()), // Password validation only
             password_reset_required: Some(false),
         };
-        let updated = service.update_login_profile(&context, update_request).await.unwrap();
+        let updated = service
+            .update_login_profile(&context, update_request)
+            .await
+            .unwrap();
         assert_eq!(updated.user_name, "bob");
         assert!(!updated.password_reset_required);
     }
@@ -198,9 +228,15 @@ mod tests {
             .await
             .unwrap();
 
-        service.delete_login_profile(&context, "charlie").await.unwrap();
+        service
+            .delete_login_profile(&context, "charlie")
+            .await
+            .unwrap();
 
-        let retrieved = service.get_login_profile(&context, "charlie").await.unwrap();
+        let retrieved = service
+            .get_login_profile(&context, "charlie")
+            .await
+            .unwrap();
         assert!(retrieved.is_none());
     }
 }

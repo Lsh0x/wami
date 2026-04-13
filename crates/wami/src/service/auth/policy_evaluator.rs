@@ -1,8 +1,8 @@
 //! Canonical Policy Evaluator
 //!
 //! Single source of truth for IAM policy evaluation logic. Used by both:
-//! - [`AuthorizationService`] for real-time authorization decisions
-//! - [`EvaluationService`] for policy simulation (simulate-custom-policy / simulate-principal-policy)
+//! - `AuthorizationService` for real-time authorization decisions
+//! - `EvaluationService` for policy simulation (simulate-custom-policy / simulate-principal-policy)
 //!
 //! # Evaluation Rules
 //!
@@ -11,7 +11,9 @@
 //! 3. **Glob matching**: `*` = single segment, `**` = multi-segment
 //! 4. **Variable substitution**: `${tenant}`, `${principal}`, `${service}` from context
 
-use wami_condition::{evaluate_condition_block, evaluator::parse_condition_block, ConditionContext};
+use wami_condition::{
+    evaluate_condition_block, evaluator::parse_condition_block, ConditionContext,
+};
 use wami_core::arn::matching::{glob_match, matches_arn_pattern, MatchContext};
 use wami_core::arn::WamiArn;
 use wami_core::context::WamiContext;
@@ -153,10 +155,7 @@ pub fn matches_condition(statement: &PolicyStatement, cond_ctx: &ConditionContex
         Err(_) => return false,
     };
 
-    match evaluate_condition_block(&block, cond_ctx) {
-        Ok(result) => result,
-        Err(_) => false,
-    }
+    evaluate_condition_block(&block, cond_ctx).unwrap_or_default()
 }
 
 /// Parse a policy document JSON string, returning an empty doc on error.

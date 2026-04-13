@@ -32,6 +32,7 @@
 
 pub mod auth;
 pub mod credentials;
+pub mod gdpr;
 pub mod identity;
 pub mod policies;
 pub mod reports;
@@ -45,6 +46,7 @@ pub use credentials::{
     AccessKeyService, LoginProfileService, MfaDeviceService, ServerCertificateService,
     ServiceCredentialService, SigningCertificateService,
 };
+pub use gdpr::GdprService;
 pub use identity::{
     GroupService, IdentityProviderService, RoleService, ServiceLinkedRoleService, UserService,
 };

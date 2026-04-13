@@ -11,7 +11,7 @@ use wami_core::error::Result;
 
 /// Object-safe authorization interface.
 ///
-/// Services hold an `Option<Arc<dyn Authorizer>>` and call [`check_or_deny`]
+/// Services hold an `Option<Arc<dyn Authorizer>>` and call [`Authorizer::check_or_deny`]
 /// at the top of each method. When `None`, no authorization check is performed
 /// (backward compatibility with existing callers).
 #[async_trait]
@@ -26,7 +26,7 @@ pub trait Authorizer: Send + Sync {
         resource_arn: &WamiArn,
     ) -> Result<bool>;
 
-    /// Like [`authorize`], but returns `Err(AccessDenied)` instead of `Ok(false)`.
+    /// Like [`Authorizer::authorize`], but returns `Err(AccessDenied)` instead of `Ok(false)`.
     async fn check_or_deny(
         &self,
         context: &WamiContext,
@@ -91,9 +91,7 @@ mod impl_for_authz_service {
     }
 
     /// Convenience: wrap an `AuthorizationService<S>` into an `Arc<dyn Authorizer>`.
-    pub fn into_authorizer<S>(
-        service: AuthorizationService<S>,
-    ) -> Arc<dyn Authorizer>
+    pub fn into_authorizer<S>(service: AuthorizationService<S>) -> Arc<dyn Authorizer>
     where
         S: UserStore + GroupStore + RoleStore + PolicyStore + Send + Sync + 'static,
     {

@@ -50,8 +50,8 @@ use crate::credentials::AccessKey;
 use crate::error::{AmiError, Result};
 use crate::service::auth::authentication::hash_secret;
 use crate::store::traits::{AccessKeyStore, PolicyStore, RoleStore, UserStore};
-use crate::wami::identity::root_user::{ROOT_TENANT_ID, ROOT_USER_ID, ROOT_USER_NAME};
 use crate::wami::identity::role::builder as role_builder;
+use crate::wami::identity::root_user::{ROOT_TENANT_ID, ROOT_USER_ID, ROOT_USER_NAME};
 use crate::wami::identity::User;
 use crate::wami::policies::policy::builder as policy_builder;
 use chrono::Utc;
@@ -258,10 +258,7 @@ impl InstanceBootstrap {
     /// - `platform-admin`: Full access to all actions (*)
     /// - `platform-space-creator`: Can create spaces + manage IAM within own spaces
     /// - `platform-user`: Minimal read-only access
-    async fn create_platform_roles<S>(
-        store: &mut S,
-        instance_id: &str,
-    ) -> Result<()>
+    async fn create_platform_roles<S>(store: &mut S, instance_id: &str) -> Result<()>
     where
         S: RoleStore + PolicyStore + Send + Sync,
     {
@@ -306,7 +303,9 @@ impl InstanceBootstrap {
             &ctx,
         )?;
         store.create_role(admin_role).await?;
-        store.attach_role_policy("platform-admin", &admin_policy_arn).await?;
+        store
+            .attach_role_policy("platform-admin", &admin_policy_arn)
+            .await?;
 
         // ── 2. platform-space-creator: create spaces + scoped IAM ──
         let creator_policy_doc = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["space:Create","space:Read","space:Update","space:Delete","iam:CreateRole","iam:DeleteRole","iam:CreateUser","iam:ReadUser","iam:ReadRole","iam:ListUsers","iam:ManageGroupMembers"],"Resource":["*"]}]}"#;
@@ -332,7 +331,9 @@ impl InstanceBootstrap {
             &ctx,
         )?;
         store.create_role(creator_role).await?;
-        store.attach_role_policy("platform-space-creator", &creator_policy_arn).await?;
+        store
+            .attach_role_policy("platform-space-creator", &creator_policy_arn)
+            .await?;
 
         // ── 3. platform-user: minimal read access ──────────────
         let user_policy_doc = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["iam:ReadUser","iam:ReadRole","iam:ListUsers","space:Read","chat:Send","chat:Read"],"Resource":["*"]}]}"#;
@@ -358,7 +359,9 @@ impl InstanceBootstrap {
             &ctx,
         )?;
         store.create_role(user_role).await?;
-        store.attach_role_policy("platform-user", &user_policy_arn).await?;
+        store
+            .attach_role_policy("platform-user", &user_policy_arn)
+            .await?;
 
         Ok(())
     }
@@ -523,20 +526,44 @@ mod tests {
         assert_eq!(admin_role.path, "/platform/");
 
         let creator_role = s.get_role("platform-space-creator").await.unwrap();
-        assert!(creator_role.is_some(), "platform-space-creator role should exist");
+        assert!(
+            creator_role.is_some(),
+            "platform-space-creator role should exist"
+        );
 
         let user_role = s.get_role("platform-user").await.unwrap();
         assert!(user_role.is_some(), "platform-user role should exist");
 
         // Verify each role has an attached policy
-        let admin_policies = s.list_attached_role_policies("platform-admin").await.unwrap();
-        assert_eq!(admin_policies.len(), 1, "platform-admin should have 1 attached policy");
+        let admin_policies = s
+            .list_attached_role_policies("platform-admin")
+            .await
+            .unwrap();
+        assert_eq!(
+            admin_policies.len(),
+            1,
+            "platform-admin should have 1 attached policy"
+        );
 
-        let creator_policies = s.list_attached_role_policies("platform-space-creator").await.unwrap();
-        assert_eq!(creator_policies.len(), 1, "platform-space-creator should have 1 attached policy");
+        let creator_policies = s
+            .list_attached_role_policies("platform-space-creator")
+            .await
+            .unwrap();
+        assert_eq!(
+            creator_policies.len(),
+            1,
+            "platform-space-creator should have 1 attached policy"
+        );
 
-        let user_policies = s.list_attached_role_policies("platform-user").await.unwrap();
-        assert_eq!(user_policies.len(), 1, "platform-user should have 1 attached policy");
+        let user_policies = s
+            .list_attached_role_policies("platform-user")
+            .await
+            .unwrap();
+        assert_eq!(
+            user_policies.len(),
+            1,
+            "platform-user should have 1 attached policy"
+        );
 
         // Verify admin policy grants full access
         let admin_policy = s.get_policy(&admin_policies[0]).await.unwrap().unwrap();

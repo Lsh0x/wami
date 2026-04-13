@@ -157,7 +157,12 @@ where
         for policy_arn in attached_policies {
             if let Some(policy) = store.get_policy(&policy_arn).await? {
                 let doc = policy_evaluator::parse_policy_doc(&policy.policy_document);
-                all_effects.push(policy_evaluator::evaluate_policy_document(&doc, action, resource_arn, context));
+                all_effects.push(policy_evaluator::evaluate_policy_document(
+                    &doc,
+                    action,
+                    resource_arn,
+                    context,
+                ));
             }
         }
 
@@ -166,7 +171,12 @@ where
         for policy_name in inline_policies {
             if let Some(doc_str) = store.get_user_policy(user_name, &policy_name).await? {
                 let doc = policy_evaluator::parse_policy_doc(&doc_str);
-                all_effects.push(policy_evaluator::evaluate_policy_document(&doc, action, resource_arn, context));
+                all_effects.push(policy_evaluator::evaluate_policy_document(
+                    &doc,
+                    action,
+                    resource_arn,
+                    context,
+                ));
             }
         }
 
@@ -174,20 +184,35 @@ where
         let groups = store.list_groups_for_user(user_name).await?;
         for group in &groups {
             // Group attached managed policies
-            let group_attached = store.list_attached_group_policies(&group.group_name).await?;
+            let group_attached = store
+                .list_attached_group_policies(&group.group_name)
+                .await?;
             for policy_arn in group_attached {
                 if let Some(policy) = store.get_policy(&policy_arn).await? {
                     let doc = policy_evaluator::parse_policy_doc(&policy.policy_document);
-                    all_effects.push(policy_evaluator::evaluate_policy_document(&doc, action, resource_arn, context));
+                    all_effects.push(policy_evaluator::evaluate_policy_document(
+                        &doc,
+                        action,
+                        resource_arn,
+                        context,
+                    ));
                 }
             }
 
             // Group inline policies
             let group_inline = store.list_group_policies(&group.group_name).await?;
             for policy_name in group_inline {
-                if let Some(doc_str) = store.get_group_policy(&group.group_name, &policy_name).await? {
+                if let Some(doc_str) = store
+                    .get_group_policy(&group.group_name, &policy_name)
+                    .await?
+                {
                     let doc = policy_evaluator::parse_policy_doc(&doc_str);
-                    all_effects.push(policy_evaluator::evaluate_policy_document(&doc, action, resource_arn, context));
+                    all_effects.push(policy_evaluator::evaluate_policy_document(
+                        &doc,
+                        action,
+                        resource_arn,
+                        context,
+                    ));
                 }
             }
         }
@@ -203,16 +228,28 @@ where
                     for policy_arn in role_attached {
                         if let Some(policy) = store.get_policy(&policy_arn).await? {
                             let doc = policy_evaluator::parse_policy_doc(&policy.policy_document);
-                            all_effects.push(policy_evaluator::evaluate_policy_document(&doc, action, resource_arn, context));
+                            all_effects.push(policy_evaluator::evaluate_policy_document(
+                                &doc,
+                                action,
+                                resource_arn,
+                                context,
+                            ));
                         }
                     }
 
                     // Role inline policies
                     let role_inline = store.list_role_policies(role_name).await?;
                     for policy_name in role_inline {
-                        if let Some(doc_str) = store.get_role_policy(role_name, &policy_name).await? {
+                        if let Some(doc_str) =
+                            store.get_role_policy(role_name, &policy_name).await?
+                        {
                             let doc = policy_evaluator::parse_policy_doc(&doc_str);
-                            all_effects.push(policy_evaluator::evaluate_policy_document(&doc, action, resource_arn, context));
+                            all_effects.push(policy_evaluator::evaluate_policy_document(
+                                &doc,
+                                action,
+                                resource_arn,
+                                context,
+                            ));
                         }
                     }
                 }
@@ -221,12 +258,12 @@ where
 
         // ── 5. Deny-overrides-allow resolution ─────────────────────
         // An explicit Deny from ANY policy source overrides all Allows.
-        if all_effects.iter().any(|e| *e == PolicyEffect::Deny) {
+        if all_effects.contains(&PolicyEffect::Deny) {
             return Ok(false);
         }
 
         // If at least one policy allows, check permissions boundary.
-        if all_effects.iter().any(|e| *e == PolicyEffect::Allow) {
+        if all_effects.contains(&PolicyEffect::Allow) {
             // ── 6. Permissions boundary check ─────────────────────
             // If the user has a permissions boundary, the effective permission is
             // the INTERSECTION of the identity policies and the boundary.
@@ -234,9 +271,13 @@ where
             if let Some(user) = store.get_user(user_name).await? {
                 if let Some(ref boundary_arn) = user.permissions_boundary {
                     if let Some(boundary_policy) = store.get_policy(boundary_arn).await? {
-                        let boundary_doc = policy_evaluator::parse_policy_doc(&boundary_policy.policy_document);
+                        let boundary_doc =
+                            policy_evaluator::parse_policy_doc(&boundary_policy.policy_document);
                         let boundary_effect = policy_evaluator::evaluate_policy_document(
-                            &boundary_doc, action, resource_arn, context,
+                            &boundary_doc,
+                            action,
+                            resource_arn,
+                            context,
                         );
                         if boundary_effect != PolicyEffect::Allow {
                             // Boundary does not allow → effective deny
@@ -282,17 +323,32 @@ mod tests {
     #[test]
     fn test_matches_action() {
         // Exact match
-        assert!(policy_evaluator::matches_action(&["iam:GetUser".to_string()], "iam:GetUser"));
+        assert!(policy_evaluator::matches_action(
+            &["iam:GetUser".to_string()],
+            "iam:GetUser"
+        ));
 
         // Wildcard all
-        assert!(policy_evaluator::matches_action(&["*".to_string()], "iam:GetUser"));
+        assert!(policy_evaluator::matches_action(
+            &["*".to_string()],
+            "iam:GetUser"
+        ));
 
         // Wildcard prefix
-        assert!(policy_evaluator::matches_action(&["iam:*".to_string()], "iam:GetUser"));
-        assert!(policy_evaluator::matches_action(&["iam:*".to_string()], "iam:CreateUser"));
+        assert!(policy_evaluator::matches_action(
+            &["iam:*".to_string()],
+            "iam:GetUser"
+        ));
+        assert!(policy_evaluator::matches_action(
+            &["iam:*".to_string()],
+            "iam:CreateUser"
+        ));
 
         // No match
-        assert!(!policy_evaluator::matches_action(&["s3:GetObject".to_string()], "iam:GetUser"));
+        assert!(!policy_evaluator::matches_action(
+            &["s3:GetObject".to_string()],
+            "iam:GetUser"
+        ));
     }
 
     #[test]
@@ -334,7 +390,10 @@ mod tests {
         assert!(!policy_evaluator::matches_action(&[], "iam:GetUser"));
 
         // Multiple wildcards
-        assert!(policy_evaluator::matches_action(&["iam:*".to_string(), "s3:*".to_string()], "iam:GetUser"));
+        assert!(policy_evaluator::matches_action(
+            &["iam:*".to_string(), "s3:*".to_string()],
+            "iam:GetUser"
+        ));
 
         // Exact match in list
         assert!(policy_evaluator::matches_action(
@@ -343,10 +402,16 @@ mod tests {
         ));
 
         // No match
-        assert!(!policy_evaluator::matches_action(&["s3:GetObject".to_string()], "iam:GetUser"));
+        assert!(!policy_evaluator::matches_action(
+            &["s3:GetObject".to_string()],
+            "iam:GetUser"
+        ));
 
         // Wildcard at end
-        assert!(policy_evaluator::matches_action(&["iam:Get*".to_string()], "iam:GetUser"));
+        assert!(policy_evaluator::matches_action(
+            &["iam:Get*".to_string()],
+            "iam:GetUser"
+        ));
     }
 
     #[test]
@@ -354,7 +419,11 @@ mod tests {
         let ctx = MatchContext::default();
 
         // Empty resources
-        assert!(!policy_evaluator::matches_resource(&[], "arn:wami:iam:12345678:wami:999:user/alice", &ctx));
+        assert!(!policy_evaluator::matches_resource(
+            &[],
+            "arn:wami:iam:12345678:wami:999:user/alice",
+            &ctx
+        ));
 
         // Multiple patterns
         assert!(policy_evaluator::matches_resource(
@@ -430,7 +499,8 @@ mod tests {
 
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
         let ctx = dummy_context();
-        let effect = policy_evaluator::evaluate_policy_document(&policy, "iam:DeleteUser", &resource, &ctx);
+        let effect =
+            policy_evaluator::evaluate_policy_document(&policy, "iam:DeleteUser", &resource, &ctx);
 
         // Deny should override Allow
         assert_eq!(effect, PolicyEffect::Deny);
@@ -450,7 +520,8 @@ mod tests {
 
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
         let ctx = dummy_context();
-        let effect = policy_evaluator::evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx);
+        let effect =
+            policy_evaluator::evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx);
 
         assert_eq!(effect, PolicyEffect::NoMatch);
     }
@@ -469,7 +540,8 @@ mod tests {
 
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
         let ctx = dummy_context();
-        let effect = policy_evaluator::evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx);
+        let effect =
+            policy_evaluator::evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx);
 
         assert_eq!(effect, PolicyEffect::Deny);
     }
@@ -497,9 +569,7 @@ mod tests {
     use wami_core::context::{SessionInfo, WamiContext};
 
     fn test_context() -> WamiContext {
-        let arn: Arn = "arn:wami:iam:12345678:wami:999:user/alice"
-            .parse()
-            .unwrap();
+        let arn: Arn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
         WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
@@ -532,7 +602,8 @@ mod tests {
     /// Helper: set up store with a user named "alice"
     async fn setup_store_with_user(ctx: &WamiContext) -> Arc<RwLock<InMemoryWamiStore>> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        let user = user_builder::build_user("alice".to_string(), Some("/".to_string()), ctx).unwrap();
+        let user =
+            user_builder::build_user("alice".to_string(), Some("/".to_string()), ctx).unwrap();
         store.write().await.create_user(user).await.unwrap();
         store
     }
@@ -554,19 +625,28 @@ mod tests {
         let policy = policy_builder::build_policy(
             "ReadPolicy".to_string(),
             allow_policy_json(&["iam:GetUser"], &["*"]),
-            None, None, None, &ctx,
-        ).unwrap();
+            None,
+            None,
+            None,
+            &ctx,
+        )
+        .unwrap();
         let policy_arn = policy.arn.clone();
         {
             let mut s = store.write().await;
             s.create_policy(policy).await.unwrap();
-            s.attach_group_policy("developers", &policy_arn).await.unwrap();
+            s.attach_group_policy("developers", &policy_arn)
+                .await
+                .unwrap();
         }
 
         let authz = AuthorizationService::new(store);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
 
-        let allowed = authz.authorize(&ctx, "iam:GetUser", &resource).await.unwrap();
+        let allowed = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
         assert!(allowed, "Group attached policy should allow iam:GetUser");
     }
 
@@ -585,13 +665,18 @@ mod tests {
                 "admins",
                 "AdminInline",
                 allow_policy_json(&["iam:*"], &["*"]),
-            ).await.unwrap();
+            )
+            .await
+            .unwrap();
         }
 
         let authz = AuthorizationService::new(store);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
 
-        let allowed = authz.authorize(&ctx, "iam:DeleteUser", &resource).await.unwrap();
+        let allowed = authz
+            .authorize(&ctx, "iam:DeleteUser", &resource)
+            .await
+            .unwrap();
         assert!(allowed, "Group inline policy should allow iam:DeleteUser");
     }
 
@@ -603,11 +688,9 @@ mod tests {
         // Give alice a user inline policy that allows iam:*
         {
             let mut s = store.write().await;
-            s.put_user_policy(
-                "alice",
-                "UserAllow",
-                allow_policy_json(&["iam:*"], &["*"]),
-            ).await.unwrap();
+            s.put_user_policy("alice", "UserAllow", allow_policy_json(&["iam:*"], &["*"]))
+                .await
+                .unwrap();
         }
 
         // Create group with deny policy for iam:DeleteUser
@@ -620,18 +703,26 @@ mod tests {
                 "restricted",
                 "DenyDelete",
                 deny_policy_json(&["iam:DeleteUser"], &["*"]),
-            ).await.unwrap();
+            )
+            .await
+            .unwrap();
         }
 
         let authz = AuthorizationService::new(store);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
 
         // Deny from group should override Allow from user inline
-        let allowed = authz.authorize(&ctx, "iam:DeleteUser", &resource).await.unwrap();
+        let allowed = authz
+            .authorize(&ctx, "iam:DeleteUser", &resource)
+            .await
+            .unwrap();
         assert!(!allowed, "Group deny should override user allow");
 
         // But other actions should still be allowed
-        let allowed_get = authz.authorize(&ctx, "iam:GetUser", &resource).await.unwrap();
+        let allowed_get = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
         assert!(allowed_get, "iam:GetUser should still be allowed");
     }
 
@@ -647,9 +738,7 @@ mod tests {
             assumed_role_arn: Some(role_arn),
         };
 
-        let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice"
-            .parse()
-            .unwrap();
+        let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
 
         let ctx = WamiContext::builder()
             .instance_id("999")
@@ -666,27 +755,40 @@ mod tests {
         let role = role_builder::build_role(
             "admin-role".to_string(),
             r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
-            None, None, None, &ctx,
-        ).unwrap();
+            None,
+            None,
+            None,
+            &ctx,
+        )
+        .unwrap();
 
         let policy = policy_builder::build_policy(
             "AdminAccess".to_string(),
             allow_policy_json(&["iam:*"], &["*"]),
-            None, None, None, &ctx,
-        ).unwrap();
+            None,
+            None,
+            None,
+            &ctx,
+        )
+        .unwrap();
         let policy_arn = policy.arn.clone();
 
         {
             let mut s = store.write().await;
             s.create_role(role).await.unwrap();
             s.create_policy(policy).await.unwrap();
-            s.attach_role_policy("admin-role", &policy_arn).await.unwrap();
+            s.attach_role_policy("admin-role", &policy_arn)
+                .await
+                .unwrap();
         }
 
         let authz = AuthorizationService::new(store);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
 
-        let allowed = authz.authorize(&ctx, "iam:CreateUser", &resource).await.unwrap();
+        let allowed = authz
+            .authorize(&ctx, "iam:CreateUser", &resource)
+            .await
+            .unwrap();
         assert!(allowed, "Assumed role policy should allow iam:CreateUser");
     }
 
@@ -702,9 +804,7 @@ mod tests {
             assumed_role_arn: Some(role_arn),
         };
 
-        let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice"
-            .parse()
-            .unwrap();
+        let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
 
         let ctx = WamiContext::builder()
             .instance_id("999")
@@ -720,8 +820,12 @@ mod tests {
         let role = role_builder::build_role(
             "reader-role".to_string(),
             r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
-            None, None, None, &ctx,
-        ).unwrap();
+            None,
+            None,
+            None,
+            &ctx,
+        )
+        .unwrap();
 
         {
             let mut s = store.write().await;
@@ -730,17 +834,28 @@ mod tests {
                 "reader-role",
                 "ReadOnly",
                 allow_policy_json(&["iam:Get*", "iam:List*"], &["*"]),
-            ).await.unwrap();
+            )
+            .await
+            .unwrap();
         }
 
         let authz = AuthorizationService::new(store);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
 
-        let allowed = authz.authorize(&ctx, "iam:GetUser", &resource).await.unwrap();
+        let allowed = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
         assert!(allowed, "Role inline policy should allow iam:GetUser");
 
-        let denied = authz.authorize(&ctx, "iam:DeleteUser", &resource).await.unwrap();
-        assert!(!denied, "Role inline policy should not allow iam:DeleteUser");
+        let denied = authz
+            .authorize(&ctx, "iam:DeleteUser", &resource)
+            .await
+            .unwrap();
+        assert!(
+            !denied,
+            "Role inline policy should not allow iam:DeleteUser"
+        );
     }
 
     #[tokio::test]
@@ -755,9 +870,7 @@ mod tests {
             assumed_role_arn: Some(role_arn),
         };
 
-        let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice"
-            .parse()
-            .unwrap();
+        let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
 
         let ctx = WamiContext::builder()
             .instance_id("999")
@@ -773,11 +886,9 @@ mod tests {
         // User inline: allow iam:*
         {
             let mut s = store.write().await;
-            s.put_user_policy(
-                "alice",
-                "AllowAll",
-                allow_policy_json(&["iam:*"], &["*"]),
-            ).await.unwrap();
+            s.put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
+                .await
+                .unwrap();
         }
 
         // Group: also allow iam:*
@@ -790,15 +901,21 @@ mod tests {
                 "power-users",
                 "AllowAll",
                 allow_policy_json(&["iam:*"], &["*"]),
-            ).await.unwrap();
+            )
+            .await
+            .unwrap();
         }
 
         // Assumed role: deny iam:DeleteUser
         let role = role_builder::build_role(
             "restrictive-role".to_string(),
             r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
-            None, None, None, &ctx,
-        ).unwrap();
+            None,
+            None,
+            None,
+            &ctx,
+        )
+        .unwrap();
         {
             let mut s = store.write().await;
             s.create_role(role).await.unwrap();
@@ -806,18 +923,26 @@ mod tests {
                 "restrictive-role",
                 "DenyDelete",
                 deny_policy_json(&["iam:DeleteUser"], &["*"]),
-            ).await.unwrap();
+            )
+            .await
+            .unwrap();
         }
 
         let authz = AuthorizationService::new(store);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
 
         // Deny from role should override allows from user + group
-        let denied = authz.authorize(&ctx, "iam:DeleteUser", &resource).await.unwrap();
+        let denied = authz
+            .authorize(&ctx, "iam:DeleteUser", &resource)
+            .await
+            .unwrap();
         assert!(!denied, "Role deny must override user+group allow");
 
         // Other actions still allowed
-        let allowed = authz.authorize(&ctx, "iam:GetUser", &resource).await.unwrap();
+        let allowed = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
         assert!(allowed, "iam:GetUser should still be allowed");
     }
 
@@ -830,15 +955,16 @@ mod tests {
         let authz = AuthorizationService::new(store);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
 
-        let allowed = authz.authorize(&ctx, "iam:GetUser", &resource).await.unwrap();
+        let allowed = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
         assert!(!allowed, "No policies → default deny");
     }
 
     #[tokio::test]
     async fn test_root_bypasses_all() {
-        let root_arn: Arn = "arn:wami:iam:12345678:wami:999:user/root"
-            .parse()
-            .unwrap();
+        let root_arn: Arn = "arn:wami:iam:12345678:wami:999:user/root".parse().unwrap();
         let ctx = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
@@ -852,7 +978,10 @@ mod tests {
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
 
         // Root should bypass even with no policies at all
-        let allowed = authz.authorize(&ctx, "iam:DeleteUser", &resource).await.unwrap();
+        let allowed = authz
+            .authorize(&ctx, "iam:DeleteUser", &resource)
+            .await
+            .unwrap();
         assert!(allowed, "Root user must bypass all checks");
     }
 
@@ -871,7 +1000,9 @@ mod tests {
                 "readers",
                 "ReadPolicy",
                 allow_policy_json(&["iam:GetUser"], &["*"]),
-            ).await.unwrap();
+            )
+            .await
+            .unwrap();
         }
 
         // Group 2: allows iam:CreateUser
@@ -884,23 +1015,39 @@ mod tests {
                 "creators",
                 "CreatePolicy",
                 allow_policy_json(&["iam:CreateUser"], &["*"]),
-            ).await.unwrap();
+            )
+            .await
+            .unwrap();
         }
 
         let authz = AuthorizationService::new(store);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
 
         // Both actions should be allowed from different groups
-        assert!(authz.authorize(&ctx, "iam:GetUser", &resource).await.unwrap());
-        assert!(authz.authorize(&ctx, "iam:CreateUser", &resource).await.unwrap());
+        assert!(authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap());
+        assert!(authz
+            .authorize(&ctx, "iam:CreateUser", &resource)
+            .await
+            .unwrap());
         // But delete is not allowed by any group
-        assert!(!authz.authorize(&ctx, "iam:DeleteUser", &resource).await.unwrap());
+        assert!(!authz
+            .authorize(&ctx, "iam:DeleteUser", &resource)
+            .await
+            .unwrap());
     }
 
     // ========== Condition evaluation tests (P2.2) ==========
 
     /// Helper: build a policy JSON with a Condition block.
-    fn policy_with_condition(effect: &str, actions: &[&str], resources: &[&str], condition: &str) -> String {
+    fn policy_with_condition(
+        effect: &str,
+        actions: &[&str],
+        resources: &[&str],
+        condition: &str,
+    ) -> String {
         let actions_json: Vec<String> = actions.iter().map(|a| format!("\"{}\"", a)).collect();
         let resources_json: Vec<String> = resources.iter().map(|r| format!("\"{}\"", r)).collect();
         format!(
@@ -936,8 +1083,13 @@ mod tests {
             .build()
             .unwrap();
 
-        let effect = policy_evaluator::evaluate_policy_document(&doc, "iam:GetUser", &resource, &ctx);
-        assert_eq!(effect, PolicyEffect::Allow, "IP 10.1.2.3 should match 10.0.0.0/8");
+        let effect =
+            policy_evaluator::evaluate_policy_document(&doc, "iam:GetUser", &resource, &ctx);
+        assert_eq!(
+            effect,
+            PolicyEffect::Allow,
+            "IP 10.1.2.3 should match 10.0.0.0/8"
+        );
     }
 
     #[test]
@@ -964,8 +1116,13 @@ mod tests {
             .build()
             .unwrap();
 
-        let effect = policy_evaluator::evaluate_policy_document(&doc, "iam:GetUser", &resource, &ctx);
-        assert_eq!(effect, PolicyEffect::NoMatch, "IP 192.168.1.1 should NOT match 10.0.0.0/8 → NoMatch");
+        let effect =
+            policy_evaluator::evaluate_policy_document(&doc, "iam:GetUser", &resource, &ctx);
+        assert_eq!(
+            effect,
+            PolicyEffect::NoMatch,
+            "IP 192.168.1.1 should NOT match 10.0.0.0/8 → NoMatch"
+        );
     }
 
     #[test]
@@ -992,8 +1149,13 @@ mod tests {
             .build()
             .unwrap();
 
-        let effect = policy_evaluator::evaluate_policy_document(&doc, "iam:DeleteUser", &resource, &ctx);
-        assert_eq!(effect, PolicyEffect::Allow, "MFA present → condition matches → Allow");
+        let effect =
+            policy_evaluator::evaluate_policy_document(&doc, "iam:DeleteUser", &resource, &ctx);
+        assert_eq!(
+            effect,
+            PolicyEffect::Allow,
+            "MFA present → condition matches → Allow"
+        );
     }
 
     #[test]
@@ -1020,8 +1182,13 @@ mod tests {
             .build()
             .unwrap();
 
-        let effect = policy_evaluator::evaluate_policy_document(&doc, "iam:DeleteUser", &resource, &ctx);
-        assert_eq!(effect, PolicyEffect::NoMatch, "MFA absent → condition fails → NoMatch");
+        let effect =
+            policy_evaluator::evaluate_policy_document(&doc, "iam:DeleteUser", &resource, &ctx);
+        assert_eq!(
+            effect,
+            PolicyEffect::NoMatch,
+            "MFA absent → condition fails → NoMatch"
+        );
     }
 
     #[test]
@@ -1040,8 +1207,13 @@ mod tests {
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
         let ctx = dummy_context();
 
-        let effect = policy_evaluator::evaluate_policy_document(&doc, "iam:GetUser", &resource, &ctx);
-        assert_eq!(effect, PolicyEffect::Allow, "No condition → Allow (backward compat)");
+        let effect =
+            policy_evaluator::evaluate_policy_document(&doc, "iam:GetUser", &resource, &ctx);
+        assert_eq!(
+            effect,
+            PolicyEffect::Allow,
+            "No condition → Allow (backward compat)"
+        );
     }
 
     #[tokio::test]
@@ -1061,11 +1233,9 @@ mod tests {
         // User inline: allow iam:*
         {
             let mut s = store.write().await;
-            s.put_user_policy(
-                "alice",
-                "AllowAll",
-                allow_policy_json(&["iam:*"], &["*"]),
-            ).await.unwrap();
+            s.put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
+                .await
+                .unwrap();
         }
 
         // User inline: deny iam:DeleteUser from outside 10.0.0.0/8
@@ -1080,18 +1250,26 @@ mod tests {
                     &["*"],
                     r#"{"NotIpAddress":{"aws:SourceIp":"10.0.0.0/8"}}"#,
                 ),
-            ).await.unwrap();
+            )
+            .await
+            .unwrap();
         }
 
         let authz = AuthorizationService::new(store);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
 
         // IP 203.0.113.50 is NOT in 10.0.0.0/8, so deny condition matches → deny
-        let denied = authz.authorize(&ctx, "iam:DeleteUser", &resource).await.unwrap();
+        let denied = authz
+            .authorize(&ctx, "iam:DeleteUser", &resource)
+            .await
+            .unwrap();
         assert!(!denied, "Deny condition should fire for external IP");
 
         // Other actions still allowed
-        let allowed = authz.authorize(&ctx, "iam:GetUser", &resource).await.unwrap();
+        let allowed = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
         assert!(allowed, "iam:GetUser should still be allowed");
     }
 
@@ -1105,19 +1283,21 @@ mod tests {
         // Give alice iam:* via user inline policy
         {
             let mut s = store.write().await;
-            s.put_user_policy(
-                "alice",
-                "AllowAll",
-                allow_policy_json(&["iam:*"], &["*"]),
-            ).await.unwrap();
+            s.put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
+                .await
+                .unwrap();
         }
 
         // Create a boundary policy that only allows iam:Get* and iam:List*
         let boundary = policy_builder::build_policy(
             "ReadOnlyBoundary".to_string(),
             allow_policy_json(&["iam:Get*", "iam:List*"], &["*"]),
-            None, None, None, &ctx,
-        ).unwrap();
+            None,
+            None,
+            None,
+            &ctx,
+        )
+        .unwrap();
         let boundary_arn = boundary.arn.clone();
         {
             let mut s = store.write().await;
@@ -1136,20 +1316,38 @@ mod tests {
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
 
         // iam:GetUser is in boundary → allowed
-        let allowed = authz.authorize(&ctx, "iam:GetUser", &resource).await.unwrap();
+        let allowed = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
         assert!(allowed, "iam:GetUser should be allowed (within boundary)");
 
         // iam:ListUsers is in boundary → allowed
-        let allowed = authz.authorize(&ctx, "iam:ListUsers", &resource).await.unwrap();
+        let allowed = authz
+            .authorize(&ctx, "iam:ListUsers", &resource)
+            .await
+            .unwrap();
         assert!(allowed, "iam:ListUsers should be allowed (within boundary)");
 
         // iam:DeleteUser is NOT in boundary → denied despite policy allowing it
-        let denied = authz.authorize(&ctx, "iam:DeleteUser", &resource).await.unwrap();
-        assert!(!denied, "iam:DeleteUser should be denied (outside boundary)");
+        let denied = authz
+            .authorize(&ctx, "iam:DeleteUser", &resource)
+            .await
+            .unwrap();
+        assert!(
+            !denied,
+            "iam:DeleteUser should be denied (outside boundary)"
+        );
 
         // iam:CreateUser is NOT in boundary → denied
-        let denied = authz.authorize(&ctx, "iam:CreateUser", &resource).await.unwrap();
-        assert!(!denied, "iam:CreateUser should be denied (outside boundary)");
+        let denied = authz
+            .authorize(&ctx, "iam:CreateUser", &resource)
+            .await
+            .unwrap();
+        assert!(
+            !denied,
+            "iam:CreateUser should be denied (outside boundary)"
+        );
     }
 
     #[tokio::test]
@@ -1160,18 +1358,19 @@ mod tests {
         // Give alice iam:* via user inline policy, NO boundary
         {
             let mut s = store.write().await;
-            s.put_user_policy(
-                "alice",
-                "AllowAll",
-                allow_policy_json(&["iam:*"], &["*"]),
-            ).await.unwrap();
+            s.put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
+                .await
+                .unwrap();
         }
 
         let authz = AuthorizationService::new(store);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
 
         // Without boundary, iam:DeleteUser should be allowed
-        let allowed = authz.authorize(&ctx, "iam:DeleteUser", &resource).await.unwrap();
+        let allowed = authz
+            .authorize(&ctx, "iam:DeleteUser", &resource)
+            .await
+            .unwrap();
         assert!(allowed, "No boundary → full access per policy");
     }
 
@@ -1183,18 +1382,17 @@ mod tests {
         // Give alice iam:*
         {
             let mut s = store.write().await;
-            s.put_user_policy(
-                "alice",
-                "AllowAll",
-                allow_policy_json(&["iam:*"], &["*"]),
-            ).await.unwrap();
+            s.put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
+                .await
+                .unwrap();
         }
 
         // Set a boundary ARN that doesn't exist in the store
         {
             let mut s = store.write().await;
             let mut alice = s.get_user("alice").await.unwrap().unwrap();
-            alice.permissions_boundary = Some("arn:wami:iam:12345678:wami:999:policy/nonexistent".to_string());
+            alice.permissions_boundary =
+                Some("arn:wami:iam:12345678:wami:999:policy/nonexistent".to_string());
             s.update_user(alice).await.unwrap();
         }
 
@@ -1202,7 +1400,10 @@ mod tests {
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
 
         // Boundary policy not found → fail closed (deny)
-        let denied = authz.authorize(&ctx, "iam:GetUser", &resource).await.unwrap();
+        let denied = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
         assert!(!denied, "Missing boundary policy → deny (fail closed)");
     }
 
@@ -1214,11 +1415,9 @@ mod tests {
         // Give alice iam:* via policy
         {
             let mut s = store.write().await;
-            s.put_user_policy(
-                "alice",
-                "AllowAll",
-                allow_policy_json(&["iam:*"], &["*"]),
-            ).await.unwrap();
+            s.put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
+                .await
+                .unwrap();
         }
 
         // Explicit deny on iam:DeleteUser
@@ -1228,15 +1427,21 @@ mod tests {
                 "alice",
                 "DenyDelete",
                 deny_policy_json(&["iam:DeleteUser"], &["*"]),
-            ).await.unwrap();
+            )
+            .await
+            .unwrap();
         }
 
         // Boundary allows everything — but deny still wins
         let boundary = policy_builder::build_policy(
             "FullBoundary".to_string(),
             allow_policy_json(&["*"], &["*"]),
-            None, None, None, &ctx,
-        ).unwrap();
+            None,
+            None,
+            None,
+            &ctx,
+        )
+        .unwrap();
         let boundary_arn = boundary.arn.clone();
         {
             let mut s = store.write().await;
@@ -1250,11 +1455,17 @@ mod tests {
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
 
         // Explicit deny still wins even with permissive boundary
-        let denied = authz.authorize(&ctx, "iam:DeleteUser", &resource).await.unwrap();
+        let denied = authz
+            .authorize(&ctx, "iam:DeleteUser", &resource)
+            .await
+            .unwrap();
         assert!(!denied, "Explicit deny must win over boundary + allow");
 
         // GetUser: allowed by policy AND boundary
-        let allowed = authz.authorize(&ctx, "iam:GetUser", &resource).await.unwrap();
+        let allowed = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
         assert!(allowed, "iam:GetUser should be allowed");
     }
 }

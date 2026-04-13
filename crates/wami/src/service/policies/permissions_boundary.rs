@@ -43,7 +43,11 @@ where
     }
 
     /// Create a new permissions boundary service with an authorization guard.
-    pub fn with_authorizer(store: Arc<RwLock<S>>, account_id: String, authz: Arc<dyn Authorizer>) -> Self {
+    pub fn with_authorizer(
+        store: Arc<RwLock<S>>,
+        account_id: String,
+        authz: Arc<dyn Authorizer>,
+    ) -> Self {
         Self {
             store,
             account_id,
@@ -52,7 +56,13 @@ where
     }
 
     /// Internal: check authorization if an authorizer is set.
-    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+    async fn guard(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<()> {
         if let Some(authz) = &self.authz {
             let arn = iam_resource_arn(context, resource_type, resource_id)?;
             authz.check_or_deny(context, action.as_str(), &arn).await?;
@@ -87,7 +97,13 @@ where
             PrincipalType::User => "user",
             PrincipalType::Role => "role",
         };
-        self.guard(context, WamiAction::IamSetBoundary, resource_type, &request.principal_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamSetBoundary,
+            resource_type,
+            &request.principal_name,
+        )
+        .await?;
 
         // Validate the boundary ARN format
         crate::wami::policies::permissions_boundary::PermissionsBoundary::validate_arn(
@@ -163,7 +179,13 @@ where
             PrincipalType::User => "user",
             PrincipalType::Role => "role",
         };
-        self.guard(context, WamiAction::IamSetBoundary, resource_type, &request.principal_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamSetBoundary,
+            resource_type,
+            &request.principal_name,
+        )
+        .await?;
 
         match request.principal_type {
             PrincipalType::User => {
@@ -337,7 +359,10 @@ mod tests {
             permissions_boundary: policy.arn.clone(),
         };
 
-        service.put_permissions_boundary(&context, request).await.unwrap();
+        service
+            .put_permissions_boundary(&context, request)
+            .await
+            .unwrap();
 
         // Verify boundary was set
         let s = store.read().unwrap();
@@ -374,7 +399,10 @@ mod tests {
             principal_name: "test-role".to_string(),
         };
 
-        service.delete_permissions_boundary(&context, request).await.unwrap();
+        service
+            .delete_permissions_boundary(&context, request)
+            .await
+            .unwrap();
 
         // Verify boundary was removed
         let s = store.read().unwrap();

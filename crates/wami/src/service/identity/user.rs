@@ -39,7 +39,13 @@ impl<S: UserStore> UserService<S> {
     }
 
     /// Internal: check authorization if an authorizer is set.
-    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+    async fn guard(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<()> {
         if let Some(authz) = &self.authz {
             let arn = iam_resource_arn(context, resource_type, resource_id)?;
             authz.check_or_deny(context, action.as_str(), &arn).await?;
@@ -54,7 +60,13 @@ impl<S: UserStore> UserService<S> {
         request: CreateUserRequest,
     ) -> Result<User> {
         // Authorization guard
-        self.guard(context, WamiAction::IamCreateUser, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamCreateUser,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         // Use wami builder to create user with context
         let mut user = user_builder::build_user(request.user_name, request.path, context)?;
@@ -77,15 +89,26 @@ impl<S: UserStore> UserService<S> {
 
     /// Get a user by name
     pub async fn get_user(&self, context: &WamiContext, user_name: &str) -> Result<Option<User>> {
-        self.guard(context, WamiAction::IamReadUser, "user", user_name).await?;
+        self.guard(context, WamiAction::IamReadUser, "user", user_name)
+            .await?;
         self.read_store().get_user(user_name).await
     }
 
     /// Update a user
     ///
     /// The root user cannot be renamed (but path and other attributes can be updated).
-    pub async fn update_user(&self, context: &WamiContext, request: UpdateUserRequest) -> Result<User> {
-        self.guard(context, WamiAction::IamUpdateUser, "user", &request.user_name).await?;
+    pub async fn update_user(
+        &self,
+        context: &WamiContext,
+        request: UpdateUserRequest,
+    ) -> Result<User> {
+        self.guard(
+            context,
+            WamiAction::IamUpdateUser,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         // Protect root user from being renamed
         if request.user_name == ROOT_USER_NAME {
@@ -133,7 +156,8 @@ impl<S: UserStore> UserService<S> {
             });
         }
 
-        self.guard(context, WamiAction::IamDeleteUser, "user", user_name).await?;
+        self.guard(context, WamiAction::IamDeleteUser, "user", user_name)
+            .await?;
         self.write_store().delete_user(user_name).await
     }
 
@@ -143,27 +167,41 @@ impl<S: UserStore> UserService<S> {
         context: &WamiContext,
         request: ListUsersRequest,
     ) -> Result<(Vec<User>, bool, Option<String>)> {
-        self.guard(context, WamiAction::IamListUsers, "user", "*").await?;
+        self.guard(context, WamiAction::IamListUsers, "user", "*")
+            .await?;
         self.read_store()
             .list_users(request.path_prefix.as_deref(), request.pagination.as_ref())
             .await
     }
 
     /// Tag a user
-    pub async fn tag_user(&self, context: &WamiContext, user_name: &str, tags: Vec<Tag>) -> Result<()> {
-        self.guard(context, WamiAction::IamUpdateUser, "user", user_name).await?;
+    pub async fn tag_user(
+        &self,
+        context: &WamiContext,
+        user_name: &str,
+        tags: Vec<Tag>,
+    ) -> Result<()> {
+        self.guard(context, WamiAction::IamUpdateUser, "user", user_name)
+            .await?;
         self.write_store().tag_user(user_name, tags).await
     }
 
     /// List tags for a user
     pub async fn list_user_tags(&self, context: &WamiContext, user_name: &str) -> Result<Vec<Tag>> {
-        self.guard(context, WamiAction::IamReadUser, "user", user_name).await?;
+        self.guard(context, WamiAction::IamReadUser, "user", user_name)
+            .await?;
         self.read_store().list_user_tags(user_name).await
     }
 
     /// Untag a user
-    pub async fn untag_user(&self, context: &WamiContext, user_name: &str, tag_keys: Vec<String>) -> Result<()> {
-        self.guard(context, WamiAction::IamUpdateUser, "user", user_name).await?;
+    pub async fn untag_user(
+        &self,
+        context: &WamiContext,
+        user_name: &str,
+        tag_keys: Vec<String>,
+    ) -> Result<()> {
+        self.guard(context, WamiAction::IamUpdateUser, "user", user_name)
+            .await?;
         self.write_store().untag_user(user_name, tag_keys).await
     }
 }
@@ -300,10 +338,16 @@ mod tests {
             key: "Environment".to_string(),
             value: "Production".to_string(),
         }];
-        service.tag_user(&context, "tagged_user", tags).await.unwrap();
+        service
+            .tag_user(&context, "tagged_user", tags)
+            .await
+            .unwrap();
 
         // List tags
-        let retrieved_tags = service.list_user_tags(&context, "tagged_user").await.unwrap();
+        let retrieved_tags = service
+            .list_user_tags(&context, "tagged_user")
+            .await
+            .unwrap();
         assert_eq!(retrieved_tags.len(), 1);
         assert_eq!(retrieved_tags[0].key, "Environment");
 
@@ -313,7 +357,10 @@ mod tests {
             .await
             .unwrap();
 
-        let tags_after = service.list_user_tags(&context, "tagged_user").await.unwrap();
+        let tags_after = service
+            .list_user_tags(&context, "tagged_user")
+            .await
+            .unwrap();
         assert_eq!(tags_after.len(), 0);
     }
 

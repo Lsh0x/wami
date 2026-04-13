@@ -68,8 +68,7 @@ impl MatchContext {
     }
 }
 
-/// Build a [`MatchContext`] from a [`WamiContext`].
-#[cfg(feature = "context")]
+/// Build a [`MatchContext`] from a [`WamiContext`](crate::context::WamiContext).
 impl From<&crate::context::WamiContext> for MatchContext {
     fn from(ctx: &crate::context::WamiContext) -> Self {
         Self {
@@ -229,8 +228,6 @@ fn glob_match_recursive(pattern: &[u8], text: &[u8]) -> bool {
                 continue;
             }
             // Single * can't cross `/`, fall through to ** backtrack
-            star_pi = -1;
-            star_ti = -1;
         }
 
         // Backtrack to `**` (matches anything including `/`)
@@ -273,8 +270,7 @@ mod tests {
 
     #[test]
     fn test_substitute_multiple_vars() {
-        let vars: HashMap<&str, &str> =
-            [("tenant", "12345678"), ("service", "iam")].into();
+        let vars: HashMap<&str, &str> = [("tenant", "12345678"), ("service", "iam")].into();
         assert_eq!(
             substitute_variables("arn:wami:${service}:${tenant}:wami:*:user/*", &vars),
             "arn:wami:iam:12345678:wami:*:user/*"
@@ -346,21 +342,30 @@ mod tests {
     #[test]
     fn test_glob_double_star_multi_segment() {
         assert!(glob_match("space/le-zinc/**", "space/le-zinc/db/menu"));
-        assert!(glob_match("space/le-zinc/**", "space/le-zinc/db/menu/items"));
+        assert!(glob_match(
+            "space/le-zinc/**",
+            "space/le-zinc/db/menu/items"
+        ));
         assert!(glob_match("space/le-zinc/**", "space/le-zinc"));
         assert!(!glob_match("space/le-zinc/**", "space/other/db"));
     }
 
     #[test]
     fn test_glob_double_star_in_middle() {
-        assert!(glob_match("arn:wami:**/user/*", "arn:wami:iam:12345678:wami:999:user/alice"));
+        assert!(glob_match(
+            "arn:wami:**/user/*",
+            "arn:wami:iam:12345678:wami:999:user/alice"
+        ));
         assert!(glob_match("a/**/z", "a/b/c/d/z"));
         assert!(glob_match("a/**/z", "a/z"));
     }
 
     #[test]
     fn test_glob_double_star_at_start() {
-        assert!(glob_match("**/user/alice", "arn:wami:iam:123:wami:999:user/alice"));
+        assert!(glob_match(
+            "**/user/alice",
+            "arn:wami:iam:123:wami:999:user/alice"
+        ));
     }
 
     // ── Full ARN Pattern Matching ─────────────────────────────

@@ -41,7 +41,13 @@ impl<S: ServiceLinkedRoleServiceStore> ServiceLinkedRoleService<S> {
         }
     }
 
-    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+    async fn guard(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<()> {
         if let Some(authz) = &self.authz {
             let arn = iam_resource_arn(context, resource_type, resource_id)?;
             authz.check_or_deny(context, action.as_str(), &arn).await?;
@@ -55,7 +61,13 @@ impl<S: ServiceLinkedRoleServiceStore> ServiceLinkedRoleService<S> {
         context: &WamiContext,
         request: CreateServiceLinkedRoleRequest,
     ) -> Result<Role> {
-        self.guard(context, WamiAction::IamCreateRole, "role", &request.aws_service_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamCreateRole,
+            "role",
+            &request.aws_service_name,
+        )
+        .await?;
 
         slr_ops::service_linked_role_operations::validate_service_name(&request.aws_service_name)?;
 
@@ -93,7 +105,8 @@ impl<S: ServiceLinkedRoleServiceStore> ServiceLinkedRoleService<S> {
         context: &WamiContext,
         deletion_task_id: &str,
     ) -> Result<Option<DeletionTaskInfo>> {
-        self.guard(context, WamiAction::IamReadRole, "role", deletion_task_id).await?;
+        self.guard(context, WamiAction::IamReadRole, "role", deletion_task_id)
+            .await?;
         self.store
             .read()
             .unwrap()

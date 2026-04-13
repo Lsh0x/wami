@@ -35,7 +35,13 @@ impl<S: GroupStore> GroupService<S> {
         }
     }
 
-    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+    async fn guard(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<()> {
         if let Some(authz) = &self.authz {
             let arn = iam_resource_arn(context, resource_type, resource_id)?;
             authz.check_or_deny(context, action.as_str(), &arn).await?;
@@ -49,21 +55,42 @@ impl<S: GroupStore> GroupService<S> {
         context: &WamiContext,
         request: CreateGroupRequest,
     ) -> Result<Group> {
-        self.guard(context, WamiAction::IamCreateGroup, "group", &request.group_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamCreateGroup,
+            "group",
+            &request.group_name,
+        )
+        .await?;
 
         let group = group_builder::build_group(request.group_name, request.path, context)?;
         self.write_store().create_group(group).await
     }
 
     /// Get a group by name
-    pub async fn get_group(&self, context: &WamiContext, group_name: &str) -> Result<Option<Group>> {
-        self.guard(context, WamiAction::IamReadRole, "group", group_name).await?;
+    pub async fn get_group(
+        &self,
+        context: &WamiContext,
+        group_name: &str,
+    ) -> Result<Option<Group>> {
+        self.guard(context, WamiAction::IamReadRole, "group", group_name)
+            .await?;
         self.read_store().get_group(group_name).await
     }
 
     /// Update a group
-    pub async fn update_group(&self, context: &WamiContext, request: UpdateGroupRequest) -> Result<Group> {
-        self.guard(context, WamiAction::IamUpdateUser, "group", &request.group_name).await?;
+    pub async fn update_group(
+        &self,
+        context: &WamiContext,
+        request: UpdateGroupRequest,
+    ) -> Result<Group> {
+        self.guard(
+            context,
+            WamiAction::IamUpdateUser,
+            "group",
+            &request.group_name,
+        )
+        .await?;
 
         let mut group = self
             .read_store()
@@ -86,7 +113,8 @@ impl<S: GroupStore> GroupService<S> {
 
     /// Delete a group
     pub async fn delete_group(&self, context: &WamiContext, group_name: &str) -> Result<()> {
-        self.guard(context, WamiAction::IamDeleteGroup, "group", group_name).await?;
+        self.guard(context, WamiAction::IamDeleteGroup, "group", group_name)
+            .await?;
         self.write_store().delete_group(group_name).await
     }
 
@@ -96,31 +124,59 @@ impl<S: GroupStore> GroupService<S> {
         context: &WamiContext,
         request: ListGroupsRequest,
     ) -> Result<(Vec<Group>, bool, Option<String>)> {
-        self.guard(context, WamiAction::IamListUsers, "group", "*").await?;
+        self.guard(context, WamiAction::IamListUsers, "group", "*")
+            .await?;
         self.read_store()
             .list_groups(request.path_prefix.as_deref(), request.pagination.as_ref())
             .await
     }
 
     /// Add a user to a group
-    pub async fn add_user_to_group(&self, context: &WamiContext, group_name: &str, user_name: &str) -> Result<()> {
-        self.guard(context, WamiAction::IamManageGroupMembers, "group", group_name).await?;
+    pub async fn add_user_to_group(
+        &self,
+        context: &WamiContext,
+        group_name: &str,
+        user_name: &str,
+    ) -> Result<()> {
+        self.guard(
+            context,
+            WamiAction::IamManageGroupMembers,
+            "group",
+            group_name,
+        )
+        .await?;
         self.write_store()
             .add_user_to_group(group_name, user_name)
             .await
     }
 
     /// Remove a user from a group
-    pub async fn remove_user_from_group(&self, context: &WamiContext, group_name: &str, user_name: &str) -> Result<()> {
-        self.guard(context, WamiAction::IamManageGroupMembers, "group", group_name).await?;
+    pub async fn remove_user_from_group(
+        &self,
+        context: &WamiContext,
+        group_name: &str,
+        user_name: &str,
+    ) -> Result<()> {
+        self.guard(
+            context,
+            WamiAction::IamManageGroupMembers,
+            "group",
+            group_name,
+        )
+        .await?;
         self.write_store()
             .remove_user_from_group(group_name, user_name)
             .await
     }
 
     /// List all groups for a user
-    pub async fn list_groups_for_user(&self, context: &WamiContext, user_name: &str) -> Result<Vec<Group>> {
-        self.guard(context, WamiAction::IamReadUser, "user", user_name).await?;
+    pub async fn list_groups_for_user(
+        &self,
+        context: &WamiContext,
+        user_name: &str,
+    ) -> Result<Vec<Group>> {
+        self.guard(context, WamiAction::IamReadUser, "user", user_name)
+            .await?;
         self.read_store().list_groups_for_user(user_name).await
     }
 }
@@ -192,7 +248,10 @@ mod tests {
             new_group_name: Some("engineers".to_string()),
             new_path: Some("/tech/".to_string()),
         };
-        let updated = service.update_group(&context, update_request).await.unwrap();
+        let updated = service
+            .update_group(&context, update_request)
+            .await
+            .unwrap();
         assert_eq!(updated.group_name, "engineers");
         assert_eq!(updated.path, "/tech/");
     }
@@ -254,9 +313,15 @@ mod tests {
         };
         service.create_group(&context, request).await.unwrap();
 
-        service.add_user_to_group(&context, "admins", "alice").await.unwrap();
+        service
+            .add_user_to_group(&context, "admins", "alice")
+            .await
+            .unwrap();
 
-        let groups = service.list_groups_for_user(&context, "alice").await.unwrap();
+        let groups = service
+            .list_groups_for_user(&context, "alice")
+            .await
+            .unwrap();
         assert_eq!(groups.len(), 1);
         assert_eq!(groups[0].group_name, "admins");
 
@@ -265,7 +330,10 @@ mod tests {
             .await
             .unwrap();
 
-        let groups_after = service.list_groups_for_user(&context, "alice").await.unwrap();
+        let groups_after = service
+            .list_groups_for_user(&context, "alice")
+            .await
+            .unwrap();
         assert_eq!(groups_after.len(), 0);
     }
 }

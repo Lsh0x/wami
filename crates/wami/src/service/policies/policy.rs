@@ -17,7 +17,10 @@ use wami_core::error::Result;
 ///
 /// Provides high-level operations for policy management.
 /// Optionally holds an [`Authorizer`] for authorization guards on every method.
-#[wami_macros::service(store_trait = "crate::store::traits::PolicyStore", generate_new = false)]
+#[wami_macros::service(
+    store_trait = "crate::store::traits::PolicyStore",
+    generate_new = false
+)]
 pub struct PolicyService<S> {
     store: Arc<RwLock<S>>,
     authz: Option<Arc<dyn Authorizer>>,
@@ -38,7 +41,13 @@ impl<S: PolicyStore> PolicyService<S> {
     }
 
     /// Internal: check authorization if an authorizer is set.
-    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+    async fn guard(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<()> {
         if let Some(authz) = &self.authz {
             let arn = iam_resource_arn(context, resource_type, resource_id)?;
             authz.check_or_deny(context, action.as_str(), &arn).await?;
@@ -53,7 +62,13 @@ impl<S: PolicyStore> PolicyService<S> {
         request: CreatePolicyRequest,
     ) -> Result<Policy> {
         // Authorization guard
-        self.guard(context, WamiAction::IamCreatePolicy, "policy", &request.policy_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamCreatePolicy,
+            "policy",
+            &request.policy_name,
+        )
+        .await?;
 
         // Use wami builder to create policy (includes tags)
         let policy = policy_builder::build_policy(
@@ -70,14 +85,29 @@ impl<S: PolicyStore> PolicyService<S> {
     }
 
     /// Get a policy by ARN
-    pub async fn get_policy(&self, context: &WamiContext, policy_arn: &str) -> Result<Option<Policy>> {
-        self.guard(context, WamiAction::IamReadPolicy, "policy", policy_arn).await?;
+    pub async fn get_policy(
+        &self,
+        context: &WamiContext,
+        policy_arn: &str,
+    ) -> Result<Option<Policy>> {
+        self.guard(context, WamiAction::IamReadPolicy, "policy", policy_arn)
+            .await?;
         self.read_store().get_policy(policy_arn).await
     }
 
     /// Update a policy
-    pub async fn update_policy(&self, context: &WamiContext, request: UpdatePolicyRequest) -> Result<Policy> {
-        self.guard(context, WamiAction::IamCreatePolicy, "policy", &request.policy_arn).await?;
+    pub async fn update_policy(
+        &self,
+        context: &WamiContext,
+        request: UpdatePolicyRequest,
+    ) -> Result<Policy> {
+        self.guard(
+            context,
+            WamiAction::IamCreatePolicy,
+            "policy",
+            &request.policy_arn,
+        )
+        .await?;
 
         // Get existing policy
         let policy = self
@@ -104,7 +134,8 @@ impl<S: PolicyStore> PolicyService<S> {
 
     /// Delete a policy
     pub async fn delete_policy(&self, context: &WamiContext, policy_arn: &str) -> Result<()> {
-        self.guard(context, WamiAction::IamDeletePolicy, "policy", policy_arn).await?;
+        self.guard(context, WamiAction::IamDeletePolicy, "policy", policy_arn)
+            .await?;
         self.write_store().delete_policy(policy_arn).await
     }
 
@@ -114,7 +145,8 @@ impl<S: PolicyStore> PolicyService<S> {
         context: &WamiContext,
         request: ListPoliciesRequest,
     ) -> Result<(Vec<Policy>, bool, Option<String>)> {
-        self.guard(context, WamiAction::IamReadPolicy, "policy", "*").await?;
+        self.guard(context, WamiAction::IamReadPolicy, "policy", "*")
+            .await?;
         self.store
             .read()
             .unwrap()
@@ -199,7 +231,10 @@ mod tests {
             description: Some("Updated description".to_string()),
             default_version_id: Some("v2".to_string()),
         };
-        let updated = service.update_policy(&context, update_request).await.unwrap();
+        let updated = service
+            .update_policy(&context, update_request)
+            .await
+            .unwrap();
         assert_eq!(updated.description, Some("Updated description".to_string()));
         assert_eq!(updated.default_version_id, "v2");
     }

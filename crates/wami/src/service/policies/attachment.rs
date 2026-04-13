@@ -43,7 +43,13 @@ where
     }
 
     /// Internal: check authorization if an authorizer is set.
-    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+    async fn guard(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<()> {
         if let Some(authz) = &self.authz {
             let arn = iam_resource_arn(context, resource_type, resource_id)?;
             authz.check_or_deny(context, action.as_str(), &arn).await?;
@@ -59,7 +65,13 @@ where
         context: &WamiContext,
         request: AttachUserPolicyRequest,
     ) -> Result<AttachUserPolicyResponse> {
-        self.guard(context, WamiAction::IamAttachPolicy, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamAttachPolicy,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         let mut store = self.write_store();
 
@@ -110,7 +122,13 @@ where
         context: &WamiContext,
         request: DetachUserPolicyRequest,
     ) -> Result<DetachUserPolicyResponse> {
-        self.guard(context, WamiAction::IamDetachPolicy, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamDetachPolicy,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         let mut store = self.write_store();
 
@@ -148,7 +166,13 @@ where
         context: &WamiContext,
         request: ListAttachedUserPoliciesRequest,
     ) -> Result<ListAttachedUserPoliciesResponse> {
-        self.guard(context, WamiAction::IamReadPolicy, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamReadPolicy,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         let store = self.read_store();
 
@@ -187,7 +211,13 @@ where
         context: &WamiContext,
         request: AttachGroupPolicyRequest,
     ) -> Result<AttachGroupPolicyResponse> {
-        self.guard(context, WamiAction::IamAttachPolicy, "group", &request.group_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamAttachPolicy,
+            "group",
+            &request.group_name,
+        )
+        .await?;
 
         let mut store = self.write_store();
 
@@ -238,7 +268,13 @@ where
         context: &WamiContext,
         request: DetachGroupPolicyRequest,
     ) -> Result<DetachGroupPolicyResponse> {
-        self.guard(context, WamiAction::IamDetachPolicy, "group", &request.group_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamDetachPolicy,
+            "group",
+            &request.group_name,
+        )
+        .await?;
 
         let mut store = self.write_store();
 
@@ -276,7 +312,13 @@ where
         context: &WamiContext,
         request: ListAttachedGroupPoliciesRequest,
     ) -> Result<ListAttachedGroupPoliciesResponse> {
-        self.guard(context, WamiAction::IamReadPolicy, "group", &request.group_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamReadPolicy,
+            "group",
+            &request.group_name,
+        )
+        .await?;
 
         let store = self.read_store();
 
@@ -315,7 +357,13 @@ where
         context: &WamiContext,
         request: AttachRolePolicyRequest,
     ) -> Result<AttachRolePolicyResponse> {
-        self.guard(context, WamiAction::IamAttachPolicy, "role", &request.role_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamAttachPolicy,
+            "role",
+            &request.role_name,
+        )
+        .await?;
 
         let mut store = self.write_store();
 
@@ -366,7 +414,13 @@ where
         context: &WamiContext,
         request: DetachRolePolicyRequest,
     ) -> Result<DetachRolePolicyResponse> {
-        self.guard(context, WamiAction::IamDetachPolicy, "role", &request.role_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamDetachPolicy,
+            "role",
+            &request.role_name,
+        )
+        .await?;
 
         let mut store = self.write_store();
 
@@ -404,7 +458,13 @@ where
         context: &WamiContext,
         request: ListAttachedRolePoliciesRequest,
     ) -> Result<ListAttachedRolePoliciesResponse> {
-        self.guard(context, WamiAction::IamReadPolicy, "role", &request.role_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamReadPolicy,
+            "role",
+            &request.role_name,
+        )
+        .await?;
 
         let store = self.read_store();
 
@@ -536,14 +596,20 @@ mod tests {
             user_name: "alice".to_string(),
             policy_arn: created_policy.arn.clone(),
         };
-        service.attach_user_policy(&context, attach_request).await.unwrap();
+        service
+            .attach_user_policy(&context, attach_request)
+            .await
+            .unwrap();
 
         // Detach policy
         let detach_request = DetachUserPolicyRequest {
             user_name: "alice".to_string(),
             policy_arn: created_policy.arn.clone(),
         };
-        let response = service.detach_user_policy(&context, detach_request).await.unwrap();
+        let response = service
+            .detach_user_policy(&context, detach_request)
+            .await
+            .unwrap();
         assert!(response.message.contains("detached"));
 
         // Verify detached
@@ -583,7 +649,10 @@ mod tests {
             group_name: "developers".to_string(),
             policy_arn: created_policy.arn.clone(),
         };
-        let response = service.attach_group_policy(&context, request).await.unwrap();
+        let response = service
+            .attach_group_policy(&context, request)
+            .await
+            .unwrap();
         assert!(response.message.contains("attached"));
     }
 

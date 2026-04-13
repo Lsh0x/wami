@@ -16,7 +16,10 @@ use wami_credentials::mfa_device::{
 ///
 /// Provides high-level operations for MFA device management.
 /// Optionally holds an [`Authorizer`] for authorization guards on every method.
-#[wami_macros::service(store_trait = "crate::store::traits::MfaDeviceStore", generate_new = false)]
+#[wami_macros::service(
+    store_trait = "crate::store::traits::MfaDeviceStore",
+    generate_new = false
+)]
 pub struct MfaDeviceService<S> {
     store: Arc<RwLock<S>>,
     authz: Option<Arc<dyn Authorizer>>,
@@ -37,7 +40,13 @@ impl<S: MfaDeviceStore> MfaDeviceService<S> {
     }
 
     /// Internal: check authorization if an authorizer is set.
-    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+    async fn guard(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<()> {
         if let Some(authz) = &self.authz {
             let arn = iam_resource_arn(context, resource_type, resource_id)?;
             authz.check_or_deny(context, action.as_str(), &arn).await?;
@@ -52,7 +61,13 @@ impl<S: MfaDeviceStore> MfaDeviceService<S> {
         request: EnableMfaDeviceRequest,
     ) -> Result<MfaDevice> {
         // Authorization guard
-        self.guard(context, WamiAction::IamManageCredentials, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         // Use wami builder to create MFA device
         let mfa_device =
@@ -63,20 +78,50 @@ impl<S: MfaDeviceStore> MfaDeviceService<S> {
     }
 
     /// Get an MFA device by serial number
-    pub async fn get_mfa_device(&self, context: &WamiContext, serial_number: &str) -> Result<Option<MfaDevice>> {
-        self.guard(context, WamiAction::IamManageCredentials, "credential", serial_number).await?;
+    pub async fn get_mfa_device(
+        &self,
+        context: &WamiContext,
+        serial_number: &str,
+    ) -> Result<Option<MfaDevice>> {
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "credential",
+            serial_number,
+        )
+        .await?;
         self.read_store().get_mfa_device(serial_number).await
     }
 
     /// Delete an MFA device
-    pub async fn delete_mfa_device(&self, context: &WamiContext, serial_number: &str) -> Result<()> {
-        self.guard(context, WamiAction::IamManageCredentials, "credential", serial_number).await?;
+    pub async fn delete_mfa_device(
+        &self,
+        context: &WamiContext,
+        serial_number: &str,
+    ) -> Result<()> {
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "credential",
+            serial_number,
+        )
+        .await?;
         self.write_store().delete_mfa_device(serial_number).await
     }
 
     /// List MFA devices for a user
-    pub async fn list_mfa_devices(&self, context: &WamiContext, request: ListMfaDevicesRequest) -> Result<Vec<MfaDevice>> {
-        self.guard(context, WamiAction::IamManageCredentials, "user", &request.user_name).await?;
+    pub async fn list_mfa_devices(
+        &self,
+        context: &WamiContext,
+        request: ListMfaDevicesRequest,
+    ) -> Result<Vec<MfaDevice>> {
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            &request.user_name,
+        )
+        .await?;
         self.read_store().list_mfa_devices(&request.user_name).await
     }
 }
@@ -172,7 +217,10 @@ mod tests {
         let list_request = ListMfaDevicesRequest {
             user_name: "charlie".to_string(),
         };
-        let devices = service.list_mfa_devices(&context, list_request).await.unwrap();
+        let devices = service
+            .list_mfa_devices(&context, list_request)
+            .await
+            .unwrap();
         assert_eq!(devices.len(), 3);
     }
 }

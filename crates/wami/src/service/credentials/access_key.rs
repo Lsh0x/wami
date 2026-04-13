@@ -16,7 +16,10 @@ use wami_credentials::access_key::{
 ///
 /// Provides high-level operations for access key management.
 /// Optionally holds an [`Authorizer`] for authorization guards on every method.
-#[wami_macros::service(store_trait = "crate::store::traits::AccessKeyStore", generate_new = false)]
+#[wami_macros::service(
+    store_trait = "crate::store::traits::AccessKeyStore",
+    generate_new = false
+)]
 pub struct AccessKeyService<S> {
     store: Arc<RwLock<S>>,
     authz: Option<Arc<dyn Authorizer>>,
@@ -37,7 +40,13 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
     }
 
     /// Internal: check authorization if an authorizer is set.
-    async fn guard(&self, context: &WamiContext, action: WamiAction, resource_type: &str, resource_id: &str) -> Result<()> {
+    async fn guard(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<()> {
         if let Some(authz) = &self.authz {
             let arn = iam_resource_arn(context, resource_type, resource_id)?;
             authz.check_or_deny(context, action.as_str(), &arn).await?;
@@ -52,7 +61,13 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
         request: CreateAccessKeyRequest,
     ) -> Result<AccessKey> {
         // Authorization guard
-        self.guard(context, WamiAction::IamManageCredentials, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            &request.user_name,
+        )
+        .await?;
 
         // Use wami builder to create access key
         let access_key = access_key_builder::build_access_key(request.user_name, context)?;
@@ -62,20 +77,50 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
     }
 
     /// Get an access key by ID
-    pub async fn get_access_key(&self, context: &WamiContext, access_key_id: &str) -> Result<Option<AccessKey>> {
-        self.guard(context, WamiAction::IamManageCredentials, "credential", access_key_id).await?;
+    pub async fn get_access_key(
+        &self,
+        context: &WamiContext,
+        access_key_id: &str,
+    ) -> Result<Option<AccessKey>> {
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "credential",
+            access_key_id,
+        )
+        .await?;
         self.read_store().get_access_key(access_key_id).await
     }
 
     /// Update an access key (e.g., change status)
-    pub async fn update_access_key(&self, context: &WamiContext, access_key: AccessKey) -> Result<AccessKey> {
-        self.guard(context, WamiAction::IamManageCredentials, "user", &access_key.user_name).await?;
+    pub async fn update_access_key(
+        &self,
+        context: &WamiContext,
+        access_key: AccessKey,
+    ) -> Result<AccessKey> {
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            &access_key.user_name,
+        )
+        .await?;
         self.write_store().update_access_key(access_key).await
     }
 
     /// Delete an access key
-    pub async fn delete_access_key(&self, context: &WamiContext, access_key_id: &str) -> Result<()> {
-        self.guard(context, WamiAction::IamManageCredentials, "credential", access_key_id).await?;
+    pub async fn delete_access_key(
+        &self,
+        context: &WamiContext,
+        access_key_id: &str,
+    ) -> Result<()> {
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "credential",
+            access_key_id,
+        )
+        .await?;
         self.write_store().delete_access_key(access_key_id).await
     }
 
@@ -85,7 +130,13 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
         context: &WamiContext,
         request: ListAccessKeysRequest,
     ) -> Result<(Vec<AccessKey>, bool, Option<String>)> {
-        self.guard(context, WamiAction::IamManageCredentials, "user", &request.user_name).await?;
+        self.guard(
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            &request.user_name,
+        )
+        .await?;
         self.read_store()
             .list_access_keys(&request.user_name, request.pagination.as_ref())
             .await
@@ -177,7 +228,10 @@ mod tests {
             user_name: "charlie".to_string(),
             pagination: None,
         };
-        let (keys, _, _) = service.list_access_keys(&context, list_request).await.unwrap();
+        let (keys, _, _) = service
+            .list_access_keys(&context, list_request)
+            .await
+            .unwrap();
         assert_eq!(keys.len(), 3);
     }
 
@@ -199,7 +253,9 @@ mod tests {
         let context = test_context();
 
         // Delete is idempotent - succeeds even if access key doesn't exist
-        let result = service.delete_access_key(&context, "nonexistent-key-id").await;
+        let result = service
+            .delete_access_key(&context, "nonexistent-key-id")
+            .await;
         assert!(result.is_ok());
     }
 

@@ -6,8 +6,8 @@
 //!
 //! This module requires the `sts-jwt` feature (enabled by default).
 
-use ed25519_dalek::pkcs8::EncodePrivateKey;
 use ed25519_dalek::pkcs8::spki::EncodePublicKey;
+use ed25519_dalek::pkcs8::EncodePrivateKey;
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use rand::rngs::OsRng;
@@ -266,7 +266,9 @@ mod tests {
         let token = km.sign_claims(&claims).expect("signing should succeed");
         assert!(!token.is_empty());
 
-        let verified = km.verify_token(&token).expect("verification should succeed");
+        let verified = km
+            .verify_token(&token)
+            .expect("verification should succeed");
         assert_eq!(verified.sub, claims.sub);
         assert_eq!(verified.iss, claims.iss);
         assert_eq!(verified.jti, claims.jti);
@@ -369,18 +371,17 @@ mod tests {
         assert!(pem.ends_with("-----END PUBLIC KEY-----"));
 
         // Extract base64 content and verify it decodes to valid SPKI DER
-        let b64_content: String = pem
-            .lines()
-            .filter(|l| !l.starts_with("-----"))
-            .collect();
-        let der_bytes = base64::Engine::decode(
-            &base64::engine::general_purpose::STANDARD,
-            &b64_content,
-        )
-        .expect("PEM content should be valid base64");
+        let b64_content: String = pem.lines().filter(|l| !l.starts_with("-----")).collect();
+        let der_bytes =
+            base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &b64_content)
+                .expect("PEM content should be valid base64");
 
         // SPKI DER for Ed25519 is 44 bytes (12-byte header + 32-byte key)
-        assert_eq!(der_bytes.len(), 44, "SPKI DER should be 44 bytes for Ed25519");
+        assert_eq!(
+            der_bytes.len(),
+            44,
+            "SPKI DER should be 44 bytes for Ed25519"
+        );
 
         // Verify the SPKI DER matches what public_key_spki_der returns
         let spki_der = km
