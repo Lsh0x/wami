@@ -859,4 +859,197 @@ mod tests {
         let result = service.put_role_policy(&context, request).await;
         assert!(result.is_err());
     }
+
+    // ─── Authorization guard tests ────────────────────────────
+
+    use crate::service::auth::authorizer::Authorizer;
+    use async_trait::async_trait;
+
+    /// Mock authorizer that always allows.
+    struct AllowAllAuthorizer;
+
+    #[async_trait]
+    impl Authorizer for AllowAllAuthorizer {
+        async fn authorize(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<bool> {
+            Ok(true)
+        }
+        async fn check_or_deny(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<()> {
+            Ok(())
+        }
+    }
+
+    /// Mock authorizer that always denies.
+    struct DenyAllAuthorizer;
+
+    #[async_trait]
+    impl Authorizer for DenyAllAuthorizer {
+        async fn authorize(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<bool> {
+            Ok(false)
+        }
+        async fn check_or_deny(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> wami_core::error::Result<()> {
+            Err(wami_core::error::AmiError::AccessDenied {
+                message: "denied by mock".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_guard_allows_with_authorizer() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            InlinePolicyService::with_authorizer(store.clone(), Arc::new(AllowAllAuthorizer));
+        let context = create_test_context().await;
+
+        // Create user so the store operation can succeed
+        let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+        store.write().unwrap().create_user(user).await.unwrap();
+
+        let request = PutUserPolicyRequest {
+            user_name: "alice".to_string(),
+            policy_name: "TestPolicy".to_string(),
+            policy_document: r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["*"],"Resource":["*"]}]}"#.to_string(),
+        };
+
+        let result = service.put_user_policy(&context, request).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_guard_denies_with_authorizer() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            InlinePolicyService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
+        let context = create_test_context().await;
+
+        let request = PutUserPolicyRequest {
+            user_name: "alice".to_string(),
+            policy_name: "TestPolicy".to_string(),
+            policy_document: r#"{"Version":"2012-10-17"}"#.to_string(),
+        };
+
+        let result = service.put_user_policy(&context, request).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, wami_core::error::AmiError::AccessDenied { .. }),
+            "Expected AccessDenied, got: {:?}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_guard_get_user_policy_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            InlinePolicyService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
+        let context = create_test_context().await;
+
+        let request = GetUserPolicyRequest {
+            user_name: "alice".to_string(),
+            policy_name: "TestPolicy".to_string(),
+        };
+
+        let result = service.get_user_policy(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_list_user_policies_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            InlinePolicyService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
+        let context = create_test_context().await;
+
+        let request = ListUserPoliciesRequest {
+            user_name: "alice".to_string(),
+        };
+
+        let result = service.list_user_policies(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_delete_user_policy_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            InlinePolicyService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
+        let context = create_test_context().await;
+
+        let request = DeleteUserPolicyRequest {
+            user_name: "alice".to_string(),
+            policy_name: "TestPolicy".to_string(),
+        };
+
+        let result = service.delete_user_policy(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_put_group_policy_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            InlinePolicyService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
+        let context = create_test_context().await;
+
+        let request = PutGroupPolicyRequest {
+            group_name: "admins".to_string(),
+            policy_name: "TestPolicy".to_string(),
+            policy_document: r#"{"Version":"2012-10-17"}"#.to_string(),
+        };
+
+        let result = service.put_group_policy(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_put_role_policy_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            InlinePolicyService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
+        let context = create_test_context().await;
+
+        let request = PutRolePolicyRequest {
+            role_name: "admin-role".to_string(),
+            policy_name: "TestPolicy".to_string(),
+            policy_document: r#"{"Version":"2012-10-17"}"#.to_string(),
+        };
+
+        let result = service.put_role_policy(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
 }

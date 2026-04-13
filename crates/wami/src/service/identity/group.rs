@@ -336,4 +336,97 @@ mod tests {
             .unwrap();
         assert_eq!(groups_after.len(), 0);
     }
+
+    // ─── Authorization guard tests ────────────────────────────
+
+    use crate::service::auth::authorizer::Authorizer;
+    use async_trait::async_trait;
+
+    struct DenyAllAuthorizer;
+
+    #[async_trait]
+    impl Authorizer for DenyAllAuthorizer {
+        async fn authorize(
+            &self,
+            _ctx: &WamiContext,
+            _action: &str,
+            _arn: &WamiArn,
+        ) -> wami_core::error::Result<bool> {
+            Ok(false)
+        }
+        async fn check_or_deny(
+            &self,
+            _ctx: &WamiContext,
+            _action: &str,
+            _arn: &WamiArn,
+        ) -> wami_core::error::Result<()> {
+            Err(wami_core::error::AmiError::AccessDenied {
+                message: "denied".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_guard_create_group_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = GroupService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+        let request = CreateGroupRequest {
+            group_name: "admins".to_string(),
+            path: None,
+            tags: None,
+        };
+        assert!(matches!(
+            service.create_group(&context, request).await,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_get_group_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = GroupService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+        assert!(matches!(
+            service.get_group(&context, "admins").await,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_delete_group_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = GroupService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+        assert!(matches!(
+            service.delete_group(&context, "admins").await,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_add_user_to_group_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = GroupService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+        assert!(matches!(
+            service.add_user_to_group(&context, "admins", "alice").await,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_list_groups_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = GroupService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
+        let context = test_context();
+        let request = ListGroupsRequest {
+            path_prefix: None,
+            pagination: None,
+        };
+        assert!(matches!(
+            service.list_groups(&context, request).await,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
 }

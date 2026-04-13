@@ -739,4 +739,122 @@ mod tests {
         let result = service.attach_user_policy(&context, request).await;
         assert!(result.is_err());
     }
+
+    // ─── Authorization guard tests ────────────────────────────
+
+    use crate::service::auth::authorizer::Authorizer;
+    use async_trait::async_trait;
+
+    struct DenyAllAuthorizer;
+
+    #[async_trait]
+    impl Authorizer for DenyAllAuthorizer {
+        async fn authorize(
+            &self,
+            _ctx: &WamiContext,
+            _action: &str,
+            _arn: &WamiArn,
+        ) -> wami_core::error::Result<bool> {
+            Ok(false)
+        }
+        async fn check_or_deny(
+            &self,
+            _ctx: &WamiContext,
+            _action: &str,
+            _arn: &WamiArn,
+        ) -> wami_core::error::Result<()> {
+            Err(wami_core::error::AmiError::AccessDenied {
+                message: "denied".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_guard_attach_user_policy_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            AttachmentService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
+        let context = create_test_context().await;
+
+        let request = AttachUserPolicyRequest {
+            user_name: "alice".to_string(),
+            policy_arn: "arn:wami:iam:0:wami:123456789012:policy/test".to_string(),
+        };
+        let result = service.attach_user_policy(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_detach_user_policy_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            AttachmentService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
+        let context = create_test_context().await;
+
+        let request = DetachUserPolicyRequest {
+            user_name: "alice".to_string(),
+            policy_arn: "arn:wami:iam:0:wami:123456789012:policy/test".to_string(),
+        };
+        let result = service.detach_user_policy(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_list_attached_user_policies_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            AttachmentService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
+        let context = create_test_context().await;
+
+        let request = ListAttachedUserPoliciesRequest {
+            user_name: "alice".to_string(),
+        };
+        let result = service.list_attached_user_policies(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_attach_group_policy_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            AttachmentService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
+        let context = create_test_context().await;
+
+        let request = AttachGroupPolicyRequest {
+            group_name: "admins".to_string(),
+            policy_arn: "arn:wami:iam:0:wami:123456789012:policy/test".to_string(),
+        };
+        let result = service.attach_group_policy(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_attach_role_policy_denied() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service =
+            AttachmentService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
+        let context = create_test_context().await;
+
+        let request = AttachRolePolicyRequest {
+            role_name: "admin-role".to_string(),
+            policy_arn: "arn:wami:iam:0:wami:123456789012:policy/test".to_string(),
+        };
+        let result = service.attach_role_policy(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
 }

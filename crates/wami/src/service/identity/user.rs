@@ -546,4 +546,152 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap().path, "/admin/");
     }
+
+    // ─── Authorization guard tests ────────────────────────────
+
+    use crate::service::auth::authorizer::Authorizer;
+    use async_trait::async_trait;
+
+    struct DenyAllAuthorizer;
+
+    #[async_trait]
+    impl Authorizer for DenyAllAuthorizer {
+        async fn authorize(
+            &self,
+            _ctx: &WamiContext,
+            _action: &str,
+            _arn: &WamiArn,
+        ) -> wami_core::error::Result<bool> {
+            Ok(false)
+        }
+        async fn check_or_deny(
+            &self,
+            _ctx: &WamiContext,
+            _action: &str,
+            _arn: &WamiArn,
+        ) -> wami_core::error::Result<()> {
+            Err(wami_core::error::AmiError::AccessDenied {
+                message: "denied".to_string(),
+            })
+        }
+    }
+
+    fn setup_guarded_service() -> UserService<InMemoryWamiStore> {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        UserService::with_authorizer(store, Arc::new(DenyAllAuthorizer))
+    }
+
+    #[tokio::test]
+    async fn test_guard_create_user_denied() {
+        let service = setup_guarded_service();
+        let context = test_context();
+        let request = CreateUserRequest {
+            user_name: "alice".to_string(),
+            path: None,
+            permissions_boundary: None,
+            tags: None,
+        };
+        let result = service.create_user(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_get_user_denied() {
+        let service = setup_guarded_service();
+        let context = test_context();
+        let result = service.get_user(&context, "alice").await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_delete_user_denied() {
+        let service = setup_guarded_service();
+        let context = test_context();
+        let result = service.delete_user(&context, "alice").await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_list_users_denied() {
+        let service = setup_guarded_service();
+        let context = test_context();
+        let request = ListUsersRequest {
+            path_prefix: None,
+            pagination: None,
+        };
+        let result = service.list_users(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_update_user_denied() {
+        let service = setup_guarded_service();
+        let context = test_context();
+        let request = UpdateUserRequest {
+            user_name: "alice".to_string(),
+            new_user_name: Some("bob".to_string()),
+            new_path: None,
+        };
+        let result = service.update_user(&context, request).await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_tag_user_denied() {
+        let service = setup_guarded_service();
+        let context = test_context();
+        let result = service
+            .tag_user(
+                &context,
+                "alice",
+                vec![wami_core::types::Tag {
+                    key: "Key".to_string(),
+                    value: "Val".to_string(),
+                }],
+            )
+            .await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_untag_user_denied() {
+        let service = setup_guarded_service();
+        let context = test_context();
+        let result = service
+            .untag_user(&context, "alice", vec!["Key".to_string()])
+            .await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_guard_list_user_tags_denied() {
+        let service = setup_guarded_service();
+        let context = test_context();
+        let result = service.list_user_tags(&context, "alice").await;
+        assert!(matches!(
+            result,
+            Err(wami_core::error::AmiError::AccessDenied { .. })
+        ));
+    }
 }
