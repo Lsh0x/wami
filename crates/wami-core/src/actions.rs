@@ -1082,4 +1082,880 @@ mod tests {
         let iam_actions = ActionRegistry::list_by_prefix(WamiServicePrefix::Iam);
         assert_eq!(iam_actions.len(), 19);
     }
+
+    // -----------------------------------------------------------------------
+    // Exhaustive list of every concrete action variant (no wildcards)
+    // -----------------------------------------------------------------------
+
+    fn all_concrete_actions() -> Vec<WamiAction> {
+        vec![
+            // Platform
+            WamiAction::PlatformAdmin,
+            WamiAction::PlatformViewSettings,
+            WamiAction::PlatformUpdateSettings,
+            WamiAction::PlatformViewAuditLog,
+            // Space
+            WamiAction::SpaceCreate,
+            WamiAction::SpaceDelete,
+            WamiAction::SpaceRead,
+            WamiAction::SpaceUpdate,
+            WamiAction::SpaceConfigure,
+            WamiAction::SpaceManageMembers,
+            WamiAction::SpaceSuspend,
+            WamiAction::SpaceList,
+            // Tenant
+            WamiAction::TenantRead,
+            WamiAction::TenantUpdate,
+            WamiAction::TenantDelete,
+            WamiAction::TenantCreateSubTenant,
+            WamiAction::TenantManageUsers,
+            WamiAction::TenantManageRoles,
+            WamiAction::TenantManagePolicies,
+            // IAM
+            WamiAction::IamCreateUser,
+            WamiAction::IamDeleteUser,
+            WamiAction::IamReadUser,
+            WamiAction::IamUpdateUser,
+            WamiAction::IamListUsers,
+            WamiAction::IamCreateGroup,
+            WamiAction::IamDeleteGroup,
+            WamiAction::IamManageGroupMembers,
+            WamiAction::IamCreateRole,
+            WamiAction::IamDeleteRole,
+            WamiAction::IamReadRole,
+            WamiAction::IamAssumeRole,
+            WamiAction::IamCreatePolicy,
+            WamiAction::IamDeletePolicy,
+            WamiAction::IamReadPolicy,
+            WamiAction::IamAttachPolicy,
+            WamiAction::IamDetachPolicy,
+            WamiAction::IamSetBoundary,
+            WamiAction::IamManageCredentials,
+            // DB
+            WamiAction::DbQuery,
+            WamiAction::DbWrite,
+            WamiAction::DbDelete,
+            WamiAction::DbCreate,
+            WamiAction::DbDrop,
+            WamiAction::DbList,
+            WamiAction::DbConfigureAccess,
+            WamiAction::DbImport,
+            WamiAction::DbExport,
+            // Chat
+            WamiAction::ChatSend,
+            WamiAction::ChatReadHistory,
+            WamiAction::ChatDeleteConversation,
+            WamiAction::ChatStream,
+            // Persona
+            WamiAction::PersonaCreate,
+            WamiAction::PersonaDelete,
+            WamiAction::PersonaRead,
+            WamiAction::PersonaUpdate,
+            WamiAction::PersonaList,
+            WamiAction::PersonaInvoke,
+            // Room
+            WamiAction::RoomCreate,
+            WamiAction::RoomDelete,
+            WamiAction::RoomJoin,
+            WamiAction::RoomRead,
+            WamiAction::RoomSend,
+            WamiAction::RoomManage,
+            // Inference
+            WamiAction::InferenceListModels,
+            WamiAction::InferenceInvoke,
+            WamiAction::InferenceConfigureRouter,
+            WamiAction::InferenceViewUsage,
+            // Analytics
+            WamiAction::AnalyticsViewUsage,
+            WamiAction::AnalyticsViewConversations,
+            WamiAction::AnalyticsExport,
+            WamiAction::AnalyticsViewActivity,
+            // Integration
+            WamiAction::IntegrationCreate,
+            WamiAction::IntegrationDelete,
+            WamiAction::IntegrationConfigure,
+            WamiAction::IntegrationList,
+            WamiAction::IntegrationReceive,
+            WamiAction::IntegrationSend,
+            // Cognitive
+            WamiAction::CognitiveRead,
+            WamiAction::CognitiveWrite,
+            WamiAction::CognitiveReset,
+            // GDPR
+            WamiAction::GdprGrantConsent,
+            WamiAction::GdprRevokeConsent,
+            WamiAction::GdprExportData,
+            WamiAction::GdprEraseData,
+            WamiAction::GdprViewAudit,
+        ]
+    }
+
+    // -----------------------------------------------------------------------
+    // Round-trip: as_str -> from_str for EVERY variant
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn roundtrip_every_concrete_action() {
+        for action in all_concrete_actions() {
+            let s = action.as_str();
+            let parsed = WamiAction::from_str(s)
+                .unwrap_or_else(|e| panic!("from_str({:?}) failed: {}", s, e));
+            assert_eq!(parsed, action, "roundtrip failed for {:?}", s);
+        }
+    }
+
+    #[test]
+    fn roundtrip_all_service_wildcards() {
+        for prefix in WamiServicePrefix::all() {
+            let action = WamiAction::ServiceAll(*prefix);
+            let s = action.as_str();
+            assert!(s.ends_with(":*"), "ServiceAll as_str should end with :*");
+            let parsed = WamiAction::from_str(s).unwrap();
+            assert_eq!(parsed, action);
+        }
+    }
+
+    #[test]
+    fn roundtrip_global_wildcard() {
+        assert_eq!(WamiAction::from_str("*").unwrap(), WamiAction::All);
+        assert_eq!(WamiAction::All.as_str(), "*");
+    }
+
+    // -----------------------------------------------------------------------
+    // Display -> FromStr for every variant (exercises Display impl)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn display_fromstr_every_action() {
+        for action in all_concrete_actions() {
+            let display = action.to_string();
+            let parsed: WamiAction = display.parse().unwrap();
+            assert_eq!(parsed, action);
+        }
+        // Wildcards too
+        let all_display = WamiAction::All.to_string();
+        assert_eq!(all_display, "*");
+        assert_eq!(all_display.parse::<WamiAction>().unwrap(), WamiAction::All);
+
+        for prefix in WamiServicePrefix::all() {
+            let svc = WamiAction::ServiceAll(*prefix);
+            let display = svc.to_string();
+            assert_eq!(display.parse::<WamiAction>().unwrap(), svc);
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // prefix() for EVERY variant
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn prefix_every_concrete_action() {
+        let expected: Vec<(WamiAction, WamiServicePrefix)> = vec![
+            (WamiAction::PlatformAdmin, WamiServicePrefix::Platform),
+            (
+                WamiAction::PlatformViewSettings,
+                WamiServicePrefix::Platform,
+            ),
+            (
+                WamiAction::PlatformUpdateSettings,
+                WamiServicePrefix::Platform,
+            ),
+            (
+                WamiAction::PlatformViewAuditLog,
+                WamiServicePrefix::Platform,
+            ),
+            (WamiAction::SpaceCreate, WamiServicePrefix::Space),
+            (WamiAction::SpaceDelete, WamiServicePrefix::Space),
+            (WamiAction::SpaceRead, WamiServicePrefix::Space),
+            (WamiAction::SpaceUpdate, WamiServicePrefix::Space),
+            (WamiAction::SpaceConfigure, WamiServicePrefix::Space),
+            (WamiAction::SpaceManageMembers, WamiServicePrefix::Space),
+            (WamiAction::SpaceSuspend, WamiServicePrefix::Space),
+            (WamiAction::SpaceList, WamiServicePrefix::Space),
+            (WamiAction::TenantRead, WamiServicePrefix::Tenant),
+            (WamiAction::TenantUpdate, WamiServicePrefix::Tenant),
+            (WamiAction::TenantDelete, WamiServicePrefix::Tenant),
+            (WamiAction::TenantCreateSubTenant, WamiServicePrefix::Tenant),
+            (WamiAction::TenantManageUsers, WamiServicePrefix::Tenant),
+            (WamiAction::TenantManageRoles, WamiServicePrefix::Tenant),
+            (WamiAction::TenantManagePolicies, WamiServicePrefix::Tenant),
+            (WamiAction::IamCreateUser, WamiServicePrefix::Iam),
+            (WamiAction::IamDeleteUser, WamiServicePrefix::Iam),
+            (WamiAction::IamReadUser, WamiServicePrefix::Iam),
+            (WamiAction::IamUpdateUser, WamiServicePrefix::Iam),
+            (WamiAction::IamListUsers, WamiServicePrefix::Iam),
+            (WamiAction::IamCreateGroup, WamiServicePrefix::Iam),
+            (WamiAction::IamDeleteGroup, WamiServicePrefix::Iam),
+            (WamiAction::IamManageGroupMembers, WamiServicePrefix::Iam),
+            (WamiAction::IamCreateRole, WamiServicePrefix::Iam),
+            (WamiAction::IamDeleteRole, WamiServicePrefix::Iam),
+            (WamiAction::IamReadRole, WamiServicePrefix::Iam),
+            (WamiAction::IamAssumeRole, WamiServicePrefix::Iam),
+            (WamiAction::IamCreatePolicy, WamiServicePrefix::Iam),
+            (WamiAction::IamDeletePolicy, WamiServicePrefix::Iam),
+            (WamiAction::IamReadPolicy, WamiServicePrefix::Iam),
+            (WamiAction::IamAttachPolicy, WamiServicePrefix::Iam),
+            (WamiAction::IamDetachPolicy, WamiServicePrefix::Iam),
+            (WamiAction::IamSetBoundary, WamiServicePrefix::Iam),
+            (WamiAction::IamManageCredentials, WamiServicePrefix::Iam),
+            (WamiAction::DbQuery, WamiServicePrefix::Db),
+            (WamiAction::DbWrite, WamiServicePrefix::Db),
+            (WamiAction::DbDelete, WamiServicePrefix::Db),
+            (WamiAction::DbCreate, WamiServicePrefix::Db),
+            (WamiAction::DbDrop, WamiServicePrefix::Db),
+            (WamiAction::DbList, WamiServicePrefix::Db),
+            (WamiAction::DbConfigureAccess, WamiServicePrefix::Db),
+            (WamiAction::DbImport, WamiServicePrefix::Db),
+            (WamiAction::DbExport, WamiServicePrefix::Db),
+            (WamiAction::ChatSend, WamiServicePrefix::Chat),
+            (WamiAction::ChatReadHistory, WamiServicePrefix::Chat),
+            (WamiAction::ChatDeleteConversation, WamiServicePrefix::Chat),
+            (WamiAction::ChatStream, WamiServicePrefix::Chat),
+            (WamiAction::PersonaCreate, WamiServicePrefix::Persona),
+            (WamiAction::PersonaDelete, WamiServicePrefix::Persona),
+            (WamiAction::PersonaRead, WamiServicePrefix::Persona),
+            (WamiAction::PersonaUpdate, WamiServicePrefix::Persona),
+            (WamiAction::PersonaList, WamiServicePrefix::Persona),
+            (WamiAction::PersonaInvoke, WamiServicePrefix::Persona),
+            (WamiAction::RoomCreate, WamiServicePrefix::Room),
+            (WamiAction::RoomDelete, WamiServicePrefix::Room),
+            (WamiAction::RoomJoin, WamiServicePrefix::Room),
+            (WamiAction::RoomRead, WamiServicePrefix::Room),
+            (WamiAction::RoomSend, WamiServicePrefix::Room),
+            (WamiAction::RoomManage, WamiServicePrefix::Room),
+            (
+                WamiAction::InferenceListModels,
+                WamiServicePrefix::Inference,
+            ),
+            (WamiAction::InferenceInvoke, WamiServicePrefix::Inference),
+            (
+                WamiAction::InferenceConfigureRouter,
+                WamiServicePrefix::Inference,
+            ),
+            (WamiAction::InferenceViewUsage, WamiServicePrefix::Inference),
+            (WamiAction::AnalyticsViewUsage, WamiServicePrefix::Analytics),
+            (
+                WamiAction::AnalyticsViewConversations,
+                WamiServicePrefix::Analytics,
+            ),
+            (WamiAction::AnalyticsExport, WamiServicePrefix::Analytics),
+            (
+                WamiAction::AnalyticsViewActivity,
+                WamiServicePrefix::Analytics,
+            ),
+            (
+                WamiAction::IntegrationCreate,
+                WamiServicePrefix::Integration,
+            ),
+            (
+                WamiAction::IntegrationDelete,
+                WamiServicePrefix::Integration,
+            ),
+            (
+                WamiAction::IntegrationConfigure,
+                WamiServicePrefix::Integration,
+            ),
+            (WamiAction::IntegrationList, WamiServicePrefix::Integration),
+            (
+                WamiAction::IntegrationReceive,
+                WamiServicePrefix::Integration,
+            ),
+            (WamiAction::IntegrationSend, WamiServicePrefix::Integration),
+            (WamiAction::CognitiveRead, WamiServicePrefix::Cognitive),
+            (WamiAction::CognitiveWrite, WamiServicePrefix::Cognitive),
+            (WamiAction::CognitiveReset, WamiServicePrefix::Cognitive),
+            (WamiAction::GdprGrantConsent, WamiServicePrefix::Gdpr),
+            (WamiAction::GdprRevokeConsent, WamiServicePrefix::Gdpr),
+            (WamiAction::GdprExportData, WamiServicePrefix::Gdpr),
+            (WamiAction::GdprEraseData, WamiServicePrefix::Gdpr),
+            (WamiAction::GdprViewAudit, WamiServicePrefix::Gdpr),
+        ];
+
+        for (action, expected_prefix) in &expected {
+            assert_eq!(
+                action.prefix(),
+                Some(*expected_prefix),
+                "prefix() wrong for {:?}",
+                action
+            );
+        }
+    }
+
+    #[test]
+    fn prefix_wildcards() {
+        assert_eq!(WamiAction::All.prefix(), None);
+        for prefix in WamiServicePrefix::all() {
+            assert_eq!(WamiAction::ServiceAll(*prefix).prefix(), Some(*prefix),);
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // as_str() spot-checks for every service group (exercises all match arms)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn as_str_platform() {
+        assert_eq!(WamiAction::PlatformAdmin.as_str(), "platform:Admin");
+        assert_eq!(
+            WamiAction::PlatformViewSettings.as_str(),
+            "platform:ViewSettings"
+        );
+        assert_eq!(
+            WamiAction::PlatformUpdateSettings.as_str(),
+            "platform:UpdateSettings"
+        );
+        assert_eq!(
+            WamiAction::PlatformViewAuditLog.as_str(),
+            "platform:ViewAuditLog"
+        );
+    }
+
+    #[test]
+    fn as_str_space() {
+        assert_eq!(WamiAction::SpaceCreate.as_str(), "space:Create");
+        assert_eq!(WamiAction::SpaceDelete.as_str(), "space:Delete");
+        assert_eq!(WamiAction::SpaceRead.as_str(), "space:Read");
+        assert_eq!(WamiAction::SpaceUpdate.as_str(), "space:Update");
+        assert_eq!(WamiAction::SpaceConfigure.as_str(), "space:Configure");
+        assert_eq!(
+            WamiAction::SpaceManageMembers.as_str(),
+            "space:ManageMembers"
+        );
+        assert_eq!(WamiAction::SpaceSuspend.as_str(), "space:Suspend");
+        assert_eq!(WamiAction::SpaceList.as_str(), "space:List");
+    }
+
+    #[test]
+    fn as_str_tenant() {
+        assert_eq!(WamiAction::TenantRead.as_str(), "tenant:Read");
+        assert_eq!(WamiAction::TenantUpdate.as_str(), "tenant:Update");
+        assert_eq!(WamiAction::TenantDelete.as_str(), "tenant:Delete");
+        assert_eq!(
+            WamiAction::TenantCreateSubTenant.as_str(),
+            "tenant:CreateSubTenant"
+        );
+        assert_eq!(WamiAction::TenantManageUsers.as_str(), "tenant:ManageUsers");
+        assert_eq!(WamiAction::TenantManageRoles.as_str(), "tenant:ManageRoles");
+        assert_eq!(
+            WamiAction::TenantManagePolicies.as_str(),
+            "tenant:ManagePolicies"
+        );
+    }
+
+    #[test]
+    fn as_str_iam() {
+        assert_eq!(WamiAction::IamCreateUser.as_str(), "iam:CreateUser");
+        assert_eq!(WamiAction::IamDeleteUser.as_str(), "iam:DeleteUser");
+        assert_eq!(WamiAction::IamReadUser.as_str(), "iam:ReadUser");
+        assert_eq!(WamiAction::IamUpdateUser.as_str(), "iam:UpdateUser");
+        assert_eq!(WamiAction::IamListUsers.as_str(), "iam:ListUsers");
+        assert_eq!(WamiAction::IamCreateGroup.as_str(), "iam:CreateGroup");
+        assert_eq!(WamiAction::IamDeleteGroup.as_str(), "iam:DeleteGroup");
+        assert_eq!(
+            WamiAction::IamManageGroupMembers.as_str(),
+            "iam:ManageGroupMembers"
+        );
+        assert_eq!(WamiAction::IamCreateRole.as_str(), "iam:CreateRole");
+        assert_eq!(WamiAction::IamDeleteRole.as_str(), "iam:DeleteRole");
+        assert_eq!(WamiAction::IamReadRole.as_str(), "iam:ReadRole");
+        assert_eq!(WamiAction::IamAssumeRole.as_str(), "iam:AssumeRole");
+        assert_eq!(WamiAction::IamCreatePolicy.as_str(), "iam:CreatePolicy");
+        assert_eq!(WamiAction::IamDeletePolicy.as_str(), "iam:DeletePolicy");
+        assert_eq!(WamiAction::IamReadPolicy.as_str(), "iam:ReadPolicy");
+        assert_eq!(WamiAction::IamAttachPolicy.as_str(), "iam:AttachPolicy");
+        assert_eq!(WamiAction::IamDetachPolicy.as_str(), "iam:DetachPolicy");
+        assert_eq!(WamiAction::IamSetBoundary.as_str(), "iam:SetBoundary");
+        assert_eq!(
+            WamiAction::IamManageCredentials.as_str(),
+            "iam:ManageCredentials"
+        );
+    }
+
+    #[test]
+    fn as_str_db() {
+        assert_eq!(WamiAction::DbQuery.as_str(), "db:Query");
+        assert_eq!(WamiAction::DbWrite.as_str(), "db:Write");
+        assert_eq!(WamiAction::DbDelete.as_str(), "db:Delete");
+        assert_eq!(WamiAction::DbCreate.as_str(), "db:Create");
+        assert_eq!(WamiAction::DbDrop.as_str(), "db:Drop");
+        assert_eq!(WamiAction::DbList.as_str(), "db:List");
+        assert_eq!(WamiAction::DbConfigureAccess.as_str(), "db:ConfigureAccess");
+        assert_eq!(WamiAction::DbImport.as_str(), "db:Import");
+        assert_eq!(WamiAction::DbExport.as_str(), "db:Export");
+    }
+
+    #[test]
+    fn as_str_chat() {
+        assert_eq!(WamiAction::ChatSend.as_str(), "chat:Send");
+        assert_eq!(WamiAction::ChatReadHistory.as_str(), "chat:ReadHistory");
+        assert_eq!(
+            WamiAction::ChatDeleteConversation.as_str(),
+            "chat:DeleteConversation"
+        );
+        assert_eq!(WamiAction::ChatStream.as_str(), "chat:Stream");
+    }
+
+    #[test]
+    fn as_str_persona() {
+        assert_eq!(WamiAction::PersonaCreate.as_str(), "persona:Create");
+        assert_eq!(WamiAction::PersonaDelete.as_str(), "persona:Delete");
+        assert_eq!(WamiAction::PersonaRead.as_str(), "persona:Read");
+        assert_eq!(WamiAction::PersonaUpdate.as_str(), "persona:Update");
+        assert_eq!(WamiAction::PersonaList.as_str(), "persona:List");
+        assert_eq!(WamiAction::PersonaInvoke.as_str(), "persona:Invoke");
+    }
+
+    #[test]
+    fn as_str_room() {
+        assert_eq!(WamiAction::RoomCreate.as_str(), "room:Create");
+        assert_eq!(WamiAction::RoomDelete.as_str(), "room:Delete");
+        assert_eq!(WamiAction::RoomJoin.as_str(), "room:Join");
+        assert_eq!(WamiAction::RoomRead.as_str(), "room:Read");
+        assert_eq!(WamiAction::RoomSend.as_str(), "room:Send");
+        assert_eq!(WamiAction::RoomManage.as_str(), "room:Manage");
+    }
+
+    #[test]
+    fn as_str_inference() {
+        assert_eq!(
+            WamiAction::InferenceListModels.as_str(),
+            "inference:ListModels"
+        );
+        assert_eq!(WamiAction::InferenceInvoke.as_str(), "inference:Invoke");
+        assert_eq!(
+            WamiAction::InferenceConfigureRouter.as_str(),
+            "inference:ConfigureRouter"
+        );
+        assert_eq!(
+            WamiAction::InferenceViewUsage.as_str(),
+            "inference:ViewUsage"
+        );
+    }
+
+    #[test]
+    fn as_str_analytics() {
+        assert_eq!(
+            WamiAction::AnalyticsViewUsage.as_str(),
+            "analytics:ViewUsage"
+        );
+        assert_eq!(
+            WamiAction::AnalyticsViewConversations.as_str(),
+            "analytics:ViewConversations"
+        );
+        assert_eq!(WamiAction::AnalyticsExport.as_str(), "analytics:Export");
+        assert_eq!(
+            WamiAction::AnalyticsViewActivity.as_str(),
+            "analytics:ViewActivity"
+        );
+    }
+
+    #[test]
+    fn as_str_integration() {
+        assert_eq!(WamiAction::IntegrationCreate.as_str(), "integration:Create");
+        assert_eq!(WamiAction::IntegrationDelete.as_str(), "integration:Delete");
+        assert_eq!(
+            WamiAction::IntegrationConfigure.as_str(),
+            "integration:Configure"
+        );
+        assert_eq!(WamiAction::IntegrationList.as_str(), "integration:List");
+        assert_eq!(
+            WamiAction::IntegrationReceive.as_str(),
+            "integration:Receive"
+        );
+        assert_eq!(WamiAction::IntegrationSend.as_str(), "integration:Send");
+    }
+
+    #[test]
+    fn as_str_cognitive() {
+        assert_eq!(WamiAction::CognitiveRead.as_str(), "cognitive:Read");
+        assert_eq!(WamiAction::CognitiveWrite.as_str(), "cognitive:Write");
+        assert_eq!(WamiAction::CognitiveReset.as_str(), "cognitive:Reset");
+    }
+
+    #[test]
+    fn as_str_gdpr() {
+        assert_eq!(WamiAction::GdprGrantConsent.as_str(), "gdpr:GrantConsent");
+        assert_eq!(WamiAction::GdprRevokeConsent.as_str(), "gdpr:RevokeConsent");
+        assert_eq!(WamiAction::GdprExportData.as_str(), "gdpr:ExportData");
+        assert_eq!(WamiAction::GdprEraseData.as_str(), "gdpr:EraseData");
+        assert_eq!(WamiAction::GdprViewAudit.as_str(), "gdpr:ViewAudit");
+    }
+
+    // -----------------------------------------------------------------------
+    // ServiceAll as_str for every prefix
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn as_str_service_all_every_prefix() {
+        assert_eq!(
+            WamiAction::ServiceAll(WamiServicePrefix::Platform).as_str(),
+            "platform:*"
+        );
+        assert_eq!(
+            WamiAction::ServiceAll(WamiServicePrefix::Space).as_str(),
+            "space:*"
+        );
+        assert_eq!(
+            WamiAction::ServiceAll(WamiServicePrefix::Tenant).as_str(),
+            "tenant:*"
+        );
+        assert_eq!(
+            WamiAction::ServiceAll(WamiServicePrefix::Iam).as_str(),
+            "iam:*"
+        );
+        assert_eq!(
+            WamiAction::ServiceAll(WamiServicePrefix::Db).as_str(),
+            "db:*"
+        );
+        assert_eq!(
+            WamiAction::ServiceAll(WamiServicePrefix::Chat).as_str(),
+            "chat:*"
+        );
+        assert_eq!(
+            WamiAction::ServiceAll(WamiServicePrefix::Persona).as_str(),
+            "persona:*"
+        );
+        assert_eq!(
+            WamiAction::ServiceAll(WamiServicePrefix::Room).as_str(),
+            "room:*"
+        );
+        assert_eq!(
+            WamiAction::ServiceAll(WamiServicePrefix::Inference).as_str(),
+            "inference:*"
+        );
+        assert_eq!(
+            WamiAction::ServiceAll(WamiServicePrefix::Analytics).as_str(),
+            "analytics:*"
+        );
+        assert_eq!(
+            WamiAction::ServiceAll(WamiServicePrefix::Integration).as_str(),
+            "integration:*"
+        );
+        assert_eq!(
+            WamiAction::ServiceAll(WamiServicePrefix::Cognitive).as_str(),
+            "cognitive:*"
+        );
+        assert_eq!(
+            WamiAction::ServiceAll(WamiServicePrefix::Gdpr).as_str(),
+            "gdpr:*"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Wildcard matching — exhaustive cross-service checks
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn matches_all_matches_everything() {
+        let all = WamiAction::All;
+        for action in all_concrete_actions() {
+            assert!(all.matches(&action), "All should match {:?}", action);
+        }
+        // Also matches wildcards themselves
+        for prefix in WamiServicePrefix::all() {
+            assert!(all.matches(&WamiAction::ServiceAll(*prefix)));
+        }
+        assert!(all.matches(&WamiAction::All));
+    }
+
+    #[test]
+    fn service_all_matches_only_own_prefix() {
+        // For every prefix, ServiceAll should match all actions in that prefix
+        // and NOT match actions in other prefixes
+        let actions = all_concrete_actions();
+        for prefix in WamiServicePrefix::all() {
+            let svc_all = WamiAction::ServiceAll(*prefix);
+            for action in &actions {
+                if action.prefix() == Some(*prefix) {
+                    assert!(
+                        svc_all.matches(action),
+                        "{:?} should match {:?}",
+                        svc_all,
+                        action
+                    );
+                } else {
+                    assert!(
+                        !svc_all.matches(action),
+                        "{:?} should NOT match {:?}",
+                        svc_all,
+                        action
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn exact_match_only_matches_self() {
+        let actions = all_concrete_actions();
+        for a in &actions {
+            assert!(a.matches(a), "{:?} should match itself", a);
+            for b in &actions {
+                if a != b {
+                    assert!(!a.matches(b), "{:?} should not match {:?}", a, b);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn concrete_does_not_match_service_all() {
+        // A concrete action should not match a ServiceAll pattern
+        let iam_create = WamiAction::IamCreateUser;
+        let iam_all = WamiAction::ServiceAll(WamiServicePrefix::Iam);
+        assert!(!iam_create.matches(&iam_all));
+    }
+
+    // -----------------------------------------------------------------------
+    // matches_str — backward compat string matching
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn matches_str_star_matches_everything() {
+        for action in all_concrete_actions() {
+            assert!(WamiAction::matches_str("*", action.as_str()));
+        }
+    }
+
+    #[test]
+    fn matches_str_service_wildcard_every_prefix() {
+        let prefixes_and_actions: Vec<(&str, &str, &str)> = vec![
+            ("platform:*", "platform:Admin", "space:Create"),
+            ("space:*", "space:Create", "tenant:Read"),
+            ("tenant:*", "tenant:Read", "iam:CreateUser"),
+            ("iam:*", "iam:CreateUser", "db:Query"),
+            ("db:*", "db:Query", "chat:Send"),
+            ("chat:*", "chat:Send", "persona:Create"),
+            ("persona:*", "persona:Create", "room:Create"),
+            ("room:*", "room:Create", "inference:Invoke"),
+            ("inference:*", "inference:Invoke", "analytics:Export"),
+            ("analytics:*", "analytics:Export", "integration:Create"),
+            ("integration:*", "integration:Create", "cognitive:Read"),
+            ("cognitive:*", "cognitive:Read", "gdpr:GrantConsent"),
+            ("gdpr:*", "gdpr:GrantConsent", "platform:Admin"),
+        ];
+        for (pattern, should_match, should_not_match) in prefixes_and_actions {
+            assert!(
+                WamiAction::matches_str(pattern, should_match),
+                "{} should match {}",
+                pattern,
+                should_match
+            );
+            assert!(
+                !WamiAction::matches_str(pattern, should_not_match),
+                "{} should NOT match {}",
+                pattern,
+                should_not_match
+            );
+        }
+    }
+
+    #[test]
+    fn matches_str_exact() {
+        assert!(WamiAction::matches_str("iam:CreateUser", "iam:CreateUser"));
+        assert!(!WamiAction::matches_str("iam:CreateUser", "iam:DeleteUser"));
+    }
+
+    #[test]
+    fn matches_str_no_colon_in_requested() {
+        // If the requested string has no colon, prefix wildcard should not match
+        assert!(!WamiAction::matches_str("iam:*", "noColonHere"));
+    }
+
+    #[test]
+    fn matches_str_non_matching_patterns() {
+        assert!(!WamiAction::matches_str("db:Query", "db:Write"));
+        assert!(!WamiAction::matches_str("iam:*", "db:Query"));
+        assert!(!WamiAction::matches_str("platform:Admin", "*"));
+    }
+
+    // -----------------------------------------------------------------------
+    // Edge cases — parse errors
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn from_str_empty_string() {
+        let err = WamiAction::from_str("").unwrap_err();
+        assert!(matches!(err, ActionParseError::InvalidFormat(_)));
+    }
+
+    #[test]
+    fn from_str_no_colon() {
+        let err = WamiAction::from_str("noColon").unwrap_err();
+        assert!(matches!(err, ActionParseError::InvalidFormat(_)));
+    }
+
+    #[test]
+    fn from_str_unknown_prefix() {
+        let err = WamiAction::from_str("fake:*").unwrap_err();
+        assert!(matches!(err, ActionParseError::UnknownPrefix(_)));
+    }
+
+    #[test]
+    fn from_str_unknown_operation() {
+        let err = WamiAction::from_str("iam:FakeOp").unwrap_err();
+        assert!(matches!(err, ActionParseError::Unknown(_)));
+    }
+
+    #[test]
+    fn from_str_case_sensitive() {
+        // Should be case-sensitive: "IAM:CreateUser" is not valid
+        assert!(WamiAction::from_str("IAM:CreateUser").is_err());
+        assert!(WamiAction::from_str("iam:createuser").is_err());
+        assert!(WamiAction::from_str("Iam:CreateUser").is_err());
+        assert!(WamiAction::from_str("iam:createUser").is_err());
+    }
+
+    #[test]
+    fn from_str_valid_prefix_wrong_operation() {
+        assert!(WamiAction::from_str("db:NotAnAction").is_err());
+        assert!(WamiAction::from_str("chat:NotAnAction").is_err());
+        assert!(WamiAction::from_str("room:NotAnAction").is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // WamiServicePrefix tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn service_prefix_as_str_all() {
+        assert_eq!(WamiServicePrefix::Platform.as_str(), "platform");
+        assert_eq!(WamiServicePrefix::Space.as_str(), "space");
+        assert_eq!(WamiServicePrefix::Tenant.as_str(), "tenant");
+        assert_eq!(WamiServicePrefix::Iam.as_str(), "iam");
+        assert_eq!(WamiServicePrefix::Db.as_str(), "db");
+        assert_eq!(WamiServicePrefix::Chat.as_str(), "chat");
+        assert_eq!(WamiServicePrefix::Persona.as_str(), "persona");
+        assert_eq!(WamiServicePrefix::Room.as_str(), "room");
+        assert_eq!(WamiServicePrefix::Inference.as_str(), "inference");
+        assert_eq!(WamiServicePrefix::Analytics.as_str(), "analytics");
+        assert_eq!(WamiServicePrefix::Integration.as_str(), "integration");
+        assert_eq!(WamiServicePrefix::Cognitive.as_str(), "cognitive");
+        assert_eq!(WamiServicePrefix::Gdpr.as_str(), "gdpr");
+    }
+
+    #[test]
+    fn service_prefix_from_str_all() {
+        for prefix in WamiServicePrefix::all() {
+            let s = prefix.as_str();
+            let parsed = WamiServicePrefix::from_str(s).unwrap();
+            assert_eq!(parsed, *prefix);
+        }
+    }
+
+    #[test]
+    fn service_prefix_from_str_error() {
+        let err = WamiServicePrefix::from_str("nonexistent").unwrap_err();
+        assert!(matches!(err, ActionParseError::UnknownPrefix(_)));
+    }
+
+    #[test]
+    fn service_prefix_display() {
+        for prefix in WamiServicePrefix::all() {
+            assert_eq!(prefix.to_string(), prefix.as_str());
+        }
+    }
+
+    #[test]
+    fn service_prefix_all_returns_all_13() {
+        assert_eq!(WamiServicePrefix::all().len(), 13);
+    }
+
+    // -----------------------------------------------------------------------
+    // Serde — additional edge cases
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn serde_roundtrip_every_action() {
+        for action in all_concrete_actions() {
+            let json = serde_json::to_string(&action).unwrap();
+            let parsed: WamiAction = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed, action);
+        }
+    }
+
+    #[test]
+    fn serde_roundtrip_every_service_wildcard() {
+        for prefix in WamiServicePrefix::all() {
+            let action = WamiAction::ServiceAll(*prefix);
+            let json = serde_json::to_string(&action).unwrap();
+            let parsed: WamiAction = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed, action);
+        }
+    }
+
+    #[test]
+    fn serde_deserialize_invalid() {
+        let result: Result<WamiAction, _> = serde_json::from_str(r#""not:valid:action""#);
+        assert!(result.is_err());
+
+        let result: Result<WamiAction, _> = serde_json::from_str(r#""garbage""#);
+        assert!(result.is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // ActionParseError Display
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn action_parse_error_display() {
+        let e1 = ActionParseError::Unknown("foo:bar".into());
+        assert!(e1.to_string().contains("foo:bar"));
+
+        let e2 = ActionParseError::UnknownPrefix("xyz".into());
+        assert!(e2.to_string().contains("xyz"));
+
+        let e3 = ActionParseError::InvalidFormat("nocolon".into());
+        assert!(e3.to_string().contains("nocolon"));
+    }
+
+    // -----------------------------------------------------------------------
+    // ActionRegistry — additional coverage
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn registry_list_by_every_prefix() {
+        let expected_counts: Vec<(WamiServicePrefix, usize)> = vec![
+            (WamiServicePrefix::Platform, 4),
+            (WamiServicePrefix::Space, 8),
+            (WamiServicePrefix::Tenant, 7),
+            (WamiServicePrefix::Iam, 19),
+            (WamiServicePrefix::Db, 9),
+            (WamiServicePrefix::Chat, 4),
+            (WamiServicePrefix::Persona, 6),
+            (WamiServicePrefix::Room, 6),
+            (WamiServicePrefix::Inference, 4),
+            (WamiServicePrefix::Analytics, 4),
+            (WamiServicePrefix::Integration, 6),
+            (WamiServicePrefix::Cognitive, 3),
+            (WamiServicePrefix::Gdpr, 5),
+        ];
+        for (prefix, expected) in expected_counts {
+            let actions = ActionRegistry::list_by_prefix(prefix);
+            assert_eq!(
+                actions.len(),
+                expected,
+                "Wrong count for {:?}: got {}, expected {}",
+                prefix,
+                actions.len(),
+                expected
+            );
+            for a in &actions {
+                assert_eq!(a.category, prefix.as_str());
+            }
+        }
+    }
+
+    #[test]
+    fn registry_list_prefixes() {
+        let prefixes = ActionRegistry::list_prefixes();
+        assert_eq!(prefixes.len(), 13);
+    }
+
+    #[test]
+    fn registry_total_action_count() {
+        let all = ActionRegistry::list_actions();
+        // 4+8+7+19+9+4+6+6+4+4+6+3+5 = 85
+        assert_eq!(all.len(), 85);
+    }
 }
