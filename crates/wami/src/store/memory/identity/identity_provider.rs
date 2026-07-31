@@ -57,7 +57,7 @@ impl IdentityProviderStore for InMemoryWamiStore {
         let mut providers: Vec<SamlProvider> = self.saml_providers.values().cloned().collect();
 
         // Sort by create_date for consistent pagination
-        providers.sort_by(|a, b| a.create_date.cmp(&b.create_date));
+        providers.sort_by_key(|a| a.create_date);
 
         // Apply pagination
         let (start_index, max_items) = if let Some(params) = pagination {
@@ -132,7 +132,7 @@ impl IdentityProviderStore for InMemoryWamiStore {
         let mut providers: Vec<OidcProvider> = self.oidc_providers.values().cloned().collect();
 
         // Sort by create_date for consistent pagination
-        providers.sort_by(|a, b| a.create_date.cmp(&b.create_date));
+        providers.sort_by_key(|a| a.create_date);
 
         // Apply pagination
         let (start_index, max_items) = if let Some(params) = pagination {

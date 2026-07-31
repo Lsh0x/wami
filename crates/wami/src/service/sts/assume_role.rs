@@ -135,7 +135,7 @@ impl<S: AssumeRoleServiceStore> AssumeRoleService<S> {
         let session_arn = format!(
             "arn:aws:sts::{}:assumed-role/{}/{}",
             context.instance_id(),
-            &role.role_name,
+            role.role_name,
             request.role_session_name
         );
 
