@@ -2,6 +2,9 @@
 name = "wami-macros"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "Procedural macros for WAMI, the multi-cloud IAM library"
+repository = "https://github.com/Lsh0x/wami"
 
 [lib]
 proc-macro = true
