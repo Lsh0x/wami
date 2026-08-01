@@ -6,9 +6,13 @@ license = "MIT"
 description = "Core primitives shared across the WAMI workspace"
 
 [dependencies]
-aws-sdk-iam = "1.0"
-aws-sdk-sts = "1.0"
-aws-sdk-ssoadmin = "1.91"
+# Only their generated `Error` types are used, in error.rs. Their default
+# features pull a full HTTP stack — hyper, rustls, and through it aws-lc-sys,
+# which builds C via cmake and does not compile under current MSVC. Three enum
+# variants are not worth a C toolchain on every platform that consumes this.
+aws-sdk-iam = { version = "1.0", default-features = false }
+aws-sdk-sts = { version = "1.0", default-features = false }
+aws-sdk-ssoadmin = { version = "1.91", default-features = false }
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
