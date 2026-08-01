@@ -4,7 +4,6 @@
     "crates/wami": {
       "release-type": "rust",
       "package-name": "wami",
-      "changelog-path": "../../CHANGELOG.md",
       "include-component-in-tag": false,
       "bump-minor-pre-major": true,
       "draft": false,
@@ -12,13 +11,40 @@
     }
   },
   "changelog-sections": [
-    { "type": "feat", "section": "Features" },
-    { "type": "fix", "section": "Bug Fixes" },
-    { "type": "perf", "section": "Performance" },
-    { "type": "refactor", "section": "Refactoring" },
-    { "type": "deps", "section": "Dependencies" },
-    { "type": "docs", "section": "Documentation", "hidden": true },
-    { "type": "test", "section": "Tests", "hidden": true },
-    { "type": "chore", "section": "Chores", "hidden": true }
+    {
+      "type": "feat",
+      "section": "Features"
+    },
+    {
+      "type": "fix",
+      "section": "Bug Fixes"
+    },
+    {
+      "type": "perf",
+      "section": "Performance"
+    },
+    {
+      "type": "refactor",
+      "section": "Refactoring"
+    },
+    {
+      "type": "deps",
+      "section": "Dependencies"
+    },
+    {
+      "type": "docs",
+      "section": "Documentation",
+      "hidden": true
+    },
+    {
+      "type": "test",
+      "section": "Tests",
+      "hidden": true
+    },
+    {
+      "type": "chore",
+      "section": "Chores",
+      "hidden": true
+    }
   ]
 }
