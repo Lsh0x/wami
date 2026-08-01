@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.0](https://github.com/Lsh0x/wami/compare/v0.13.0...v0.14.0) (2026-08-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* AmiError loses AwsSdk, StsSdk and SsoAdminSdk. Provider translations move behind features, off by default.
+
+### Refactoring
+
+* no cloud provider knowledge in a default build ([#112](https://github.com/Lsh0x/wami/issues/112)) ([8f9938b](https://github.com/Lsh0x/wami/commit/8f9938b73d6f01383e597c2bbb0e1c3d3c4f4794))
+
 ## [0.13.0](https://github.com/Lsh0x/wami/compare/v0.12.0...v0.13.0) (2026-08-01)
 
 
