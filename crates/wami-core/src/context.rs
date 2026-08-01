@@ -119,6 +119,7 @@ pub struct SessionInfo {
 /// This context is created during authentication and passed to all service operations.
 /// It contains information about who is performing the operation and where it should be executed.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(try_from = "WireContext")]
 pub struct WamiContext {
     /// The tenant path where operations will be performed
     tenant_path: TenantPath,
@@ -134,7 +135,6 @@ pub struct WamiContext {
     /// The last step always names `caller_arn`: both are written by the same
     /// call, so the chain cannot come to describe someone other than the
     /// caller. Not settable through the builder — see `through`.
-    #[serde(default)]
     provenance: Vec<Step>,
 
     /// Whether the caller is a root user (bypasses all authorization)
@@ -157,6 +157,75 @@ pub struct WamiContext {
     /// Whether the request was made over a secure transport (HTTPS)
     #[serde(skip_serializing_if = "Option::is_none")]
     secure_transport: Option<bool>,
+}
+
+/// The wire shape a `WamiContext` is deserialised through.
+///
+/// `build` and `through` are the only ways to construct a context in memory,
+/// and both keep the chain ending on `caller_arn`. Deserialisation bypasses
+/// them, so it is checked here instead: a context arriving with an empty chain
+/// would look entirely normal while `provenance().last()` returned `None` to
+/// anything reading the chain to decide — a silent absence rather than a
+/// refusal, which is the harder kind to notice.
+#[derive(Deserialize)]
+struct WireContext {
+    tenant_path: TenantPath,
+    instance_id: String,
+    caller_arn: WamiArn,
+    provenance: Vec<Step>,
+    is_root: bool,
+    region: Option<String>,
+    session_info: Option<SessionInfo>,
+    source_ip: Option<String>,
+    mfa_present: Option<bool>,
+    secure_transport: Option<bool>,
+}
+
+impl TryFrom<WireContext> for WamiContext {
+    type Error = AmiError;
+
+    fn try_from(wire: WireContext) -> Result<Self> {
+        match wire.provenance.last() {
+            None => {
+                return Err(AmiError::InvalidParameter {
+                    message: "context has no provenance: every context records how \
+                              authority was obtained, starting at authentication"
+                        .to_string(),
+                })
+            }
+            Some(last) if last.principal != wire.caller_arn => {
+                return Err(AmiError::InvalidParameter {
+                    message: format!(
+                        "provenance ends on {} but the caller is {}",
+                        last.principal, wire.caller_arn
+                    ),
+                })
+            }
+            Some(_) => {}
+        }
+
+        if wire.provenance.len() > MAX_PROVENANCE_DEPTH {
+            return Err(AmiError::InvalidParameter {
+                message: format!(
+                    "provenance is {} steps deep, past the maximum of {MAX_PROVENANCE_DEPTH}",
+                    wire.provenance.len()
+                ),
+            });
+        }
+
+        Ok(WamiContext {
+            tenant_path: wire.tenant_path,
+            instance_id: wire.instance_id,
+            caller_arn: wire.caller_arn,
+            provenance: wire.provenance,
+            is_root: wire.is_root,
+            region: wire.region,
+            session_info: wire.session_info,
+            source_ip: wire.source_ip,
+            mfa_present: wire.mfa_present,
+            secure_transport: wire.secure_transport,
+        })
+    }
 }
 
 impl WamiContext {
@@ -213,6 +282,27 @@ impl WamiContext {
         next.is_root = self.is_root && principal.is_root_user();
         next.tenant_path = principal.tenant_path.clone();
         next.instance_id = principal.wami_instance_id.clone();
+
+        // Attributes proving something about *who authenticated* do not survive
+        // a change of identity. A caller who authenticated with MFA and then
+        // assumed a role would otherwise still claim MFA, and a policy
+        // requiring it on the role would see a factor belonging to someone who
+        // is no longer the caller. Same for the session: one opened for alice
+        // describes alice, not what she became.
+        //
+        // Applying a permission set is not a change of identity — the caller
+        // stays who they were — so it keeps both.
+        if matches!(
+            via,
+            Transition::AssumedRole { .. } | Transition::Federated { .. }
+        ) {
+            next.mfa_present = None;
+            next.session_info = None;
+        }
+
+        // source_ip and secure_transport describe the request, not the
+        // principal, and are true regardless of who holds authority.
+
         next.provenance.push(Step {
             principal: principal.clone(),
             via,
@@ -807,6 +897,141 @@ mod tests {
         let refused = context.through(arn_for(12345678, "one-too-many"), Transition::Authenticated);
         assert!(refused.is_err());
         assert_eq!(context.provenance().len(), MAX_PROVENANCE_DEPTH);
+    }
+
+    #[test]
+    fn a_context_without_provenance_is_refused_on_the_wire() {
+        // build() and through() keep the chain ending on caller_arn.
+        // Deserialisation bypasses both, and an empty chain looks entirely
+        // normal while provenance().last() returns None to whatever reads it.
+        let json = r#"{
+            "tenant_path": [12345678],
+            "instance_id": "999888777",
+            "caller_arn": "arn:wami:iam:12345678:wami:999888777:user/alice",
+            "provenance": [],
+            "is_root": false,
+            "region": null,
+            "session_info": null
+        }"#;
+
+        assert!(serde_json::from_str::<WamiContext>(json).is_err());
+    }
+
+    #[test]
+    fn a_chain_ending_on_someone_else_is_refused() {
+        // The forgery this guards: claim a route through a privileged role
+        // while acting as somebody else entirely.
+        let alice = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .build()
+            .unwrap();
+
+        let mut tampered: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string(&alice).unwrap()).unwrap();
+        tampered["caller_arn"] =
+            serde_json::json!("arn:wami:iam:12345678:wami:999888777:user/mallory");
+
+        let err = serde_json::from_value::<WamiContext>(tampered).unwrap_err();
+        assert!(err.to_string().contains("provenance ends on"), "{err}");
+    }
+
+    #[test]
+    fn an_overlong_chain_is_refused_on_the_wire() {
+        // through() refuses to build one; the wire must not be a way around it.
+        let mut context = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .build()
+            .unwrap();
+        for i in 1..MAX_PROVENANCE_DEPTH {
+            context = context
+                .through(
+                    arn_for(12345678, &format!("role{i}")),
+                    Transition::Authenticated,
+                )
+                .unwrap();
+        }
+
+        let mut value: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string(&context).unwrap()).unwrap();
+        let extra = value["provenance"][0].clone();
+        value["provenance"].as_array_mut().unwrap().push(extra);
+
+        assert!(serde_json::from_value::<WamiContext>(value).is_err());
+    }
+
+    #[test]
+    fn assuming_a_role_drops_the_mfa_of_whoever_authenticated() {
+        // alice proved MFA; DataScientist did not. Carrying the flag across
+        // would show a policy a factor belonging to someone who is no longer
+        // the caller.
+        let alice = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .mfa_present(true)
+            .session_info(SessionInfo {
+                session_token: "tok".to_string(),
+                expiration: 9_999_999_999,
+                assumed_role_arn: None,
+            })
+            .build()
+            .unwrap();
+        assert_eq!(alice.mfa_present(), Some(true));
+
+        let assumed = alice
+            .through(
+                arn_for(12345678, "DataScientist"),
+                Transition::AssumedRole {
+                    session_name: "s".to_string(),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(assumed.mfa_present(), None);
+        assert!(assumed.session_info().is_none());
+    }
+
+    #[test]
+    fn a_permission_set_is_not_a_change_of_identity() {
+        // The caller stays who they were, so what they proved still holds.
+        let alice = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .mfa_present(true)
+            .build()
+            .unwrap();
+
+        let scoped = alice
+            .through(
+                arn_for(12345678, "alice"),
+                Transition::PermissionSet {
+                    name: "DeveloperAccess".to_string(),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(scoped.mfa_present(), Some(true));
+    }
+
+    #[test]
+    fn request_attributes_survive_a_transition() {
+        // The source address and transport describe the request, not the
+        // principal — they are true whoever holds authority.
+        let alice = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .source_ip("203.0.113.7")
+            .secure_transport(true)
+            .build()
+            .unwrap();
+
+        let assumed = alice
+            .through(
+                arn_for(12345678, "role"),
+                Transition::AssumedRole {
+                    session_name: "s".to_string(),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(assumed.source_ip(), Some("203.0.113.7"));
+        assert_eq!(assumed.secure_transport(), Some(true));
     }
 
     #[test]
