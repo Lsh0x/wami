@@ -102,4 +102,6 @@ pub use transformer::{
     get_transformer, ArnTransformer, AwsArnTransformer, AzureArnTransformer, GcpArnTransformer,
     ProviderArnInfo, ScalewayArnTransformer,
 };
-pub use types::{CloudMapping, Resource, Service, TenantPath, WamiArn};
+pub use types::{
+    CloudMapping, Resource, Service, TenantPath, WamiArn, ROOT_TENANT_ID, ROOT_USER_NAME,
+};

@@ -21,10 +21,9 @@
 //! use wami_core::arn::{TenantPath, WamiArn};
 //! use wami_core::context::WamiContext;
 //!
-//! // Build a context for testing/internal use
+//! // The caller ARN is the only required field: the tenant path, the instance
+//! // and whether the caller is root are all read from it.
 //! let context = WamiContext::builder()
-//!     .instance_id("123456789012")
-//!     .tenant_path(TenantPath::single(0))
 //!     .caller_arn(
 //!         WamiArn::builder()
 //!             .service(wami_core::arn::Service::Iam)
@@ -34,12 +33,18 @@
 //!             .build()
 //!             .unwrap(),
 //!     )
-//!     .is_root(false)
 //!     .build()
 //!     .unwrap();
 //!
 //! assert_eq!(context.instance_id(), "123456789012");
+//! assert_eq!(context.tenant_path(), &TenantPath::single(0));
+//! assert!(!context.is_root());
 //! ```
+//!
+//! `tenant_path` and `instance_id` can still be set explicitly, but only to
+//! widen an operation beyond the caller's own scope — cross-tenant work or
+//! impersonation. Restating them to repeat what the ARN already says is what
+//! allowed the two to drift apart.
 
 use crate::arn::{TenantPath, WamiArn};
 use crate::error::{AmiError, Result};
@@ -178,7 +183,8 @@ pub struct WamiContextBuilder {
     tenant_path: Option<TenantPath>,
     instance_id: Option<String>,
     caller_arn: Option<WamiArn>,
-    is_root: bool,
+    /// `None` means "derive from the caller ARN"; an explicit value always wins.
+    is_root: Option<bool>,
     region: Option<String>,
     session_info: Option<SessionInfo>,
     source_ip: Option<String>,
@@ -206,8 +212,12 @@ impl WamiContextBuilder {
     }
 
     /// Set whether the caller is a root user
+    ///
+    /// Leave it unset to derive it from the caller ARN. An explicit value is
+    /// never overridden — in particular `is_root(false)` stays false even for
+    /// a root ARN, which is what makes deliberate privilege dropping possible.
     pub fn is_root(mut self, is_root: bool) -> Self {
-        self.is_root = is_root;
+        self.is_root = Some(is_root);
         self
     }
 
@@ -244,17 +254,21 @@ impl WamiContextBuilder {
     /// Build the WamiContext
     #[allow(clippy::result_large_err)]
     pub fn build(self) -> Result<WamiContext> {
-        let tenant_path = self.tenant_path.ok_or_else(|| AmiError::InvalidParameter {
-            message: "tenant_path is required".to_string(),
-        })?;
-
-        let instance_id = self.instance_id.ok_or_else(|| AmiError::InvalidParameter {
-            message: "instance_id is required".to_string(),
-        })?;
-
+        // The ARN comes first because the other three fields are derived from
+        // it. Stating them again is allowed, but only to widen the scope of an
+        // operation (cross-tenant, impersonation); leaving them out is the
+        // normal case and cannot drift from the caller's identity.
         let caller_arn = self.caller_arn.ok_or_else(|| AmiError::InvalidParameter {
             message: "caller_arn is required".to_string(),
         })?;
+
+        let tenant_path = self
+            .tenant_path
+            .unwrap_or_else(|| caller_arn.tenant_path.clone());
+
+        let instance_id = self
+            .instance_id
+            .unwrap_or_else(|| caller_arn.wami_instance_id.clone());
 
         // Validate that instance_id is not empty
         if instance_id.trim().is_empty() {
@@ -266,8 +280,8 @@ impl WamiContextBuilder {
         Ok(WamiContext {
             tenant_path,
             instance_id,
+            is_root: self.is_root.unwrap_or_else(|| caller_arn.is_root_user()),
             caller_arn,
-            is_root: self.is_root,
             region: self.region,
             session_info: self.session_info,
             source_ip: self.source_ip,
@@ -462,15 +476,95 @@ mod tests {
     }
 
     #[test]
-    fn test_missing_required_fields() {
-        // Missing instance_id
+    fn test_caller_arn_is_the_only_required_field() {
+        // tenant_path and instance_id are derived, so neither is enough alone.
         let result = WamiContext::builder()
             .tenant_path(TenantPath::single(0))
             .build();
         assert!(result.is_err());
 
-        // Missing tenant_path
         let result = WamiContext::builder().instance_id("999888777").build();
         assert!(result.is_err());
+    }
+
+    /// Helper: an ARN for `user_id` inside `tenant`.
+    fn arn_for(tenant: u64, user_id: &str) -> WamiArn {
+        WamiArn::builder()
+            .service(crate::arn::Service::Iam)
+            .tenant_path(TenantPath::single(tenant))
+            .wami_instance("999888777")
+            .resource("user", user_id)
+            .build()
+            .unwrap()
+    }
+
+    #[test]
+    fn test_scope_is_derived_from_caller_arn() {
+        let context = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .build()
+            .unwrap();
+
+        assert_eq!(context.tenant_path(), &TenantPath::single(12345678));
+        assert_eq!(context.instance_id(), "999888777");
+    }
+
+    #[test]
+    fn test_explicit_scope_still_wins() {
+        // Cross-tenant operations are the reason the overrides remain.
+        let context = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .tenant_path(TenantPath::single(87654321))
+            .instance_id("111222333")
+            .build()
+            .unwrap();
+
+        assert_eq!(context.tenant_path(), &TenantPath::single(87654321));
+        assert_eq!(context.instance_id(), "111222333");
+    }
+
+    #[test]
+    fn test_root_is_derived_from_root_arn() {
+        let context = WamiContext::builder()
+            .caller_arn(arn_for(0, "root"))
+            .build()
+            .unwrap();
+
+        assert!(context.is_root());
+    }
+
+    #[test]
+    fn test_a_user_named_root_in_another_tenant_is_not_root() {
+        // The whole reason is_root_user checks the tenant as well as the name:
+        // is_root bypasses every authorization check, so it must not be
+        // reachable by naming a resource `root` in a tenant one controls.
+        let context = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "root"))
+            .build()
+            .unwrap();
+
+        assert!(!context.is_root());
+    }
+
+    #[test]
+    fn test_ordinary_user_in_root_tenant_is_not_root() {
+        let context = WamiContext::builder()
+            .caller_arn(arn_for(0, "alice"))
+            .build()
+            .unwrap();
+
+        assert!(!context.is_root());
+    }
+
+    #[test]
+    fn test_explicit_is_root_false_beats_a_root_arn() {
+        // Dropping privileges deliberately has to remain possible.
+        let context = WamiContext::builder()
+            .caller_arn(arn_for(0, "root"))
+            .is_root(false)
+            .build()
+            .unwrap();
+
+        assert!(!context.is_root());
     }
 }

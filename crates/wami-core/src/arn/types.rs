@@ -4,6 +4,12 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use std::str::FromStr;
 
+/// Name of the platform root user.
+pub const ROOT_USER_NAME: &str = "root";
+
+/// Tenant the platform root user belongs to.
+pub const ROOT_TENANT_ID: u64 = 0;
+
 /// Represents a WAMI ARN (Amazon Resource Name).
 ///
 /// # Format
@@ -348,6 +354,22 @@ impl WamiArn {
     /// Returns true if this resource is synced with a cloud provider.
     pub fn is_cloud_synced(&self) -> bool {
         self.cloud_mapping.is_some()
+    }
+
+    /// Returns true if this ARN identifies the platform root user.
+    ///
+    /// Both conditions must hold: the resource is the user named
+    /// [`ROOT_USER_NAME`], **and** it sits in the root tenant
+    /// ([`ROOT_TENANT_ID`]).
+    ///
+    /// The tenant check is not redundant. A root context bypasses every
+    /// authorization check, so deriving it from a name alone would make the
+    /// privilege reachable by anything able to influence a resource id — and
+    /// nothing forbids naming a user `root` inside an ordinary tenant.
+    pub fn is_root_user(&self) -> bool {
+        self.resource.resource_type == "user"
+            && self.resource.resource_id == ROOT_USER_NAME
+            && self.tenant_path.root_u64() == Some(ROOT_TENANT_ID)
     }
 
     /// Returns the cloud provider name if synced.
