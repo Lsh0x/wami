@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.0](https://github.com/Lsh0x/wami/compare/v0.12.0...v0.13.0) (2026-08-01)
+
+
+### Features
+
+* implement policy condition keys evaluation ([#77](https://github.com/Lsh0x/wami/issues/77)) ([500d8db](https://github.com/Lsh0x/wami/commit/500d8db9dfe55c0459314635ab2664ff15a4e403))
+* **sts:** carry a kid in tokens, and let keys rotate ([#105](https://github.com/Lsh0x/wami/issues/105)) ([cb0be6d](https://github.com/Lsh0x/wami/commit/cb0be6dfc9e67be2c04bcc4bcd8a868f37e3aad4)), closes [#102](https://github.com/Lsh0x/wami/issues/102)
+* **sts:** JWT Ed25519 signed tokens for STS services ([#98](https://github.com/Lsh0x/wami/issues/98)) ([546d8b7](https://github.com/Lsh0x/wami/commit/546d8b764026d5502c4da20b7f0710118e852b36))
+
+
+### Bug Fixes
+
+* **ci:** labeler workflow — remove unsupported body-contains option, ([546d8b7](https://github.com/Lsh0x/wami/commit/546d8b764026d5502c4da20b7f0710118e852b36))
+* **ci:** release-please rejects the changelog path ([#106](https://github.com/Lsh0x/wami/issues/106)) ([66ce599](https://github.com/Lsh0x/wami/commit/66ce599afcfa0422c0f78cd7a207fdba5594e58c))
+* **deps:** drop the AWS HTTP stack, which broke the Windows CI ([#103](https://github.com/Lsh0x/wami/issues/103)) ([3853062](https://github.com/Lsh0x/wami/commit/3853062e14b0c8f448b35ed54e30d62dcf83f6ac))
+
+
+### Refactoring
+
+* **context:** derive tenant, instance and root from the caller ARN ([#101](https://github.com/Lsh0x/wami/issues/101)) ([534e962](https://github.com/Lsh0x/wami/commit/534e9622122e4f8116a04f212fe110fbb620b842)), closes [#67](https://github.com/Lsh0x/wami/issues/67)
+* Reorganize codebase into workspace structure ([#72](https://github.com/Lsh0x/wami/issues/72)) ([11da721](https://github.com/Lsh0x/wami/commit/11da721699dd732aac0bcd53726cdaae7456343e))
+
 ## [0.12.0] - 2025-10-31
 
 ### 🚀 Features
