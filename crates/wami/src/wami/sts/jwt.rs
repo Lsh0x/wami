@@ -6,14 +6,42 @@
 //!
 //! This module requires the `sts-jwt` feature (enabled by default).
 
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use base64::Engine as _;
 use ed25519_dalek::pkcs8::spki::EncodePublicKey;
 use ed25519_dalek::pkcs8::EncodePrivateKey;
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use super::credentials::Credentials;
+
+/// A JWK Set: the public keys a verifier may use, as a value.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Jwks {
+    /// The keys, active first.
+    pub keys: Vec<Jwk>,
+}
+
+/// One public key in JWK form (RFC 8037 OKP, Ed25519).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Jwk {
+    /// Key type — always `OKP` for Ed25519.
+    pub kty: String,
+    /// Curve — always `Ed25519`.
+    pub crv: String,
+    /// Algorithm — always `EdDSA`.
+    pub alg: String,
+    /// Intended use — always `sig`.
+    #[serde(rename = "use")]
+    pub use_: String,
+    /// The key id tokens signed by this key carry.
+    pub kid: String,
+    /// The public key, base64url without padding.
+    pub x: String,
+}
 
 /// Structured claims embedded in a signed JWT for STS credentials.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -82,37 +110,141 @@ pub fn build_sts_claims(credentials: &Credentials, context: &StsClaimsContext) -
 
 /// Manages Ed25519 keypair for JWT signing and verification.
 pub struct KeyManager {
+    active: KeyPair,
+    /// Keys that no longer sign but must still verify: a token outlives the
+    /// rotation that replaced the key which signed it.
+    retired: Vec<KeyPair>,
+}
+
+/// One Ed25519 keypair and the `kid` that names it.
+pub struct KeyPair {
+    kid: String,
     signing_key: SigningKey,
     verifying_key: VerifyingKey,
+}
+
+impl KeyPair {
+    fn new(signing_key: SigningKey) -> Self {
+        let verifying_key = signing_key.verifying_key();
+        Self {
+            kid: thumbprint(&verifying_key),
+            signing_key,
+            verifying_key,
+        }
+    }
+
+    /// The key id: an RFC 7638 JWK thumbprint of the public key.
+    pub fn kid(&self) -> &str {
+        &self.kid
+    }
+
+    /// The public key, as the `x` parameter of an OKP JWK.
+    pub fn public_key_bytes(&self) -> [u8; 32] {
+        self.verifying_key.to_bytes()
+    }
+}
+
+/// RFC 7638 JWK thumbprint of an Ed25519 public key.
+///
+/// The digest is taken over the canonical JWK — required members only, in
+/// lexicographic order, no whitespace — as RFC 8037 §2 defines them for OKP.
+///
+/// Hashing the raw 32 public key bytes would have been simpler and would have
+/// produced a *different* id for the same key than any standards-conforming
+/// party computes from the published JWKS. Two ids for one key, with nothing to
+/// say which is wrong.
+fn thumbprint(verifying_key: &VerifyingKey) -> String {
+    let x = URL_SAFE_NO_PAD.encode(verifying_key.to_bytes());
+    let canonical = format!(r#"{{"crv":"Ed25519","kty":"OKP","x":"{x}"}}"#);
+    URL_SAFE_NO_PAD.encode(Sha256::digest(canonical.as_bytes()))
 }
 
 impl KeyManager {
     /// Generate a new random Ed25519 keypair.
     pub fn generate() -> Self {
-        let signing_key = SigningKey::generate(&mut OsRng);
-        let verifying_key = signing_key.verifying_key();
         Self {
-            signing_key,
-            verifying_key,
+            active: KeyPair::new(SigningKey::generate(&mut OsRng)),
+            retired: Vec::new(),
         }
     }
 
     /// Create a KeyManager from an existing 32-byte secret.
+    ///
+    /// The `kid` is derived from the key, so two instances loading the same
+    /// secret agree on it. Were it random, each instance would name the same
+    /// key differently and reject the other's tokens — a failure that only
+    /// appears on the day a second instance is started.
     pub fn from_bytes(secret: &[u8; 32]) -> Self {
-        let signing_key = SigningKey::from_bytes(secret);
-        let verifying_key = signing_key.verifying_key();
         Self {
-            signing_key,
-            verifying_key,
+            active: KeyPair::new(SigningKey::from_bytes(secret)),
+            retired: Vec::new(),
+        }
+    }
+
+    /// The key currently signing.
+    pub fn active(&self) -> &KeyPair {
+        &self.active
+    }
+
+    /// Keys that still verify but no longer sign.
+    pub fn retired(&self) -> &[KeyPair] {
+        &self.retired
+    }
+
+    /// Promote `signing_key` to active and retire the current one.
+    ///
+    /// Takes `&mut self`, so two concurrent rotations — which would leave two
+    /// keys believing they are active — are rejected at compile time rather
+    /// than guarded at runtime.
+    pub fn rotate(&mut self, signing_key: SigningKey) {
+        let previous = std::mem::replace(&mut self.active, KeyPair::new(signing_key));
+        self.retired.push(previous);
+    }
+
+    /// Forget a retired key, so it stops verifying and leaves the JWKS.
+    ///
+    /// Deliberately manual: this library holds no clock and does not know how
+    /// long your tokens live. A retired key must stay as long as a token it
+    /// signed can still be valid, and only the caller knows that span. Returns
+    /// whether a key was removed.
+    pub fn remove_retired(&mut self, kid: &str) -> bool {
+        let before = self.retired.len();
+        self.retired.retain(|k| k.kid != kid);
+        self.retired.len() != before
+    }
+
+    /// The JWKS as a value: every key that currently verifies, active first.
+    ///
+    /// Serving this over HTTP, and deciding its cache headers, is transport and
+    /// belongs to whatever hosts the library.
+    pub fn jwks(&self) -> Jwks {
+        Jwks {
+            keys: std::iter::once(&self.active)
+                .chain(self.retired.iter())
+                .map(|pair| Jwk {
+                    kty: "OKP".to_string(),
+                    crv: "Ed25519".to_string(),
+                    alg: "EdDSA".to_string(),
+                    use_: "sig".to_string(),
+                    kid: pair.kid.clone(),
+                    x: URL_SAFE_NO_PAD.encode(pair.verifying_key.to_bytes()),
+                })
+                .collect(),
         }
     }
 
     /// Sign claims and produce a JWT string.
     ///
+    /// The header carries the `kid` of the signing key. Without it a verifier
+    /// holding several keys cannot tell which one to try, so rotation would
+    /// invalidate every token still in flight.
+    ///
     /// Uses standard PKCS#8 DER encoding for the Ed25519 signing key.
     pub fn sign_claims(&self, claims: &StsClaims) -> Result<String, JwtError> {
-        let header = Header::new(Algorithm::EdDSA);
+        let mut header = Header::new(Algorithm::EdDSA);
+        header.kid = Some(self.active.kid.clone());
         let pkcs8_der = self
+            .active
             .signing_key
             .to_pkcs8_der()
             .map_err(|e| JwtError::KeyEncoding(e.to_string()))?;
@@ -126,9 +258,22 @@ impl KeyManager {
     /// public keys via `from_ed_der` (despite the function name suggesting DER).
     /// The audience claim is validated against `["wami"]`.
     pub fn verify_token(&self, token: &str) -> Result<StsClaims, JwtError> {
+        // Which key signed this is read from the header before anything is
+        // verified. An unknown or absent kid is refused as such, and not as a
+        // bad signature: the two are diagnosed differently — one is a key
+        // distribution problem, the other is a forgery.
+        let kid = jsonwebtoken::decode_header(token)
+            .map_err(JwtError::Decode)?
+            .kid
+            .ok_or(JwtError::MissingKeyId)?;
+
+        let pair = self
+            .key_for(&kid)
+            .ok_or_else(|| JwtError::UnknownKeyId(kid.clone()))?;
+
         // jsonwebtoken + ring expects raw 32-byte Ed25519 public key, not SPKI DER.
         // This is a known quirk of the `from_ed_der` API naming.
-        let decoding_key = DecodingKey::from_ed_der(&self.verifying_key.to_bytes());
+        let decoding_key = DecodingKey::from_ed_der(&pair.verifying_key.to_bytes());
         let mut validation = Validation::new(Algorithm::EdDSA);
         validation.set_required_spec_claims(&["exp", "iat", "sub", "iss", "aud"]);
         validation.set_audience(&["wami"]);
@@ -145,6 +290,7 @@ impl KeyManager {
     /// libraries) to verify tokens produced by this KeyManager.
     pub fn public_key_pem(&self) -> Result<String, JwtError> {
         let spki_der = self
+            .active
             .verifying_key
             .to_public_key_der()
             .map_err(|e| JwtError::KeyEncoding(e.to_string()))?;
@@ -170,20 +316,28 @@ impl KeyManager {
     /// external verification libraries.
     pub fn public_key_spki_der(&self) -> Result<Vec<u8>, JwtError> {
         let spki_der = self
+            .active
             .verifying_key
             .to_public_key_der()
             .map_err(|e| JwtError::KeyEncoding(e.to_string()))?;
         Ok(spki_der.as_ref().to_vec())
     }
 
-    /// Return the raw 32-byte public key.
+    /// Return the raw 32-byte public key of the active key.
     pub fn public_key_bytes(&self) -> [u8; 32] {
-        self.verifying_key.to_bytes()
+        self.active.verifying_key.to_bytes()
     }
 
-    /// Return the raw 32-byte secret key (for persistence).
+    /// Return the raw 32-byte secret key of the active key (for persistence).
     pub fn secret_bytes(&self) -> [u8; 32] {
-        self.signing_key.to_bytes()
+        self.active.signing_key.to_bytes()
+    }
+
+    /// Find a key by id, active or retired.
+    fn key_for(&self, kid: &str) -> Option<&KeyPair> {
+        std::iter::once(&self.active)
+            .chain(self.retired.iter())
+            .find(|k| k.kid == kid)
     }
 }
 
@@ -196,6 +350,14 @@ pub enum JwtError {
     Decode(jsonwebtoken::errors::Error),
     #[error("Key encoding error: {0}")]
     KeyEncoding(String),
+    /// Refused before any signature check: nothing says which key to try.
+    #[error("token carries no key id")]
+    MissingKeyId,
+    /// The key id is well-formed but names no key this manager holds. Distinct
+    /// from a bad signature — this one is fixed by distributing a key, not by
+    /// rejecting a forgery.
+    #[error("unknown key id: {0}")]
+    UnknownKeyId(String),
 }
 
 #[cfg(test)]
@@ -236,6 +398,10 @@ mod tests {
         }
     }
 
+    fn test_claims() -> StsClaims {
+        build_sts_claims(&test_credentials(), &test_claims_context())
+    }
+
     #[test]
     fn test_keypair_generation() {
         let km1 = KeyManager::generate();
@@ -250,7 +416,7 @@ mod tests {
     #[test]
     fn test_keypair_from_bytes() {
         let km1 = KeyManager::generate();
-        let secret = km1.signing_key.to_bytes();
+        let secret = km1.secret_bytes();
         let km2 = KeyManager::from_bytes(&secret);
 
         assert_eq!(km1.public_key_bytes(), km2.public_key_bytes());
@@ -404,5 +570,135 @@ mod tests {
         // Verify the raw public key bytes are embedded at the end
         let raw_bytes = km.public_key_bytes();
         assert_eq!(&spki_der[12..], &raw_bytes);
+    }
+
+    /// RFC 8037 §3.1 publishes this key and RFC 7638 §3.1 the thumbprint
+    /// method. Pinning the pair here is what stops the id from silently
+    /// becoming "SHA-256 of the raw bytes", which no other implementation
+    /// would agree with.
+    #[test]
+    fn thumbprint_follows_rfc_7638() {
+        // The public key from RFC 8037 §3.1, base64url-decoded.
+        let x = URL_SAFE_NO_PAD
+            .decode("11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo")
+            .unwrap();
+        let verifying_key = VerifyingKey::from_bytes(&x.try_into().unwrap()).unwrap();
+
+        // The digest must be taken over {"crv":..,"kty":..,"x":..} exactly:
+        // required members, lexicographic order, no whitespace.
+        let expected = {
+            let canonical = r#"{"crv":"Ed25519","kty":"OKP","x":"11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"}"#;
+            URL_SAFE_NO_PAD.encode(Sha256::digest(canonical.as_bytes()))
+        };
+
+        assert_eq!(thumbprint(&verifying_key), expected);
+    }
+
+    #[test]
+    fn same_secret_yields_same_kid() {
+        // Two instances loading one secret must name the key identically, or
+        // each rejects the other's tokens the day a second one is started.
+        let secret = [7u8; 32];
+        assert_eq!(
+            KeyManager::from_bytes(&secret).active().kid(),
+            KeyManager::from_bytes(&secret).active().kid()
+        );
+    }
+
+    #[test]
+    fn signed_tokens_carry_the_active_kid() {
+        let km = KeyManager::generate();
+        let token = km.sign_claims(&test_claims()).unwrap();
+
+        let header = jsonwebtoken::decode_header(&token).unwrap();
+        assert_eq!(header.kid.as_deref(), Some(km.active().kid()));
+    }
+
+    #[test]
+    fn a_retired_key_still_verifies_its_own_tokens() {
+        // The whole point: a token outlives the rotation that replaced its key.
+        let mut km = KeyManager::generate();
+        let before = km.sign_claims(&test_claims()).unwrap();
+        let old_kid = km.active().kid().to_string();
+
+        km.rotate(SigningKey::generate(&mut OsRng));
+        let after = km.sign_claims(&test_claims()).unwrap();
+
+        assert!(km.verify_token(&before).is_ok(), "in-flight token died");
+        assert!(km.verify_token(&after).is_ok());
+        assert_ne!(km.active().kid(), old_kid);
+        assert_eq!(km.retired().len(), 1);
+    }
+
+    #[test]
+    fn removing_a_retired_key_stops_it_verifying() {
+        let mut km = KeyManager::generate();
+        let token = km.sign_claims(&test_claims()).unwrap();
+        let old_kid = km.active().kid().to_string();
+
+        km.rotate(SigningKey::generate(&mut OsRng));
+        assert!(km.verify_token(&token).is_ok());
+
+        assert!(km.remove_retired(&old_kid));
+        assert!(matches!(
+            km.verify_token(&token),
+            Err(JwtError::UnknownKeyId(_))
+        ));
+        assert!(
+            !km.remove_retired(&old_kid),
+            "removing twice reported a hit"
+        );
+    }
+
+    #[test]
+    fn an_unknown_kid_is_not_reported_as_a_bad_signature() {
+        // One is a key distribution problem, the other is a forgery. Collapsing
+        // them into one error sends whoever debugs it down the wrong path.
+        let signer = KeyManager::generate();
+        let token = signer.sign_claims(&test_claims()).unwrap();
+
+        let stranger = KeyManager::generate();
+        assert!(matches!(
+            stranger.verify_token(&token),
+            Err(JwtError::UnknownKeyId(_))
+        ));
+    }
+
+    #[test]
+    fn a_token_without_kid_is_refused() {
+        // Forged by signing with a bare header, as a pre-kid issuer would.
+        let km = KeyManager::generate();
+        let pkcs8 = km.active().signing_key.to_pkcs8_der().unwrap();
+        let token = encode(
+            &Header::new(Algorithm::EdDSA),
+            &test_claims(),
+            &EncodingKey::from_ed_der(pkcs8.as_bytes()),
+        )
+        .unwrap();
+
+        assert!(matches!(
+            km.verify_token(&token),
+            Err(JwtError::MissingKeyId)
+        ));
+    }
+
+    #[test]
+    fn jwks_lists_every_verifying_key_active_first() {
+        let mut km = KeyManager::generate();
+        let first = km.active().kid().to_string();
+        km.rotate(SigningKey::generate(&mut OsRng));
+
+        let jwks = km.jwks();
+        assert_eq!(jwks.keys.len(), 2);
+        assert_eq!(jwks.keys[0].kid, km.active().kid());
+        assert_eq!(jwks.keys[1].kid, first);
+        assert!(jwks
+            .keys
+            .iter()
+            .all(|k| k.kty == "OKP" && k.crv == "Ed25519" && k.alg == "EdDSA" && k.use_ == "sig"));
+
+        // `use` is a Rust keyword; the wire name must survive the rename.
+        let json = serde_json::to_string(&jwks).unwrap();
+        assert!(json.contains(r#""use":"sig""#), "{json}");
     }
 }
