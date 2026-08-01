@@ -990,6 +990,78 @@ mod tests {
     }
 
     #[test]
+    fn federation_drops_them_too() {
+        // Being vouched for by an external issuer is as much a change of
+        // identity as assuming a role: whatever the previous principal proved
+        // says nothing about the one now holding authority.
+        let alice = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .mfa_present(true)
+            .session_info(SessionInfo {
+                session_token: "tok".to_string(),
+                expiration: 9_999_999_999,
+                assumed_role_arn: None,
+            })
+            .build()
+            .unwrap();
+
+        let federated = alice
+            .through(
+                arn_for(12345678, "external-bob"),
+                Transition::Federated {
+                    issuer: "https://idp.example".to_string(),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(federated.mfa_present(), None);
+        assert!(federated.session_info().is_none());
+        assert_eq!(
+            federated.provenance().last().unwrap().via(),
+            &Transition::Federated {
+                issuer: "https://idp.example".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn every_field_survives_a_round_trip() {
+        // The wire type restates all ten fields, so a context serialised with
+        // each of them set has to come back whole — a field dropped in that
+        // restatement would be silently lost on every deserialisation.
+        let context = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .region("eu-west-3")
+            .session_info(SessionInfo {
+                session_token: "tok".to_string(),
+                expiration: 9_999_999_999,
+                assumed_role_arn: Some(arn_for(12345678, "role")),
+            })
+            .source_ip("203.0.113.7")
+            .mfa_present(true)
+            .secure_transport(true)
+            .build()
+            .unwrap();
+
+        let back: WamiContext =
+            serde_json::from_str(&serde_json::to_string(&context).unwrap()).unwrap();
+
+        assert_eq!(back.caller_arn(), context.caller_arn());
+        assert_eq!(back.tenant_path(), context.tenant_path());
+        assert_eq!(back.instance_id(), context.instance_id());
+        assert_eq!(back.is_root(), context.is_root());
+        assert_eq!(back.region(), Some("eu-west-3"));
+        assert_eq!(back.source_ip(), Some("203.0.113.7"));
+        assert_eq!(back.mfa_present(), Some(true));
+        assert_eq!(back.secure_transport(), Some(true));
+        assert_eq!(back.provenance(), context.provenance());
+        assert_eq!(
+            back.session_info().map(|s| s.session_token.as_str()),
+            Some("tok")
+        );
+    }
+
+    #[test]
     fn a_permission_set_is_not_a_change_of_identity() {
         // The caller stays who they were, so what they proved still holds.
         let alice = WamiContext::builder()
