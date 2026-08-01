@@ -101,6 +101,47 @@ impl Step {
     pub fn via(&self) -> &Transition {
         &self.via
     }
+
+    /// The service that performed this transition, in ARN terms.
+    pub fn service(&self) -> &'static str {
+        match self.via {
+            // Federation is STS's business, as it is in AWS: AssumeRoleWithSAML
+            // and GetFederationToken both live there.
+            Transition::AssumedRole { .. } | Transition::Federated { .. } => "sts",
+            Transition::PermissionSet { .. } => "sso",
+            Transition::Authenticated => "iam",
+        }
+    }
+
+    /// This step as one `service:type/value` segment of a trail.
+    fn segment(&self) -> String {
+        match &self.via {
+            Transition::Authenticated => {
+                format!("iam:user/{}", escape(self.principal.resource_id()))
+            }
+            Transition::AssumedRole { session_name } => format!(
+                "sts:assumed-role/{}/{}",
+                escape(self.principal.resource_id()),
+                escape(session_name)
+            ),
+            Transition::PermissionSet { name } => {
+                format!("sso:permission-set/{}", escape(name))
+            }
+            Transition::Federated { issuer } => format!("sts:federated/{}", escape(issuer)),
+        }
+    }
+}
+
+/// Percent-escape the two characters that structure a trail.
+///
+/// An issuer such as `https://idp.example` carries both. Left raw, a trail
+/// would gain segment boundaries out of a value, and `LIKE '%:sts:%'` would
+/// match text that names no service at all.
+fn escape(value: &str) -> String {
+    value
+        .replace('%', "%25")
+        .replace(':', "%3A")
+        .replace('/', "%2F")
 }
 
 /// Session information for temporary credentials
@@ -254,6 +295,44 @@ impl WamiContext {
     /// wildcard added to compensate would swallow segments nobody intended.
     pub fn provenance(&self) -> &[Step] {
         &self.provenance
+    }
+
+    /// The provenance as one string, for an audit log.
+    ///
+    /// The first principal, then one `service:type/value` segment per hand-off:
+    ///
+    /// ```text
+    /// arn:wami:iam:12345678:wami:999:user/alice:sts:assumed-role/DataScientist/session1
+    /// ```
+    ///
+    /// It exists to be **queried**. A trail in a text column answers "which
+    /// requests went through STS then SSO" with `LIKE '%:sts:%:sso:%'` — one
+    /// index, no join, no JSON operators. That is the most common question
+    /// asked of an audit log, and the structured chain answers it poorly.
+    ///
+    /// This is a projection, not a serialisation: it is deliberately lossy, and
+    /// there is no parser back. Reconstructing a context from it would give
+    /// something that looks authoritative while having lost the full ARNs — use
+    /// [`WamiContext::provenance`] when the structure is what matters.
+    ///
+    /// Note it is *not* the caller's ARN, and must never be used as one. An
+    /// identifier that grows a segment per service traversed stops comparing
+    /// equal to itself, and every policy written against it silently stops
+    /// matching.
+    pub fn provenance_trail(&self) -> String {
+        let mut steps = self.provenance.iter();
+        let Some(first) = steps.next() else {
+            // Unreachable through build, through or deserialisation, all of
+            // which require a non-empty chain.
+            return String::new();
+        };
+
+        let mut trail = first.principal.to_string();
+        for step in steps {
+            trail.push(':');
+            trail.push_str(&step.segment());
+        }
+        trail
     }
 
     /// Derive the context that results from authority passing to `principal`.
@@ -987,6 +1066,148 @@ mod tests {
 
         assert_eq!(assumed.mfa_present(), None);
         assert!(assumed.session_info().is_none());
+    }
+
+    /// A stand-in for `principal LIKE '%…%'`, so the assertions below are the
+    /// queries #49 asks for rather than a paraphrase of them.
+    fn matches_like(trail: &str, pattern: &str) -> bool {
+        let mut rest = trail;
+        for (i, part) in pattern.split('%').enumerate() {
+            if part.is_empty() {
+                continue;
+            }
+            match (i, rest.find(part)) {
+                (_, None) => return false,
+                (0, Some(0)) | (1.., Some(_)) => {
+                    rest = &rest[rest.find(part).unwrap() + part.len()..]
+                }
+                (0, Some(_)) => return false,
+            }
+        }
+        pattern.ends_with('%') || rest.is_empty()
+    }
+
+    #[test]
+    fn a_trail_answers_the_queries_the_issue_asks_for() {
+        let trail = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .build()
+            .unwrap()
+            .through(
+                arn_for(12345678, "DataScientist"),
+                Transition::AssumedRole {
+                    session_name: "session-abc123".to_string(),
+                },
+            )
+            .unwrap()
+            .through(
+                arn_for(12345678, "DataScientist"),
+                Transition::PermissionSet {
+                    name: "DeveloperAccess".to_string(),
+                },
+            )
+            .unwrap()
+            .provenance_trail();
+
+        // The three from the issue, verbatim.
+        assert!(matches_like(&trail, "%:sts:assumed-role/%"));
+        assert!(matches_like(&trail, "%:sso:%"));
+        assert!(matches_like(&trail, "%:sts:%:sso:%"));
+
+        // And the negative that gives those any meaning.
+        assert!(!matches_like(&trail, "%:iam:policy/ReadOnly%"));
+
+        // The trail starts at the identity, not at a segment.
+        assert!(trail.starts_with("arn:wami:"));
+        assert!(trail.contains("user/alice"));
+        assert!(trail.contains("assumed-role/DataScientist/session-abc123"));
+    }
+
+    #[test]
+    fn a_trail_is_not_the_caller_arn() {
+        // The distinction the whole design rests on: the trail grows, the
+        // identifier policies match against does not.
+        let alice = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .build()
+            .unwrap();
+        let assumed = alice
+            .through(
+                arn_for(12345678, "role"),
+                Transition::AssumedRole {
+                    session_name: "s".to_string(),
+                },
+            )
+            .unwrap();
+
+        assert_ne!(assumed.provenance_trail(), assumed.caller_arn().to_string());
+        assert_eq!(
+            assumed.caller_arn().to_string(),
+            arn_for(12345678, "role").to_string()
+        );
+    }
+
+    #[test]
+    fn a_value_cannot_forge_a_segment_boundary() {
+        // An issuer is free text and carries both `:` and `/`. Left raw,
+        // `LIKE '%:sso:%'` would match a trail that never touched SSO.
+        let trail = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .build()
+            .unwrap()
+            .through(
+                arn_for(12345678, "bob"),
+                Transition::Federated {
+                    issuer: "https://idp.example/:sso:permission-set/Admin".to_string(),
+                },
+            )
+            .unwrap()
+            .provenance_trail();
+
+        assert!(matches_like(&trail, "%:sts:federated/%"));
+        assert!(
+            !matches_like(&trail, "%:sso:permission-set/%"),
+            "an issuer forged an SSO segment: {trail}"
+        );
+    }
+
+    #[test]
+    fn each_transition_names_its_service() {
+        let context = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .build()
+            .unwrap();
+        assert_eq!(context.provenance()[0].service(), "iam");
+
+        let assumed = context
+            .through(
+                arn_for(12345678, "r"),
+                Transition::AssumedRole {
+                    session_name: "s".to_string(),
+                },
+            )
+            .unwrap();
+        assert_eq!(assumed.provenance()[1].service(), "sts");
+
+        let sso = assumed
+            .through(
+                arn_for(12345678, "r"),
+                Transition::PermissionSet {
+                    name: "n".to_string(),
+                },
+            )
+            .unwrap();
+        assert_eq!(sso.provenance()[2].service(), "sso");
+
+        let federated = context
+            .through(
+                arn_for(12345678, "b"),
+                Transition::Federated {
+                    issuer: "i".to_string(),
+                },
+            )
+            .unwrap();
+        assert_eq!(federated.provenance()[1].service(), "sts");
     }
 
     #[test]
