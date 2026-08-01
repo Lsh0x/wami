@@ -43,11 +43,11 @@ use crate::wami::identity::User;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-/// Constants for root user
-pub const ROOT_USER_NAME: &str = "root";
-/// Root tenant numeric ID constant
-/// Using 0 as a special reserved value for root tenant
-pub const ROOT_TENANT_ID: u64 = 0;
+// Re-exported rather than redefined: `WamiArn::is_root_user` decides the same
+// question inside wami-core, and two copies of these values could drift into a
+// state where a context is root by one definition and not by the other.
+pub use wami_core::arn::{ROOT_TENANT_ID, ROOT_USER_NAME};
+
 pub const ROOT_USER_ID: &str = "root";
 
 /// Root User - Special administrative user with full access

@@ -166,22 +166,10 @@ where
     async fn create_context_from_user(&self, user: &User) -> Result<WamiContext> {
         let arn = &user.wami_arn;
 
-        // Check if this is the root user
-        // Root user is in the root tenant (ID = 0)
-        let is_root = user.user_name == ROOT_USER_NAME
-            && arn.tenant_path.root_u64() == Some(crate::wami::identity::root_user::ROOT_TENANT_ID);
-
-        // Extract instance_id and tenant_path from the ARN
-        let instance_id = arn.wami_instance_id.clone();
-        let tenant_path = arn.tenant_path.clone();
-
-        // Create the context
-        WamiContext::builder()
-            .instance_id(instance_id)
-            .tenant_path(tenant_path)
-            .caller_arn(arn.clone())
-            .is_root(is_root)
-            .build()
+        // tenant_path, instance_id and is_root all come from the ARN now — see
+        // WamiContextBuilder::build. Restating them here was how they could
+        // disagree with the identity they are supposed to describe.
+        WamiContext::builder().caller_arn(arn.clone()).build()
     }
 
     /// Create context for a root user
