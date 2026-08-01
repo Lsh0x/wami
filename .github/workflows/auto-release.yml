@@ -1,9 +1,18 @@
 name: Auto Release
 
+# NO LONGER RUNS ON PUSH. Release Please owns versioning, changelog and tags.
+#
+# This workflow computed the next version itself and failed doing it: the last
+# three runs on main died on `NEW_VERSION=".1.0"`, then on `grep "^version"
+# Cargo.toml` — which finds nothing, because the root manifest is a workspace
+# and holds no version at all. That is also how v0.12.0 got tagged while
+# crates/wami/Cargo.toml still declared 0.11.0.
+#
+# Kept for its build-docs, create-release and publish-crate jobs, which are
+# still worth running by hand. Note that publish-crate cannot succeed as-is:
+# the internal dependencies are declared by `path` with no version, and
+# crates.io rejects those.
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       bump_type:
