@@ -71,7 +71,10 @@
 //!
 //! ## Transforming to Provider Formats
 //!
+//! Requires the `aws` feature; provider translations are off by default.
+//!
 //! ```
+//! # #[cfg(feature = "aws")] {
 //! use wami_core::arn::{WamiArn, Service, AwsArnTransformer, ArnTransformer};
 //!
 //! let arn = WamiArn::builder()
@@ -86,6 +89,7 @@
 //! let transformer = AwsArnTransformer;
 //! let aws_arn = transformer.to_provider_arn(&arn).unwrap();
 //! assert_eq!(aws_arn, "arn:aws:iam::223344556677:user/77557755");
+//! # }
 //! ```
 
 pub mod builder;
@@ -98,10 +102,17 @@ pub mod types;
 pub use builder::ArnBuilder;
 pub use matching::{glob_match, matches_arn_pattern, MatchContext};
 pub use parser::{parse_arn, ArnParseError};
-pub use transformer::{
-    get_transformer, ArnTransformer, AwsArnTransformer, AzureArnTransformer, GcpArnTransformer,
-    ProviderArnInfo, ScalewayArnTransformer,
-};
+pub use transformer::{available_providers, get_transformer, ArnTransformer, ProviderArnInfo};
+// Each translation is behind its provider's feature, off by default: a
+// deployment that syncs with no cloud should not compile any of them.
+#[cfg(feature = "aws")]
+pub use transformer::AwsArnTransformer;
+#[cfg(feature = "azure")]
+pub use transformer::AzureArnTransformer;
+#[cfg(feature = "gcp")]
+pub use transformer::GcpArnTransformer;
+#[cfg(feature = "scaleway")]
+pub use transformer::ScalewayArnTransformer;
 pub use types::{
     CloudMapping, Resource, Service, TenantPath, WamiArn, ROOT_TENANT_ID, ROOT_USER_NAME,
 };

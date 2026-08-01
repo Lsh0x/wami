@@ -14,10 +14,6 @@ keywords = ["iam", "sso", "identity", "multicloud", "aws"]
 categories = ["api-bindings", "authentication", "development-tools"]
 
 [dependencies]
-# See wami-core: re-exported types only, no client is ever constructed.
-aws-sdk-iam = { version = "1.0", default-features = false }
-aws-sdk-sts = { version = "1.0", default-features = false }
-aws-sdk-ssoadmin = { version = "1.91", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.0", features = ["full"] }
@@ -50,5 +46,19 @@ wami-core = { path = "../wami-core" }
 wami-macros = { path = "../wami-macros" }
 
 [features]
+# Provider translations, forwarded to wami-core. Off by default there, so off
+# here unless asked for.
+aws = ["wami-core/aws"]
+gcp = ["wami-core/gcp"]
+azure = ["wami-core/azure"]
+scaleway = ["wami-core/scaleway"]
+all-providers = ["wami-core/all-providers"]
 default = ["sts-jwt"]
 sts-jwt = ["dep:ed25519-dalek", "dep:jsonwebtoken"]
+
+# Demonstrates every provider translation, so it only builds when they exist.
+# Without this, `cargo check --all-targets` on a default build fails on an
+# example rather than on anything a consumer would ship.
+[[example]]
+name = "25_arn_usage"
+required-features = ["all-providers"]

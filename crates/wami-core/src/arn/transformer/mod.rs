@@ -4,14 +4,22 @@
 //! lives in its own file. Adding one is adding a file, not editing a
 //! seven-hundred-line module shared with three others.
 
+#[cfg(feature = "aws")]
 mod aws;
+#[cfg(feature = "azure")]
 mod azure;
+#[cfg(feature = "gcp")]
 mod gcp;
+#[cfg(feature = "scaleway")]
 mod scaleway;
 
+#[cfg(feature = "aws")]
 pub use aws::AwsArnTransformer;
+#[cfg(feature = "azure")]
 pub use azure::AzureArnTransformer;
+#[cfg(feature = "gcp")]
 pub use gcp::GcpArnTransformer;
+#[cfg(feature = "scaleway")]
 pub use scaleway::ScalewayArnTransformer;
 
 use crate::arn::types::WamiArn;
@@ -55,25 +63,63 @@ pub struct ProviderArnInfo {
 
 /// Gets the appropriate transformer for a given provider.
 ///
+/// Returns `None` for a provider whose feature is not enabled, which by
+/// default is all of them. Ask [`available_providers`] what this build can
+/// actually translate for.
+///
 /// # Examples
 ///
 /// ```
+/// use wami_core::arn::{available_providers, get_transformer};
+///
+/// // Holds for any set of enabled features, including none.
+/// for provider in available_providers() {
+///     assert!(get_transformer(provider).is_some());
+/// }
+///
+/// assert!(get_transformer("unknown").is_none());
+/// ```
+///
+/// With the `aws` feature enabled:
+///
+/// ```
+/// # #[cfg(feature = "aws")] {
 /// use wami_core::arn::get_transformer;
-///
-/// let transformer = get_transformer("aws");
-/// assert!(transformer.is_some());
-///
-/// let transformer = get_transformer("unknown");
-/// assert!(transformer.is_none());
+/// assert!(get_transformer("aws").is_some());
+/// # }
 /// ```
 pub fn get_transformer(provider: &str) -> Option<Box<dyn ArnTransformer>> {
     match provider {
+        #[cfg(feature = "aws")]
         "aws" => Some(Box::new(AwsArnTransformer)),
+        #[cfg(feature = "gcp")]
         "gcp" => Some(Box::new(GcpArnTransformer)),
+        #[cfg(feature = "azure")]
         "azure" => Some(Box::new(AzureArnTransformer)),
+        #[cfg(feature = "scaleway")]
         "scaleway" => Some(Box::new(ScalewayArnTransformer)),
         _ => None,
     }
+}
+
+/// The providers this build can translate for.
+///
+/// With no provider feature enabled — the default — this is empty and
+/// [`get_transformer`] returns `None` for everything. That is correct for a
+/// deployment that syncs with no cloud, and indistinguishable from a typo
+/// without somewhere to ask. This is that place, so the answer does not
+/// require reading a Cargo.toml.
+pub fn available_providers() -> &'static [&'static str] {
+    &[
+        #[cfg(feature = "aws")]
+        "aws",
+        #[cfg(feature = "gcp")]
+        "gcp",
+        #[cfg(feature = "azure")]
+        "azure",
+        #[cfg(feature = "scaleway")]
+        "scaleway",
+    ]
 }
 
 #[cfg(test)]
@@ -81,11 +127,35 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_transformer() {
-        assert!(get_transformer("aws").is_some());
-        assert!(get_transformer("gcp").is_some());
-        assert!(get_transformer("azure").is_some());
-        assert!(get_transformer("scaleway").is_some());
+    fn the_inventory_and_the_registry_agree() {
+        // Stated as a property rather than a list of providers, so it holds
+        // whatever set of features a build enables — including none, which is
+        // the default and the case that matters to a consumer with no cloud.
+        for provider in available_providers() {
+            assert!(
+                get_transformer(provider).is_some(),
+                "{provider} is advertised but cannot be built"
+            );
+        }
         assert!(get_transformer("unknown").is_none());
+    }
+
+    #[test]
+    fn no_provider_is_available_unless_asked_for() {
+        // The reason the inventory exists: without it, an empty result is
+        // indistinguishable from a typo, and nothing says which it was.
+        #[cfg(not(any(
+            feature = "aws",
+            feature = "gcp",
+            feature = "azure",
+            feature = "scaleway"
+        )))]
+        {
+            assert!(available_providers().is_empty());
+            assert!(get_transformer("aws").is_none());
+        }
+
+        #[cfg(feature = "aws")]
+        assert!(available_providers().contains(&"aws"));
     }
 }
