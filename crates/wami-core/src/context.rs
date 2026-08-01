@@ -50,6 +50,59 @@ use crate::arn::{TenantPath, WamiArn};
 use crate::error::{AmiError, Result};
 use serde::{Deserialize, Serialize};
 
+/// How many times authority may pass hands within one context.
+///
+/// Reaching it refuses the transition rather than dropping the oldest step. A
+/// truncated chain still satisfies any check made against it while no longer
+/// describing what happened — an audit trail that lies is worse than one that
+/// stops.
+pub const MAX_PROVENANCE_DEPTH: usize = 8;
+
+/// How authority passed to a principal.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Transition {
+    /// The principal proved who they are; the start of every chain.
+    Authenticated,
+    /// A role was assumed, under this session name.
+    AssumedRole {
+        /// The session name given at assumption time.
+        session_name: String,
+    },
+    /// An SSO permission set was applied.
+    PermissionSet {
+        /// The permission set name.
+        name: String,
+    },
+    /// An external identity provider vouched for the principal.
+    Federated {
+        /// The issuer that vouched.
+        issuer: String,
+    },
+}
+
+/// One link in the chain: who held authority, and how they came to hold it.
+///
+/// Deliberately not constructible from outside this crate. The chain is meant
+/// to be trusted by policy conditions, and a `Step` anyone can build is a
+/// provenance anyone can claim.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Step {
+    principal: WamiArn,
+    via: Transition,
+}
+
+impl Step {
+    /// Who held authority at this step.
+    pub fn principal(&self) -> &WamiArn {
+        &self.principal
+    }
+
+    /// How they came to hold it.
+    pub fn via(&self) -> &Transition {
+        &self.via
+    }
+}
+
 /// Session information for temporary credentials
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionInfo {
@@ -75,6 +128,14 @@ pub struct WamiContext {
 
     /// The ARN of the caller (user or assumed role)
     caller_arn: WamiArn,
+
+    /// How authority reached `caller_arn`, oldest first.
+    ///
+    /// The last step always names `caller_arn`: both are written by the same
+    /// call, so the chain cannot come to describe someone other than the
+    /// caller. Not settable through the builder — see `through`.
+    #[serde(default)]
+    provenance: Vec<Step>,
 
     /// Whether the caller is a root user (bypasses all authorization)
     is_root: bool,
@@ -114,6 +175,50 @@ impl WamiContext {
     /// Get the caller's ARN
     pub fn caller_arn(&self) -> &WamiArn {
         &self.caller_arn
+    }
+
+    /// How authority reached the current caller, oldest first.
+    ///
+    /// The chain answers "by what route", which no ARN should: an ARN names a
+    /// thing, and one that grows a segment per service traversed stops being
+    /// comparable — policies matching on it would break, and a trailing
+    /// wildcard added to compensate would swallow segments nobody intended.
+    pub fn provenance(&self) -> &[Step] {
+        &self.provenance
+    }
+
+    /// Derive the context that results from authority passing to `principal`.
+    ///
+    /// One call writes both the new caller and the step recording the move, so
+    /// the chain cannot end up describing someone other than the caller. The
+    /// tenant path and instance follow the new principal, exactly as they do
+    /// when a context is built.
+    ///
+    /// Root is never regained: a context that was not root cannot become root
+    /// by assuming something, whatever that something is named. It can only be
+    /// kept, and only by staying on a root principal.
+    ///
+    /// Fails past [`MAX_PROVENANCE_DEPTH`].
+    #[allow(clippy::result_large_err)]
+    pub fn through(&self, principal: WamiArn, via: Transition) -> Result<WamiContext> {
+        if self.provenance.len() >= MAX_PROVENANCE_DEPTH {
+            return Err(AmiError::InvalidParameter {
+                message: format!(
+                    "authority has already passed hands {MAX_PROVENANCE_DEPTH} times in this context"
+                ),
+            });
+        }
+
+        let mut next = self.clone();
+        next.is_root = self.is_root && principal.is_root_user();
+        next.tenant_path = principal.tenant_path.clone();
+        next.instance_id = principal.wami_instance_id.clone();
+        next.provenance.push(Step {
+            principal: principal.clone(),
+            via,
+        });
+        next.caller_arn = principal;
+        Ok(next)
     }
 
     /// Get the tenant path
@@ -281,6 +386,13 @@ impl WamiContextBuilder {
             tenant_path,
             instance_id,
             is_root: self.is_root.unwrap_or_else(|| caller_arn.is_root_user()),
+            // The chain starts here rather than at the first `through`, or an
+            // audit trail would begin mid-route with no way to tell who came
+            // first. A freshly built context is one that just proved itself.
+            provenance: vec![Step {
+                principal: caller_arn.clone(),
+                via: Transition::Authenticated,
+            }],
             caller_arn,
             region: self.region,
             session_info: self.session_info,
@@ -554,6 +666,184 @@ mod tests {
             .unwrap();
 
         assert!(!context.is_root());
+    }
+
+    #[test]
+    fn a_built_context_starts_its_chain_at_authentication() {
+        // Starting at the first `through` would leave an audit trail beginning
+        // mid-route, with nothing saying who came first.
+        let context = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .build()
+            .unwrap();
+
+        assert_eq!(context.provenance().len(), 1);
+        assert_eq!(context.provenance()[0].via(), &Transition::Authenticated);
+        assert_eq!(context.provenance()[0].principal(), context.caller_arn());
+    }
+
+    #[test]
+    fn through_moves_the_caller_and_records_the_move_together() {
+        let alice = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .build()
+            .unwrap();
+
+        let role = arn_for(12345678, "DataScientist");
+        let assumed = alice
+            .through(
+                role.clone(),
+                Transition::AssumedRole {
+                    session_name: "session1".to_string(),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(assumed.caller_arn(), &role);
+        assert_eq!(assumed.provenance().len(), 2);
+        // The invariant that makes the chain worth trusting.
+        assert_eq!(
+            assumed.provenance().last().unwrap().principal(),
+            assumed.caller_arn()
+        );
+        // And the question #49 wanted answered: who was it before?
+        assert_eq!(assumed.provenance()[0].principal().resource_id(), "alice");
+    }
+
+    #[test]
+    fn the_arn_itself_never_changes_shape() {
+        // The whole reason provenance lives here and not in the ARN: a policy
+        // matching on the caller must keep matching after a role is assumed.
+        let alice_arn = arn_for(12345678, "alice");
+        let alice = WamiContext::builder()
+            .caller_arn(alice_arn.clone())
+            .build()
+            .unwrap();
+
+        let assumed = alice
+            .through(
+                arn_for(12345678, "DataScientist"),
+                Transition::AssumedRole {
+                    session_name: "s".to_string(),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(assumed.provenance()[0].principal(), &alice_arn);
+        assert!(!assumed.caller_arn().to_string().contains("assumed-role"));
+        assert!(!assumed.caller_arn().to_string().contains(":iam:policy"));
+    }
+
+    #[test]
+    fn root_is_never_regained_by_assuming_something() {
+        // A principal named `root` in the root tenant is what is_root_user
+        // accepts — so this is the exact shape an escalation would take.
+        let alice = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .build()
+            .unwrap();
+        assert!(!alice.is_root());
+
+        let escalated = alice
+            .through(arn_for(0, "root"), Transition::Authenticated)
+            .unwrap();
+        assert!(!escalated.is_root(), "assuming root granted root");
+    }
+
+    #[test]
+    fn root_is_dropped_when_authority_moves_elsewhere() {
+        let root = WamiContext::builder()
+            .caller_arn(arn_for(0, "root"))
+            .build()
+            .unwrap();
+        assert!(root.is_root());
+
+        let as_role = root
+            .through(
+                arn_for(12345678, "DataScientist"),
+                Transition::AssumedRole {
+                    session_name: "s".to_string(),
+                },
+            )
+            .unwrap();
+        assert!(!as_role.is_root());
+    }
+
+    #[test]
+    fn scope_follows_the_new_principal() {
+        // Same rule as build: two sources for one truth can disagree.
+        let alice = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .build()
+            .unwrap();
+
+        let elsewhere = alice
+            .through(arn_for(87654321, "bob"), Transition::Authenticated)
+            .unwrap();
+
+        assert_eq!(elsewhere.tenant_path(), &TenantPath::single(87654321));
+    }
+
+    #[test]
+    fn the_chain_refuses_to_grow_past_its_bound() {
+        // Refused, not truncated: a shortened chain would still satisfy any
+        // check made against it while no longer describing what happened.
+        let mut context = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .build()
+            .unwrap();
+
+        // One step is already spent on authentication.
+        for i in 1..MAX_PROVENANCE_DEPTH {
+            context = context
+                .through(
+                    arn_for(12345678, &format!("role{i}")),
+                    Transition::Authenticated,
+                )
+                .unwrap();
+        }
+        assert_eq!(context.provenance().len(), MAX_PROVENANCE_DEPTH);
+
+        let refused = context.through(arn_for(12345678, "one-too-many"), Transition::Authenticated);
+        assert!(refused.is_err());
+        assert_eq!(context.provenance().len(), MAX_PROVENANCE_DEPTH);
+    }
+
+    #[test]
+    fn deriving_a_context_leaves_the_original_alone() {
+        let alice = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .build()
+            .unwrap();
+
+        let _ = alice
+            .through(arn_for(12345678, "role"), Transition::Authenticated)
+            .unwrap();
+
+        assert_eq!(alice.provenance().len(), 1);
+        assert_eq!(alice.caller_arn().resource_id(), "alice");
+    }
+
+    #[test]
+    fn transitions_survive_serialisation() {
+        // The chain is only useful if it reaches a log or a policy engine.
+        let context = WamiContext::builder()
+            .caller_arn(arn_for(12345678, "alice"))
+            .build()
+            .unwrap()
+            .through(
+                arn_for(12345678, "DataScientist"),
+                Transition::AssumedRole {
+                    session_name: "session1".to_string(),
+                },
+            )
+            .unwrap();
+
+        let json = serde_json::to_string(&context).unwrap();
+        let back: WamiContext = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(back.provenance(), context.provenance());
+        assert_eq!(back.caller_arn(), context.caller_arn());
     }
 
     #[test]
