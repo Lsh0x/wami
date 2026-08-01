@@ -87,10 +87,18 @@ pub use wami_core::types::{
 
 // Re-export ARN types
 pub use wami_core::arn::{
-    get_transformer, parse_arn, ArnBuilder, ArnParseError, ArnTransformer, AwsArnTransformer,
-    AzureArnTransformer, CloudMapping, GcpArnTransformer, ProviderArnInfo, Resource,
-    ScalewayArnTransformer, Service, TenantPath, WamiArn,
+    available_providers, get_transformer, parse_arn, ArnBuilder, ArnParseError, ArnTransformer,
+    CloudMapping, ProviderArnInfo, Resource, Service, TenantPath, WamiArn,
 };
+// Behind their provider's feature, all off by default.
+#[cfg(feature = "aws")]
+pub use wami_core::arn::AwsArnTransformer;
+#[cfg(feature = "azure")]
+pub use wami_core::arn::AzureArnTransformer;
+#[cfg(feature = "gcp")]
+pub use wami_core::arn::GcpArnTransformer;
+#[cfg(feature = "scaleway")]
+pub use wami_core::arn::ScalewayArnTransformer;
 
 // Re-export context types
 pub use wami_core::context::{SessionInfo, WamiContext};

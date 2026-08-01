@@ -2,14 +2,27 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum AmiError {
-    #[error("AWS SDK error: {0}")]
-    AwsSdk(#[from] aws_sdk_iam::Error),
-
-    #[error("STS SDK error: {0}")]
-    StsSdk(#[from] aws_sdk_sts::Error),
-
-    #[error("SSO Admin SDK error: {0}")]
-    SsoAdminSdk(#[from] aws_sdk_ssoadmin::Error),
+    /// A provider rejected an operation.
+    ///
+    /// Replaces the AwsSdk, StsSdk and SsoAdminSdk variants removed in 0.14.
+    /// Those named SDK error types in their signature, so every consumer
+    /// compiled three AWS SDKs to hold three variants this workspace never
+    /// constructed once. Carrying the provider name and its message keeps the
+    /// information without keeping the dependency:
+    ///
+    /// ```ignore
+    /// client.get_user().send().await.map_err(|e| AmiError::Provider {
+    ///     provider: "aws".to_string(),
+    ///     message: e.to_string(),
+    /// })?
+    /// ```
+    #[error("{provider} error: {message}")]
+    Provider {
+        /// Which provider refused.
+        provider: String,
+        /// What it said.
+        message: String,
+    },
 
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
