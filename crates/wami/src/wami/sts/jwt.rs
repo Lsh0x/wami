@@ -252,12 +252,16 @@ impl KeyManager {
         encode(&header, claims, &encoding_key).map_err(JwtError::Encode)
     }
 
-    /// Verify a JWT token and return the claims.
+    /// Verify a JWT token against an expected audience and return the claims.
+    ///
+    /// The audience is a parameter, mirroring [`StsClaimsContext::audience`] on
+    /// the issuing side. A verifier that accepted one compiled-in audience
+    /// could not tell two classes of token apart — say one that only buys
+    /// another token from one that grants access — which is what `aud` is for.
     ///
     /// Note: `jsonwebtoken` with the `ring` backend expects raw 32-byte Ed25519
     /// public keys via `from_ed_der` (despite the function name suggesting DER).
-    /// The audience claim is validated against `["wami"]`.
-    pub fn verify_token(&self, token: &str) -> Result<StsClaims, JwtError> {
+    pub fn verify_token(&self, token: &str, audience: &str) -> Result<StsClaims, JwtError> {
         // Which key signed this is read from the header before anything is
         // verified. An unknown or absent kid is refused as such, and not as a
         // bad signature: the two are diagnosed differently — one is a key
@@ -276,11 +280,22 @@ impl KeyManager {
         let decoding_key = DecodingKey::from_ed_der(&pair.verifying_key.to_bytes());
         let mut validation = Validation::new(Algorithm::EdDSA);
         validation.set_required_spec_claims(&["exp", "iat", "sub", "iss", "aud"]);
-        validation.set_audience(&["wami"]);
+        validation.set_audience(&[audience]);
         // validate_aud defaults to true and set_audience configures the expected
         // values — audience IS validated.
-        let token_data =
-            decode::<StsClaims>(token, &decoding_key, &validation).map_err(JwtError::Decode)?;
+        let token_data = decode::<StsClaims>(token, &decoding_key, &validation).map_err(|e| {
+            // A well-signed token addressed elsewhere is not a forgery: it is a
+            // token of the wrong class, and the caller has to distinguish the
+            // two to route or refuse it. Collapsing it into `Decode` would make
+            // that require reading `jsonwebtoken`'s own error kinds.
+            if matches!(e.kind(), jsonwebtoken::errors::ErrorKind::InvalidAudience) {
+                JwtError::AudienceMismatch {
+                    expected: audience.to_string(),
+                }
+            } else {
+                JwtError::Decode(e)
+            }
+        })?;
         Ok(token_data.claims)
     }
 
@@ -358,11 +373,23 @@ pub enum JwtError {
     /// rejecting a forgery.
     #[error("unknown key id: {0}")]
     UnknownKeyId(String),
+    /// The signature holds, but the token was issued for another audience.
+    /// Reported apart from [`JwtError::Decode`] so a caller verifying several
+    /// classes of token can tell "not for me" from "not genuine".
+    #[error("token is not addressed to audience `{expected}`")]
+    AudienceMismatch {
+        /// The audience the verifier was asked to accept.
+        expected: String,
+    },
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The audience the fixtures issue for, and the one to verify against
+    /// unless a test is specifically about a mismatch.
+    const AUD: &str = "wami";
 
     fn test_credentials() -> Credentials {
         use crate::arn::{TenantPath, WamiArn};
@@ -392,7 +419,7 @@ mod tests {
         StsClaimsContext {
             principal_arn: "arn:aws:iam::123456789012:user/alice".to_string(),
             issuer: "wami-sts".to_string(),
-            audience: "wami".to_string(),
+            audience: AUD.to_string(),
             scoped_actions: vec!["s3:GetObject".to_string()],
             scoped_resources: vec!["arn:aws:s3:::my-bucket/*".to_string()],
         }
@@ -433,7 +460,7 @@ mod tests {
         assert!(!token.is_empty());
 
         let verified = km
-            .verify_token(&token)
+            .verify_token(&token, AUD)
             .expect("verification should succeed");
         assert_eq!(verified.sub, claims.sub);
         assert_eq!(verified.iss, claims.iss);
@@ -480,7 +507,7 @@ mod tests {
         };
 
         let token = km.sign_claims(&claims).expect("signing should succeed");
-        let result = km.verify_token(&token);
+        let result = km.verify_token(&token, AUD);
         assert!(result.is_err(), "expired token should be rejected");
     }
 
@@ -507,7 +534,7 @@ mod tests {
         }
         let tampered_token = format!("{}.{}.{}", parts[0], parts[1], tampered_sig);
 
-        let result = km.verify_token(&tampered_token);
+        let result = km.verify_token(&tampered_token, AUD);
         assert!(result.is_err(), "tampered token should be rejected");
     }
 
@@ -520,7 +547,7 @@ mod tests {
         let claims = build_sts_claims(&creds, &ctx);
 
         let token = km1.sign_claims(&claims).expect("signing should succeed");
-        let result = km2.verify_token(&token);
+        let result = km2.verify_token(&token, AUD);
         assert!(
             result.is_err(),
             "token signed by different key should be rejected"
@@ -624,8 +651,11 @@ mod tests {
         km.rotate(SigningKey::generate(&mut OsRng));
         let after = km.sign_claims(&test_claims()).unwrap();
 
-        assert!(km.verify_token(&before).is_ok(), "in-flight token died");
-        assert!(km.verify_token(&after).is_ok());
+        assert!(
+            km.verify_token(&before, AUD).is_ok(),
+            "in-flight token died"
+        );
+        assert!(km.verify_token(&after, AUD).is_ok());
         assert_ne!(km.active().kid(), old_kid);
         assert_eq!(km.retired().len(), 1);
     }
@@ -637,11 +667,11 @@ mod tests {
         let old_kid = km.active().kid().to_string();
 
         km.rotate(SigningKey::generate(&mut OsRng));
-        assert!(km.verify_token(&token).is_ok());
+        assert!(km.verify_token(&token, AUD).is_ok());
 
         assert!(km.remove_retired(&old_kid));
         assert!(matches!(
-            km.verify_token(&token),
+            km.verify_token(&token, AUD),
             Err(JwtError::UnknownKeyId(_))
         ));
         assert!(
@@ -659,7 +689,7 @@ mod tests {
 
         let stranger = KeyManager::generate();
         assert!(matches!(
-            stranger.verify_token(&token),
+            stranger.verify_token(&token, AUD),
             Err(JwtError::UnknownKeyId(_))
         ));
     }
@@ -677,7 +707,7 @@ mod tests {
         .unwrap();
 
         assert!(matches!(
-            km.verify_token(&token),
+            km.verify_token(&token, AUD),
             Err(JwtError::MissingKeyId)
         ));
     }
@@ -700,5 +730,48 @@ mod tests {
         // `use` is a Rust keyword; the wire name must survive the rename.
         let json = serde_json::to_string(&jwks).unwrap();
         assert!(json.contains(r#""use":"sig""#), "{json}");
+    }
+
+    fn claims_for(audience: &str) -> StsClaims {
+        build_sts_claims(
+            &test_credentials(),
+            &StsClaimsContext {
+                audience: audience.to_string(),
+                ..test_claims_context()
+            },
+        )
+    }
+
+    #[test]
+    fn the_verifier_accepts_whichever_audience_it_is_given() {
+        // One issuer, two classes of token. Neither is the verifier's built-in
+        // audience, because there is no longer one.
+        let km = KeyManager::generate();
+        let exchange = km.sign_claims(&claims_for("wami-sts")).unwrap();
+        let access = km.sign_claims(&claims_for("mermaid-live")).unwrap();
+
+        assert_eq!(
+            km.verify_token(&exchange, "wami-sts").unwrap().aud,
+            "wami-sts"
+        );
+        assert_eq!(
+            km.verify_token(&access, "mermaid-live").unwrap().aud,
+            "mermaid-live"
+        );
+    }
+
+    #[test]
+    fn a_token_addressed_elsewhere_is_refused_as_such() {
+        // The point of `aud`: a token that only buys another token must not
+        // pass where one granting access is expected — and the refusal must
+        // say so, rather than looking like a forgery.
+        let km = KeyManager::generate();
+        let token = km.sign_claims(&claims_for("wami-sts")).unwrap();
+
+        let err = km.verify_token(&token, "mermaid-live").unwrap_err();
+        assert!(
+            matches!(&err, JwtError::AudienceMismatch { expected } if expected == "mermaid-live"),
+            "got {err:?}"
+        );
     }
 }

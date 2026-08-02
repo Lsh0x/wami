@@ -339,7 +339,7 @@ mod tests {
             .as_ref()
             .expect("signed_token should be present");
         let claims = km
-            .verify_token(signed_token)
+            .verify_token(signed_token, "wami")
             .expect("token should be verifiable");
         assert_eq!(claims.sub, "arn:aws:iam::123456789012:user/alice");
         assert_eq!(claims.iss, "wami-sts");
