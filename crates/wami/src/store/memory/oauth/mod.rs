@@ -313,6 +313,7 @@ mod tests {
             redirect_uri: "https://app.test/cb".to_string(),
             challenge: None,
             nonce: None,
+            event: None,
             expires_at: Utc::now() + chrono::Duration::seconds(60),
         }
     }
@@ -326,6 +327,7 @@ mod tests {
             expires_at: Utc::now() + chrono::Duration::days(30),
             used_at: None,
             replaced_by: None,
+            event: None,
         }
     }
 

@@ -44,6 +44,60 @@ pub struct Jwk {
     pub x: String,
 }
 
+/// What a signed token declares itself to be, in the JOSE `typ` header.
+///
+/// # Why this exists
+///
+/// wami signs access tokens and ID tokens with one keyset. They are told apart
+/// by `aud` — an access token names the resource server, an ID token names the
+/// client — and that holds, as long as the verifier checks the audience.
+/// RFC 9068 adds a structural label so it does not have to:
+///
+/// > The explicit typing required in this profile [...] helps the resource
+/// > server to distinguish between JWT access tokens and OpenID Connect ID
+/// > Tokens.
+///
+/// # Why it is not the default
+///
+/// Every token wami has issued so far carries `typ: JWT`. Switching that to
+/// `at+jwt` unannounced would break a resource server that pins the old value.
+/// Issuance is opt-in — see
+/// [`OAuthService::with_explicit_typ`][crate::service::oauth::OAuthService::with_explicit_typ]
+/// — and verification stays lenient about which of the two it sees, so turning
+/// it on does not invalidate the tokens already in flight.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TokenType {
+    /// `JWT` — the unlabelled default. What every token carried before RFC 9068
+    /// typing was an option, and what ID tokens still carry: OIDC registers no
+    /// `typ` of its own for them.
+    Jwt,
+    /// `at+jwt` — an OAuth 2.0 access token, RFC 9068.
+    AccessToken,
+}
+
+impl TokenType {
+    /// The header value.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            TokenType::Jwt => "JWT",
+            TokenType::AccessToken => "at+jwt",
+        }
+    }
+
+    /// Parse a `typ` header value.
+    ///
+    /// RFC 9068 §4: a resource server accepts `at+jwt` or `application/at+jwt`.
+    /// The media-type prefix is optional in JOSE headers and both forms are on
+    /// the wire, so both are read.
+    pub fn parse(typ: &str) -> Option<Self> {
+        match typ {
+            "JWT" | "jwt" => Some(TokenType::Jwt),
+            "at+jwt" | "application/at+jwt" => Some(TokenType::AccessToken),
+            _ => None,
+        }
+    }
+}
+
 /// Structured claims embedded in a signed JWT for STS credentials.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StsClaims {
@@ -245,8 +299,20 @@ impl KeyManager {
     /// with the same keys and the same rotation, instead of each growing its own
     /// signer. Existing callers infer `StsClaims` from the argument.
     pub fn sign_claims<C: Serialize>(&self, claims: &C) -> Result<String, JwtError> {
+        self.sign_claims_as(claims, TokenType::Jwt)
+    }
+
+    /// Sign claims, declaring in the header what kind of token this is.
+    ///
+    /// See [`TokenType`] for what the label buys and why it is not the default.
+    pub fn sign_claims_as<C: Serialize>(
+        &self,
+        claims: &C,
+        typ: TokenType,
+    ) -> Result<String, JwtError> {
         let mut header = Header::new(Algorithm::EdDSA);
         header.kid = Some(self.active.kid.clone());
+        header.typ = Some(typ.as_str().to_string());
         let pkcs8_der = self
             .active
             .signing_key
@@ -275,6 +341,67 @@ impl KeyManager {
     /// share every check, so key rotation and audience validation cannot drift
     /// apart between issuers.
     pub fn verify_claims<C: DeserializeOwned>(
+        &self,
+        token: &str,
+        audience: &str,
+    ) -> Result<C, JwtError> {
+        self.verify_claims_as(token, audience, TokenType::Jwt)
+    }
+
+    /// Verify a token that must be of a given kind, and deserialise it.
+    ///
+    /// # What the `typ` header is allowed to say
+    ///
+    /// A token may be labelled less specifically than expected, never
+    /// differently. Concretely:
+    ///
+    /// | expecting | header says | |
+    /// |---|---|---|
+    /// | [`TokenType::AccessToken`] | absent, `JWT`, or `at+jwt` | accepted |
+    /// | [`TokenType::Jwt`] | absent or `JWT` | accepted |
+    /// | [`TokenType::Jwt`] | `at+jwt` | **refused** |
+    /// | either | anything else | refused |
+    ///
+    /// The asymmetry is the whole point, and it is what makes explicit typing
+    /// safe to turn on mid-flight. An access token is accepted with the old
+    /// unlabelled header, so enabling
+    /// [`with_explicit_typ`][crate::service::oauth::OAuthService::with_explicit_typ]
+    /// does not invalidate the tokens already issued. But once a token *is*
+    /// labelled `at+jwt`, nothing will read it as an ID token — which is the
+    /// confusion RFC 9068 exists to end.
+    ///
+    /// # Errors
+    ///
+    /// [`JwtError::TokenTypeMismatch`] when the label is wrong, before the
+    /// signature is examined. A forged label is caught anyway: `typ` is inside
+    /// the signed JOSE header, so changing it breaks the signature.
+    pub fn verify_claims_as<C: DeserializeOwned>(
+        &self,
+        token: &str,
+        audience: &str,
+        expected: TokenType,
+    ) -> Result<C, JwtError> {
+        if let Some(declared) = jsonwebtoken::decode_header(token)
+            .map_err(JwtError::Decode)?
+            .typ
+        {
+            let acceptable = match TokenType::parse(&declared) {
+                Some(TokenType::Jwt) => true,
+                Some(TokenType::AccessToken) => expected == TokenType::AccessToken,
+                None => false,
+            };
+            if !acceptable {
+                return Err(JwtError::TokenTypeMismatch {
+                    expected: expected.as_str(),
+                    found: declared,
+                });
+            }
+        }
+        self.verify_signed_claims(token, audience)
+    }
+
+    /// Everything after the `typ` check: key lookup, signature, audience.
+    fn verify_signed_claims<C: DeserializeOwned>(
         &self,
         token: &str,
         audience: &str,
@@ -398,6 +525,16 @@ pub enum JwtError {
         /// The audience the verifier was asked to accept.
         expected: String,
     },
+    /// The token declares a `typ` that cannot be what the verifier asked for.
+    /// The case that matters: an RFC 9068 access token presented where an ID
+    /// token belongs.
+    #[error("token declares typ `{found}`, which cannot serve as `{expected}`")]
+    TokenTypeMismatch {
+        /// What the verifier wanted.
+        expected: &'static str,
+        /// What the header said.
+        found: String,
+    },
 }
 
 #[cfg(test)]
@@ -484,6 +621,95 @@ mod tests {
         assert_eq!(verified.jti, claims.jti);
         assert_eq!(verified.scoped_actions, claims.scoped_actions);
         assert_eq!(verified.scoped_resources, claims.scoped_resources);
+    }
+
+    #[test]
+    fn an_unlabelled_token_still_verifies_as_either_kind() {
+        // The whole reason typing is opt-in: nothing already in flight breaks.
+        let km = KeyManager::generate();
+        let claims = build_sts_claims(&test_credentials(), &test_claims_context());
+        let token = km.sign_claims(&claims).unwrap();
+
+        assert!(km
+            .verify_claims_as::<StsClaims>(&token, AUD, TokenType::Jwt)
+            .is_ok());
+        assert!(km
+            .verify_claims_as::<StsClaims>(&token, AUD, TokenType::AccessToken)
+            .is_ok());
+    }
+
+    #[test]
+    fn an_access_token_cannot_be_read_as_an_id_token() {
+        // The protection RFC 9068 exists to give. Once a token says `at+jwt`,
+        // no verifier expecting an ID token will take it.
+        let km = KeyManager::generate();
+        let claims = build_sts_claims(&test_credentials(), &test_claims_context());
+        let token = km.sign_claims_as(&claims, TokenType::AccessToken).unwrap();
+
+        assert!(km
+            .verify_claims_as::<StsClaims>(&token, AUD, TokenType::AccessToken)
+            .is_ok());
+
+        let err = km
+            .verify_claims_as::<StsClaims>(&token, AUD, TokenType::Jwt)
+            .unwrap_err();
+        match err {
+            JwtError::TokenTypeMismatch { found, expected } => {
+                assert_eq!(found, "at+jwt");
+                assert_eq!(expected, "JWT");
+            }
+            other => panic!("got {other:?}"),
+        }
+
+        // `verify_claims` is the ID-token-shaped door, so it refuses too.
+        assert!(km.verify_claims::<StsClaims>(&token, AUD).is_err());
+    }
+
+    #[test]
+    fn the_typ_header_says_what_was_asked_for() {
+        let km = KeyManager::generate();
+        let claims = build_sts_claims(&test_credentials(), &test_claims_context());
+
+        for (typ, expected) in [(TokenType::Jwt, "JWT"), (TokenType::AccessToken, "at+jwt")] {
+            let token = km.sign_claims_as(&claims, typ).unwrap();
+            let header = jsonwebtoken::decode_header(&token).unwrap();
+            assert_eq!(header.typ.as_deref(), Some(expected));
+            assert!(header.kid.is_some(), "rotation still needs the kid");
+        }
+    }
+
+    #[test]
+    fn both_spellings_of_the_access_token_type_are_read() {
+        // RFC 9068 §4 allows the media-type prefix; both are on the wire.
+        assert_eq!(TokenType::parse("at+jwt"), Some(TokenType::AccessToken));
+        assert_eq!(
+            TokenType::parse("application/at+jwt"),
+            Some(TokenType::AccessToken)
+        );
+        assert_eq!(TokenType::parse("JWT"), Some(TokenType::Jwt));
+        assert_eq!(TokenType::parse("dpop+jwt"), None);
+    }
+
+    #[test]
+    fn a_typ_nobody_recognises_is_refused_for_either_kind() {
+        let km = KeyManager::generate();
+        let claims = build_sts_claims(&test_credentials(), &test_claims_context());
+        let mut header = Header::new(Algorithm::EdDSA);
+        header.kid = Some(km.active.kid.clone());
+        header.typ = Some("dpop+jwt".to_string());
+        let pkcs8 = km.active.signing_key.to_pkcs8_der().unwrap();
+        let token = encode(
+            &header,
+            &claims,
+            &EncodingKey::from_ed_der(pkcs8.as_bytes()),
+        )
+        .unwrap();
+
+        for expected in [TokenType::Jwt, TokenType::AccessToken] {
+            assert!(km
+                .verify_claims_as::<StsClaims>(&token, AUD, expected)
+                .is_err());
+        }
     }
 
     #[test]
