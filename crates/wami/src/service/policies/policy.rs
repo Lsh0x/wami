@@ -155,6 +155,7 @@ impl<S: PolicyStore> PolicyService<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::service::auth::decision::{Decision, DenyReason};
     use crate::store::memory::InMemoryWamiStore;
     use wami_core::arn::{TenantPath, WamiArn};
 
@@ -392,18 +393,8 @@ mod tests {
             _context: &WamiContext,
             _action: &str,
             _resource_arn: &WamiArn,
-        ) -> wami_core::error::Result<bool> {
-            Ok(false)
-        }
-        async fn check_or_deny(
-            &self,
-            _context: &WamiContext,
-            _action: &str,
-            _resource_arn: &WamiArn,
-        ) -> wami_core::error::Result<()> {
-            Err(wami_core::error::AmiError::AccessDenied {
-                message: "denied by mock".to_string(),
-            })
+        ) -> wami_core::error::Result<Decision> {
+            Ok(Decision::Deny(DenyReason::NoMatch))
         }
     }
 

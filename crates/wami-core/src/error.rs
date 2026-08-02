@@ -50,6 +50,22 @@ pub enum AmiError {
 
     #[error("Store error: {0}")]
     StoreError(String),
+
+    /// A policy document could not be parsed, so no decision can be made from it.
+    ///
+    /// Deliberately an error and not a denial. A denial means "the rules
+    /// forbid this"; an unreadable policy means "the rules cannot be read" —
+    /// and the caller must be able to tell those apart, because the first is a
+    /// 403 the user can act on and the second is a corrupt store that should
+    /// page someone. Folding it into `AccessDenied` would hide a broken policy
+    /// store behind what looks like an ordinary permission failure.
+    #[error("policy cannot be read ({policy}): {message}")]
+    UnreadablePolicy {
+        /// Which policy failed to parse, so an operator knows what to fix.
+        policy: String,
+        /// What the parser objected to.
+        message: String,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, AmiError>;

@@ -10,6 +10,7 @@ use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
+use wami_core::types::PolicyDocument;
 
 pub trait InlinePolicyServiceStore: UserStore + GroupStore + RoleStore {}
 impl<T> InlinePolicyServiceStore for T where T: UserStore + GroupStore + RoleStore {}
@@ -84,10 +85,15 @@ where
                 resource: format!("User: {}", request.user_name),
             })?;
 
-        // Validate policy document is valid JSON
-        serde_json::from_str::<serde_json::Value>(&request.policy_document).map_err(|e| {
+        // Validate against PolicyDocument, not merely `Value`: a document that
+        // is valid JSON but not a valid policy — `"Actions"` for `"Action"`,
+        // say — used to be accepted here and then evaluate to nothing, so a
+        // Deny written with a typo silently stopped applying. Refusing it at
+        // the point where someone can still fix it is the other half of the
+        // fix; `parse_policy_doc` covers documents already in the store.
+        serde_json::from_str::<PolicyDocument>(&request.policy_document).map_err(|e| {
             AmiError::InvalidParameter {
-                message: format!("Invalid policy document JSON: {}", e),
+                message: format!("Invalid policy document: {}", e),
             }
         })?;
 
@@ -243,10 +249,15 @@ where
                 resource: format!("Group: {}", request.group_name),
             })?;
 
-        // Validate policy document is valid JSON
-        serde_json::from_str::<serde_json::Value>(&request.policy_document).map_err(|e| {
+        // Validate against PolicyDocument, not merely `Value`: a document that
+        // is valid JSON but not a valid policy — `"Actions"` for `"Action"`,
+        // say — used to be accepted here and then evaluate to nothing, so a
+        // Deny written with a typo silently stopped applying. Refusing it at
+        // the point where someone can still fix it is the other half of the
+        // fix; `parse_policy_doc` covers documents already in the store.
+        serde_json::from_str::<PolicyDocument>(&request.policy_document).map_err(|e| {
             AmiError::InvalidParameter {
-                message: format!("Invalid policy document JSON: {}", e),
+                message: format!("Invalid policy document: {}", e),
             }
         })?;
 
@@ -402,10 +413,15 @@ where
                 resource: format!("Role: {}", request.role_name),
             })?;
 
-        // Validate policy document is valid JSON
-        serde_json::from_str::<serde_json::Value>(&request.policy_document).map_err(|e| {
+        // Validate against PolicyDocument, not merely `Value`: a document that
+        // is valid JSON but not a valid policy — `"Actions"` for `"Action"`,
+        // say — used to be accepted here and then evaluate to nothing, so a
+        // Deny written with a typo silently stopped applying. Refusing it at
+        // the point where someone can still fix it is the other half of the
+        // fix; `parse_policy_doc` covers documents already in the store.
+        serde_json::from_str::<PolicyDocument>(&request.policy_document).map_err(|e| {
             AmiError::InvalidParameter {
-                message: format!("Invalid policy document JSON: {}", e),
+                message: format!("Invalid policy document: {}", e),
             }
         })?;
 
@@ -539,6 +555,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::service::auth::decision::{AllowReason, Decision, DenyReason};
     use crate::store::memory::InMemoryWamiStore;
     use crate::wami::identity::group::builder::build_group;
     use crate::wami::identity::role::builder::build_role;
@@ -1020,16 +1037,8 @@ mod tests {
             _context: &WamiContext,
             _action: &str,
             _resource_arn: &WamiArn,
-        ) -> wami_core::error::Result<bool> {
-            Ok(true)
-        }
-        async fn check_or_deny(
-            &self,
-            _context: &WamiContext,
-            _action: &str,
-            _resource_arn: &WamiArn,
-        ) -> wami_core::error::Result<()> {
-            Ok(())
+        ) -> wami_core::error::Result<Decision> {
+            Ok(Decision::Allow(AllowReason::RootBypass))
         }
     }
 
@@ -1043,18 +1052,8 @@ mod tests {
             _context: &WamiContext,
             _action: &str,
             _resource_arn: &WamiArn,
-        ) -> wami_core::error::Result<bool> {
-            Ok(false)
-        }
-        async fn check_or_deny(
-            &self,
-            _context: &WamiContext,
-            _action: &str,
-            _resource_arn: &WamiArn,
-        ) -> wami_core::error::Result<()> {
-            Err(wami_core::error::AmiError::AccessDenied {
-                message: "denied by mock".to_string(),
-            })
+        ) -> wami_core::error::Result<Decision> {
+            Ok(Decision::Deny(DenyReason::NoMatch))
         }
     }
 
@@ -1290,5 +1289,72 @@ mod tests {
             service.delete_role_policy(&context, request).await,
             Err(wami_core::error::AmiError::AccessDenied { .. })
         ));
+    }
+
+    #[tokio::test]
+    async fn a_malformed_policy_is_refused_on_every_write_path() {
+        // Valid JSON, invalid policy — "Actions" for "Action". All three write
+        // paths must refuse it, not just the user one.
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = InlinePolicyService::new(store.clone());
+        let context = create_test_context().await;
+        let broken = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Deny","Actions":["iam:*"],"Resource":["*"]}]}"#;
+
+        {
+            let mut s = store.write().await;
+            let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+            s.create_user(user).await.unwrap();
+            let group = build_group("devs".to_string(), Some("/".to_string()), &context).unwrap();
+            s.create_group(group).await.unwrap();
+            let role = build_role(
+                "AppRole".to_string(),
+                r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+                Some("/".to_string()),
+                None,
+                None,
+                &context,
+            )
+            .unwrap();
+            s.create_role(role).await.unwrap();
+        }
+
+        let user_err = service
+            .put_user_policy(
+                &context,
+                PutUserPolicyRequest {
+                    user_name: "alice".to_string(),
+                    policy_name: "Broken".to_string(),
+                    policy_document: broken.to_string(),
+                },
+            )
+            .await
+            .expect_err("user path must refuse");
+        assert!(matches!(user_err, AmiError::InvalidParameter { .. }));
+
+        let group_err = service
+            .put_group_policy(
+                &context,
+                PutGroupPolicyRequest {
+                    group_name: "devs".to_string(),
+                    policy_name: "Broken".to_string(),
+                    policy_document: broken.to_string(),
+                },
+            )
+            .await
+            .expect_err("group path must refuse");
+        assert!(matches!(group_err, AmiError::InvalidParameter { .. }));
+
+        let role_err = service
+            .put_role_policy(
+                &context,
+                PutRolePolicyRequest {
+                    role_name: "AppRole".to_string(),
+                    policy_name: "Broken".to_string(),
+                    policy_document: broken.to_string(),
+                },
+            )
+            .await
+            .expect_err("role path must refuse");
+        assert!(matches!(role_err, AmiError::InvalidParameter { .. }));
     }
 }

@@ -22,22 +22,25 @@
 //!     let context = todo!("Get from authentication");
 //!     let resource_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse()?;
 //!
-//!     // Check if user can perform action
-//!     let allowed = authz_service
+//!     // The decision carries why it went that way, so it can be logged or
+//!     // shown to the user as-is.
+//!     let decision = authz_service
 //!         .authorize(&context, "iam:GetUser", &resource_arn)
 //!         .await?;
 //!
-//!     if allowed {
-//!         println!("Access granted");
-//!     } else {
-//!         println!("Access denied");
+//!     println!("{decision}");
+//!     if decision.is_allowed() {
+//!         // ...
 //!     }
 //!
 //!     Ok(())
 //! }
 //! ```
 
-use crate::service::auth::policy_evaluator::{self, PolicyEffect};
+use crate::service::auth::decision::{
+    AllowReason, Decision, DenyReason, NonEmpty, PolicySource, StatementRef,
+};
+use crate::service::auth::policy_evaluator::{self, PolicyEffect, StatementHit};
 use crate::store::traits::{GroupStore, PolicyStore, RoleStore, UserStore};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -89,130 +92,123 @@ where
         context: &WamiContext,
         action: &str,
         resource_arn: &WamiArn,
-    ) -> Result<bool> {
-        // Root users bypass all authorization checks
+    ) -> Result<Decision> {
+        // Root bypasses everything, permissions boundary included — as it does
+        // in AWS, where boundaries do not apply to the account root.
         if context.is_root() {
-            return Ok(true);
+            return Ok(Decision::Allow(AllowReason::RootBypass));
         }
 
-        // Extract user name from caller ARN
         let user_name = self.extract_user_name_from_arn(context.caller_arn())?;
 
-        // Evaluate policies for this user
         self.evaluate_user_policies(context, &user_name, action, resource_arn)
             .await
     }
 
     /// Check if access is denied (returns an error if not authorized)
     ///
-    /// This is a convenience method that throws an `AccessDenied` error
-    /// if the authorization check fails.
+    /// Convenience wrapper over [`AuthorizationService::authorize`] for callers
+    /// that only need to proceed or stop. The refusal names what decided, so a
+    /// caller gets a usable message without handling [`Decision`] itself.
     pub async fn check_or_deny(
         &self,
         context: &WamiContext,
         action: &str,
         resource_arn: &WamiArn,
     ) -> Result<()> {
-        let allowed = self.authorize(context, action, resource_arn).await?;
-
-        if !allowed {
-            return Err(AmiError::AccessDenied {
+        match self.authorize(context, action, resource_arn).await? {
+            Decision::Allow(_) => Ok(()),
+            denied => Err(AmiError::AccessDenied {
                 message: format!(
-                    "User {} is not authorized to perform {} on {}",
+                    "{} is not authorized to perform {} on {}: {}",
                     context.caller_arn(),
                     action,
-                    resource_arn
+                    resource_arn,
+                    denied
                 ),
-            });
+            }),
         }
-
-        Ok(())
     }
 
     /// Evaluate all policies for a user
     ///
-    /// This includes:
-    /// - User's attached managed policies
-    /// - User's inline policies
-    /// - Policies from user's groups (attached + inline)
-    /// - Policies from assumed role (if session has one)
+    /// Collects from every source — the user's managed and inline policies,
+    /// those of their groups, and those of an assumed role — then applies
+    /// deny-overrides-allow across the whole set, and finally intersects with
+    /// the permissions boundary.
     ///
-    /// **Deny-overrides-allow**: an explicit Deny from ANY source wins over
-    /// an Allow from any other source.
+    /// The collected sources are sorted before anything is reported. That sort
+    /// is where determinism comes from: `GroupStore::list_groups_for_user` and
+    /// friends promise no ordering, so a SQL backend without an `ORDER BY`
+    /// could hand back the same policies in a different order on two identical
+    /// calls. Sorting by [`PolicySource`] reproduces the intended precedence —
+    /// user, then group, then role — no matter what the store did.
     async fn evaluate_user_policies(
         &self,
         context: &WamiContext,
         user_name: &str,
         action: &str,
         resource_arn: &WamiArn,
-    ) -> Result<bool> {
+    ) -> Result<Decision> {
         let store = self.store.read().await;
 
-        // Collect all policy documents from every source, then apply
-        // deny-overrides-allow across the whole set.
-        let mut all_effects: Vec<PolicyEffect> = Vec::new();
+        let mut hits: Vec<(PolicySource, StatementHit)> = Vec::new();
+
+        // Evaluate one document, recording which source it came from. An
+        // unreadable document aborts the whole decision rather than being
+        // skipped: it might have held a deny, and there is no way to know.
+        let mut consider = |document: &str, source: PolicySource| -> Result<()> {
+            let parsed = policy_evaluator::parse_policy_doc(document, &source)?;
+            if let Some(hit) =
+                policy_evaluator::evaluate_policy_document(&parsed, action, resource_arn, context)
+            {
+                hits.push((source, hit));
+            }
+            Ok(())
+        };
 
         // ── 1. User attached managed policies ──────────────────────
-        let attached_policies = store.list_attached_user_policies(user_name).await?;
-        for policy_arn in attached_policies {
+        for policy_arn in store.list_attached_user_policies(user_name).await? {
             if let Some(policy) = store.get_policy(&policy_arn).await? {
-                let doc = policy_evaluator::parse_policy_doc(&policy.policy_document);
-                all_effects.push(policy_evaluator::evaluate_policy_document(
-                    &doc,
-                    action,
-                    resource_arn,
-                    context,
-                ));
+                consider(
+                    &policy.policy_document,
+                    PolicySource::UserManaged { arn: policy_arn },
+                )?;
             }
         }
 
         // ── 2. User inline policies ────────────────────────────────
-        let inline_policies = store.list_user_policies(user_name).await?;
-        for policy_name in inline_policies {
-            if let Some(doc_str) = store.get_user_policy(user_name, &policy_name).await? {
-                let doc = policy_evaluator::parse_policy_doc(&doc_str);
-                all_effects.push(policy_evaluator::evaluate_policy_document(
-                    &doc,
-                    action,
-                    resource_arn,
-                    context,
-                ));
+        for policy_name in store.list_user_policies(user_name).await? {
+            if let Some(document) = store.get_user_policy(user_name, &policy_name).await? {
+                consider(&document, PolicySource::UserInline { name: policy_name })?;
             }
         }
 
         // ── 3. Group policies (attached + inline) ──────────────────
-        let groups = store.list_groups_for_user(user_name).await?;
-        for group in &groups {
-            // Group attached managed policies
-            let group_attached = store
-                .list_attached_group_policies(&group.group_name)
-                .await?;
-            for policy_arn in group_attached {
+        for group in store.list_groups_for_user(user_name).await? {
+            let group_name = &group.group_name;
+
+            for policy_arn in store.list_attached_group_policies(group_name).await? {
                 if let Some(policy) = store.get_policy(&policy_arn).await? {
-                    let doc = policy_evaluator::parse_policy_doc(&policy.policy_document);
-                    all_effects.push(policy_evaluator::evaluate_policy_document(
-                        &doc,
-                        action,
-                        resource_arn,
-                        context,
-                    ));
+                    consider(
+                        &policy.policy_document,
+                        PolicySource::GroupManaged {
+                            group: group_name.clone(),
+                            arn: policy_arn,
+                        },
+                    )?;
                 }
             }
 
-            // Group inline policies
-            let group_inline = store.list_group_policies(&group.group_name).await?;
-            for policy_name in group_inline {
-                if let Some(doc_str) = store
-                    .get_group_policy(&group.group_name, &policy_name)
-                    .await?
-                {
-                    let doc = policy_evaluator::parse_policy_doc(&doc_str);
-                    all_effects.push(policy_evaluator::evaluate_policy_document(
-                        &doc,
-                        action,
-                        resource_arn,
-                        context,
-                    ));
+            for policy_name in store.list_group_policies(group_name).await? {
+                if let Some(document) = store.get_group_policy(group_name, &policy_name).await? {
+                    consider(
+                        &document,
+                        PolicySource::GroupInline {
+                            group: group_name.clone(),
+                            name: policy_name,
+                        },
+                    )?;
                 }
             }
         }
@@ -223,80 +219,113 @@ where
                 if role_arn.resource.resource_type == "role" {
                     let role_name = &role_arn.resource.resource_id;
 
-                    // Role attached managed policies
-                    let role_attached = store.list_attached_role_policies(role_name).await?;
-                    for policy_arn in role_attached {
+                    for policy_arn in store.list_attached_role_policies(role_name).await? {
                         if let Some(policy) = store.get_policy(&policy_arn).await? {
-                            let doc = policy_evaluator::parse_policy_doc(&policy.policy_document);
-                            all_effects.push(policy_evaluator::evaluate_policy_document(
-                                &doc,
-                                action,
-                                resource_arn,
-                                context,
-                            ));
+                            consider(
+                                &policy.policy_document,
+                                PolicySource::RoleManaged {
+                                    role: role_name.clone(),
+                                    arn: policy_arn,
+                                },
+                            )?;
                         }
                     }
 
-                    // Role inline policies
-                    let role_inline = store.list_role_policies(role_name).await?;
-                    for policy_name in role_inline {
-                        if let Some(doc_str) =
+                    for policy_name in store.list_role_policies(role_name).await? {
+                        if let Some(document) =
                             store.get_role_policy(role_name, &policy_name).await?
                         {
-                            let doc = policy_evaluator::parse_policy_doc(&doc_str);
-                            all_effects.push(policy_evaluator::evaluate_policy_document(
-                                &doc,
-                                action,
-                                resource_arn,
-                                context,
-                            ));
+                            consider(
+                                &document,
+                                PolicySource::RoleInline {
+                                    role: role_name.clone(),
+                                    name: policy_name,
+                                },
+                            )?;
                         }
                     }
                 }
             }
         }
 
-        // ── 5. Deny-overrides-allow resolution ─────────────────────
-        // An explicit Deny from ANY policy source overrides all Allows.
-        if all_effects.contains(&PolicyEffect::Deny) {
-            return Ok(false);
+        // Canonical order — see the note on this function.
+        hits.sort_by(|(a, _), (b, _)| a.cmp(b));
+
+        let refs = |effect: PolicyEffect| -> Vec<StatementRef> {
+            hits.iter()
+                .filter(|(_, hit)| hit.effect == effect)
+                .map(|(source, hit)| StatementRef {
+                    policy: source.clone(),
+                    sid: hit.sid.clone(),
+                    index: hit.index,
+                })
+                .collect()
+        };
+
+        // ── 5. Deny-overrides-allow ────────────────────────────────
+        if let Ok(denied_by) = NonEmpty::new(refs(PolicyEffect::Deny)) {
+            return Ok(Decision::Deny(DenyReason::Statements(denied_by)));
         }
 
-        // If at least one policy allows, check permissions boundary.
-        if all_effects.contains(&PolicyEffect::Allow) {
-            // ── 6. Permissions boundary check ─────────────────────
-            // If the user has a permissions boundary, the effective permission is
-            // the INTERSECTION of the identity policies and the boundary.
-            // The action must be allowed by BOTH the policies AND the boundary.
-            if let Some(user) = store.get_user(user_name).await? {
-                if let Some(ref boundary_arn) = user.permissions_boundary {
-                    if let Some(boundary_policy) = store.get_policy(boundary_arn).await? {
-                        let boundary_doc =
-                            policy_evaluator::parse_policy_doc(&boundary_policy.policy_document);
-                        let boundary_effect = policy_evaluator::evaluate_policy_document(
-                            &boundary_doc,
-                            action,
-                            resource_arn,
-                            context,
-                        );
-                        if boundary_effect != PolicyEffect::Allow {
-                            // Boundary does not allow → effective deny
-                            return Ok(false);
-                        }
-                    }
-                    // If boundary policy not found, fail closed (deny)
-                    else {
-                        return Ok(false);
-                    }
-                }
+        // Nothing allowed it, so there is no statement to name. The boundary is
+        // deliberately not consulted here: it can only narrow permissions,
+        // never grant them, so with nothing to narrow it cannot change this.
+        let Ok(allowed_by) = NonEmpty::new(refs(PolicyEffect::Allow)) else {
+            return Ok(Decision::Deny(DenyReason::NoMatch));
+        };
+
+        // ── 6. Permissions boundary ────────────────────────────────
+        // Effective permissions are the intersection of the identity policies
+        // and the boundary: the action must be allowed by both.
+        let Some(user) = store.get_user(user_name).await? else {
+            return Ok(Decision::Allow(AllowReason::Statements(allowed_by)));
+        };
+        let Some(boundary_arn) = user.permissions_boundary else {
+            return Ok(Decision::Allow(AllowReason::Statements(allowed_by)));
+        };
+
+        let Some(boundary) = store.get_policy(&boundary_arn).await? else {
+            // Referenced but absent: a ceiling that cannot be read cannot be
+            // honoured, so fail closed.
+            return Ok(Decision::Deny(DenyReason::BoundaryMissing {
+                arn: boundary_arn,
+            }));
+        };
+
+        let boundary_source = PolicySource::PermissionsBoundary {
+            arn: boundary_arn.clone(),
+        };
+        let boundary_doc =
+            policy_evaluator::parse_policy_doc(&boundary.policy_document, &boundary_source)?;
+        let boundary_hit = policy_evaluator::evaluate_policy_document(
+            &boundary_doc,
+            action,
+            resource_arn,
+            context,
+        );
+
+        match boundary_hit {
+            Some(hit) if hit.effect == PolicyEffect::Allow => {
+                Ok(Decision::Allow(AllowReason::Statements(allowed_by)))
             }
-            return Ok(true);
+            // An explicit deny in the boundary and a boundary that simply does
+            // not cover the action are both refusals, but they call for
+            // opposite fixes — remove that statement, or widen the boundary.
+            // `denied_by` carries which one it was.
+            other => Ok(Decision::Deny(DenyReason::BoundaryRestricted {
+                arn: boundary_arn,
+                allowed_by,
+                denied_by: other
+                    .into_iter()
+                    .map(|hit| StatementRef {
+                        policy: boundary_source.clone(),
+                        sid: hit.sid,
+                        index: hit.index,
+                    })
+                    .collect(),
+            })),
         }
-
-        // Default deny — no policy explicitly allows.
-        Ok(false)
     }
-
     /// Extract user name from a user ARN
     fn extract_user_name_from_arn(&self, arn: &WamiArn) -> Result<String> {
         // Check if this is a user resource
@@ -483,12 +512,14 @@ mod tests {
             version: "2012-10-17".to_string(),
             statement: vec![
                 PolicyStatement {
+                    sid: None,
                     effect: "Allow".to_string(),
                     action: vec!["iam:*".to_string()],
                     resource: vec!["*".to_string()],
                     condition: None,
                 },
                 PolicyStatement {
+                    sid: None,
                     effect: "Deny".to_string(),
                     action: vec!["iam:DeleteUser".to_string()],
                     resource: vec!["*".to_string()],
@@ -503,7 +534,7 @@ mod tests {
             policy_evaluator::evaluate_policy_document(&policy, "iam:DeleteUser", &resource, &ctx);
 
         // Deny should override Allow
-        assert_eq!(effect, PolicyEffect::Deny);
+        assert_eq!(effect.map(|hit| hit.effect), Some(PolicyEffect::Deny));
     }
 
     #[test]
@@ -511,6 +542,7 @@ mod tests {
         let policy = PolicyDocument {
             version: "2012-10-17".to_string(),
             statement: vec![PolicyStatement {
+                sid: None,
                 effect: "Allow".to_string(),
                 action: vec!["s3:GetObject".to_string()],
                 resource: vec!["*".to_string()],
@@ -523,7 +555,7 @@ mod tests {
         let effect =
             policy_evaluator::evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx);
 
-        assert_eq!(effect, PolicyEffect::NoMatch);
+        assert!(effect.is_none());
     }
 
     #[test]
@@ -531,6 +563,7 @@ mod tests {
         let policy = PolicyDocument {
             version: "2012-10-17".to_string(),
             statement: vec![PolicyStatement {
+                sid: None,
                 effect: "DENY".to_string(), // Uppercase
                 action: vec!["iam:GetUser".to_string()],
                 resource: vec!["*".to_string()],
@@ -543,7 +576,7 @@ mod tests {
         let effect =
             policy_evaluator::evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx);
 
-        assert_eq!(effect, PolicyEffect::Deny);
+        assert_eq!(effect.map(|hit| hit.effect), Some(PolicyEffect::Deny));
     }
 
     /// Helper: minimal WamiContext for unit tests that only call evaluate_policy_document
@@ -647,7 +680,10 @@ mod tests {
             .authorize(&ctx, "iam:GetUser", &resource)
             .await
             .unwrap();
-        assert!(allowed, "Group attached policy should allow iam:GetUser");
+        assert!(
+            allowed.is_allowed(),
+            "Group attached policy should allow iam:GetUser"
+        );
     }
 
     #[tokio::test]
@@ -677,7 +713,10 @@ mod tests {
             .authorize(&ctx, "iam:DeleteUser", &resource)
             .await
             .unwrap();
-        assert!(allowed, "Group inline policy should allow iam:DeleteUser");
+        assert!(
+            allowed.is_allowed(),
+            "Group inline policy should allow iam:DeleteUser"
+        );
     }
 
     #[tokio::test]
@@ -716,14 +755,20 @@ mod tests {
             .authorize(&ctx, "iam:DeleteUser", &resource)
             .await
             .unwrap();
-        assert!(!allowed, "Group deny should override user allow");
+        assert!(
+            !allowed.is_allowed(),
+            "Group deny should override user allow"
+        );
 
         // But other actions should still be allowed
         let allowed_get = authz
             .authorize(&ctx, "iam:GetUser", &resource)
             .await
             .unwrap();
-        assert!(allowed_get, "iam:GetUser should still be allowed");
+        assert!(
+            allowed_get.is_allowed(),
+            "iam:GetUser should still be allowed"
+        );
     }
 
     #[tokio::test]
@@ -789,7 +834,10 @@ mod tests {
             .authorize(&ctx, "iam:CreateUser", &resource)
             .await
             .unwrap();
-        assert!(allowed, "Assumed role policy should allow iam:CreateUser");
+        assert!(
+            allowed.is_allowed(),
+            "Assumed role policy should allow iam:CreateUser"
+        );
     }
 
     #[tokio::test]
@@ -846,14 +894,17 @@ mod tests {
             .authorize(&ctx, "iam:GetUser", &resource)
             .await
             .unwrap();
-        assert!(allowed, "Role inline policy should allow iam:GetUser");
+        assert!(
+            allowed.is_allowed(),
+            "Role inline policy should allow iam:GetUser"
+        );
 
         let denied = authz
             .authorize(&ctx, "iam:DeleteUser", &resource)
             .await
             .unwrap();
         assert!(
-            !denied,
+            !denied.is_allowed(),
             "Role inline policy should not allow iam:DeleteUser"
         );
     }
@@ -936,14 +987,17 @@ mod tests {
             .authorize(&ctx, "iam:DeleteUser", &resource)
             .await
             .unwrap();
-        assert!(!denied, "Role deny must override user+group allow");
+        assert!(
+            !denied.is_allowed(),
+            "Role deny must override user+group allow"
+        );
 
         // Other actions still allowed
         let allowed = authz
             .authorize(&ctx, "iam:GetUser", &resource)
             .await
             .unwrap();
-        assert!(allowed, "iam:GetUser should still be allowed");
+        assert!(allowed.is_allowed(), "iam:GetUser should still be allowed");
     }
 
     #[tokio::test]
@@ -959,7 +1013,7 @@ mod tests {
             .authorize(&ctx, "iam:GetUser", &resource)
             .await
             .unwrap();
-        assert!(!allowed, "No policies → default deny");
+        assert!(!allowed.is_allowed(), "No policies → default deny");
     }
 
     #[tokio::test]
@@ -982,7 +1036,7 @@ mod tests {
             .authorize(&ctx, "iam:DeleteUser", &resource)
             .await
             .unwrap();
-        assert!(allowed, "Root user must bypass all checks");
+        assert!(allowed.is_allowed(), "Root user must bypass all checks");
     }
 
     #[tokio::test]
@@ -1027,16 +1081,19 @@ mod tests {
         assert!(authz
             .authorize(&ctx, "iam:GetUser", &resource)
             .await
-            .unwrap());
+            .unwrap()
+            .is_allowed());
         assert!(authz
             .authorize(&ctx, "iam:CreateUser", &resource)
             .await
-            .unwrap());
+            .unwrap()
+            .is_allowed());
         // But delete is not allowed by any group
         assert!(!authz
             .authorize(&ctx, "iam:DeleteUser", &resource)
             .await
-            .unwrap());
+            .unwrap()
+            .is_allowed());
     }
 
     // ========== Condition evaluation tests (P2.2) ==========
@@ -1086,8 +1143,8 @@ mod tests {
         let effect =
             policy_evaluator::evaluate_policy_document(&doc, "iam:GetUser", &resource, &ctx);
         assert_eq!(
-            effect,
-            PolicyEffect::Allow,
+            effect.map(|hit| hit.effect),
+            Some(PolicyEffect::Allow),
             "IP 10.1.2.3 should match 10.0.0.0/8"
         );
     }
@@ -1118,9 +1175,8 @@ mod tests {
 
         let effect =
             policy_evaluator::evaluate_policy_document(&doc, "iam:GetUser", &resource, &ctx);
-        assert_eq!(
-            effect,
-            PolicyEffect::NoMatch,
+        assert!(
+            effect.is_none(),
             "IP 192.168.1.1 should NOT match 10.0.0.0/8 → NoMatch"
         );
     }
@@ -1152,8 +1208,8 @@ mod tests {
         let effect =
             policy_evaluator::evaluate_policy_document(&doc, "iam:DeleteUser", &resource, &ctx);
         assert_eq!(
-            effect,
-            PolicyEffect::Allow,
+            effect.map(|hit| hit.effect),
+            Some(PolicyEffect::Allow),
             "MFA present → condition matches → Allow"
         );
     }
@@ -1184,11 +1240,7 @@ mod tests {
 
         let effect =
             policy_evaluator::evaluate_policy_document(&doc, "iam:DeleteUser", &resource, &ctx);
-        assert_eq!(
-            effect,
-            PolicyEffect::NoMatch,
-            "MFA absent → condition fails → NoMatch"
-        );
+        assert!(effect.is_none(), "MFA absent → condition fails → NoMatch");
     }
 
     #[test]
@@ -1197,6 +1249,7 @@ mod tests {
         let doc = PolicyDocument {
             version: "2012-10-17".to_string(),
             statement: vec![PolicyStatement {
+                sid: None,
                 effect: "Allow".to_string(),
                 action: vec!["iam:GetUser".to_string()],
                 resource: vec!["*".to_string()],
@@ -1210,8 +1263,8 @@ mod tests {
         let effect =
             policy_evaluator::evaluate_policy_document(&doc, "iam:GetUser", &resource, &ctx);
         assert_eq!(
-            effect,
-            PolicyEffect::Allow,
+            effect.map(|hit| hit.effect),
+            Some(PolicyEffect::Allow),
             "No condition → Allow (backward compat)"
         );
     }
@@ -1263,14 +1316,17 @@ mod tests {
             .authorize(&ctx, "iam:DeleteUser", &resource)
             .await
             .unwrap();
-        assert!(!denied, "Deny condition should fire for external IP");
+        assert!(
+            !denied.is_allowed(),
+            "Deny condition should fire for external IP"
+        );
 
         // Other actions still allowed
         let allowed = authz
             .authorize(&ctx, "iam:GetUser", &resource)
             .await
             .unwrap();
-        assert!(allowed, "iam:GetUser should still be allowed");
+        assert!(allowed.is_allowed(), "iam:GetUser should still be allowed");
     }
 
     // ========== Permissions boundary tests (P2.3) ==========
@@ -1320,14 +1376,20 @@ mod tests {
             .authorize(&ctx, "iam:GetUser", &resource)
             .await
             .unwrap();
-        assert!(allowed, "iam:GetUser should be allowed (within boundary)");
+        assert!(
+            allowed.is_allowed(),
+            "iam:GetUser should be allowed (within boundary)"
+        );
 
         // iam:ListUsers is in boundary → allowed
         let allowed = authz
             .authorize(&ctx, "iam:ListUsers", &resource)
             .await
             .unwrap();
-        assert!(allowed, "iam:ListUsers should be allowed (within boundary)");
+        assert!(
+            allowed.is_allowed(),
+            "iam:ListUsers should be allowed (within boundary)"
+        );
 
         // iam:DeleteUser is NOT in boundary → denied despite policy allowing it
         let denied = authz
@@ -1335,7 +1397,7 @@ mod tests {
             .await
             .unwrap();
         assert!(
-            !denied,
+            !denied.is_allowed(),
             "iam:DeleteUser should be denied (outside boundary)"
         );
 
@@ -1345,7 +1407,7 @@ mod tests {
             .await
             .unwrap();
         assert!(
-            !denied,
+            !denied.is_allowed(),
             "iam:CreateUser should be denied (outside boundary)"
         );
     }
@@ -1371,7 +1433,7 @@ mod tests {
             .authorize(&ctx, "iam:DeleteUser", &resource)
             .await
             .unwrap();
-        assert!(allowed, "No boundary → full access per policy");
+        assert!(allowed.is_allowed(), "No boundary → full access per policy");
     }
 
     #[tokio::test]
@@ -1404,7 +1466,10 @@ mod tests {
             .authorize(&ctx, "iam:GetUser", &resource)
             .await
             .unwrap();
-        assert!(!denied, "Missing boundary policy → deny (fail closed)");
+        assert!(
+            !denied.is_allowed(),
+            "Missing boundary policy → deny (fail closed)"
+        );
     }
 
     #[tokio::test]
@@ -1459,13 +1524,399 @@ mod tests {
             .authorize(&ctx, "iam:DeleteUser", &resource)
             .await
             .unwrap();
-        assert!(!denied, "Explicit deny must win over boundary + allow");
+        assert!(
+            !denied.is_allowed(),
+            "Explicit deny must win over boundary + allow"
+        );
 
         // GetUser: allowed by policy AND boundary
         let allowed = authz
             .authorize(&ctx, "iam:GetUser", &resource)
             .await
             .unwrap();
-        assert!(allowed, "iam:GetUser should be allowed");
+        assert!(allowed.is_allowed(), "iam:GetUser should be allowed");
+    }
+
+    // ─── #100: the decision names what decided ────────────────────
+
+    #[tokio::test]
+    async fn an_allow_names_the_statement_that_granted_it() {
+        let ctx = test_context();
+        let store = setup_store_with_user(&ctx).await;
+        store
+            .write()
+            .await
+            .put_user_policy(
+                "alice",
+                "AllowReads",
+                r#"{"Version":"2012-10-17","Statement":[{"Sid":"ReadAnything","Effect":"Allow","Action":["iam:GetUser"],"Resource":["*"]}]}"#
+                    .to_string(),
+            )
+            .await
+            .unwrap();
+
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        let decision = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
+
+        let Decision::Allow(AllowReason::Statements(refs)) = &decision else {
+            panic!("expected a statement-backed allow, got {decision:?}");
+        };
+        assert_eq!(refs.first().sid.as_deref(), Some("ReadAnything"));
+        assert_eq!(
+            refs.first().policy,
+            PolicySource::UserInline {
+                name: "AllowReads".to_string()
+            }
+        );
+        // And it renders into something an audit log can keep verbatim.
+        assert!(decision.to_string().contains("ReadAnything"));
+    }
+
+    #[tokio::test]
+    async fn a_deny_reports_every_source_that_denied_not_just_one() {
+        // Two independent denials — a group policy and a user policy. An
+        // auditor needs both; reporting only the first would hide one.
+        let ctx = test_context();
+        let store = setup_store_with_user(&ctx).await;
+        {
+            let mut s = store.write().await;
+            let group = group_builder::build_group("blocked".to_string(), None, &ctx).unwrap();
+            s.create_group(group).await.unwrap();
+            s.add_user_to_group("blocked", "alice").await.unwrap();
+            s.put_group_policy("blocked", "GroupDeny", deny_policy_json(&["iam:*"], &["*"]))
+                .await
+                .unwrap();
+            s.put_user_policy("alice", "UserDeny", deny_policy_json(&["iam:*"], &["*"]))
+                .await
+                .unwrap();
+        }
+
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        let decision = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
+
+        let Decision::Deny(DenyReason::Statements(refs)) = &decision else {
+            panic!("expected statement-backed deny, got {decision:?}");
+        };
+        assert_eq!(refs.len(), 2, "both denials must be reported");
+        // Canonical order: the user's own policy before the group's, whatever
+        // order the store returned them in.
+        assert!(matches!(refs[0].policy, PolicySource::UserInline { .. }));
+        assert!(matches!(refs[1].policy, PolicySource::GroupInline { .. }));
+    }
+
+    #[tokio::test]
+    async fn nothing_matching_is_distinguishable_from_an_explicit_deny() {
+        let ctx = test_context();
+        let store = setup_store_with_user(&ctx).await;
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+
+        // The distinction a bool could not carry: refused because a rule says
+        // so, versus refused because no rule applies.
+        assert_eq!(
+            authz
+                .authorize(&ctx, "iam:GetUser", &resource)
+                .await
+                .unwrap(),
+            Decision::Deny(DenyReason::NoMatch)
+        );
+    }
+
+    #[tokio::test]
+    async fn root_is_allowed_without_consulting_any_policy() {
+        let ctx = WamiContext::builder()
+            .instance_id("999")
+            .tenant_path(TenantPath::single(12345678))
+            .caller_arn(
+                "arn:wami:iam:12345678:wami:999:user/root"
+                    .parse::<Arn>()
+                    .unwrap(),
+            )
+            .is_root(true)
+            .build()
+            .unwrap();
+
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+
+        assert_eq!(
+            authz
+                .authorize(&ctx, "iam:DeleteUser", &resource)
+                .await
+                .unwrap(),
+            Decision::Allow(AllowReason::RootBypass)
+        );
+    }
+
+    // ─── boundary: two refusals, two different fixes ──────────────
+
+    async fn alice_with_boundary(
+        ctx: &WamiContext,
+        boundary: &str,
+    ) -> Arc<RwLock<InMemoryWamiStore>> {
+        let store = setup_store_with_user(ctx).await;
+        let mut s = store.write().await;
+        s.put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
+            .await
+            .unwrap();
+        let policy = policy_builder::build_policy(
+            "Boundary".to_string(),
+            boundary.to_string(),
+            None,
+            None,
+            None,
+            ctx,
+        )
+        .unwrap();
+        let arn = policy.arn.clone();
+        s.create_policy(policy).await.unwrap();
+        let mut alice = s.get_user("alice").await.unwrap().unwrap();
+        alice.permissions_boundary = Some(arn);
+        s.update_user(alice).await.unwrap();
+        drop(s);
+        store
+    }
+
+    #[tokio::test]
+    async fn a_boundary_that_does_not_cover_the_action_says_so() {
+        let ctx = test_context();
+        // Allows something else entirely — the action is simply not covered.
+        let store = alice_with_boundary(&ctx, &allow_policy_json(&["s3:*"], &["*"])).await;
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+
+        let decision = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
+        let Decision::Deny(DenyReason::BoundaryRestricted {
+            allowed_by,
+            denied_by,
+            ..
+        }) = &decision
+        else {
+            panic!("expected boundary restriction, got {decision:?}");
+        };
+        assert!(
+            denied_by.is_empty(),
+            "no explicit deny — the fix is to widen the boundary"
+        );
+        assert!(!allowed_by.is_empty(), "identity policy did allow it");
+        assert!(decision.to_string().contains("does not cover"));
+    }
+
+    #[tokio::test]
+    async fn a_boundary_that_explicitly_denies_names_the_statement() {
+        let ctx = test_context();
+        let store = alice_with_boundary(&ctx, &deny_policy_json(&["iam:*"], &["*"])).await;
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+
+        let decision = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
+        let Decision::Deny(DenyReason::BoundaryRestricted { denied_by, .. }) = &decision else {
+            panic!("expected boundary restriction, got {decision:?}");
+        };
+        // The opposite remedy from the previous test: remove this statement.
+        assert_eq!(denied_by.len(), 1);
+        assert!(matches!(
+            denied_by[0].policy,
+            PolicySource::PermissionsBoundary { .. }
+        ));
+        assert!(decision.to_string().contains("refuses this action"));
+    }
+
+    // ─── #120: an unreadable policy is an error, not a silent allow ──
+
+    #[tokio::test]
+    async fn a_malformed_deny_no_longer_disappears() {
+        // Written straight to the store, as a third-party backend or a
+        // pre-fix row would be — the service layer now rejects this on write.
+        let ctx = test_context();
+        let store = setup_store_with_user(&ctx).await;
+        {
+            let mut s = store.write().await;
+            s.put_user_policy("alice", "Allow", allow_policy_json(&["iam:*"], &["*"]))
+                .await
+                .unwrap();
+            s.put_user_policy(
+                "alice",
+                "BrokenDeny",
+                // "Actions" instead of "Action" — valid JSON, invalid policy.
+                r#"{"Version":"2012-10-17","Statement":[{"Effect":"Deny","Actions":["iam:*"],"Resource":["*"]}]}"#
+                    .to_string(),
+            )
+            .await
+            .unwrap();
+        }
+
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        let err = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .expect_err("a policy that cannot be read must not yield a decision");
+
+        // Before the fix this returned Ok(true): the Deny parsed to nothing and
+        // the Allow won.
+        assert!(matches!(err, AmiError::UnreadablePolicy { .. }), "{err:?}");
+        assert!(err.to_string().contains("BrokenDeny"));
+    }
+
+    #[tokio::test]
+    async fn an_unreadable_boundary_is_reported_as_the_boundary() {
+        // The second parsing path. It must name the boundary, not leave the
+        // operator guessing which of the two documents failed.
+        let ctx = test_context();
+        let store = alice_with_boundary(&ctx, r#"{"Version":"2012-10-17"}"#).await;
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+
+        let err = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .expect_err("an unreadable boundary must not be treated as absent");
+        assert!(matches!(err, AmiError::UnreadablePolicy { .. }), "{err:?}");
+        assert!(err.to_string().contains("permissions boundary"));
+    }
+
+    #[tokio::test]
+    async fn a_malformed_policy_is_refused_on_write() {
+        // The other half of the fix: stop it entering the store at all.
+        use crate::service::policies::inline::InlinePolicyService;
+        use crate::wami::policies::inline::PutUserPolicyRequest;
+
+        let ctx = test_context();
+        let store = setup_store_with_user(&ctx).await;
+        let service = InlinePolicyService::new(store);
+
+        let err = service
+            .put_user_policy(
+                &ctx,
+                PutUserPolicyRequest {
+                    user_name: "alice".to_string(),
+                    policy_name: "BrokenDeny".to_string(),
+                    policy_document: r#"{"Version":"2012-10-17","Statement":[{"Effect":"Deny","Actions":["iam:*"],"Resource":["*"]}]}"#.to_string(),
+                },
+            )
+            .await
+            .expect_err("valid JSON that is not a valid policy must be refused");
+        assert!(matches!(err, AmiError::InvalidParameter { .. }), "{err:?}");
+    }
+
+    #[tokio::test]
+    async fn check_or_deny_quotes_the_reason_it_refused() {
+        // The convenience wrapper must not throw away the motivation — that is
+        // the whole point of the change for callers that never touch Decision.
+        let ctx = test_context();
+        let store = setup_store_with_user(&ctx).await;
+        store
+            .write()
+            .await
+            .put_user_policy("alice", "Blocked", deny_policy_json(&["iam:*"], &["*"]))
+            .await
+            .unwrap();
+
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+
+        let err = authz
+            .check_or_deny(&ctx, "iam:GetUser", &resource)
+            .await
+            .expect_err("an explicit deny must refuse");
+        let AmiError::AccessDenied { message } = &err else {
+            panic!("expected AccessDenied, got {err:?}");
+        };
+        assert!(message.contains("denied by"), "{message}");
+        assert!(message.contains("Blocked"), "{message}");
+    }
+
+    #[tokio::test]
+    async fn check_or_deny_passes_when_allowed() {
+        let ctx = test_context();
+        let store = setup_store_with_user(&ctx).await;
+        store
+            .write()
+            .await
+            .put_user_policy("alice", "Allow", allow_policy_json(&["iam:*"], &["*"]))
+            .await
+            .unwrap();
+
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        authz
+            .check_or_deny(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_managed_policy_attached_to_the_user_is_evaluated() {
+        // The inline path was covered; the managed one was not.
+        let ctx = test_context();
+        let store = setup_store_with_user(&ctx).await;
+        {
+            let mut s = store.write().await;
+            let policy = policy_builder::build_policy(
+                "ReadOnly".to_string(),
+                allow_policy_json(&["iam:GetUser"], &["*"]),
+                None,
+                None,
+                None,
+                &ctx,
+            )
+            .unwrap();
+            let arn = policy.arn.clone();
+            s.create_policy(policy).await.unwrap();
+            s.attach_user_policy("alice", &arn).await.unwrap();
+        }
+
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        let decision = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
+
+        let Decision::Allow(AllowReason::Statements(refs)) = &decision else {
+            panic!("expected an allow from the managed policy, got {decision:?}");
+        };
+        assert!(matches!(
+            refs.first().policy,
+            PolicySource::UserManaged { .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn a_missing_user_cannot_have_a_boundary_to_apply() {
+        // The caller is authenticated but the user record is gone. There is no
+        // boundary to intersect with, so an allow already found stands.
+        let ctx = test_context();
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        store
+            .write()
+            .await
+            .put_user_policy("alice", "Allow", allow_policy_json(&["iam:*"], &["*"]))
+            .await
+            .unwrap();
+
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        assert!(authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap()
+            .is_allowed());
     }
 }

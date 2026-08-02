@@ -7,7 +7,9 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use wami_core::arn::WamiArn;
 use wami_core::context::WamiContext;
-use wami_core::error::Result;
+use wami_core::error::{AmiError, Result};
+
+use super::decision::Decision;
 
 /// Object-safe authorization interface.
 ///
@@ -16,23 +18,50 @@ use wami_core::error::Result;
 /// (backward compatibility with existing callers).
 #[async_trait]
 pub trait Authorizer: Send + Sync {
-    /// Check if `context` is allowed to perform `action` on `resource_arn`.
+    /// Decide whether `context` may perform `action` on `resource_arn`.
     ///
-    /// Returns `Ok(true)` if allowed, `Ok(false)` if denied.
+    /// Returns the verdict *and what produced it*, so a caller can write an
+    /// audit line naming the statement that decided, and tell a refused user
+    /// what they lack.
+    ///
+    /// # Errors
+    ///
+    /// [`AmiError::UnreadablePolicy`] when a policy document cannot be parsed.
+    /// That is deliberately not a denial: an unreadable policy might have held
+    /// a deny, so no decision can honestly be made from it.
+    ///
+    /// [`AmiError::UnreadablePolicy`]: wami_core::error::AmiError::UnreadablePolicy
     async fn authorize(
         &self,
         context: &WamiContext,
         action: &str,
         resource_arn: &WamiArn,
-    ) -> Result<bool>;
+    ) -> Result<Decision>;
 
-    /// Like [`Authorizer::authorize`], but returns `Err(AccessDenied)` instead of `Ok(false)`.
+    /// Like [`Authorizer::authorize`], but returns `Err(AccessDenied)` on refusal.
+    ///
+    /// Implemented in terms of `authorize`, so implementors only supply the
+    /// latter — and the two cannot drift apart. The error message quotes the
+    /// [`Decision`], which is why overriding this is rarely worth it.
     async fn check_or_deny(
         &self,
         context: &WamiContext,
         action: &str,
         resource_arn: &WamiArn,
-    ) -> Result<()>;
+    ) -> Result<()> {
+        match self.authorize(context, action, resource_arn).await? {
+            Decision::Allow(_) => Ok(()),
+            denied => Err(AmiError::AccessDenied {
+                message: format!(
+                    "{} is not authorized to perform {} on {}: {}",
+                    context.caller_arn(),
+                    action,
+                    resource_arn,
+                    denied
+                ),
+            }),
+        }
+    }
 }
 
 /// Helper: build a WAMI ARN for an IAM resource from the caller's context.
@@ -76,17 +105,8 @@ mod impl_for_authz_service {
             context: &WamiContext,
             action: &str,
             resource_arn: &WamiArn,
-        ) -> Result<bool> {
+        ) -> Result<Decision> {
             AuthorizationService::authorize(self, context, action, resource_arn).await
-        }
-
-        async fn check_or_deny(
-            &self,
-            context: &WamiContext,
-            action: &str,
-            resource_arn: &WamiArn,
-        ) -> Result<()> {
-            AuthorizationService::check_or_deny(self, context, action, resource_arn).await
         }
     }
 
@@ -103,6 +123,7 @@ pub use impl_for_authz_service::into_authorizer;
 
 #[cfg(test)]
 mod tests {
+    use super::super::decision::{AllowReason, DenyReason};
     use super::*;
     use crate::service::auth::authorization::AuthorizationService;
     use crate::store::memory::InMemoryWamiStore;
@@ -210,7 +231,12 @@ mod tests {
             .authorize(&ctx, "iam:GetUser", &resource)
             .await
             .unwrap();
-        assert!(allowed);
+        assert!(allowed.is_allowed());
+        // The grant names what granted it — that is the point of the change.
+        assert!(matches!(
+            allowed,
+            Decision::Allow(AllowReason::Statements(_))
+        ));
     }
 
     #[tokio::test]
@@ -228,7 +254,8 @@ mod tests {
             .authorize(&ctx, "iam:GetUser", &resource)
             .await
             .unwrap();
-        assert!(!allowed);
+        // Nothing matched, so there is no statement to name.
+        assert_eq!(allowed, Decision::Deny(DenyReason::NoMatch));
     }
 
     #[tokio::test]

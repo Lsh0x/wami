@@ -97,6 +97,20 @@ pub struct PolicyDocument {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolicyStatement {
+    /// Optional statement id, as AWS defines it.
+    ///
+    /// An audit line has to name the statement that decided. Without a `Sid`
+    /// the only handle left is the statement's index in the document, and an
+    /// index recorded today points at a different statement once the policy is
+    /// rewritten — a log that is worse than silent, because it is confidently
+    /// wrong.
+    ///
+    /// Adding it is backward compatible in both directions: the struct does
+    /// not deny unknown fields, so documents already carrying a `Sid` are
+    /// accepted today and merely drop it, and `skip_serializing_if` keeps
+    /// documents without one byte-identical when re-serialised.
+    #[serde(rename = "Sid", default, skip_serializing_if = "Option::is_none")]
+    pub sid: Option<String>,
     #[serde(rename = "Effect")]
     pub effect: String,
     #[serde(rename = "Action", deserialize_with = "string_or_vec")]

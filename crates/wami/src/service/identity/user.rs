@@ -214,6 +214,7 @@ impl<S: UserStore> UserService<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::service::auth::decision::{Decision, DenyReason};
     use crate::store::memory::InMemoryWamiStore;
     use wami_core::arn::{TenantPath, WamiArn};
     use wami_core::context::WamiContext;
@@ -566,18 +567,8 @@ mod tests {
             _ctx: &WamiContext,
             _action: &str,
             _arn: &WamiArn,
-        ) -> wami_core::error::Result<bool> {
-            Ok(false)
-        }
-        async fn check_or_deny(
-            &self,
-            _ctx: &WamiContext,
-            _action: &str,
-            _arn: &WamiArn,
-        ) -> wami_core::error::Result<()> {
-            Err(wami_core::error::AmiError::AccessDenied {
-                message: "denied".to_string(),
-            })
+        ) -> wami_core::error::Result<Decision> {
+            Ok(Decision::Deny(DenyReason::NoMatch))
         }
     }
 
