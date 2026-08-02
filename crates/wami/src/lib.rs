@@ -118,9 +118,10 @@ pub use service::{
     AssumeRoleService, AttachmentService, AuthenticationService, AuthorizationService,
     CredentialReportService, EvaluationService, FederationService, GroupService, IdentityService,
     InlinePolicyService, InstanceService as SsoInstanceService, LoginProfileService,
-    MfaDeviceService, PermissionSetService, PolicyService, RoleService, ServerCertificateService,
-    ServiceCredentialService, ServiceLinkedRoleService, SessionService, SessionTokenService,
-    SigningCertificateService, TenantService, TrustedTokenIssuerService, UserService,
+    MfaDeviceService, OAuthService, PermissionSetService, PolicyService, RoleService,
+    ServerCertificateService, ServiceCredentialService, ServiceLinkedRoleService, SessionService,
+    SessionTokenService, SigningCertificateService, TenantService, TrustedTokenIssuerService,
+    UserService,
 };
 
 // Re-export WAMI modules for convenience (Legacy compatibility)

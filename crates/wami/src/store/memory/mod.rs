@@ -12,6 +12,7 @@
 //! - `InMemoryTenantStore` - Tenant management
 //! - `InMemoryStore` - Combines all stores into a single unified interface
 
+mod oauth;
 mod sso_admin;
 mod sts;
 mod tenant;
@@ -25,6 +26,7 @@ mod policies;
 mod reports;
 
 // Store implementations
+pub use oauth::InMemoryOAuthStore;
 pub use sso_admin::InMemorySsoAdminStore;
 pub use sts::InMemoryStsStore;
 pub use tenant::InMemoryTenantStore;

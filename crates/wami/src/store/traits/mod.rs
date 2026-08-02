@@ -34,6 +34,7 @@ mod wami; // WAMI store (identity + credentials + policies) // SSO Admin store (
 
 // Supporting trait modules
 pub mod gdpr;
+pub mod oauth;
 mod tenant;
 
 // Export sub-traits from identity
@@ -55,6 +56,7 @@ pub use reports::CredentialReportStore;
 
 // Export composite traits
 pub use gdpr::{AuditStore, ConsentStore};
+pub use oauth::{OAuthClientStore, OAuthTokenStore};
 pub use sso_admin::{
     AccountAssignmentStore, ApplicationStore, PermissionSetStore, SsoAdminStore, SsoInstanceStore,
     TrustedTokenIssuerStore,
