@@ -56,7 +56,10 @@ pub use reports::CredentialReportStore;
 
 // Export composite traits
 pub use gdpr::{AuditStore, ConsentStore};
-pub use oauth::{OAuthClientStore, OAuthTokenStore};
+pub use oauth::{
+    OAuthAuthorizationStore, OAuthClientStore, OAuthConsentStore, OAuthRefreshStore,
+    OAuthTokenStore,
+};
 pub use sso_admin::{
     AccountAssignmentStore, ApplicationStore, PermissionSetStore, SsoAdminStore, SsoInstanceStore,
     TrustedTokenIssuerStore,

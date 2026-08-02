@@ -45,6 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         vec![GrantType::ClientCredentials],
         vec!["reports:read".to_string(), "reports:write".to_string()],
         AUDIENCE.to_string(),
+        vec![],
     )?;
     let registered = service.register_client(client).await?;
 

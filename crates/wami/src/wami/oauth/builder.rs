@@ -27,6 +27,7 @@ pub fn build_client(
     grant_types: Vec<GrantType>,
     scopes: Vec<String>,
     audience: String,
+    redirect_uris: Vec<String>,
 ) -> Result<OAuthClient> {
     if client_id.trim().is_empty() {
         return Err(AmiError::InvalidParameter {
@@ -51,6 +52,7 @@ pub fn build_client(
         grant_types,
         scopes,
         audience,
+        redirect_uris,
         created_at: Utc::now(),
         enabled: true,
     })
@@ -71,6 +73,31 @@ pub fn build_claims(
 ) -> OAuthClaims {
     OAuthClaims {
         sub: client.client_id.clone(),
+        iss: issuer.to_string(),
+        aud: client.audience.clone(),
+        exp: (issued_at + lifetime).timestamp(),
+        iat: issued_at.timestamp(),
+        jti: Uuid::new_v4().to_string(),
+        scope: scopes.join(" "),
+        client_id: client.client_id.clone(),
+    }
+}
+
+/// Build the claims for an access token issued on behalf of a user.
+///
+/// The difference from [`build_claims`] is the subject: here it is the user,
+/// and `client_id` names the application acting for them. A resource server
+/// that reads `sub` gets the person, which is what it wants to authorise.
+pub fn build_user_claims(
+    client: &OAuthClient,
+    user_name: &str,
+    scopes: &[String],
+    issuer: &str,
+    issued_at: DateTime<Utc>,
+    lifetime: Duration,
+) -> OAuthClaims {
+    OAuthClaims {
+        sub: user_name.to_string(),
         iss: issuer.to_string(),
         aud: client.audience.clone(),
         exp: (issued_at + lifetime).timestamp(),
@@ -124,6 +151,7 @@ mod tests {
             vec![GrantType::ClientCredentials],
             vec!["read".into()],
             "wami".into(),
+            vec![],
         )
         .unwrap();
 
@@ -141,6 +169,7 @@ mod tests {
             vec![],
             vec![],
             "wami".into(),
+            vec![],
         )
         .unwrap_err();
         assert!(matches!(err, AmiError::InvalidParameter { .. }));
@@ -156,6 +185,7 @@ mod tests {
                 vec![GrantType::ClientCredentials],
                 vec![],
                 "wami".into(),
+                vec![]
             )
             .is_err());
         }
@@ -178,6 +208,7 @@ mod tests {
             vec![GrantType::ClientCredentials],
             vec!["read".into()],
             "wami".into(),
+            vec![],
         )
         .unwrap();
         let now = Utc::now();
@@ -213,6 +244,7 @@ mod tests {
             vec![GrantType::ClientCredentials],
             vec!["read".into(), "write".into()],
             "wami".into(),
+            vec![],
         )
         .unwrap();
         let now = Utc::now();
