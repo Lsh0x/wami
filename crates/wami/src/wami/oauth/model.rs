@@ -17,6 +17,10 @@ use serde::{Deserialize, Serialize};
 pub enum GrantType {
     /// The client authenticates as itself. No user is involved.
     ClientCredentials,
+    /// A user authorises the client, which then exchanges a code for a token.
+    AuthorizationCode,
+    /// The client trades a refresh token for a fresh access token.
+    RefreshToken,
 }
 
 /// A registered OAuth client.
@@ -39,6 +43,14 @@ pub struct OAuthClient {
     pub scopes: Vec<String>,
     /// The audience tokens for this client are minted with.
     pub audience: String,
+    /// Where the authorization server may redirect back to.
+    ///
+    /// Matched exactly — never by prefix. A prefix match on
+    /// `https://app.example.com/cb` would accept
+    /// `https://app.example.com/cb.attacker.test`, which is how authorization
+    /// codes get delivered to the wrong party.
+    #[serde(default)]
+    pub redirect_uris: Vec<String>,
     /// When the client was registered.
     pub created_at: DateTime<Utc>,
     /// Whether the client may still obtain tokens.
@@ -49,6 +61,13 @@ impl OAuthClient {
     /// Whether this client is allowed to use `grant`.
     pub fn allows_grant(&self, grant: GrantType) -> bool {
         self.grant_types.contains(&grant)
+    }
+
+    /// Whether `uri` is one this client registered, compared exactly.
+    pub fn allows_redirect(&self, uri: &str) -> bool {
+        self.redirect_uris
+            .iter()
+            .any(|registered| registered == uri)
     }
 
     /// The subset of `requested` this client may have, or the first scope it
@@ -210,6 +229,7 @@ mod tests {
             grant_types: vec![GrantType::ClientCredentials],
             scopes: scopes.iter().map(|s| s.to_string()).collect(),
             audience: "wami".into(),
+            redirect_uris: vec![],
             created_at: Utc::now(),
             enabled: true,
         }

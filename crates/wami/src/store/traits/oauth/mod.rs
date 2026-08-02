@@ -9,7 +9,7 @@
 use async_trait::async_trait;
 use wami_core::error::Result;
 
-use crate::wami::oauth::{AccessToken, OAuthClient};
+use crate::wami::oauth::{AccessToken, AuthorizationCode, OAuthClient, RefreshToken, UserConsent};
 
 /// Storage for registered OAuth clients.
 #[async_trait]
@@ -58,4 +58,70 @@ pub trait OAuthTokenStore: Send + Sync {
 
     /// Tokens issued to a client, revoked ones included.
     async fn list_oauth_tokens_for_client(&self, client_id: &str) -> Result<Vec<AccessToken>>;
+}
+
+/// Storage for authorization codes.
+#[async_trait]
+pub trait OAuthAuthorizationStore: Send + Sync {
+    /// Store a freshly issued code.
+    async fn store_authorization_code(&mut self, code: AuthorizationCode) -> Result<()>;
+
+    /// Take a code, atomically.
+    ///
+    /// **The contract is that this is one operation.** An implementation that
+    /// reads the code and then deletes it leaves a window in which two
+    /// exchanges can both succeed — which is precisely the replay an
+    /// authorization code is meant to be immune to. If your backend cannot do
+    /// it in one statement, use a conditional delete that returns the row
+    /// (`DELETE ... RETURNING`) or a transaction; do not emulate it with a get
+    /// followed by a delete.
+    ///
+    /// Returns `None` if the code does not exist, which includes the case where
+    /// somebody else consumed it a moment ago.
+    async fn consume_authorization_code(&mut self, code: &str)
+        -> Result<Option<AuthorizationCode>>;
+}
+
+/// Storage for refresh tokens.
+#[async_trait]
+pub trait OAuthRefreshStore: Send + Sync {
+    /// Store a refresh token.
+    async fn store_refresh_token(&mut self, token: RefreshToken) -> Result<()>;
+
+    /// Read a refresh token without consuming it.
+    async fn get_refresh_token(&self, token: &str) -> Result<Option<RefreshToken>>;
+
+    /// Mark a refresh token used and record what replaced it.
+    ///
+    /// Same atomicity requirement as consuming a code, and for the same reason:
+    /// rotation only detects a leak if exactly one of two concurrent uses can
+    /// win.
+    async fn rotate_refresh_token(
+        &mut self,
+        token: &str,
+        replacement: RefreshToken,
+    ) -> Result<Option<RefreshToken>>;
+
+    /// Invalidate every refresh token in a user's chain with a client.
+    ///
+    /// What to do when a used token is presented again: the legitimate client
+    /// has already rotated, so a second use means the token leaked, and the
+    /// whole chain is suspect.
+    async fn revoke_refresh_chain(&mut self, client_id: &str, user_name: &str) -> Result<u64>;
+}
+
+/// Storage for standing user consent.
+///
+/// Named `OAuthConsentStore`, not `ConsentStore` — that name belongs to GDPR
+/// consent, which is an unrelated concept.
+#[async_trait]
+pub trait OAuthConsentStore: Send + Sync {
+    /// Record or widen a user's approval of a client.
+    async fn record_consent(&mut self, consent: UserConsent) -> Result<UserConsent>;
+
+    /// What a user has already approved for a client.
+    async fn get_consent(&self, client_id: &str, user_name: &str) -> Result<Option<UserConsent>>;
+
+    /// Withdraw approval.
+    async fn revoke_consent(&mut self, client_id: &str, user_name: &str) -> Result<bool>;
 }

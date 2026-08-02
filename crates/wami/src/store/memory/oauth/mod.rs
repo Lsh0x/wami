@@ -8,14 +8,21 @@ use chrono::Utc;
 use std::collections::HashMap;
 use wami_core::error::{AmiError, Result};
 
-use crate::store::traits::oauth::{OAuthClientStore, OAuthTokenStore};
-use crate::wami::oauth::{AccessToken, OAuthClient};
+use crate::store::traits::oauth::{
+    OAuthAuthorizationStore, OAuthClientStore, OAuthConsentStore, OAuthRefreshStore,
+    OAuthTokenStore,
+};
+use crate::wami::oauth::{AccessToken, AuthorizationCode, OAuthClient, RefreshToken, UserConsent};
 
 /// Clients and issued tokens, held in maps.
 #[derive(Debug, Clone, Default)]
 pub struct InMemoryOAuthStore {
     clients: HashMap<String, OAuthClient>,
     tokens: HashMap<String, AccessToken>,
+    codes: HashMap<String, AuthorizationCode>,
+    refresh: HashMap<String, RefreshToken>,
+    /// Keyed by `(client_id, user_name)`.
+    consents: HashMap<(String, String), UserConsent>,
 }
 
 impl InMemoryOAuthStore {
@@ -112,6 +119,96 @@ impl OAuthTokenStore for InMemoryOAuthStore {
     }
 }
 
+#[async_trait]
+impl OAuthAuthorizationStore for InMemoryOAuthStore {
+    async fn store_authorization_code(&mut self, code: AuthorizationCode) -> Result<()> {
+        self.codes.insert(code.code.clone(), code);
+        Ok(())
+    }
+
+    async fn consume_authorization_code(
+        &mut self,
+        code: &str,
+    ) -> Result<Option<AuthorizationCode>> {
+        // `remove` returns the value it took out, so this really is one
+        // operation — the trait's contract, not merely its spirit. `&mut self`
+        // means the caller holds the write lock for its whole duration.
+        Ok(self.codes.remove(code))
+    }
+}
+
+#[async_trait]
+impl OAuthRefreshStore for InMemoryOAuthStore {
+    async fn store_refresh_token(&mut self, token: RefreshToken) -> Result<()> {
+        self.refresh.insert(token.token.clone(), token);
+        Ok(())
+    }
+
+    async fn get_refresh_token(&self, token: &str) -> Result<Option<RefreshToken>> {
+        Ok(self.refresh.get(token).cloned())
+    }
+
+    async fn rotate_refresh_token(
+        &mut self,
+        token: &str,
+        replacement: RefreshToken,
+    ) -> Result<Option<RefreshToken>> {
+        let now = Utc::now();
+        let Some(existing) = self.refresh.get_mut(token) else {
+            return Ok(None);
+        };
+        if !existing.is_usable_at(now) {
+            // Returning the spent token rather than `None` is what lets the
+            // service tell "never existed" from "used twice" — the second is a
+            // leak, and it reacts differently.
+            return Ok(Some(existing.clone()));
+        }
+        existing.used_at = Some(now);
+        existing.replaced_by = Some(replacement.token.clone());
+        let spent = existing.clone();
+        self.refresh.insert(replacement.token.clone(), replacement);
+        Ok(Some(spent))
+    }
+
+    async fn revoke_refresh_chain(&mut self, client_id: &str, user_name: &str) -> Result<u64> {
+        let now = Utc::now();
+        let mut revoked = 0;
+        for token in self.refresh.values_mut() {
+            if token.client_id == client_id
+                && token.user_name == user_name
+                && token.used_at.is_none()
+            {
+                token.used_at = Some(now);
+                revoked += 1;
+            }
+        }
+        Ok(revoked)
+    }
+}
+
+#[async_trait]
+impl OAuthConsentStore for InMemoryOAuthStore {
+    async fn record_consent(&mut self, consent: UserConsent) -> Result<UserConsent> {
+        let key = (consent.client_id.clone(), consent.user_name.clone());
+        self.consents.insert(key, consent.clone());
+        Ok(consent)
+    }
+
+    async fn get_consent(&self, client_id: &str, user_name: &str) -> Result<Option<UserConsent>> {
+        Ok(self
+            .consents
+            .get(&(client_id.to_string(), user_name.to_string()))
+            .cloned())
+    }
+
+    async fn revoke_consent(&mut self, client_id: &str, user_name: &str) -> Result<bool> {
+        Ok(self
+            .consents
+            .remove(&(client_id.to_string(), user_name.to_string()))
+            .is_some())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,6 +222,7 @@ mod tests {
             vec![GrantType::ClientCredentials],
             vec!["read".to_string()],
             "wami".to_string(),
+            vec![],
         )
         .unwrap()
     }
@@ -204,6 +302,160 @@ mod tests {
 
         let untouched = store.get_oauth_token("j3").await.unwrap().unwrap();
         assert!(untouched.revoked_at.is_none());
+    }
+
+    fn a_code(code: &str) -> AuthorizationCode {
+        AuthorizationCode {
+            code: code.to_string(),
+            client_id: "svc".to_string(),
+            user_name: "alice".to_string(),
+            scopes: vec!["openid".to_string()],
+            redirect_uri: "https://app.test/cb".to_string(),
+            challenge: None,
+            nonce: None,
+            expires_at: Utc::now() + chrono::Duration::seconds(60),
+        }
+    }
+
+    fn a_refresh(token: &str, user: &str) -> RefreshToken {
+        RefreshToken {
+            token: token.to_string(),
+            client_id: "svc".to_string(),
+            user_name: user.to_string(),
+            scopes: vec!["openid".to_string()],
+            expires_at: Utc::now() + chrono::Duration::days(30),
+            used_at: None,
+            replaced_by: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn a_code_can_only_be_consumed_once() {
+        let mut store = InMemoryOAuthStore::new();
+        store.store_authorization_code(a_code("abc")).await.unwrap();
+
+        let first = store.consume_authorization_code("abc").await.unwrap();
+        assert_eq!(first.unwrap().user_name, "alice");
+
+        let second = store.consume_authorization_code("abc").await.unwrap();
+        assert!(second.is_none(), "a replayed code must find nothing");
+    }
+
+    #[tokio::test]
+    async fn rotating_marks_the_old_token_spent_and_points_at_its_replacement() {
+        let mut store = InMemoryOAuthStore::new();
+        store
+            .store_refresh_token(a_refresh("r1", "alice"))
+            .await
+            .unwrap();
+
+        let spent = store
+            .rotate_refresh_token("r1", a_refresh("r2", "alice"))
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(spent.used_at.is_some());
+        assert_eq!(spent.replaced_by.as_deref(), Some("r2"));
+
+        // The replacement is usable; the original is not.
+        assert!(store
+            .get_refresh_token("r2")
+            .await
+            .unwrap()
+            .unwrap()
+            .is_usable_at(Utc::now()));
+        assert!(!store
+            .get_refresh_token("r1")
+            .await
+            .unwrap()
+            .unwrap()
+            .is_usable_at(Utc::now()));
+    }
+
+    #[tokio::test]
+    async fn a_second_rotation_returns_the_spent_token_not_none() {
+        // The distinction matters: `None` is an unknown token, a spent one is a
+        // leak, and the service revokes the chain only for the second.
+        let mut store = InMemoryOAuthStore::new();
+        store
+            .store_refresh_token(a_refresh("r1", "alice"))
+            .await
+            .unwrap();
+        store
+            .rotate_refresh_token("r1", a_refresh("r2", "alice"))
+            .await
+            .unwrap();
+
+        let replayed = store
+            .rotate_refresh_token("r1", a_refresh("r3", "alice"))
+            .await
+            .unwrap();
+        assert!(replayed.is_some_and(|t| t.used_at.is_some()));
+        assert!(
+            store.get_refresh_token("r3").await.unwrap().is_none(),
+            "a refused rotation must not have minted anything"
+        );
+
+        assert!(store
+            .rotate_refresh_token("never-existed", a_refresh("r4", "alice"))
+            .await
+            .unwrap()
+            .is_none());
+    }
+
+    #[tokio::test]
+    async fn revoking_a_chain_spares_other_users_and_other_clients() {
+        let mut store = InMemoryOAuthStore::new();
+        store
+            .store_refresh_token(a_refresh("r1", "alice"))
+            .await
+            .unwrap();
+        store
+            .store_refresh_token(a_refresh("r2", "alice"))
+            .await
+            .unwrap();
+        store
+            .store_refresh_token(a_refresh("r3", "bob"))
+            .await
+            .unwrap();
+        let mut other = a_refresh("r4", "alice");
+        other.client_id = "other".to_string();
+        store.store_refresh_token(other).await.unwrap();
+
+        assert_eq!(store.revoke_refresh_chain("svc", "alice").await.unwrap(), 2);
+        assert_eq!(
+            store.revoke_refresh_chain("svc", "alice").await.unwrap(),
+            0,
+            "already-revoked tokens are not counted again"
+        );
+
+        for spared in ["r3", "r4"] {
+            assert!(store
+                .get_refresh_token(spared)
+                .await
+                .unwrap()
+                .unwrap()
+                .is_usable_at(Utc::now()));
+        }
+    }
+
+    #[tokio::test]
+    async fn consent_is_per_client_and_per_user() {
+        let mut store = InMemoryOAuthStore::new();
+        let consent = UserConsent {
+            user_name: "alice".to_string(),
+            client_id: "svc".to_string(),
+            scopes: vec!["openid".to_string()],
+            granted_at: Utc::now(),
+        };
+        store.record_consent(consent).await.unwrap();
+
+        assert!(store.get_consent("svc", "alice").await.unwrap().is_some());
+        assert!(store.get_consent("svc", "bob").await.unwrap().is_none());
+        assert!(store.get_consent("other", "alice").await.unwrap().is_none());
+
+        assert!(store.revoke_consent("svc", "alice").await.unwrap());
+        assert!(!store.revoke_consent("svc", "alice").await.unwrap());
     }
 
     #[tokio::test]

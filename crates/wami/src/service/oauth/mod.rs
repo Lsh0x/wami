@@ -1,7 +1,13 @@
-//! OAuth 2.0 authorization server — machine-to-machine grants.
+//! OAuth 2.0 authorization server.
 //!
 //! Issues short-lived signed JWTs to services that authenticate as themselves,
 //! and answers introspection and revocation for them.
+//!
+//! The user-facing half — authorization code with PKCE, consent, ID tokens,
+//! refresh rotation, discovery — is in [`oidc`], on the same service and the
+//! same keyset. Nothing there is a separate server; a host that already issues
+//! `client_credentials` tokens becomes an OpenID Provider by calling different
+//! methods on the [`OAuthService`] it already has.
 //!
 //! # Why a store is involved at all
 //!
@@ -33,6 +39,7 @@
 //!     vec![GrantType::ClientCredentials],
 //!     vec!["reports:read".into()],
 //!     "wami".into(),
+//!     vec![],
 //! )?;
 //! service.register_client(client).await?;
 //!
@@ -47,6 +54,8 @@
 //! # Ok(())
 //! # }
 //! ```
+
+pub mod oidc;
 
 use chrono::{Duration, Utc};
 use std::sync::Arc;
@@ -71,6 +80,8 @@ pub struct OAuthService<S> {
     keys: Arc<KeyManager>,
     issuer: String,
     lifetime: Duration,
+    /// Where ID token profile claims come from. `None` releases only `sub`.
+    user_claims: Option<Arc<dyn oidc::UserClaimsSource>>,
 }
 
 impl<S: OAuthStore> OAuthService<S> {
@@ -81,6 +92,7 @@ impl<S: OAuthStore> OAuthService<S> {
             keys,
             issuer,
             lifetime: DEFAULT_TOKEN_LIFETIME,
+            user_claims: None,
         }
     }
 
@@ -285,6 +297,7 @@ mod tests {
             vec![GrantType::ClientCredentials],
             scopes.iter().map(|s| s.to_string()).collect(),
             AUD.to_string(),
+            vec![],
         )
         .unwrap();
         service.register_client(client).await.unwrap();
@@ -412,6 +425,7 @@ mod tests {
             vec![GrantType::ClientCredentials],
             vec!["read".into()],
             AUD.to_string(),
+            vec![],
         )
         .unwrap();
         stranger.register_client(other_client).await.unwrap();
@@ -487,6 +501,7 @@ mod tests {
             vec![GrantType::ClientCredentials],
             vec!["read".into()],
             AUD.to_string(),
+            vec![],
         )
         .unwrap();
         // Registered for no grant at all — as a store row written elsewhere
