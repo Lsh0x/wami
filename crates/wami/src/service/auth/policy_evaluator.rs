@@ -17,7 +17,10 @@ use wami_condition::{
 use wami_core::arn::matching::{glob_match, matches_arn_pattern, MatchContext};
 use wami_core::arn::WamiArn;
 use wami_core::context::WamiContext;
+use wami_core::error::{AmiError, Result};
 use wami_core::types::{PolicyDocument, PolicyStatement};
+
+use super::decision::PolicySource;
 
 /// Policy evaluation result for a single policy document.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -30,18 +33,32 @@ pub enum PolicyEffect {
     NoMatch,
 }
 
+/// The statement that decided a document, and what it decided.
+///
+/// One per document, not one per matching statement: evaluation stops at the
+/// first match, denies before allows, so a document has exactly one decisive
+/// statement or none at all.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StatementHit {
+    /// What the statement decided — never `NoMatch`.
+    pub effect: PolicyEffect,
+    /// The statement's `Sid`, if it has one.
+    pub sid: Option<String>,
+    /// Its position in the document.
+    pub index: usize,
+}
+
 /// Evaluate a single policy document against an action and resource.
 ///
-/// Returns:
-/// - `Allow` if the policy explicitly allows the action
-/// - `Deny` if the policy explicitly denies the action
-/// - `NoMatch` if the policy doesn't apply
+/// Returns the statement that decided, or `None` when the document does not
+/// apply. Which statement decided is what lets a caller write an audit line
+/// naming it — the effect alone cannot be traced back to anything.
 pub fn evaluate_policy_document(
     policy: &PolicyDocument,
     action: &str,
     resource_arn: &WamiArn,
     context: &WamiContext,
-) -> PolicyEffect {
+) -> Option<StatementHit> {
     let resource_str = resource_arn.to_string();
     let match_ctx = MatchContext {
         tenant: Some(context.tenant_path().as_string()),
@@ -50,29 +67,33 @@ pub fn evaluate_policy_document(
     };
     let cond_ctx = build_condition_context(context, resource_arn);
 
-    // First check for explicit denies (deny overrides allow)
-    for statement in &policy.statement {
-        if statement.effect.to_lowercase() == "deny"
-            && matches_action(&statement.action, action)
+    let hit = |effect: PolicyEffect, index: usize, statement: &PolicyStatement| StatementHit {
+        effect,
+        sid: statement.sid.clone(),
+        index,
+    };
+
+    let applies = |statement: &PolicyStatement| {
+        matches_action(&statement.action, action)
             && matches_resource(&statement.resource, &resource_str, &match_ctx)
             && matches_condition(statement, &cond_ctx)
-        {
-            return PolicyEffect::Deny;
+    };
+
+    // Explicit denies first — a deny anywhere in the document wins over an
+    // allow later in it.
+    for (index, statement) in policy.statement.iter().enumerate() {
+        if statement.effect.to_lowercase() == "deny" && applies(statement) {
+            return Some(hit(PolicyEffect::Deny, index, statement));
         }
     }
 
-    // Then check for allows
-    for statement in &policy.statement {
-        if statement.effect.to_lowercase() == "allow"
-            && matches_action(&statement.action, action)
-            && matches_resource(&statement.resource, &resource_str, &match_ctx)
-            && matches_condition(statement, &cond_ctx)
-        {
-            return PolicyEffect::Allow;
+    for (index, statement) in policy.statement.iter().enumerate() {
+        if statement.effect.to_lowercase() == "allow" && applies(statement) {
+            return Some(hit(PolicyEffect::Allow, index, statement));
         }
     }
 
-    PolicyEffect::NoMatch
+    None
 }
 
 /// Check if an action matches any of the policy action patterns.
@@ -158,11 +179,24 @@ pub fn matches_condition(statement: &PolicyStatement, cond_ctx: &ConditionContex
     evaluate_condition_block(&block, cond_ctx).unwrap_or_default()
 }
 
-/// Parse a policy document JSON string, returning an empty doc on error.
-pub fn parse_policy_doc(json: &str) -> PolicyDocument {
-    serde_json::from_str(json).unwrap_or_else(|_| PolicyDocument {
-        version: "2012-10-17".to_string(),
-        statement: vec![],
+/// Parse a policy document, refusing to guess when it cannot be read.
+///
+/// This used to swallow the error and hand back an empty document. For an
+/// `Allow` that was merely useless; for a `Deny` it was a fail-open — the
+/// statement meant to block the action stopped existing, and any `Allow` from
+/// another source won. One typo was enough:
+///
+/// ```text
+/// {"Effect":"Deny","Actions":["iam:*"],"Resource":["*"]}
+///                   ^ plural — valid JSON, not a PolicyStatement
+/// ```
+///
+/// Refusing to decide is the only safe answer: a document that cannot be read
+/// might have contained a deny, and there is no way to know.
+pub fn parse_policy_doc(json: &str, policy: &PolicySource) -> Result<PolicyDocument> {
+    serde_json::from_str(json).map_err(|e| AmiError::UnreadablePolicy {
+        policy: policy.to_string(),
+        message: e.to_string(),
     })
 }
 
@@ -186,6 +220,7 @@ mod tests {
         PolicyDocument {
             version: "2012-10-17".to_string(),
             statement: vec![PolicyStatement {
+                sid: None,
                 effect: effect.to_string(),
                 action: actions.iter().map(|a| a.to_string()).collect(),
                 resource: resources.iter().map(|r| r.to_string()).collect(),
@@ -201,6 +236,7 @@ mod tests {
         condition: Option<serde_json::Value>,
     ) -> PolicyStatement {
         PolicyStatement {
+            sid: None,
             effect: effect.to_string(),
             action: actions.iter().map(|a| a.to_string()).collect(),
             resource: resources.iter().map(|r| r.to_string()).collect(),
@@ -354,25 +390,59 @@ mod tests {
 
     // ─── parse_policy_doc ─────────────────────────────────────
 
+    fn a_policy() -> PolicySource {
+        PolicySource::UserInline {
+            name: "p".to_string(),
+        }
+    }
+
     #[test]
     fn parse_policy_doc_valid() {
         let json = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["iam:GetUser"],"Resource":["*"]}]}"#;
-        let doc = parse_policy_doc(json);
+        let doc = parse_policy_doc(json, &a_policy()).unwrap();
         assert_eq!(doc.statement.len(), 1);
         assert_eq!(doc.statement[0].effect, "Allow");
     }
 
     #[test]
-    fn parse_policy_doc_invalid_returns_empty() {
-        let doc = parse_policy_doc("not json at all");
-        assert_eq!(doc.version, "2012-10-17");
-        assert!(doc.statement.is_empty());
+    fn a_sid_survives_a_round_trip() {
+        let json = r#"{"Version":"2012-10-17","Statement":[{"Sid":"AllowReads","Effect":"Allow","Action":["iam:GetUser"],"Resource":["*"]}]}"#;
+        let doc = parse_policy_doc(json, &a_policy()).unwrap();
+        assert_eq!(doc.statement[0].sid.as_deref(), Some("AllowReads"));
+        // Documents without a Sid must not gain an empty one when written back.
+        let plain = parse_policy_doc(
+            r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["a"],"Resource":["*"]}]}"#,
+            &a_policy(),
+        )
+        .unwrap();
+        assert!(!serde_json::to_string(&plain).unwrap().contains("Sid"));
     }
 
     #[test]
-    fn parse_policy_doc_empty_string() {
-        let doc = parse_policy_doc("");
-        assert!(doc.statement.is_empty());
+    fn an_unreadable_policy_refuses_to_parse_instead_of_returning_nothing() {
+        // The whole of #120: this used to yield an empty document, so a Deny
+        // written with a typo simply stopped existing and any Allow elsewhere
+        // won. Now it cannot be mistaken for a policy that permits nothing.
+        for bad in ["not json at all", "", r#"{"Version":"2012-10-17"}"#] {
+            let err = parse_policy_doc(bad, &a_policy()).unwrap_err();
+            assert!(
+                matches!(err, AmiError::UnreadablePolicy { .. }),
+                "{bad:?} gave {err:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_deny_with_a_typo_no_longer_vanishes() {
+        // Valid JSON, so it passes a `serde_json::Value` check, but not a
+        // PolicyStatement: "Actions" instead of "Action". One character.
+        let typo = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Deny","Actions":["iam:*"],"Resource":["*"]}]}"#;
+        assert!(serde_json::from_str::<serde_json::Value>(typo).is_ok());
+
+        let err = parse_policy_doc(typo, &a_policy()).unwrap_err();
+        assert!(matches!(err, AmiError::UnreadablePolicy { .. }));
+        // And the operator is told which policy to go fix.
+        assert!(err.to_string().contains("user inline policy p"));
     }
 
     // ─── evaluate_policy_document ─────────────────────────────
@@ -383,8 +453,8 @@ mod tests {
         let policy = make_policy("Allow", &["iam:GetUser"], &["*"]);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
         assert_eq!(
-            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx),
-            PolicyEffect::Allow
+            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx).map(|hit| hit.effect),
+            Some(PolicyEffect::Allow)
         );
     }
 
@@ -400,8 +470,9 @@ mod tests {
         };
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
         assert_eq!(
-            evaluate_policy_document(&policy, "iam:DeleteUser", &resource, &ctx),
-            PolicyEffect::Deny
+            evaluate_policy_document(&policy, "iam:DeleteUser", &resource, &ctx)
+                .map(|hit| hit.effect),
+            Some(PolicyEffect::Deny)
         );
     }
 
@@ -410,10 +481,7 @@ mod tests {
         let ctx = make_context();
         let policy = make_policy("Allow", &["sts:AssumeRole"], &["*"]);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
-        assert_eq!(
-            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx),
-            PolicyEffect::NoMatch
-        );
+        assert!(evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx).is_none());
     }
 
     #[test]
@@ -422,8 +490,8 @@ mod tests {
         let policy = make_policy("Deny", &["iam:*"], &["*"]);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
         assert_eq!(
-            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx),
-            PolicyEffect::Deny
+            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx).map(|hit| hit.effect),
+            Some(PolicyEffect::Deny)
         );
     }
 
@@ -435,10 +503,7 @@ mod tests {
             statement: vec![],
         };
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
-        assert_eq!(
-            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx),
-            PolicyEffect::NoMatch
-        );
+        assert!(evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx).is_none());
     }
 
     #[test]
@@ -447,8 +512,9 @@ mod tests {
         let policy = make_policy("Allow", &["*"], &["*"]);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
         assert_eq!(
-            evaluate_policy_document(&policy, "anything:Here", &resource, &ctx),
-            PolicyEffect::Allow
+            evaluate_policy_document(&policy, "anything:Here", &resource, &ctx)
+                .map(|hit| hit.effect),
+            Some(PolicyEffect::Allow)
         );
     }
 

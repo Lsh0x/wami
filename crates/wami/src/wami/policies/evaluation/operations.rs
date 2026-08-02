@@ -85,6 +85,7 @@ mod tests {
         PolicyDocument {
             version: "2012-10-17".to_string(),
             statement: vec![PolicyStatement {
+                sid: None,
                 effect: effect.to_string(),
                 action: actions.iter().map(|a| a.to_string()).collect(),
                 resource: vec!["*".to_string()],

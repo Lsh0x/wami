@@ -10,6 +10,7 @@ use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
+use wami_core::types::PolicyDocument;
 
 pub trait InlinePolicyServiceStore: UserStore + GroupStore + RoleStore {}
 impl<T> InlinePolicyServiceStore for T where T: UserStore + GroupStore + RoleStore {}
@@ -84,10 +85,15 @@ where
                 resource: format!("User: {}", request.user_name),
             })?;
 
-        // Validate policy document is valid JSON
-        serde_json::from_str::<serde_json::Value>(&request.policy_document).map_err(|e| {
+        // Validate against PolicyDocument, not merely `Value`: a document that
+        // is valid JSON but not a valid policy — `"Actions"` for `"Action"`,
+        // say — used to be accepted here and then evaluate to nothing, so a
+        // Deny written with a typo silently stopped applying. Refusing it at
+        // the point where someone can still fix it is the other half of the
+        // fix; `parse_policy_doc` covers documents already in the store.
+        serde_json::from_str::<PolicyDocument>(&request.policy_document).map_err(|e| {
             AmiError::InvalidParameter {
-                message: format!("Invalid policy document JSON: {}", e),
+                message: format!("Invalid policy document: {}", e),
             }
         })?;
 
@@ -243,10 +249,15 @@ where
                 resource: format!("Group: {}", request.group_name),
             })?;
 
-        // Validate policy document is valid JSON
-        serde_json::from_str::<serde_json::Value>(&request.policy_document).map_err(|e| {
+        // Validate against PolicyDocument, not merely `Value`: a document that
+        // is valid JSON but not a valid policy — `"Actions"` for `"Action"`,
+        // say — used to be accepted here and then evaluate to nothing, so a
+        // Deny written with a typo silently stopped applying. Refusing it at
+        // the point where someone can still fix it is the other half of the
+        // fix; `parse_policy_doc` covers documents already in the store.
+        serde_json::from_str::<PolicyDocument>(&request.policy_document).map_err(|e| {
             AmiError::InvalidParameter {
-                message: format!("Invalid policy document JSON: {}", e),
+                message: format!("Invalid policy document: {}", e),
             }
         })?;
 
@@ -402,10 +413,15 @@ where
                 resource: format!("Role: {}", request.role_name),
             })?;
 
-        // Validate policy document is valid JSON
-        serde_json::from_str::<serde_json::Value>(&request.policy_document).map_err(|e| {
+        // Validate against PolicyDocument, not merely `Value`: a document that
+        // is valid JSON but not a valid policy — `"Actions"` for `"Action"`,
+        // say — used to be accepted here and then evaluate to nothing, so a
+        // Deny written with a typo silently stopped applying. Refusing it at
+        // the point where someone can still fix it is the other half of the
+        // fix; `parse_policy_doc` covers documents already in the store.
+        serde_json::from_str::<PolicyDocument>(&request.policy_document).map_err(|e| {
             AmiError::InvalidParameter {
-                message: format!("Invalid policy document JSON: {}", e),
+                message: format!("Invalid policy document: {}", e),
             }
         })?;
 
@@ -539,6 +555,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::service::auth::decision::{AllowReason, Decision, DenyReason};
     use crate::store::memory::InMemoryWamiStore;
     use crate::wami::identity::group::builder::build_group;
     use crate::wami::identity::role::builder::build_role;
@@ -1020,8 +1037,8 @@ mod tests {
             _context: &WamiContext,
             _action: &str,
             _resource_arn: &WamiArn,
-        ) -> wami_core::error::Result<bool> {
-            Ok(true)
+        ) -> wami_core::error::Result<Decision> {
+            Ok(Decision::Allow(AllowReason::RootBypass))
         }
         async fn check_or_deny(
             &self,
@@ -1043,8 +1060,8 @@ mod tests {
             _context: &WamiContext,
             _action: &str,
             _resource_arn: &WamiArn,
-        ) -> wami_core::error::Result<bool> {
-            Ok(false)
+        ) -> wami_core::error::Result<Decision> {
+            Ok(Decision::Deny(DenyReason::NoMatch))
         }
         async fn check_or_deny(
             &self,

@@ -41,11 +41,10 @@
 //!     let authz_service = AuthorizationService::new(store.clone());
 //!     let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse()?;
 //!     
-//!     if authz_service.authorize(&context, "iam:GetUser", &resource).await? {
-//!         println!("Access granted");
-//!     } else {
-//!         println!("Access denied");
-//!     }
+//!     let decision = authz_service
+//!         .authorize(&context, "iam:GetUser", &resource)
+//!         .await?;
+//!     println!("{decision}");
 //!
 //!     Ok(())
 //! }
@@ -54,11 +53,13 @@
 pub mod authentication;
 pub mod authorization;
 pub mod authorizer;
+pub mod decision;
 pub mod policy_evaluator;
 
 pub use authentication::{hash_secret, verify_secret, AuthenticationService};
 pub use authorization::AuthorizationService;
 pub use authorizer::{iam_resource_arn, into_authorizer, Authorizer};
+pub use decision::{AllowReason, Decision, DenyReason, NonEmpty, PolicySource, StatementRef};
 pub use policy_evaluator::{
     build_condition_context, evaluate_policy_document, matches_action, matches_condition,
     matches_resource, parse_policy_doc, PolicyEffect,

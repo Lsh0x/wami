@@ -136,6 +136,7 @@ impl<S: MfaDeviceStore> MfaDeviceService<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::service::auth::decision::{Decision, DenyReason};
     use crate::store::memory::InMemoryWamiStore;
     use wami_core::arn::{TenantPath, WamiArn};
 
@@ -245,8 +246,8 @@ mod tests {
             _context: &WamiContext,
             _action: &str,
             _resource_arn: &WamiArn,
-        ) -> wami_core::error::Result<bool> {
-            Ok(false)
+        ) -> wami_core::error::Result<Decision> {
+            Ok(Decision::Deny(DenyReason::NoMatch))
         }
         async fn check_or_deny(
             &self,
