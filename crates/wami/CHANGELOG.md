@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.15.0](https://github.com/Lsh0x/wami/compare/v0.14.0...v0.15.0) (2026-08-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **auth:** `Authorizer::authorize` and `AuthorizationService::authorize` return `Result<Decision>` instead of `Result<bool>`; call `.is_allowed()` for the old boolean. `evaluate_policy_document` returns `Option<StatementHit>` instead of `PolicyEffect`. `parse_policy_doc` returns `Result` and takes the `PolicySource` it is parsing. `PolicyStatement` has a new `sid` field. Policy documents that are valid JSON but not valid policies are now rejected on write.
+* every service constructor takes `Arc<tokio::sync::RwLock<S>>` instead of `Arc<std::sync::RwLock<S>>`, and `store()` returns the same. Callers swap `use std::sync::RwLock` for `use tokio::sync::RwLock`.
+* **sts:** `KeyManager::verify_token` takes the expected audience as a second argument. Callers relying on the previous behaviour pass `"wami"`.
+
+### Features
+
+* **auth:** authorize returns a motivated Decision, and an unreadable policy is an error ([#121](https://github.com/Lsh0x/wami/issues/121)) ([9b1d44c](https://github.com/Lsh0x/wami/commit/9b1d44c675d8766fc849cf51f79371183f340202))
+* **oauth:** issue, introspect and revoke machine-to-machine tokens ([#122](https://github.com/Lsh0x/wami/issues/122)) ([a4a3744](https://github.com/Lsh0x/wami/commit/a4a3744e83cd41a85d1cf572a49b469f8c6848e6))
+
+
+### Bug Fixes
+
+* **sts:** verify_token takes the expected audience ([#116](https://github.com/Lsh0x/wami/issues/116)) ([99041e9](https://github.com/Lsh0x/wami/commit/99041e948236657f4cff993dea2c177d7c98f89a)), closes [#114](https://github.com/Lsh0x/wami/issues/114)
+
+
+### Refactoring
+
+* settle every store lock on tokio::sync::RwLock ([#117](https://github.com/Lsh0x/wami/issues/117)) ([0adf805](https://github.com/Lsh0x/wami/commit/0adf805a4db8979680551375679502e264591d82))
+
 ## [0.14.0](https://github.com/Lsh0x/wami/compare/v0.13.0...v0.14.0) (2026-08-01)
 
 
