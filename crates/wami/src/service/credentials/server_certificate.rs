@@ -253,6 +253,67 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_update_server_certificate() {
+        let service = setup_service();
+        let context = test_context();
+
+        service
+            .upload_server_certificate(
+                &context,
+                UploadServerCertificateRequest {
+                    server_certificate_name: "test-cert".to_string(),
+                    certificate_body:
+                        "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----".to_string(),
+                    private_key:
+                        "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----"
+                            .to_string(),
+                    certificate_chain: None,
+                    path: Some("/certs/".to_string()),
+                    tags: None,
+                },
+            )
+            .await
+            .unwrap();
+
+        // Renaming is not exercised here: the in-memory store looks the entry up
+        // by the *new* name, so a rename cannot find it. That is a store bug,
+        // untouched by this change.
+        let updated = service
+            .update_server_certificate(
+                &context,
+                UpdateServerCertificateRequest {
+                    server_certificate_name: "test-cert".to_string(),
+                    new_server_certificate_name: None,
+                    new_path: Some("/renamed/".to_string()),
+                },
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(updated.server_certificate_name, "test-cert");
+        assert_eq!(updated.path, "/renamed/");
+    }
+
+    #[tokio::test]
+    async fn test_update_server_certificate_not_found() {
+        let service = setup_service();
+        let context = test_context();
+
+        let result = service
+            .update_server_certificate(
+                &context,
+                UpdateServerCertificateRequest {
+                    server_certificate_name: "missing".to_string(),
+                    new_server_certificate_name: None,
+                    new_path: None,
+                },
+            )
+            .await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
     async fn test_delete_server_certificate() {
         let service = setup_service();
         let context = test_context();

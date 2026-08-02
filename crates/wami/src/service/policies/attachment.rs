@@ -696,6 +696,146 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_list_and_detach_group_policy() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = AttachmentService::new(store.clone());
+        let context = create_test_context().await;
+
+        let group = build_group("developers".to_string(), Some("/".to_string()), &context).unwrap();
+        store.write().await.create_group(group).await.unwrap();
+
+        let policy = build_policy(
+            "TestPolicy".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+            None,
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        let created_policy = store.write().await.create_policy(policy).await.unwrap();
+
+        service
+            .attach_group_policy(
+                &context,
+                AttachGroupPolicyRequest {
+                    group_name: "developers".to_string(),
+                    policy_arn: created_policy.arn.clone(),
+                },
+            )
+            .await
+            .unwrap();
+
+        let listed = service
+            .list_attached_group_policies(
+                &context,
+                ListAttachedGroupPoliciesRequest {
+                    group_name: "developers".to_string(),
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(listed.attached_policies.len(), 1);
+        assert_eq!(listed.attached_policies[0].policy_arn, created_policy.arn);
+
+        service
+            .detach_group_policy(
+                &context,
+                DetachGroupPolicyRequest {
+                    group_name: "developers".to_string(),
+                    policy_arn: created_policy.arn.clone(),
+                },
+            )
+            .await
+            .unwrap();
+
+        let after = service
+            .list_attached_group_policies(
+                &context,
+                ListAttachedGroupPoliciesRequest {
+                    group_name: "developers".to_string(),
+                },
+            )
+            .await
+            .unwrap();
+        assert!(after.attached_policies.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_list_and_detach_role_policy() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = AttachmentService::new(store.clone());
+        let context = create_test_context().await;
+
+        let role = build_role(
+            "AdminRole".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+            Some("/".to_string()),
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        store.write().await.create_role(role).await.unwrap();
+
+        let policy = build_policy(
+            "TestPolicy".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+            None,
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        let created_policy = store.write().await.create_policy(policy).await.unwrap();
+
+        service
+            .attach_role_policy(
+                &context,
+                AttachRolePolicyRequest {
+                    role_name: "AdminRole".to_string(),
+                    policy_arn: created_policy.arn.clone(),
+                },
+            )
+            .await
+            .unwrap();
+
+        let listed = service
+            .list_attached_role_policies(
+                &context,
+                ListAttachedRolePoliciesRequest {
+                    role_name: "AdminRole".to_string(),
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(listed.attached_policies.len(), 1);
+        assert_eq!(listed.attached_policies[0].policy_arn, created_policy.arn);
+
+        service
+            .detach_role_policy(
+                &context,
+                DetachRolePolicyRequest {
+                    role_name: "AdminRole".to_string(),
+                    policy_arn: created_policy.arn.clone(),
+                },
+            )
+            .await
+            .unwrap();
+
+        let after = service
+            .list_attached_role_policies(
+                &context,
+                ListAttachedRolePoliciesRequest {
+                    role_name: "AdminRole".to_string(),
+                },
+            )
+            .await
+            .unwrap();
+        assert!(after.attached_policies.is_empty());
+    }
+
+    #[tokio::test]
     async fn test_attach_policy_user_not_found() {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
         let service = AttachmentService::new(store.clone());

@@ -728,6 +728,150 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_group_policy_get_list_delete() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = InlinePolicyService::new(store.clone());
+        let context = create_test_context().await;
+
+        let group = build_group("developers".to_string(), Some("/".to_string()), &context).unwrap();
+        store.write().await.create_group(group).await.unwrap();
+
+        let document = r#"{"Version":"2012-10-17","Statement":[]}"#;
+        service
+            .put_group_policy(
+                &context,
+                PutGroupPolicyRequest {
+                    group_name: "developers".to_string(),
+                    policy_name: "MyInlinePolicy".to_string(),
+                    policy_document: document.to_string(),
+                },
+            )
+            .await
+            .unwrap();
+
+        let got = service
+            .get_group_policy(
+                &context,
+                GetGroupPolicyRequest {
+                    group_name: "developers".to_string(),
+                    policy_name: "MyInlinePolicy".to_string(),
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(got.policy_document, document);
+
+        let listed = service
+            .list_group_policies(
+                &context,
+                ListGroupPoliciesRequest {
+                    group_name: "developers".to_string(),
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(listed.policy_names, vec!["MyInlinePolicy".to_string()]);
+
+        service
+            .delete_group_policy(
+                &context,
+                DeleteGroupPolicyRequest {
+                    group_name: "developers".to_string(),
+                    policy_name: "MyInlinePolicy".to_string(),
+                },
+            )
+            .await
+            .unwrap();
+
+        let after = service
+            .list_group_policies(
+                &context,
+                ListGroupPoliciesRequest {
+                    group_name: "developers".to_string(),
+                },
+            )
+            .await
+            .unwrap();
+        assert!(after.policy_names.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_role_policy_get_list_delete() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = InlinePolicyService::new(store.clone());
+        let context = create_test_context().await;
+
+        let role = build_role(
+            "AdminRole".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+            Some("/".to_string()),
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        store.write().await.create_role(role).await.unwrap();
+
+        let document = r#"{"Version":"2012-10-17","Statement":[]}"#;
+        service
+            .put_role_policy(
+                &context,
+                PutRolePolicyRequest {
+                    role_name: "AdminRole".to_string(),
+                    policy_name: "MyInlinePolicy".to_string(),
+                    policy_document: document.to_string(),
+                },
+            )
+            .await
+            .unwrap();
+
+        let got = service
+            .get_role_policy(
+                &context,
+                GetRolePolicyRequest {
+                    role_name: "AdminRole".to_string(),
+                    policy_name: "MyInlinePolicy".to_string(),
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(got.policy_document, document);
+
+        let listed = service
+            .list_role_policies(
+                &context,
+                ListRolePoliciesRequest {
+                    role_name: "AdminRole".to_string(),
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(listed.policy_names, vec!["MyInlinePolicy".to_string()]);
+
+        service
+            .delete_role_policy(
+                &context,
+                DeleteRolePolicyRequest {
+                    role_name: "AdminRole".to_string(),
+                    policy_name: "MyInlinePolicy".to_string(),
+                },
+            )
+            .await
+            .unwrap();
+
+        let after = service
+            .list_role_policies(
+                &context,
+                ListRolePoliciesRequest {
+                    role_name: "AdminRole".to_string(),
+                },
+            )
+            .await
+            .unwrap();
+        assert!(after.policy_names.is_empty());
+    }
+
+    #[tokio::test]
     async fn test_invalid_json_policy() {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
         let service = InlinePolicyService::new(store.clone());

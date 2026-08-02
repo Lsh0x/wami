@@ -412,6 +412,55 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_delete_boundary_from_user() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let context = test_context();
+        let service = PermissionsBoundaryService::new(store.clone(), "123456789012".to_string());
+
+        let mut user =
+            build_user("test-user".to_string(), Some("/".to_string()), &context).unwrap();
+        user.permissions_boundary = Some("arn:aws:iam::123456789012:policy/boundary".to_string());
+        {
+            let mut s = store.write().await;
+            s.create_user(user).await.unwrap();
+        }
+
+        service
+            .delete_permissions_boundary(
+                &context,
+                DeletePermissionsBoundaryRequest {
+                    principal_type: PrincipalType::User,
+                    principal_name: "test-user".to_string(),
+                },
+            )
+            .await
+            .unwrap();
+
+        let s = store.read().await;
+        let updated_user = s.get_user("test-user").await.unwrap().unwrap();
+        assert_eq!(updated_user.permissions_boundary, None);
+    }
+
+    #[tokio::test]
+    async fn test_delete_boundary_from_unknown_user() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let context = test_context();
+        let service = PermissionsBoundaryService::new(store.clone(), "123456789012".to_string());
+
+        let result = service
+            .delete_permissions_boundary(
+                &context,
+                DeletePermissionsBoundaryRequest {
+                    principal_type: PrincipalType::User,
+                    principal_name: "missing".to_string(),
+                },
+            )
+            .await;
+
+        assert!(matches!(result, Err(AmiError::ResourceNotFound { .. })));
+    }
+
+    #[tokio::test]
     async fn test_put_boundary_invalid_arn() {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
         let context = test_context();

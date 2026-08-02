@@ -153,3 +153,66 @@ fn expand_inner(args: ServiceArgs, item_struct: ItemStruct) -> Result<proc_macro
 
     Ok(expanded)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn args() -> ServiceArgs {
+        ServiceArgs {
+            store_trait: parse_quote!(MyStore),
+            generate_new: true,
+        }
+    }
+
+    #[test]
+    fn a_store_field_that_is_not_a_path_type_is_refused() {
+        // A tuple, a reference, a pointer — anything the generated accessors
+        // cannot call `.read().await` on. Rejected with the shape it wanted,
+        // rather than by whatever the expansion would have failed on later.
+        let item: ItemStruct = parse_quote! {
+            struct Svc<S> { store: (S, S) }
+        };
+
+        let err = expand_inner(args(), item).unwrap_err();
+        assert!(
+            err.to_string().contains("Arc<tokio::sync::RwLock<S>>"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn a_struct_without_a_store_field_is_refused() {
+        let item: ItemStruct = parse_quote! {
+            struct Svc<S> { other: S }
+        };
+
+        let err = expand_inner(args(), item).unwrap_err();
+        assert!(err.to_string().contains("`store` field"), "{err}");
+    }
+
+    #[test]
+    fn a_non_generic_struct_is_refused() {
+        let item: ItemStruct = parse_quote! {
+            struct Svc { store: std::sync::Arc<tokio::sync::RwLock<Concrete>> }
+        };
+
+        let err = expand_inner(args(), item).unwrap_err();
+        assert!(err.to_string().contains("generic over `S`"), "{err}");
+    }
+
+    #[test]
+    fn the_generated_accessors_are_async_and_tokio() {
+        // The point of #115: were these to go back to `std::sync`, every
+        // service would hold a blocking guard across an await again.
+        let item: ItemStruct = parse_quote! {
+            struct Svc<S> { store: std::sync::Arc<tokio::sync::RwLock<S>> }
+        };
+
+        let expanded = expand_inner(args(), item).unwrap().to_string();
+        assert!(expanded.contains("async fn read_store"), "{expanded}");
+        assert!(expanded.contains("async fn write_store"), "{expanded}");
+        assert!(expanded.contains("tokio :: sync :: RwLock"), "{expanded}");
+        assert!(!expanded.contains("std :: sync :: RwLock"), "{expanded}");
+    }
+}

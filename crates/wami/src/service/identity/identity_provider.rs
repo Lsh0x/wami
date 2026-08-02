@@ -405,4 +405,68 @@ mod tests {
         let after_delete = service.get_oidc_provider(&created.arn).await.unwrap();
         assert!(after_delete.is_none());
     }
+
+    #[tokio::test]
+    async fn test_identity_provider_tagging() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = IdentityProviderService::new(store);
+        let context = test_context();
+
+        let created = service
+            .create_saml_provider(
+                &context,
+                CreateSAMLProviderRequest {
+                    name: "TaggedSAML".to_string(),
+                    saml_metadata_document: r#"<?xml version="1.0"?>
+                        <EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
+                            <IDPSSODescriptor />
+                        </EntityDescriptor>"#
+                        .to_string(),
+                    tags: None,
+                },
+            )
+            .await
+            .unwrap();
+
+        assert!(service
+            .list_identity_provider_tags(&created.arn)
+            .await
+            .unwrap()
+            .is_empty());
+
+        service
+            .tag_identity_provider(
+                &created.arn,
+                vec![
+                    Tag {
+                        key: "env".to_string(),
+                        value: "prod".to_string(),
+                    },
+                    Tag {
+                        key: "team".to_string(),
+                        value: "platform".to_string(),
+                    },
+                ],
+            )
+            .await
+            .unwrap();
+
+        let tags = service
+            .list_identity_provider_tags(&created.arn)
+            .await
+            .unwrap();
+        assert_eq!(tags.len(), 2);
+
+        service
+            .untag_identity_provider(&created.arn, vec!["env".to_string()])
+            .await
+            .unwrap();
+
+        let remaining = service
+            .list_identity_provider_tags(&created.arn)
+            .await
+            .unwrap();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].key, "team");
+    }
 }

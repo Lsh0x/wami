@@ -553,4 +553,32 @@ mod tests {
         // IDs should be different (even though both are root tenants)
         assert_ne!(tenant1.id, tenant2.id);
     }
+
+    #[tokio::test]
+    async fn test_effective_quotas_and_usage() {
+        let service = setup_service();
+        let context = test_context();
+        let tenant = service
+            .create_tenant(&context, "acme".to_string(), None, None)
+            .await
+            .unwrap();
+
+        // A fresh tenant carries the default quotas and no usage yet.
+        let quotas = service.get_effective_quotas(&tenant.id).await.unwrap();
+        assert_eq!(quotas.max_users, tenant.quotas.max_users);
+        assert_eq!(quotas.max_roles, tenant.quotas.max_roles);
+
+        let usage = service.get_tenant_usage(&tenant.id).await.unwrap();
+        assert_eq!(usage.tenant_id, tenant.id);
+        assert_eq!(usage.current_users, 0);
+    }
+
+    #[tokio::test]
+    async fn test_quotas_and_usage_reject_unknown_tenant() {
+        let service = setup_service();
+        let missing = TenantId::from_string("99999999").unwrap();
+
+        assert!(service.get_effective_quotas(&missing).await.is_err());
+        assert!(service.get_tenant_usage(&missing).await.is_err());
+    }
 }

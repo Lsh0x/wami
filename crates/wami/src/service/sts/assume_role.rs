@@ -324,6 +324,64 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_assume_role_with_aws_format_arn() {
+        // An ARN that does not parse as a WAMI ARN takes the AWS fallback path,
+        // which looks the role up by the name pulled out of the ARN.
+        let service = setup_service();
+        let context = test_context();
+
+        let role = build_role(
+            "LegacyRole".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+            Some("/".to_string()),
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        service.store.write().await.create_role(role).await.unwrap();
+
+        let response = service
+            .assume_role(
+                &context,
+                AssumeRoleRequest {
+                    role_arn: "arn:aws:iam::123456789012:role/LegacyRole".to_string(),
+                    role_session_name: "legacy-session".to_string(),
+                    duration_seconds: Some(3600),
+                    external_id: None,
+                    policy: None,
+                },
+                "arn:aws:iam::123456789012:user/alice",
+            )
+            .await
+            .unwrap();
+
+        assert!(response.assumed_role_user.arn.contains("LegacyRole"));
+    }
+
+    #[tokio::test]
+    async fn test_assume_role_with_aws_format_arn_unknown_role() {
+        let service = setup_service();
+        let context = test_context();
+
+        let result = service
+            .assume_role(
+                &context,
+                AssumeRoleRequest {
+                    role_arn: "arn:aws:iam::123456789012:role/Missing".to_string(),
+                    role_session_name: "legacy-session".to_string(),
+                    duration_seconds: Some(3600),
+                    external_id: None,
+                    policy: None,
+                },
+                "arn:aws:iam::123456789012:user/alice",
+            )
+            .await;
+
+        assert!(matches!(result, Err(AmiError::ResourceNotFound { .. })));
+    }
+
+    #[tokio::test]
     async fn test_assume_role_with_external_id() {
         let service = setup_service();
         let context = test_context();
