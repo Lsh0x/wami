@@ -29,7 +29,8 @@ pub use model::{
 };
 pub use oidc::{
     build_discovery_document, build_id_token_claims, build_user_info, derive_s256_challenge,
-    generate_opaque_value, validate_redirect_uri, AuthorizationCode, CodeChallenge,
-    CodeChallengeMethod, DiscoveryDocument, IdTokenClaims, IdTokenRequest, RefreshToken,
-    UserConsent, UserInfo, UserProfile, AUTHORIZATION_CODE_LIFETIME, REFRESH_TOKEN_LIFETIME,
+    generate_opaque_value, validate_redirect_uri, AuthenticationEvent, AuthorizationCode,
+    CodeChallenge, CodeChallengeMethod, DiscoveryDocument, IdTokenClaims, IdTokenRequest,
+    RefreshToken, UserConsent, UserInfo, UserProfile, AUTHORIZATION_CODE_LIFETIME,
+    REFRESH_TOKEN_LIFETIME,
 };

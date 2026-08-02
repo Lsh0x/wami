@@ -12,6 +12,7 @@ Welcome to the WAMI documentation! Choose your path:
 - **[IAM Operations](IAM_GUIDE.md)** - Manage users, roles, policies, groups
 - **[STS Operations](STS_GUIDE.md)** - Get temporary credentials
 - **[SSO Admin](SSO_ADMIN_GUIDE.md)** - Configure permission sets
+- **[OAuth 2.0 & OIDC](OAUTH_OIDC_GUIDE.md)** - Issue tokens, sign users in
 - **[Multi-Tenant](MULTI_TENANT_GUIDE.md)** - Isolate resources by tenant
 
 ### Implement Advanced Features
@@ -43,6 +44,9 @@ Welcome to the WAMI documentation! Choose your path:
 ### Use Case: Generating Temporary Access Keys
 → Start with [STS Guide](STS_GUIDE.md)
 
+### Use Case: Letting Users Sign In to Your Applications
+→ Start with [OAuth 2.0 & OIDC Guide](OAUTH_OIDC_GUIDE.md)
+
 ## 📖 Full Documentation
 
 | Document | Description | Audience |
@@ -51,6 +55,7 @@ Welcome to the WAMI documentation! Choose your path:
 | [IAM Guide](IAM_GUIDE.md) | Complete IAM operations | Developers |
 | [STS Guide](STS_GUIDE.md) | Temporary credentials | Developers |
 | [SSO Admin Guide](SSO_ADMIN_GUIDE.md) | SSO configuration | Developers |
+| [OAuth & OIDC Guide](OAUTH_OIDC_GUIDE.md) | Authorization server, OpenID Provider | Developers |
 | [Multi-Tenant](MULTI_TENANT_GUIDE.md) | Tenant isolation | SaaS Builders |
 | [Multicloud Providers](MULTICLOUD_PROVIDERS.md) | Cloud abstraction | Platform Teams |
 | [Store Implementation](STORE_IMPLEMENTATION.md) | Custom persistence | Backend Developers |

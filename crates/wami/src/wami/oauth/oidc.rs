@@ -87,6 +87,9 @@ pub struct AuthorizationCode {
     pub challenge: Option<CodeChallenge>,
     /// The client's nonce, carried into the ID token.
     pub nonce: Option<String>,
+    /// What the host reported about the sign-in, if anything.
+    #[serde(default)]
+    pub event: Option<AuthenticationEvent>,
     /// When it stops being redeemable.
     pub expires_at: DateTime<Utc>,
 }
@@ -122,6 +125,15 @@ pub struct RefreshToken {
     /// The token issued in its place, if any. Lets a reuse be traced to the
     /// chain it came from.
     pub replaced_by: Option<String>,
+    /// The sign-in this chain descends from.
+    ///
+    /// Carried rather than recomputed: OIDC Core §12.2 requires a refreshed ID
+    /// token's `auth_time` to be the *original* authentication time. A chain
+    /// that forgot it would silently reset the user's session age on every
+    /// refresh, which is exactly what a relying party enforcing `max_age` is
+    /// trying to detect.
+    #[serde(default)]
+    pub event: Option<AuthenticationEvent>,
 }
 
 impl RefreshToken {
@@ -154,6 +166,49 @@ impl UserConsent {
     }
 }
 
+/// How and when the host authenticated the user.
+///
+/// wami does not perform authentication, so it cannot know any of this — the
+/// host proves who is at the keyboard and reports what it did. Supplying it is
+/// optional; the claims it produces simply do not appear otherwise.
+///
+/// It matters to relying parties that enforce a maximum session age
+/// (`auth_time`) or care whether a password or a passkey was used
+/// (`acr`/`amr`). Without it they cannot tell, and some will refuse to
+/// federate.
+///
+/// # It describes one sign-in, for the life of one chain
+///
+/// The event is fixed when the authorization code is issued and carried
+/// unchanged through every refresh — `auth_time` must be, per OIDC Core §12.2,
+/// and `acr`/`amr` follow it because they describe the same moment.
+///
+/// So a user who signs in with a password and later adds a hardware key keeps
+/// reporting `amr: ["pwd"]` until the chain ends. That is not a gap to patch
+/// with a way to amend the event in place: a stronger authentication is a new
+/// authentication, and the honest way to reflect it is a new authorization —
+/// which mints a new chain with a new event. A relying party that needs a
+/// *fresh* assurance about how someone authenticated must ask for one, not
+/// trust a claim minted a month ago.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AuthenticationEvent {
+    /// When the user actually authenticated.
+    ///
+    /// The time of the *sign-in*, not of the token. OIDC Core §12.2 is explicit
+    /// that a refreshed ID token's `auth_time` "MUST represent the time of the
+    /// original authentication - not the time that the new ID token is issued",
+    /// which is why this travels with the refresh token rather than being
+    /// recomputed.
+    pub at: DateTime<Utc>,
+    /// Authentication Context Class Reference — how strong the sign-in was.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub acr: Option<String>,
+    /// Authentication Methods References — what was used, e.g. `pwd`, `otp`,
+    /// `hwk`. Registered values are in RFC 8176.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub amr: Vec<String>,
+}
+
 /// The claims of an OpenID Connect ID token.
 ///
 /// An ID token says *who signed in*; an access token says *what may be done*.
@@ -184,9 +239,21 @@ pub struct IdTokenClaims {
     /// Present when the `email` scope was granted.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
+    /// When the user authenticated, as a Unix timestamp.
+    ///
+    /// Present only when the host reported an [`AuthenticationEvent`], and it
+    /// is the time of the original sign-in even on a refreshed token.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auth_time: Option<i64>,
+    /// How strong the sign-in was.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub acr: Option<String>,
+    /// What the user authenticated with.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub amr: Vec<String>,
 }
 
-// Two claims a reviewer will look for here and not find.
+// One claim a reviewer will look for here and not find.
 //
 // `at_hash` is OPTIONAL for an ID token returned from the token endpoint in the
 // authorization code flow (OIDC Core §3.1.3.6 — it is only REQUIRED where a
@@ -196,10 +263,6 @@ pub struct IdTokenClaims {
 // internal SHA-512. An `at_hash` a relying party computes differently is a hard
 // validation failure, where its absence is a no-op. Absent is the safer answer
 // until EdDSA has a settled convention.
-//
-// `auth_time`, `acr` and `amr` describe the authentication event, and wami does
-// not perform it — the host does, before it ever calls `authorize`. Supporting
-// them means the host passing the event in, which is additive and not yet done.
 
 /// The profile claims wami puts in an ID token when the scopes allow it.
 ///
@@ -296,6 +359,8 @@ pub struct IdTokenRequest<'a> {
     pub profile: &'a UserProfile,
     /// The client's nonce, echoed back.
     pub nonce: Option<String>,
+    /// What the host reported about the sign-in.
+    pub event: Option<&'a AuthenticationEvent>,
 }
 
 /// Build the claims of an ID token.
@@ -318,6 +383,9 @@ pub fn build_id_token_claims(
         nonce: request.nonce,
         name: name.cloned(),
         email: email.cloned(),
+        auth_time: request.event.map(|e| e.at.timestamp()),
+        acr: request.event.and_then(|e| e.acr.clone()),
+        amr: request.event.map(|e| e.amr.clone()).unwrap_or_default(),
     }
 }
 
@@ -419,6 +487,7 @@ mod tests {
             expires_at: now + Duration::days(30),
             used_at: None,
             replaced_by: None,
+            event: None,
         };
         assert!(token.is_usable_at(now));
 
@@ -440,6 +509,7 @@ mod tests {
             expires_at: now - Duration::seconds(1),
             used_at: None,
             replaced_by: None,
+            event: None,
         };
         assert!(!token.is_usable_at(now));
     }
@@ -515,6 +585,7 @@ mod tests {
                 scopes: &scopes,
                 profile: &a_profile(),
                 nonce: None,
+                event: None,
             },
             Utc::now(),
             Duration::minutes(5),
@@ -549,6 +620,7 @@ mod tests {
                 scopes: &scopes,
                 profile: &profile,
                 nonce: None,
+                event: None,
             },
             Utc::now(),
             Duration::minutes(5),
@@ -571,6 +643,7 @@ mod tests {
                 scopes: &["openid".to_string()],
                 profile: &UserProfile::default(),
                 nonce: Some("n-0S6_WzA2Mj".into()),
+                event: None,
             },
             now,
             Duration::minutes(5),

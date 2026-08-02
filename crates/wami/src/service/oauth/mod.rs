@@ -82,6 +82,9 @@ pub struct OAuthService<S> {
     lifetime: Duration,
     /// Where ID token profile claims come from. `None` releases only `sub`.
     user_claims: Option<Arc<dyn oidc::UserClaimsSource>>,
+    /// Whether access tokens declare `typ: at+jwt`. Off, for now — see
+    /// [`OAuthService::with_explicit_typ`].
+    explicit_typ: bool,
 }
 
 impl<S: OAuthStore> OAuthService<S> {
@@ -93,6 +96,7 @@ impl<S: OAuthStore> OAuthService<S> {
             issuer,
             lifetime: DEFAULT_TOKEN_LIFETIME,
             user_claims: None,
+            explicit_typ: false,
         }
     }
 
@@ -103,6 +107,46 @@ impl<S: OAuthStore> OAuthService<S> {
     pub fn with_token_lifetime(mut self, lifetime: Duration) -> Self {
         self.lifetime = lifetime;
         self
+    }
+
+    /// Label access tokens `typ: at+jwt`, per RFC 9068.
+    ///
+    /// # What it buys
+    ///
+    /// wami tells an access token from an ID token by `aud`, and that holds —
+    /// but only for a verifier that checks the audience. RFC 9068 adds a
+    /// header a resource server can refuse on directly:
+    ///
+    /// > The resource server MUST verify that the `typ` header value is
+    /// > `at+jwt` or `application/at+jwt` and reject tokens carrying any other
+    /// > value.
+    ///
+    /// ID tokens are unaffected: OIDC registers no `typ` of its own for them,
+    /// so they keep `JWT`. That difference is the point — once this is on,
+    /// nothing wami signs as an access token can be read as an ID token.
+    ///
+    /// # Why it is opt-in
+    ///
+    /// Every token issued before this existed carries `typ: JWT`, and a
+    /// resource server that pins that value would start refusing new tokens the
+    /// moment the header changed. Turning this on is therefore a decision for
+    /// the deployment, not a default — and it is safe to make mid-flight:
+    /// verification accepts either label on an access token, so tokens already
+    /// in circulation keep working until they expire. Nothing is reissued.
+    ///
+    /// The default flips at the next major.
+    pub fn with_explicit_typ(mut self) -> Self {
+        self.explicit_typ = true;
+        self
+    }
+
+    /// The `typ` this service signs access tokens with.
+    pub(crate) fn access_token_type(&self) -> crate::wami::sts::jwt::TokenType {
+        if self.explicit_typ {
+            crate::wami::sts::jwt::TokenType::AccessToken
+        } else {
+            crate::wami::sts::jwt::TokenType::Jwt
+        }
     }
 
     /// The public keys a verifier needs, as a JWKS.
@@ -177,7 +221,7 @@ impl<S: OAuthStore> OAuthService<S> {
             builder::build_claims(&client, &granted, &self.issuer, issued_at, self.lifetime);
         let signed = self
             .keys
-            .sign_claims(&claims)
+            .sign_claims_as(&claims, self.access_token_type())
             .map_err(|e| AmiError::StoreError(format!("failed to sign token: {e}")))?;
 
         // Recorded before it is handed out: a token the caller holds but the
@@ -201,7 +245,15 @@ impl<S: OAuthStore> OAuthService<S> {
         token: &str,
         audience: &str,
     ) -> Result<TokenIntrospection> {
-        let Ok(claims) = self.keys.verify_claims::<OAuthClaims>(token, audience) else {
+        // Lenient: this service introspects its own tokens, and some of them
+        // may predate `with_explicit_typ`. Refusing those would make flipping
+        // the flag an outage.
+        let Ok(claims) = self.keys.verify_claims_as::<OAuthClaims>(
+            token,
+            audience,
+            crate::wami::sts::jwt::TokenType::AccessToken,
+            crate::wami::sts::jwt::TypePolicy::Lenient,
+        ) else {
             return Ok(TokenIntrospection::inactive());
         };
 
@@ -235,7 +287,12 @@ impl<S: OAuthStore> OAuthService<S> {
     /// offline will keep accepting the token until it expires. Revocation binds
     /// on anyone who introspects, which is why token lifetimes are short.
     pub async fn revoke_token(&self, token: &str, audience: &str) -> Result<()> {
-        if let Ok(claims) = self.keys.verify_claims::<OAuthClaims>(token, audience) {
+        if let Ok(claims) = self.keys.verify_claims_as::<OAuthClaims>(
+            token,
+            audience,
+            crate::wami::sts::jwt::TokenType::AccessToken,
+            crate::wami::sts::jwt::TypePolicy::Lenient,
+        ) {
             self.store
                 .write()
                 .await

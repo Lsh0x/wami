@@ -34,10 +34,11 @@ use wami_core::error::{AmiError, Result};
 use super::{OAuthService, OAuthStore};
 use crate::store::traits::oauth::{OAuthAuthorizationStore, OAuthConsentStore, OAuthRefreshStore};
 use crate::wami::oauth::{
-    builder, oidc, AuthorizationCode, CodeChallenge, DiscoveryDocument, GrantType, OAuthClaims,
-    OAuthClient, RefreshToken, UserConsent, UserInfo, UserProfile, AUTHORIZATION_CODE_LIFETIME,
-    REFRESH_TOKEN_LIFETIME,
+    builder, oidc, AuthenticationEvent, AuthorizationCode, CodeChallenge, DiscoveryDocument,
+    GrantType, OAuthClaims, OAuthClient, RefreshToken, UserConsent, UserInfo, UserProfile,
+    AUTHORIZATION_CODE_LIFETIME, REFRESH_TOKEN_LIFETIME,
 };
+use crate::wami::sts::jwt::{TokenType, TypePolicy};
 
 /// Combined bound for a store that can serve the user-facing flows.
 pub trait OidcStore:
@@ -86,6 +87,12 @@ pub struct AuthorizationRequest {
     pub challenge: CodeChallenge,
     /// The client's nonce, echoed into the ID token.
     pub nonce: Option<String>,
+    /// What the host did to authenticate the user, if it wants to say.
+    ///
+    /// Produces `auth_time`, `acr` and `amr` in the ID token, and survives into
+    /// the refresh chain so a later token reports the *original* sign-in.
+    /// Omitting it omits those claims; nothing else changes.
+    pub event: Option<AuthenticationEvent>,
     /// The client's opaque state, handed back untouched.
     ///
     /// wami does nothing with it, and cannot: `state` defends against CSRF by
@@ -231,6 +238,7 @@ impl<S: OidcStore> OAuthService<S> {
             redirect_uri: request.redirect_uri.clone(),
             challenge: Some(request.challenge),
             nonce: request.nonce,
+            event: request.event,
             expires_at: Utc::now() + AUTHORIZATION_CODE_LIFETIME,
         };
         let issued = code.code.clone();
@@ -339,8 +347,14 @@ impl<S: OidcStore> OAuthService<S> {
             _ => return Err(refused_code()),
         }
 
-        self.mint(&client, &code.user_name, &code.scopes, code.nonce)
-            .await
+        self.mint(
+            &client,
+            &code.user_name,
+            &code.scopes,
+            code.nonce,
+            code.event,
+        )
+        .await
     }
 
     /// Exchange a refresh token for a fresh set.
@@ -384,6 +398,7 @@ impl<S: OidcStore> OAuthService<S> {
             expires_at: Utc::now() + REFRESH_TOKEN_LIFETIME,
             used_at: None,
             replaced_by: None,
+            event: existing.event.clone(),
         };
         let minted = replacement.token.clone();
 
@@ -417,7 +432,7 @@ impl<S: OidcStore> OAuthService<S> {
         // the original authentication contained nonce". The nonce belonged to
         // one sign-in; replaying it into a later token would defeat what the
         // relying party checks it for.
-        self.mint(&client, &spent.user_name, &spent.scopes, None)
+        self.mint(&client, &spent.user_name, &spent.scopes, None, spent.event)
             .await
     }
 
@@ -435,7 +450,12 @@ impl<S: OidcStore> OAuthService<S> {
 
         let claims = self
             .keys
-            .verify_claims::<OAuthClaims>(access_token, audience)
+            .verify_claims_as::<OAuthClaims>(
+                access_token,
+                audience,
+                TokenType::AccessToken,
+                TypePolicy::Lenient,
+            )
             .map_err(|_| refused())?;
 
         let scopes: Vec<String> = claims
@@ -503,6 +523,7 @@ impl<S: OidcStore> OAuthService<S> {
         user_name: &str,
         scopes: &[String],
         nonce: Option<String>,
+        event: Option<AuthenticationEvent>,
     ) -> Result<OidcTokens> {
         let now = Utc::now();
         let signing_failed = |e: crate::wami::sts::jwt::JwtError| {
@@ -511,7 +532,10 @@ impl<S: OidcStore> OAuthService<S> {
 
         let claims =
             builder::build_user_claims(client, user_name, scopes, &self.issuer, now, self.lifetime);
-        let access_token = self.keys.sign_claims(&claims).map_err(signing_failed)?;
+        let access_token = self
+            .keys
+            .sign_claims_as(&claims, self.access_token_type())
+            .map_err(signing_failed)?;
 
         let id_token = if scopes.iter().any(|s| s == "openid") {
             let profile = self.profile_of(user_name).await?;
@@ -523,6 +547,7 @@ impl<S: OidcStore> OAuthService<S> {
                     scopes,
                     profile: &profile,
                     nonce,
+                    event: event.as_ref(),
                 },
                 now,
                 self.lifetime,
@@ -540,6 +565,7 @@ impl<S: OidcStore> OAuthService<S> {
             expires_at: now + REFRESH_TOKEN_LIFETIME,
             used_at: None,
             replaced_by: None,
+            event,
         };
         let refresh_token = refresh.token.clone();
 
@@ -646,6 +672,7 @@ mod tests {
             scopes: scopes.iter().map(|s| s.to_string()).collect(),
             challenge: CodeChallenge::s256(derive_s256_challenge(VERIFIER)),
             nonce: Some("n-0S6".into()),
+            event: None,
             state: Some("xyz".into()),
         }
     }
@@ -898,6 +925,7 @@ mod tests {
             redirect_uri: REDIRECT.into(),
             challenge: Some(CodeChallenge::s256(derive_s256_challenge(VERIFIER))),
             nonce: None,
+            event: None,
             expires_at: Utc::now() - chrono::Duration::seconds(1),
         };
         service
@@ -1204,6 +1232,7 @@ mod tests {
             expires_at: Utc::now() - chrono::Duration::seconds(1),
             used_at: None,
             replaced_by: None,
+            event: None,
         };
         service
             .store
@@ -1229,6 +1258,210 @@ mod tests {
                 .await
                 .is_ok(),
             "the user's live token should have survived"
+        );
+    }
+
+    /// A sign-in the host reports: two hours ago, password plus a hardware key.
+    fn an_event() -> AuthenticationEvent {
+        AuthenticationEvent {
+            at: Utc::now() - chrono::Duration::hours(2),
+            acr: Some("urn:mace:incommon:iap:silver".into()),
+            amr: vec!["pwd".into(), "hwk".into()],
+        }
+    }
+
+    #[tokio::test]
+    async fn the_id_token_reports_the_sign_in_the_host_described() {
+        let service = service().await;
+        let event = an_event();
+        service
+            .grant_consent("app", "alice", vec!["openid".into()])
+            .await
+            .unwrap();
+        let mut req = request(&["openid"]);
+        req.event = Some(event.clone());
+        let code = match service.authorize(req).await.unwrap() {
+            Authorization::Code { code, .. } => code,
+            other => panic!("expected a code, got {other:?}"),
+        };
+
+        let tokens = service
+            .exchange_code(exchange(&code, VERIFIER))
+            .await
+            .unwrap();
+        let id: IdTokenClaims = service
+            .keys
+            .verify_claims(tokens.id_token.as_ref().unwrap(), "app")
+            .unwrap();
+
+        assert_eq!(id.auth_time, Some(event.at.timestamp()));
+        assert_eq!(id.acr, event.acr);
+        assert_eq!(id.amr, vec!["pwd", "hwk"]);
+    }
+
+    #[tokio::test]
+    async fn a_refreshed_id_token_reports_the_original_sign_in_not_the_refresh() {
+        // OIDC Core §12.2: auth_time "MUST represent the time of the original
+        // authentication - not the time that the new ID token is issued". A
+        // chain that recomputed it would silently reset the session age on
+        // every refresh, defeating a relying party that enforces max_age.
+        let service = service().await;
+        let event = an_event();
+        service
+            .grant_consent("app", "alice", vec!["openid".into()])
+            .await
+            .unwrap();
+        let mut req = request(&["openid"]);
+        req.event = Some(event.clone());
+        let code = match service.authorize(req).await.unwrap() {
+            Authorization::Code { code, .. } => code,
+            other => panic!("expected a code, got {other:?}"),
+        };
+        let first = service
+            .exchange_code(exchange(&code, VERIFIER))
+            .await
+            .unwrap();
+
+        let second = service
+            .refresh_tokens("app", "s3cret", &first.refresh_token)
+            .await
+            .unwrap();
+        let third = service
+            .refresh_tokens("app", "s3cret", &second.refresh_token)
+            .await
+            .unwrap();
+
+        for (which, tokens) in [("second", &second), ("third", &third)] {
+            let id: IdTokenClaims = service
+                .keys
+                .verify_claims(tokens.id_token.as_ref().unwrap(), "app")
+                .unwrap();
+            assert_eq!(
+                id.auth_time,
+                Some(event.at.timestamp()),
+                "{which} refresh moved auth_time"
+            );
+            assert_eq!(id.amr, vec!["pwd", "hwk"], "{which} refresh lost amr");
+            assert_eq!(id.nonce, None, "{which} refresh must not echo the nonce");
+        }
+    }
+
+    #[tokio::test]
+    async fn a_host_that_says_nothing_gets_no_authentication_claims() {
+        let service = service().await;
+        let code = a_code(&service, &["openid"]).await;
+        let tokens = service
+            .exchange_code(exchange(&code, VERIFIER))
+            .await
+            .unwrap();
+
+        let id: IdTokenClaims = service
+            .keys
+            .verify_claims(tokens.id_token.as_ref().unwrap(), "app")
+            .unwrap();
+        assert_eq!(id.auth_time, None);
+        assert_eq!(id.acr, None);
+        assert!(id.amr.is_empty());
+
+        // And they are absent from the wire, not present as nulls.
+        let json = serde_json::to_value(&id).unwrap();
+        for absent in ["auth_time", "acr", "amr"] {
+            assert!(json.get(absent).is_none(), "{absent} was serialised");
+        }
+    }
+
+    #[tokio::test]
+    async fn explicit_typing_labels_access_tokens_and_leaves_id_tokens_alone() {
+        let service = service().await.with_explicit_typ();
+        let code = a_code(&service, &["openid"]).await;
+        let tokens = service
+            .exchange_code(exchange(&code, VERIFIER))
+            .await
+            .unwrap();
+
+        let access = jsonwebtoken::decode_header(&tokens.access_token).unwrap();
+        assert_eq!(access.typ.as_deref(), Some("at+jwt"));
+
+        // OIDC registers no typ for ID tokens, so they keep JWT — and that
+        // difference is what makes the two impossible to confuse.
+        let id = jsonwebtoken::decode_header(tokens.id_token.as_ref().unwrap()).unwrap();
+        assert_eq!(id.typ.as_deref(), Some("JWT"));
+
+        // Two independent barriers, checked one at a time. The audience: an
+        // access token names the API, so it does not verify against the
+        // client. And the label, isolated by asking with the *right* audience
+        // — only the `typ` can refuse it here.
+        assert!(
+            service
+                .keys
+                .verify_claims::<IdTokenClaims>(&tokens.access_token, "app")
+                .is_err(),
+            "the audience alone should have refused it"
+        );
+        let by_label = service.keys.verify_claims_as::<IdTokenClaims>(
+            &tokens.access_token,
+            AUD,
+            TokenType::Jwt,
+            TypePolicy::Lenient,
+        );
+        assert!(
+            matches!(
+                by_label,
+                Err(crate::wami::sts::jwt::JwtError::TokenTypeMismatch { .. })
+            ),
+            "the label alone should have refused it, got {by_label:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn turning_typing_on_does_not_invalidate_tokens_already_issued() {
+        // The reason the switch is safe to flip in production: an access token
+        // signed before the flip carries `typ: JWT`, and introspection and
+        // /userinfo still accept it.
+        let untyped = service().await;
+        let code = a_code(&untyped, &["openid"]).await;
+        let tokens = untyped
+            .exchange_code(exchange(&code, VERIFIER))
+            .await
+            .unwrap();
+
+        let typed = OAuthService::new(
+            untyped.store.clone(),
+            untyped.keys.clone(),
+            "https://id.test".to_string(),
+        )
+        .with_user_claims(Arc::new(Directory))
+        .with_explicit_typ();
+
+        assert!(typed.user_info(&tokens.access_token, AUD).await.is_ok());
+        assert!(
+            typed
+                .introspect_token(&tokens.access_token, AUD)
+                .await
+                .unwrap()
+                .active
+        );
+    }
+
+    #[tokio::test]
+    async fn an_id_token_is_never_accepted_as_a_bearer_token() {
+        let service = service().await.with_explicit_typ();
+        let code = a_code(&service, &["openid"]).await;
+        let tokens = service
+            .exchange_code(exchange(&code, VERIFIER))
+            .await
+            .unwrap();
+        let id_token = tokens.id_token.unwrap();
+
+        // Two independent reasons it fails: the audience is the client, and
+        // once typing is on the label is wrong too.
+        assert!(service.user_info(&id_token, AUD).await.is_err());
+        assert!(
+            !service
+                .introspect_token(&id_token, AUD)
+                .await
+                .unwrap()
+                .active
         );
     }
 
