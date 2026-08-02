@@ -81,6 +81,9 @@ pub mod tenant;
 /// GDPR compliance, consent management, audit trail, and data rights
 pub mod gdpr;
 
+/// OAuth 2.0 authorization server (machine-to-machine grants).
+pub mod oauth;
+
 // Client operations (IAM operations)
 // Operations moved to service/ layer
 // pub mod operations;

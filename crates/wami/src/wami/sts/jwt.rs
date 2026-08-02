@@ -13,6 +13,7 @@ use ed25519_dalek::pkcs8::EncodePrivateKey;
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use rand::rngs::OsRng;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -240,7 +241,10 @@ impl KeyManager {
     /// invalidate every token still in flight.
     ///
     /// Uses standard PKCS#8 DER encoding for the Ed25519 signing key.
-    pub fn sign_claims(&self, claims: &StsClaims) -> Result<String, JwtError> {
+    /// Generic over the claim set so other issuers — OAuth, for one — can sign
+    /// with the same keys and the same rotation, instead of each growing its own
+    /// signer. Existing callers infer `StsClaims` from the argument.
+    pub fn sign_claims<C: Serialize>(&self, claims: &C) -> Result<String, JwtError> {
         let mut header = Header::new(Algorithm::EdDSA);
         header.kid = Some(self.active.kid.clone());
         let pkcs8_der = self
@@ -262,6 +266,19 @@ impl KeyManager {
     /// Note: `jsonwebtoken` with the `ring` backend expects raw 32-byte Ed25519
     /// public keys via `from_ed_der` (despite the function name suggesting DER).
     pub fn verify_token(&self, token: &str, audience: &str) -> Result<StsClaims, JwtError> {
+        self.verify_claims(token, audience)
+    }
+
+    /// Verify a token and deserialise it into any claim set.
+    ///
+    /// [`KeyManager::verify_token`] is this with `StsClaims` filled in; the two
+    /// share every check, so key rotation and audience validation cannot drift
+    /// apart between issuers.
+    pub fn verify_claims<C: DeserializeOwned>(
+        &self,
+        token: &str,
+        audience: &str,
+    ) -> Result<C, JwtError> {
         // Which key signed this is read from the header before anything is
         // verified. An unknown or absent kid is refused as such, and not as a
         // bad signature: the two are diagnosed differently — one is a key
@@ -283,7 +300,7 @@ impl KeyManager {
         validation.set_audience(&[audience]);
         // validate_aud defaults to true and set_audience configures the expected
         // values — audience IS validated.
-        let token_data = decode::<StsClaims>(token, &decoding_key, &validation).map_err(|e| {
+        let token_data = decode::<C>(token, &decoding_key, &validation).map_err(|e| {
             // A well-signed token addressed elsewhere is not a forgery: it is a
             // token of the wrong class, and the caller has to distinguish the
             // two to route or refuse it. Collapsing it into `Decode` would make

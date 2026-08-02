@@ -33,6 +33,7 @@ pub mod auth;
 pub mod credentials;
 pub mod gdpr;
 pub mod identity;
+pub mod oauth;
 pub mod policies;
 pub mod reports;
 pub mod sso_admin;
@@ -49,6 +50,7 @@ pub use gdpr::GdprService;
 pub use identity::{
     GroupService, IdentityProviderService, RoleService, ServiceLinkedRoleService, UserService,
 };
+pub use oauth::{OAuthService, OAuthStore};
 pub use policies::{
     AttachmentService, EvaluationService, InlinePolicyService, PermissionsBoundaryService,
     PolicyService,
