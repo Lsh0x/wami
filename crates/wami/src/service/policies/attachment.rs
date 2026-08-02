@@ -5,7 +5,8 @@
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::{GroupStore, PolicyStore, RoleStore, UserStore};
 use crate::wami::policies::attachment::*;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
@@ -73,7 +74,7 @@ where
         )
         .await?;
 
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
 
         // Verify user exists
         store
@@ -130,7 +131,7 @@ where
         )
         .await?;
 
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
 
         // Verify user exists
         store
@@ -174,7 +175,7 @@ where
         )
         .await?;
 
-        let store = self.read_store();
+        let store = self.read_store().await;
 
         // Verify user exists
         store
@@ -219,7 +220,7 @@ where
         )
         .await?;
 
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
 
         // Verify group exists
         store
@@ -276,7 +277,7 @@ where
         )
         .await?;
 
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
 
         // Verify group exists
         store
@@ -320,7 +321,7 @@ where
         )
         .await?;
 
-        let store = self.read_store();
+        let store = self.read_store().await;
 
         // Verify group exists
         store
@@ -365,7 +366,7 @@ where
         )
         .await?;
 
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
 
         // Verify role exists
         store
@@ -422,7 +423,7 @@ where
         )
         .await?;
 
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
 
         // Verify role exists
         store
@@ -466,7 +467,7 @@ where
         )
         .await?;
 
-        let store = self.read_store();
+        let store = self.read_store().await;
 
         // Verify role exists
         store
@@ -534,7 +535,7 @@ mod tests {
 
         // Create user and policy
         let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
-        let _created_user = store.write().unwrap().create_user(user).await.unwrap();
+        let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let policy = build_policy(
             "TestPolicy".to_string(),
@@ -545,7 +546,7 @@ mod tests {
             &context,
         )
         .unwrap();
-        let created_policy = store.write().unwrap().create_policy(policy).await.unwrap();
+        let created_policy = store.write().await.create_policy(policy).await.unwrap();
 
         // Attach policy to user
         let request = AttachUserPolicyRequest {
@@ -578,7 +579,7 @@ mod tests {
 
         // Create user and policy
         let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
-        let _created_user = store.write().unwrap().create_user(user).await.unwrap();
+        let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let policy = build_policy(
             "TestPolicy".to_string(),
@@ -589,7 +590,7 @@ mod tests {
             &context,
         )
         .unwrap();
-        let created_policy = store.write().unwrap().create_policy(policy).await.unwrap();
+        let created_policy = store.write().await.create_policy(policy).await.unwrap();
 
         // Attach policy
         let attach_request = AttachUserPolicyRequest {
@@ -631,7 +632,7 @@ mod tests {
 
         // Create group and policy
         let group = build_group("developers".to_string(), Some("/".to_string()), &context).unwrap();
-        let _created_group = store.write().unwrap().create_group(group).await.unwrap();
+        let _created_group = store.write().await.create_group(group).await.unwrap();
 
         let policy = build_policy(
             "TestPolicy".to_string(),
@@ -642,7 +643,7 @@ mod tests {
             &context,
         )
         .unwrap();
-        let created_policy = store.write().unwrap().create_policy(policy).await.unwrap();
+        let created_policy = store.write().await.create_policy(policy).await.unwrap();
 
         // Attach policy to group
         let request = AttachGroupPolicyRequest {
@@ -672,7 +673,7 @@ mod tests {
             &context,
         )
         .unwrap();
-        let _created_role = store.write().unwrap().create_role(role).await.unwrap();
+        let _created_role = store.write().await.create_role(role).await.unwrap();
 
         let policy = build_policy(
             "TestPolicy".to_string(),
@@ -683,7 +684,7 @@ mod tests {
             &context,
         )
         .unwrap();
-        let created_policy = store.write().unwrap().create_policy(policy).await.unwrap();
+        let created_policy = store.write().await.create_policy(policy).await.unwrap();
 
         // Attach policy to role
         let request = AttachRolePolicyRequest {
@@ -709,7 +710,7 @@ mod tests {
             &context,
         )
         .unwrap();
-        let created_policy = store.write().unwrap().create_policy(policy).await.unwrap();
+        let created_policy = store.write().await.create_policy(policy).await.unwrap();
 
         let request = AttachUserPolicyRequest {
             user_name: "nonexistent".to_string(),
@@ -730,7 +731,7 @@ mod tests {
         let context = create_test_context().await;
 
         let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
-        let _created_user = store.write().unwrap().create_user(user).await.unwrap();
+        let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let request = AttachUserPolicyRequest {
             user_name: "alice".to_string(),

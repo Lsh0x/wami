@@ -4,7 +4,8 @@
 
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::MfaDeviceStore;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
@@ -74,7 +75,7 @@ impl<S: MfaDeviceStore> MfaDeviceService<S> {
             mfa_builder::build_mfa_device(request.user_name, request.serial_number, context)?;
 
         // Store it
-        self.write_store().create_mfa_device(mfa_device).await
+        self.write_store().await.create_mfa_device(mfa_device).await
     }
 
     /// Get an MFA device by serial number
@@ -90,7 +91,7 @@ impl<S: MfaDeviceStore> MfaDeviceService<S> {
             serial_number,
         )
         .await?;
-        self.read_store().get_mfa_device(serial_number).await
+        self.read_store().await.get_mfa_device(serial_number).await
     }
 
     /// Delete an MFA device
@@ -106,7 +107,10 @@ impl<S: MfaDeviceStore> MfaDeviceService<S> {
             serial_number,
         )
         .await?;
-        self.write_store().delete_mfa_device(serial_number).await
+        self.write_store()
+            .await
+            .delete_mfa_device(serial_number)
+            .await
     }
 
     /// List MFA devices for a user
@@ -122,7 +126,10 @@ impl<S: MfaDeviceStore> MfaDeviceService<S> {
             &request.user_name,
         )
         .await?;
-        self.read_store().list_mfa_devices(&request.user_name).await
+        self.read_store()
+            .await
+            .list_mfa_devices(&request.user_name)
+            .await
     }
 }
 

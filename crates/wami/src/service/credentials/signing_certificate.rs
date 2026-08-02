@@ -4,7 +4,8 @@
 
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::SigningCertificateStore;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
@@ -79,6 +80,7 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
 
         // Store it
         self.write_store()
+            .await
             .create_signing_certificate(certificate)
             .await
     }
@@ -97,6 +99,7 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
         )
         .await?;
         self.read_store()
+            .await
             .get_signing_certificate(certificate_id)
             .await
     }
@@ -118,6 +121,7 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
         // Get existing certificate
         let mut certificate = self
             .read_store()
+            .await
             .get_signing_certificate(&request.certificate_id)
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
@@ -129,6 +133,7 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
 
         // Store updated certificate
         self.write_store()
+            .await
             .update_signing_certificate(certificate)
             .await
     }
@@ -147,6 +152,7 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
         )
         .await?;
         self.write_store()
+            .await
             .delete_signing_certificate(&request.certificate_id)
             .await
     }
@@ -161,6 +167,7 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
         self.guard(context, WamiAction::IamManageCredentials, "user", user_name)
             .await?;
         self.read_store()
+            .await
             .list_signing_certificates(request.user_name.as_deref())
             .await
     }

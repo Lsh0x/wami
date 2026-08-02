@@ -9,7 +9,8 @@ use crate::wami::policies::evaluation::{
     SimulatePrincipalPolicyRequest, StatementMatch,
 };
 use serde_json::Value;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_condition::evaluator::parse_condition_block;
 use wami_condition::{evaluate_condition_block, ConditionContext, ConditionValue};
 use wami_core::error::{AmiError, Result};
@@ -237,7 +238,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
                 let _user = self
                     .store
                     .read()
-                    .unwrap()
+                    .await
                     .get_user(principal_name)
                     .await?
                     .ok_or_else(|| AmiError::ResourceNotFound {
@@ -256,7 +257,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
                 let _role = self
                     .store
                     .read()
-                    .unwrap()
+                    .await
                     .get_role(principal_name)
                     .await?
                     .ok_or_else(|| AmiError::ResourceNotFound {
@@ -286,7 +287,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
                 let user = self
                     .store
                     .read()
-                    .unwrap()
+                    .await
                     .get_user(principal_name)
                     .await?
                     .ok_or_else(|| AmiError::ResourceNotFound {
@@ -298,7 +299,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
                 let role = self
                     .store
                     .read()
-                    .unwrap()
+                    .await
                     .get_role(principal_name)
                     .await?
                     .ok_or_else(|| AmiError::ResourceNotFound {
@@ -315,7 +316,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
 
         // Fetch the boundary policy if it exists
         if let Some(arn) = boundary_arn {
-            let policy = self.store.read().unwrap().get_policy(&arn).await?;
+            let policy = self.store.read().await.get_policy(&arn).await?;
             Ok(policy)
         } else {
             Ok(None)
@@ -832,13 +833,7 @@ mod tests {
         // Create a user
         let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
 
-        service
-            .store
-            .write()
-            .unwrap()
-            .create_user(user)
-            .await
-            .unwrap();
+        service.store.write().await.create_user(user).await.unwrap();
 
         // Create a policy document for testing
         let policy_doc = r#"{
@@ -1739,7 +1734,7 @@ mod tests {
         // Create a user first so the principal exists
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
         let user = build_user("alice".to_string(), None, &test_context()).unwrap();
-        store.write().unwrap().create_user(user).await.unwrap();
+        store.write().await.create_user(user).await.unwrap();
 
         let service = EvaluationService::new(store, "123456789012".to_string());
         let request = SimulatePrincipalPolicyRequest {

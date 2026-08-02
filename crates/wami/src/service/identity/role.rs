@@ -7,7 +7,8 @@ use crate::store::traits::RoleStore;
 use crate::wami::identity::role::{
     builder as role_builder, CreateRoleRequest, ListRolesRequest, Role, UpdateRoleRequest,
 };
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
@@ -80,14 +81,14 @@ impl<S: RoleStore> RoleService<S> {
             role
         };
 
-        self.write_store().create_role(role).await
+        self.write_store().await.create_role(role).await
     }
 
     /// Get a role by name
     pub async fn get_role(&self, context: &WamiContext, role_name: &str) -> Result<Option<Role>> {
         self.guard(context, WamiAction::IamReadRole, "role", role_name)
             .await?;
-        self.read_store().get_role(role_name).await
+        self.read_store().await.get_role(role_name).await
     }
 
     /// Update a role
@@ -107,7 +108,7 @@ impl<S: RoleStore> RoleService<S> {
         let mut role = self
             .store
             .read()
-            .unwrap()
+            .await
             .get_role(&request.role_name)
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
@@ -122,14 +123,14 @@ impl<S: RoleStore> RoleService<S> {
             role = role_builder::update_max_session_duration(role, max_session_duration);
         }
 
-        self.write_store().update_role(role).await
+        self.write_store().await.update_role(role).await
     }
 
     /// Delete a role
     pub async fn delete_role(&self, context: &WamiContext, role_name: &str) -> Result<()> {
         self.guard(context, WamiAction::IamDeleteRole, "role", role_name)
             .await?;
-        self.write_store().delete_role(role_name).await
+        self.write_store().await.delete_role(role_name).await
     }
 
     /// List roles with optional filtering
@@ -142,7 +143,7 @@ impl<S: RoleStore> RoleService<S> {
             .await?;
         self.store
             .read()
-            .unwrap()
+            .await
             .list_roles(request.path_prefix.as_deref(), request.pagination.as_ref())
             .await
     }

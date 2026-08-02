@@ -4,7 +4,8 @@
 
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::ServerCertificateStore;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
@@ -83,6 +84,7 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
 
         // Store it (note: private_key is part of ServerCertificate, not passed separately)
         self.write_store()
+            .await
             .create_server_certificate(certificate)
             .await
     }
@@ -101,6 +103,7 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         )
         .await?;
         self.read_store()
+            .await
             .get_server_certificate(certificate_name)
             .await
     }
@@ -122,6 +125,7 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         // Get existing certificate
         let mut certificate = self
             .read_store()
+            .await
             .get_server_certificate(&request.server_certificate_name)
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
@@ -139,6 +143,7 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
 
         // Store updated certificate
         self.write_store()
+            .await
             .update_server_certificate(certificate)
             .await
     }
@@ -157,6 +162,7 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         )
         .await?;
         self.write_store()
+            .await
             .delete_server_certificate(certificate_name)
             .await
     }
@@ -180,6 +186,7 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         };
 
         self.read_store()
+            .await
             .list_server_certificates(request.path_prefix.as_deref(), pagination.as_ref())
             .await
     }

@@ -3,7 +3,8 @@
 //! This example demonstrates how to attach managed policies and inline policies
 //! to users, groups, and roles.
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami::arn::{TenantPath, WamiArn};
 use wami::context::WamiContext;
 use wami::service::{AttachmentService, InlinePolicyService, PolicyService, UserService};

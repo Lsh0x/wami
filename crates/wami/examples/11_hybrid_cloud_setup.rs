@@ -9,7 +9,8 @@
 //!
 //! Run with: `cargo run --example 11_hybrid_cloud_setup`
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami::error::Result;
 use wami::provider::{AwsProvider, CloudProvider, ResourceLimits, ResourceType};
 use wami::service::UserService;

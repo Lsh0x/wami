@@ -89,11 +89,11 @@ fn expand_inner(args: ServiceArgs, item_struct: ItemStruct) -> Result<proc_macro
             )
         })?;
 
-    // Validate the store field type is Arc<RwLock<...>>
+    // Validate the store field type is Arc<tokio::sync::RwLock<...>>
     if !matches!(store_field.ty, syn::Type::Path(_)) {
         return Err(syn::Error::new(
             store_field.ty.span(),
-            "`store` field must be of type Arc<RwLock<S>>",
+            "`store` field must be of type Arc<tokio::sync::RwLock<S>>",
         ));
     }
 
@@ -119,7 +119,7 @@ fn expand_inner(args: ServiceArgs, item_struct: ItemStruct) -> Result<proc_macro
 
     let new_fn = if args.generate_new {
         Some(quote! {
-            pub fn new(store: std::sync::Arc<std::sync::RwLock<#type_ident>>) -> Self {
+            pub fn new(store: std::sync::Arc<tokio::sync::RwLock<#type_ident>>) -> Self {
                 Self { store }
             }
         })
@@ -127,26 +127,26 @@ fn expand_inner(args: ServiceArgs, item_struct: ItemStruct) -> Result<proc_macro
         None
     };
 
+    // The lock is `tokio::sync::RwLock` because the store traits are async: a
+    // service holding a `std::sync` guard across an `.await` blocks a runtime
+    // thread, and its futures are not `Send`. The accessors are therefore
+    // async too, and there is no poisoning to report.
     let expanded = quote! {
         #item_struct
 
         impl #impl_generics #struct_ident #ty_generics #where_clause {
             #new_fn
 
-            pub fn store(&self) -> &std::sync::Arc<std::sync::RwLock<#type_ident>> {
+            pub fn store(&self) -> &std::sync::Arc<tokio::sync::RwLock<#type_ident>> {
                 &self.store
             }
 
-            fn read_store(&self) -> std::sync::RwLockReadGuard<'_, #type_ident> {
-                self.store
-                    .read()
-                    .expect("store read lock poisoned")
+            async fn read_store(&self) -> tokio::sync::RwLockReadGuard<'_, #type_ident> {
+                self.store.read().await
             }
 
-            fn write_store(&self) -> std::sync::RwLockWriteGuard<'_, #type_ident> {
-                self.store
-                    .write()
-                    .expect("store write lock poisoned")
+            async fn write_store(&self) -> tokio::sync::RwLockWriteGuard<'_, #type_ident> {
+                self.store.write().await
             }
         }
     };

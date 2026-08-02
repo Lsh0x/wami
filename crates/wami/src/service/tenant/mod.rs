@@ -5,7 +5,8 @@
 use crate::store::traits::TenantStore;
 use crate::wami::tenant::operations::tenant_operations;
 use crate::wami::tenant::{Tenant, TenantId, TenantQuotas, TenantUsage};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::arn::{Service, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
@@ -34,7 +35,7 @@ impl<S: TenantStore> TenantService<S> {
             };
 
             // Check global uniqueness - verify tenant doesn't already exist
-            let exists = self.read_store().get_tenant(&tenant_id).await?;
+            let exists = self.read_store().await.get_tenant(&tenant_id).await?;
 
             if exists.is_none() {
                 return Ok(tenant_id);
@@ -147,52 +148,55 @@ impl<S: TenantStore> TenantService<S> {
             .to_string();
 
         // Persist
-        self.write_store().create_tenant(tenant).await
+        self.write_store().await.create_tenant(tenant).await
     }
 
     /// Get a tenant by ID
     pub async fn get_tenant(&self, tenant_id: &TenantId) -> Result<Option<Tenant>> {
-        self.read_store().get_tenant(tenant_id).await
+        self.read_store().await.get_tenant(tenant_id).await
     }
 
     /// Update a tenant
     pub async fn update_tenant(&self, tenant: Tenant) -> Result<Tenant> {
-        self.write_store().update_tenant(tenant).await
+        self.write_store().await.update_tenant(tenant).await
     }
 
     /// Delete a tenant
     pub async fn delete_tenant(&self, tenant_id: &TenantId) -> Result<()> {
-        self.write_store().delete_tenant(tenant_id).await
+        self.write_store().await.delete_tenant(tenant_id).await
     }
 
     /// List all tenants
     pub async fn list_tenants(&self) -> Result<Vec<Tenant>> {
-        self.read_store().list_tenants().await
+        self.read_store().await.list_tenants().await
     }
 
     /// List child tenants of a parent
     pub async fn list_child_tenants(&self, parent_id: &TenantId) -> Result<Vec<Tenant>> {
-        self.read_store().list_child_tenants(parent_id).await
+        self.read_store().await.list_child_tenants(parent_id).await
     }
 
     /// Get all ancestors of a tenant
     pub async fn get_ancestors(&self, tenant_id: &TenantId) -> Result<Vec<Tenant>> {
-        self.read_store().get_ancestors(tenant_id).await
+        self.read_store().await.get_ancestors(tenant_id).await
     }
 
     /// Get all descendants of a tenant
     pub async fn get_descendants(&self, tenant_id: &TenantId) -> Result<Vec<TenantId>> {
-        self.read_store().get_descendants(tenant_id).await
+        self.read_store().await.get_descendants(tenant_id).await
     }
 
     /// Get effective quotas for a tenant (considering hierarchy)
     pub async fn get_effective_quotas(&self, tenant_id: &TenantId) -> Result<TenantQuotas> {
-        self.read_store().get_effective_quotas(tenant_id).await
+        self.read_store()
+            .await
+            .get_effective_quotas(tenant_id)
+            .await
     }
 
     /// Get current usage for a tenant
     pub async fn get_tenant_usage(&self, tenant_id: &TenantId) -> Result<TenantUsage> {
-        self.read_store().get_tenant_usage(tenant_id).await
+        self.read_store().await.get_tenant_usage(tenant_id).await
     }
 }
 

@@ -20,7 +20,8 @@ wami-macros = { path = "../wami-macros" }
 ```
 
 ```rust
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_macros::service;
 use wami_traits::Service;
 
@@ -34,10 +35,15 @@ pub struct UserService<S> {
 
 impl<S: UserServiceStore> UserService<S> {
     pub async fn get_user(&self, user_name: &str) -> wami::Result<Option<wami::identity::User>> {
-        self.read_store().get_user(user_name).await
+        self.read_store().await.get_user(user_name).await
     }
 }
 ```
+
+The lock is `tokio::sync::RwLock`, not `std::sync::RwLock`: the store traits are
+async, so a service holding a blocking guard across an `.await` would stall a
+runtime thread and make its futures non-`Send`. `read_store()` and
+`write_store()` are therefore async, and there is no lock poisoning to handle.
 
 ## Development
 

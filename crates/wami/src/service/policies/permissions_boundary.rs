@@ -7,7 +7,8 @@ use crate::store::traits::{PolicyStore, RoleStore, UserStore};
 use crate::wami::policies::permissions_boundary::{
     operations, DeletePermissionsBoundaryRequest, PrincipalType, PutPermissionsBoundaryRequest,
 };
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
@@ -111,7 +112,7 @@ where
         )?;
 
         // Get the boundary policy to validate it exists and is suitable
-        let store = self.read_store();
+        let store = self.read_store().await;
         let policy = store
             .get_policy(&request.permissions_boundary)
             .await?
@@ -126,7 +127,7 @@ where
         // Update the principal with the boundary
         match request.principal_type {
             PrincipalType::User => {
-                let mut store = self.write_store();
+                let mut store = self.write_store().await;
                 let mut user = store
                     .get_user(&request.principal_name)
                     .await?
@@ -139,7 +140,7 @@ where
                 store.update_user(user).await?;
             }
             PrincipalType::Role => {
-                let mut store = self.write_store();
+                let mut store = self.write_store().await;
                 let mut role = store
                     .get_role(&request.principal_name)
                     .await?
@@ -189,7 +190,7 @@ where
 
         match request.principal_type {
             PrincipalType::User => {
-                let mut store = self.write_store();
+                let mut store = self.write_store().await;
                 let mut user = store
                     .get_user(&request.principal_name)
                     .await?
@@ -202,7 +203,7 @@ where
                 store.update_user(user).await?;
             }
             PrincipalType::Role => {
-                let mut store = self.write_store();
+                let mut store = self.write_store().await;
                 let mut role = store
                     .get_role(&request.principal_name)
                     .await?
@@ -253,7 +254,7 @@ mod tests {
         // Create a user
         let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
         {
-            let mut s = store.write().unwrap();
+            let mut s = store.write().await;
             s.create_user(user).await.unwrap();
         }
 
@@ -276,7 +277,7 @@ mod tests {
         )
         .unwrap();
         {
-            let mut s = store.write().unwrap();
+            let mut s = store.write().await;
             s.create_policy(policy.clone()).await.unwrap();
         }
 
@@ -294,7 +295,7 @@ mod tests {
         match result {
             Ok(_) => {
                 // Verify boundary was set
-                let s = store.read().unwrap();
+                let s = store.read().await;
                 let updated_user = s.get_user("alice").await.unwrap().unwrap();
                 assert_eq!(
                     updated_user.permissions_boundary,
@@ -325,7 +326,7 @@ mod tests {
         )
         .unwrap();
         {
-            let mut s = store.write().unwrap();
+            let mut s = store.write().await;
             s.create_role(role).await.unwrap();
         }
 
@@ -348,7 +349,7 @@ mod tests {
         )
         .unwrap();
         {
-            let mut s = store.write().unwrap();
+            let mut s = store.write().await;
             s.create_policy(policy.clone()).await.unwrap();
         }
 
@@ -365,7 +366,7 @@ mod tests {
             .unwrap();
 
         // Verify boundary was set
-        let s = store.read().unwrap();
+        let s = store.read().await;
         let updated_role = s.get_role("test-role").await.unwrap().unwrap();
         assert_eq!(updated_role.permissions_boundary, Some(policy.arn.clone()));
     }
@@ -389,7 +390,7 @@ mod tests {
         .unwrap();
         role.permissions_boundary = Some("arn:aws:iam::123456789012:policy/boundary".to_string());
         {
-            let mut s = store.write().unwrap();
+            let mut s = store.write().await;
             s.create_role(role).await.unwrap();
         }
 
@@ -405,7 +406,7 @@ mod tests {
             .unwrap();
 
         // Verify boundary was removed
-        let s = store.read().unwrap();
+        let s = store.read().await;
         let updated_role = s.get_role("test-role").await.unwrap().unwrap();
         assert_eq!(updated_role.permissions_boundary, None);
     }
@@ -436,7 +437,7 @@ mod tests {
         // Create a user
         let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
         {
-            let mut s = store.write().unwrap();
+            let mut s = store.write().await;
             s.create_user(user).await.unwrap();
         }
 
@@ -475,7 +476,7 @@ mod tests {
         )
         .unwrap();
         {
-            let mut s = store.write().unwrap();
+            let mut s = store.write().await;
             s.create_policy(policy.clone()).await.unwrap();
         }
 

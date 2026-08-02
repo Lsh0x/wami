@@ -10,7 +10,8 @@
 //!
 //! Run with: cargo run --example 23_permissions_boundaries
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami::{
     arn::{TenantPath, WamiArn},
     context::WamiContext,

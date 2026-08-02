@@ -5,7 +5,8 @@
 use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::ApplicationStore;
 use crate::wami::sso_admin::application::Application;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::error::Result;
 
 /// Service for managing applications
@@ -40,7 +41,7 @@ impl<S: ApplicationStore> ApplicationService<S> {
     pub async fn create_application(&self, application: Application) -> Result<Application> {
         self.store
             .write()
-            .unwrap()
+            .await
             .create_application(application)
             .await
     }
@@ -49,7 +50,7 @@ impl<S: ApplicationStore> ApplicationService<S> {
     pub async fn get_application(&self, application_arn: &str) -> Result<Option<Application>> {
         self.store
             .read()
-            .unwrap()
+            .await
             .get_application(application_arn)
             .await
     }
@@ -58,7 +59,7 @@ impl<S: ApplicationStore> ApplicationService<S> {
     pub async fn list_applications(&self, instance_arn: &str) -> Result<Vec<Application>> {
         self.store
             .read()
-            .unwrap()
+            .await
             .list_applications(instance_arn)
             .await
     }

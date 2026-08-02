@@ -9,7 +9,8 @@ use crate::wami::sts::federation::{
 use crate::wami::sts::session::SessionStatus;
 use crate::wami::sts::{Credentials, StsSession};
 use chrono::{Duration, Utc};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::arn::{Service, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
@@ -157,7 +158,7 @@ impl<S: SessionStore> FederationService<S> {
             last_used: None,
         };
 
-        self.write_store().create_session(session).await?;
+        self.write_store().await.create_session(session).await?;
 
         Ok(GetFederationTokenResponse {
             credentials,
@@ -268,7 +269,7 @@ mod tests {
         let sessions = service
             .store
             .read()
-            .unwrap()
+            .await
             .list_sessions(None)
             .await
             .unwrap();

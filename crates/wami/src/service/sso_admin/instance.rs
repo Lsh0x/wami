@@ -5,7 +5,8 @@
 use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::SsoInstanceStore;
 use crate::wami::sso_admin::instance::SsoInstance;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::error::Result;
 
 /// Service for managing SSO instances
@@ -38,29 +39,17 @@ impl<S: SsoInstanceStore> InstanceService<S> {
 
     /// Create a new SSO instance
     pub async fn create_instance(&self, instance: SsoInstance) -> Result<SsoInstance> {
-        self.store
-            .write()
-            .expect("store write lock poisoned")
-            .create_instance(instance)
-            .await
+        self.store.write().await.create_instance(instance).await
     }
 
     /// Get an SSO instance by ARN
     pub async fn get_instance(&self, instance_arn: &str) -> Result<Option<SsoInstance>> {
-        self.store
-            .read()
-            .expect("store read lock poisoned")
-            .get_instance(instance_arn)
-            .await
+        self.store.read().await.get_instance(instance_arn).await
     }
 
     /// List all SSO instances
     pub async fn list_instances(&self) -> Result<Vec<SsoInstance>> {
-        self.store
-            .read()
-            .expect("store read lock poisoned")
-            .list_instances()
-            .await
+        self.store.read().await.list_instances().await
     }
 }
 

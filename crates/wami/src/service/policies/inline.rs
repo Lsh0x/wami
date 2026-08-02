@@ -5,7 +5,8 @@
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::{GroupStore, RoleStore, UserStore};
 use crate::wami::policies::inline::*;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
@@ -73,7 +74,7 @@ where
         )
         .await?;
 
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
 
         // Verify user exists
         store
@@ -121,7 +122,7 @@ where
         )
         .await?;
 
-        let store = self.read_store();
+        let store = self.read_store().await;
 
         // Verify user exists
         store
@@ -163,7 +164,7 @@ where
         )
         .await?;
 
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
 
         // Verify user exists
         store
@@ -200,7 +201,7 @@ where
         )
         .await?;
 
-        let store = self.read_store();
+        let store = self.read_store().await;
 
         // Verify user exists
         store
@@ -232,7 +233,7 @@ where
         )
         .await?;
 
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
 
         // Verify group exists
         store
@@ -280,7 +281,7 @@ where
         )
         .await?;
 
-        let store = self.read_store();
+        let store = self.read_store().await;
 
         // Verify group exists
         store
@@ -322,7 +323,7 @@ where
         )
         .await?;
 
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
 
         // Verify group exists
         store
@@ -359,7 +360,7 @@ where
         )
         .await?;
 
-        let store = self.read_store();
+        let store = self.read_store().await;
 
         // Verify group exists
         store
@@ -391,7 +392,7 @@ where
         )
         .await?;
 
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
 
         // Verify role exists
         store
@@ -439,7 +440,7 @@ where
         )
         .await?;
 
-        let store = self.read_store();
+        let store = self.read_store().await;
 
         // Verify role exists
         store
@@ -481,7 +482,7 @@ where
         )
         .await?;
 
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
 
         // Verify role exists
         store
@@ -518,7 +519,7 @@ where
         )
         .await?;
 
-        let store = self.read_store();
+        let store = self.read_store().await;
 
         // Verify role exists
         store
@@ -571,7 +572,7 @@ mod tests {
         let context = create_test_context().await;
 
         let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
-        let _created_user = store.write().unwrap().create_user(user).await.unwrap();
+        let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let request = PutUserPolicyRequest {
             user_name: "alice".to_string(),
@@ -589,7 +590,7 @@ mod tests {
         let context = create_test_context().await;
 
         let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
-        let _created_user = store.write().unwrap().create_user(user).await.unwrap();
+        let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let put_request = PutUserPolicyRequest {
             user_name: "alice".to_string(),
@@ -620,7 +621,7 @@ mod tests {
         let context = create_test_context().await;
 
         let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
-        let _created_user = store.write().unwrap().create_user(user).await.unwrap();
+        let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let put_request = PutUserPolicyRequest {
             user_name: "alice".to_string(),
@@ -650,7 +651,7 @@ mod tests {
         let context = create_test_context().await;
 
         let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
-        let _created_user = store.write().unwrap().create_user(user).await.unwrap();
+        let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let put_request1 = PutUserPolicyRequest {
             user_name: "alice".to_string(),
@@ -689,7 +690,7 @@ mod tests {
         let context = create_test_context().await;
 
         let group = build_group("developers".to_string(), Some("/".to_string()), &context).unwrap();
-        let _created_group = store.write().unwrap().create_group(group).await.unwrap();
+        let _created_group = store.write().await.create_group(group).await.unwrap();
 
         let request = PutGroupPolicyRequest {
             group_name: "developers".to_string(),
@@ -715,7 +716,7 @@ mod tests {
             &context,
         )
         .unwrap();
-        let _created_role = store.write().unwrap().create_role(role).await.unwrap();
+        let _created_role = store.write().await.create_role(role).await.unwrap();
 
         let request = PutRolePolicyRequest {
             role_name: "AdminRole".to_string(),
@@ -733,7 +734,7 @@ mod tests {
         let context = create_test_context().await;
 
         let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
-        let _created_user = store.write().unwrap().create_user(user).await.unwrap();
+        let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let request = PutUserPolicyRequest {
             user_name: "alice".to_string(),
@@ -788,7 +789,7 @@ mod tests {
         let context = create_test_context().await;
 
         let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
-        let _created_user = store.write().unwrap().create_user(user).await.unwrap();
+        let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let request = GetUserPolicyRequest {
             user_name: "alice".to_string(),
@@ -922,7 +923,7 @@ mod tests {
 
         // Create user so the store operation can succeed
         let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
-        store.write().unwrap().create_user(user).await.unwrap();
+        store.write().await.create_user(user).await.unwrap();
 
         let request = PutUserPolicyRequest {
             user_name: "alice".to_string(),

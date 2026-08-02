@@ -5,7 +5,8 @@
 use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::SessionStore;
 use crate::wami::sts::StsSession;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::error::Result;
 
 /// Service for managing STS sessions
@@ -43,38 +44,22 @@ impl<S: SessionStore> SessionService<S> {
 
     /// Create a new STS session
     pub async fn create_session(&self, session: StsSession) -> Result<StsSession> {
-        self.store
-            .write()
-            .expect("store write lock poisoned")
-            .create_session(session)
-            .await
+        self.store.write().await.create_session(session).await
     }
 
     /// Get a session by session token
     pub async fn get_session(&self, session_token: &str) -> Result<Option<StsSession>> {
-        self.store
-            .read()
-            .expect("store read lock poisoned")
-            .get_session(session_token)
-            .await
+        self.store.read().await.get_session(session_token).await
     }
 
     /// Delete a session
     pub async fn delete_session(&self, session_token: &str) -> Result<()> {
-        self.store
-            .write()
-            .unwrap()
-            .delete_session(session_token)
-            .await
+        self.store.write().await.delete_session(session_token).await
     }
 
     /// List sessions, optionally filtered by user ID
     pub async fn list_sessions(&self, user_id: Option<&str>) -> Result<Vec<StsSession>> {
-        self.store
-            .read()
-            .expect("store read lock poisoned")
-            .list_sessions(user_id)
-            .await
+        self.store.read().await.list_sessions(user_id).await
     }
 }
 
