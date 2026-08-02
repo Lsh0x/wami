@@ -10,7 +10,8 @@ use crate::wami::identity::identity_provider::{
     RemoveClientIDFromOpenIDConnectProviderRequest, SamlProvider,
     UpdateOpenIDConnectProviderThumbprintRequest, UpdateSAMLProviderRequest,
 };
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
 use wami_core::types::Tag;
@@ -60,13 +61,13 @@ impl<S: IdentityProviderStore> IdentityProviderService<S> {
         }
 
         // Persist
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
         store.create_saml_provider(provider).await
     }
 
     /// Get a SAML provider by ARN
     pub async fn get_saml_provider(&self, arn: &str) -> Result<Option<SamlProvider>> {
-        let store = self.read_store();
+        let store = self.read_store().await;
         store.get_saml_provider(arn).await
     }
 
@@ -80,7 +81,7 @@ impl<S: IdentityProviderStore> IdentityProviderService<S> {
 
         // Get existing provider
         let existing = {
-            let store = self.read_store();
+            let store = self.read_store().await;
             store.get_saml_provider(&request.arn).await?
         };
 
@@ -100,13 +101,13 @@ impl<S: IdentityProviderStore> IdentityProviderService<S> {
         }
 
         // Persist
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
         store.update_saml_provider(updated).await
     }
 
     /// Delete a SAML provider
     pub async fn delete_saml_provider(&self, arn: &str) -> Result<()> {
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
         store.delete_saml_provider(arn).await
     }
 
@@ -115,7 +116,7 @@ impl<S: IdentityProviderStore> IdentityProviderService<S> {
         &self,
         request: ListSAMLProvidersRequest,
     ) -> Result<(Vec<SamlProvider>, bool, Option<String>)> {
-        let store = self.read_store();
+        let store = self.read_store().await;
         store.list_saml_providers(request.pagination.as_ref()).await
     }
 
@@ -152,13 +153,13 @@ impl<S: IdentityProviderStore> IdentityProviderService<S> {
         }
 
         // Persist
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
         store.create_oidc_provider(provider).await
     }
 
     /// Get an OIDC provider by ARN
     pub async fn get_oidc_provider(&self, arn: &str) -> Result<Option<OidcProvider>> {
-        let store = self.read_store();
+        let store = self.read_store().await;
         store.get_oidc_provider(arn).await
     }
 
@@ -172,7 +173,7 @@ impl<S: IdentityProviderStore> IdentityProviderService<S> {
 
         // Get existing provider
         let existing = {
-            let store = self.read_store();
+            let store = self.read_store().await;
             store.get_oidc_provider(&request.arn).await?
         };
 
@@ -184,7 +185,7 @@ impl<S: IdentityProviderStore> IdentityProviderService<S> {
         let updated = builder::update_thumbprints(existing, request.thumbprint_list);
 
         // Persist
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
         store.update_oidc_provider(updated).await
     }
 
@@ -195,7 +196,7 @@ impl<S: IdentityProviderStore> IdentityProviderService<S> {
     ) -> Result<OidcProvider> {
         // Get existing provider
         let existing = {
-            let store = self.read_store();
+            let store = self.read_store().await;
             store.get_oidc_provider(&request.arn).await?
         };
 
@@ -207,7 +208,7 @@ impl<S: IdentityProviderStore> IdentityProviderService<S> {
         let updated = builder::add_client_id(existing, request.client_id);
 
         // Persist
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
         store.update_oidc_provider(updated).await
     }
 
@@ -218,7 +219,7 @@ impl<S: IdentityProviderStore> IdentityProviderService<S> {
     ) -> Result<OidcProvider> {
         // Get existing provider
         let existing = {
-            let store = self.read_store();
+            let store = self.read_store().await;
             store.get_oidc_provider(&request.arn).await?
         };
 
@@ -230,13 +231,13 @@ impl<S: IdentityProviderStore> IdentityProviderService<S> {
         let updated = builder::remove_client_id(existing, &request.client_id);
 
         // Persist
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
         store.update_oidc_provider(updated).await
     }
 
     /// Delete an OIDC provider
     pub async fn delete_oidc_provider(&self, arn: &str) -> Result<()> {
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
         store.delete_oidc_provider(arn).await
     }
 
@@ -245,7 +246,7 @@ impl<S: IdentityProviderStore> IdentityProviderService<S> {
         &self,
         request: ListOpenIDConnectProvidersRequest,
     ) -> Result<(Vec<OidcProvider>, bool, Option<String>)> {
-        let store = self.read_store();
+        let store = self.read_store().await;
         store.list_oidc_providers(request.pagination.as_ref()).await
     }
 
@@ -255,19 +256,19 @@ impl<S: IdentityProviderStore> IdentityProviderService<S> {
 
     /// Tag an identity provider (SAML or OIDC)
     pub async fn tag_identity_provider(&self, arn: &str, tags: Vec<Tag>) -> Result<()> {
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
         store.tag_identity_provider(arn, tags).await
     }
 
     /// List tags for an identity provider
     pub async fn list_identity_provider_tags(&self, arn: &str) -> Result<Vec<Tag>> {
-        let store = self.read_store();
+        let store = self.read_store().await;
         store.list_identity_provider_tags(arn).await
     }
 
     /// Untag an identity provider
     pub async fn untag_identity_provider(&self, arn: &str, tag_keys: Vec<String>) -> Result<()> {
-        let mut store = self.write_store();
+        let mut store = self.write_store().await;
         store.untag_identity_provider(arn, tag_keys).await
     }
 }
@@ -403,5 +404,69 @@ mod tests {
         service.delete_oidc_provider(&created.arn).await.unwrap();
         let after_delete = service.get_oidc_provider(&created.arn).await.unwrap();
         assert!(after_delete.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_identity_provider_tagging() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let service = IdentityProviderService::new(store);
+        let context = test_context();
+
+        let created = service
+            .create_saml_provider(
+                &context,
+                CreateSAMLProviderRequest {
+                    name: "TaggedSAML".to_string(),
+                    saml_metadata_document: r#"<?xml version="1.0"?>
+                        <EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
+                            <IDPSSODescriptor />
+                        </EntityDescriptor>"#
+                        .to_string(),
+                    tags: None,
+                },
+            )
+            .await
+            .unwrap();
+
+        assert!(service
+            .list_identity_provider_tags(&created.arn)
+            .await
+            .unwrap()
+            .is_empty());
+
+        service
+            .tag_identity_provider(
+                &created.arn,
+                vec![
+                    Tag {
+                        key: "env".to_string(),
+                        value: "prod".to_string(),
+                    },
+                    Tag {
+                        key: "team".to_string(),
+                        value: "platform".to_string(),
+                    },
+                ],
+            )
+            .await
+            .unwrap();
+
+        let tags = service
+            .list_identity_provider_tags(&created.arn)
+            .await
+            .unwrap();
+        assert_eq!(tags.len(), 2);
+
+        service
+            .untag_identity_provider(&created.arn, vec!["env".to_string()])
+            .await
+            .unwrap();
+
+        let remaining = service
+            .list_identity_provider_tags(&created.arn)
+            .await
+            .unwrap();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].key, "team");
     }
 }

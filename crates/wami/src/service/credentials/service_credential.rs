@@ -4,7 +4,8 @@
 
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::ServiceCredentialStore;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
@@ -80,6 +81,7 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
 
         // Store it
         self.write_store()
+            .await
             .create_service_specific_credential(credential)
             .await
     }
@@ -98,6 +100,7 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
         )
         .await?;
         self.read_store()
+            .await
             .get_service_specific_credential(credential_id)
             .await
     }
@@ -119,6 +122,7 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
         // Get existing credential
         let mut credential = self
             .read_store()
+            .await
             .get_service_specific_credential(&request.service_specific_credential_id)
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
@@ -133,6 +137,7 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
 
         // Store updated credential
         self.write_store()
+            .await
             .update_service_specific_credential(credential)
             .await
     }
@@ -151,6 +156,7 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
         )
         .await?;
         self.write_store()
+            .await
             .delete_service_specific_credential(&request.service_specific_credential_id)
             .await
     }
@@ -170,6 +176,7 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
         )
         .await?;
         self.read_store()
+            .await
             .list_service_specific_credentials(user_name)
             .await
     }

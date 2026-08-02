@@ -9,7 +9,8 @@
 //!
 //! Run with: `cargo run --example 21_sso_setup_basic`
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami::provider::AwsProvider;
 use wami::service::{InstanceService as SsoInstanceService, PermissionSetService};
 use wami::store::memory::InMemoryWamiStore;

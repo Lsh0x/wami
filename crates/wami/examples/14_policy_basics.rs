@@ -9,7 +9,8 @@
 //!
 //! Run with: `cargo run --example 14_policy_basics`
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami::arn::{TenantPath, WamiArn};
 use wami::context::WamiContext;
 use wami::service::{PolicyService, UserService};

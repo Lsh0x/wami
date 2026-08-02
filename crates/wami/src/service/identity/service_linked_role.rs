@@ -9,7 +9,8 @@ use crate::wami::identity::service_linked_role::{
     operations as slr_ops, CreateServiceLinkedRoleRequest, DeletionTaskInfo,
 };
 use crate::wami::identity::Role;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
@@ -96,7 +97,7 @@ impl<S: ServiceLinkedRoleServiceStore> ServiceLinkedRoleService<S> {
             context,
         )?;
 
-        self.write_store().create_role(role).await
+        self.write_store().await.create_role(role).await
     }
 
     /// Get the status of a service-linked role deletion task
@@ -109,7 +110,7 @@ impl<S: ServiceLinkedRoleServiceStore> ServiceLinkedRoleService<S> {
             .await?;
         self.store
             .read()
-            .unwrap()
+            .await
             .get_service_linked_role_deletion_task(deletion_task_id)
             .await
     }

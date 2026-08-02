@@ -1,4 +1,3 @@
-#![allow(clippy::await_holding_lock)]
 //! GDPR Service
 //!
 //! Orchestrates consent management, audit trail recording, data export,
@@ -11,7 +10,8 @@ use crate::wami::gdpr::model::{
 };
 use crate::wami::gdpr::operations;
 use chrono::Utc;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::error::{AmiError, Result};
 
 /// Combined trait bound for GDPR storage.
@@ -49,13 +49,17 @@ impl<S: GdprStore> GdprService<S> {
 
         // Revoke any existing active consent for this user+category.
         // Note: split into two statements to drop the read lock before acquiring write lock
-        // (std::sync::RwLock deadlocks if both held on the same thread).
+        // (the RwLock is not reentrant — holding both at once deadlocks the task).
         let existing = self
             .read_store()
+            .await
             .get_active_consent(tenant_id, user_name, category)
             .await?;
         if let Some(existing) = existing {
-            self.write_store().revoke_consent(&existing.id).await?;
+            self.write_store()
+                .await
+                .revoke_consent(&existing.id)
+                .await?;
         }
 
         // Create the new consent record.
@@ -73,12 +77,12 @@ impl<S: GdprStore> GdprService<S> {
             active: true,
         };
 
-        let created = self.write_store().create_consent(record).await?;
+        let created = self.write_store().await.create_consent(record).await?;
 
         // Audit trail.
         let audit_event =
             operations::build_consent_audit_event(tenant_id, user_name, user_name, category, level);
-        self.write_store().record_event(audit_event).await?;
+        self.write_store().await.record_event(audit_event).await?;
 
         Ok(created)
     }
@@ -92,6 +96,7 @@ impl<S: GdprStore> GdprService<S> {
     ) -> Result<()> {
         let existing = self
             .read_store()
+            .await
             .get_active_consent(tenant_id, user_name, category)
             .await?
             .ok_or_else(|| AmiError::ResourceNotFound {
@@ -101,7 +106,10 @@ impl<S: GdprStore> GdprService<S> {
                 ),
             })?;
 
-        self.write_store().revoke_consent(&existing.id).await?;
+        self.write_store()
+            .await
+            .revoke_consent(&existing.id)
+            .await?;
 
         // Audit trail.
         let event = WamiAuditEvent {
@@ -115,7 +123,7 @@ impl<S: GdprStore> GdprService<S> {
             source_ip: None,
             metadata: None,
         };
-        self.write_store().record_event(event).await?;
+        self.write_store().await.record_event(event).await?;
 
         Ok(())
     }
@@ -124,6 +132,7 @@ impl<S: GdprStore> GdprService<S> {
     pub async fn revoke_all_consents(&self, tenant_id: &str, user_name: &str) -> Result<u64> {
         let count = self
             .write_store()
+            .await
             .revoke_all_user_consents(tenant_id, user_name)
             .await?;
 
@@ -138,7 +147,7 @@ impl<S: GdprStore> GdprService<S> {
             source_ip: None,
             metadata: Some(serde_json::json!({ "revoked_count": count })),
         };
-        self.write_store().record_event(event).await?;
+        self.write_store().await.record_event(event).await?;
 
         Ok(count)
     }
@@ -150,6 +159,7 @@ impl<S: GdprStore> GdprService<S> {
         user_name: &str,
     ) -> Result<Vec<ConsentRecord>> {
         self.read_store()
+            .await
             .list_user_consents(tenant_id, user_name)
             .await
     }
@@ -163,6 +173,7 @@ impl<S: GdprStore> GdprService<S> {
     ) -> Result<bool> {
         let consents = self
             .read_store()
+            .await
             .list_user_consents(tenant_id, user_name)
             .await?;
         Ok(operations::is_processing_allowed(&consents, category))
@@ -182,7 +193,11 @@ impl<S: GdprStore> GdprService<S> {
         processed_by: &str,
     ) -> Result<ErasureCertificate> {
         // Get retention policies to determine what must be retained.
-        let policies = self.read_store().list_retention_policies(tenant_id).await?;
+        let policies = self
+            .read_store()
+            .await
+            .list_retention_policies(tenant_id)
+            .await?;
 
         let (to_erase, to_retain) = operations::compute_erasure_scope(categories, &policies);
 
@@ -213,18 +228,20 @@ impl<S: GdprStore> GdprService<S> {
 
         let saved = self
             .write_store()
+            .await
             .create_erasure_certificate(certificate.clone())
             .await?;
 
         // Revoke all consents for erased user.
         let _ = self
             .write_store()
+            .await
             .revoke_all_user_consents(tenant_id, user_name)
             .await;
 
         // Audit trail.
         let audit_event = operations::build_erasure_audit_event(tenant_id, processed_by, &saved);
-        self.write_store().record_event(audit_event).await?;
+        self.write_store().await.record_event(audit_event).await?;
 
         Ok(saved)
     }
@@ -235,6 +252,7 @@ impl<S: GdprStore> GdprService<S> {
         certificate_id: &str,
     ) -> Result<Option<ErasureCertificate>> {
         self.read_store()
+            .await
             .get_erasure_certificate(certificate_id)
             .await
     }
@@ -250,6 +268,7 @@ impl<S: GdprStore> GdprService<S> {
     ) -> Result<UserDataExport> {
         let export = self
             .read_store()
+            .await
             .export_user_data(tenant_id, user_name, categories)
             .await?;
 
@@ -268,7 +287,7 @@ impl<S: GdprStore> GdprService<S> {
                 "section_count": export.sections.len(),
             })),
         };
-        self.write_store().record_event(event).await?;
+        self.write_store().await.record_event(event).await?;
 
         Ok(export)
     }
@@ -280,17 +299,27 @@ impl<S: GdprStore> GdprService<S> {
         &self,
         policy: RetentionPolicy,
     ) -> Result<RetentionPolicy> {
-        self.write_store().upsert_retention_policy(policy).await
+        self.write_store()
+            .await
+            .upsert_retention_policy(policy)
+            .await
     }
 
     /// List retention policies for a tenant.
     pub async fn list_retention_policies(&self, tenant_id: &str) -> Result<Vec<RetentionPolicy>> {
-        self.read_store().list_retention_policies(tenant_id).await
+        self.read_store()
+            .await
+            .list_retention_policies(tenant_id)
+            .await
     }
 
     /// Enforce retention policies (purge expired data).
     pub async fn enforce_retention(&self, tenant_id: &str) -> Result<u64> {
-        let count = self.write_store().enforce_retention(tenant_id).await?;
+        let count = self
+            .write_store()
+            .await
+            .enforce_retention(tenant_id)
+            .await?;
 
         if count > 0 {
             let event = WamiAuditEvent {
@@ -304,7 +333,7 @@ impl<S: GdprStore> GdprService<S> {
                 source_ip: None,
                 metadata: Some(serde_json::json!({ "records_purged": count })),
             };
-            self.write_store().record_event(event).await?;
+            self.write_store().await.record_event(event).await?;
         }
 
         Ok(count)
@@ -318,7 +347,10 @@ impl<S: GdprStore> GdprService<S> {
         tenant_id: &str,
         filter: &crate::store::traits::gdpr::audit::AuditFilter,
     ) -> Result<Vec<WamiAuditEvent>> {
-        self.read_store().query_events(tenant_id, filter).await
+        self.read_store()
+            .await
+            .query_events(tenant_id, filter)
+            .await
     }
 }
 
@@ -872,7 +904,7 @@ mod tests {
         let svc = make_service();
         // Create a consent with an old granted_at date
         {
-            let mut store = svc.write_store();
+            let mut store = svc.write_store().await;
             store.consents.push(ConsentRecord {
                 id: "old-c1".to_string(),
                 user_name: "alice".to_string(),
@@ -939,7 +971,7 @@ mod tests {
     async fn enforce_retention_emits_audit_when_purging() {
         let svc = make_service();
         {
-            let mut store = svc.write_store();
+            let mut store = svc.write_store().await;
             store.consents.push(ConsentRecord {
                 id: "old-c1".to_string(),
                 user_name: "bob".to_string(),

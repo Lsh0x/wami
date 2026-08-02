@@ -5,7 +5,8 @@
 use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::AccountAssignmentStore;
 use crate::wami::sso_admin::account_assignment::AccountAssignment;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::error::Result;
 
 /// Service for managing account assignments
@@ -43,7 +44,7 @@ impl<S: AccountAssignmentStore> AccountAssignmentService<S> {
     ) -> Result<AccountAssignment> {
         self.store
             .write()
-            .unwrap()
+            .await
             .create_account_assignment(assignment)
             .await
     }
@@ -55,7 +56,7 @@ impl<S: AccountAssignmentStore> AccountAssignmentService<S> {
     ) -> Result<Option<AccountAssignment>> {
         self.store
             .read()
-            .unwrap()
+            .await
             .get_account_assignment(assignment_id)
             .await
     }
@@ -64,7 +65,7 @@ impl<S: AccountAssignmentStore> AccountAssignmentService<S> {
     pub async fn delete_account_assignment(&self, assignment_id: &str) -> Result<()> {
         self.store
             .write()
-            .unwrap()
+            .await
             .delete_account_assignment(assignment_id)
             .await
     }
@@ -77,7 +78,7 @@ impl<S: AccountAssignmentStore> AccountAssignmentService<S> {
     ) -> Result<Vec<AccountAssignment>> {
         self.store
             .read()
-            .unwrap()
+            .await
             .list_account_assignments(account_id, permission_set_arn)
             .await
     }

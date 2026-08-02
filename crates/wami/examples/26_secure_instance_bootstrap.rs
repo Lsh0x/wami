@@ -20,7 +20,10 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami::store::memory::InMemoryWamiStore;
-use wami::{AmiError, AuthenticationService, InstanceBootstrap, RootCredentials};
+use wami::{
+    AmiError, AuthenticationService, CreateUserRequest, InstanceBootstrap, RootCredentials,
+    UserService,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -78,15 +81,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // =========================================================================
     println!("\n👤 Step 4: Create Admin User (as root)");
 
-    // Note: To create users, you would use UserService with the authenticated context
-    // Example:
-    // use wami::UserService;
-    // use std::sync::{Arc, RwLock as StdRwLock};
-    // let std_store = Arc::new(StdRwLock::new(store.read().await.wami_store.clone()));
-    // let user_service = UserService::new(std_store);
-    // let admin_user = user_service.create_user(&root_context, ...).await?;
+    // The same store handle that bootstrapped the instance and authenticated
+    // the caller also serves UserService — one lock type, one source of truth.
+    let user_service = UserService::new(store.clone());
+    let admin_user = user_service
+        .create_user(
+            &root_context,
+            CreateUserRequest {
+                user_name: "admin".to_string(),
+                path: Some("/".to_string()),
+                permissions_boundary: None,
+                tags: None,
+            },
+        )
+        .await?;
 
-    println!("✅ Root context can be used to create resources");
+    println!("✅ Admin user created: {}", admin_user.user_name);
+    println!("   ARN:              {}", admin_user.wami_arn);
     println!("   Context is required for all operations");
     println!("   Root context bypasses authorization checks");
 

@@ -409,7 +409,8 @@ use wami::{
     InstanceBootstrap, AuthenticationService,
     UserService, InMemoryStore,
 };
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

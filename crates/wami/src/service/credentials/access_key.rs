@@ -4,7 +4,8 @@
 
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::AccessKeyStore;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
@@ -73,7 +74,7 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
         let access_key = access_key_builder::build_access_key(request.user_name, context)?;
 
         // Store it
-        self.write_store().create_access_key(access_key).await
+        self.write_store().await.create_access_key(access_key).await
     }
 
     /// Get an access key by ID
@@ -89,7 +90,7 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
             access_key_id,
         )
         .await?;
-        self.read_store().get_access_key(access_key_id).await
+        self.read_store().await.get_access_key(access_key_id).await
     }
 
     /// Update an access key (e.g., change status)
@@ -105,7 +106,7 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
             &access_key.user_name,
         )
         .await?;
-        self.write_store().update_access_key(access_key).await
+        self.write_store().await.update_access_key(access_key).await
     }
 
     /// Delete an access key
@@ -121,7 +122,10 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
             access_key_id,
         )
         .await?;
-        self.write_store().delete_access_key(access_key_id).await
+        self.write_store()
+            .await
+            .delete_access_key(access_key_id)
+            .await
     }
 
     /// List access keys for a user
@@ -138,6 +142,7 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
         )
         .await?;
         self.read_store()
+            .await
             .list_access_keys(&request.user_name, request.pagination.as_ref())
             .await
     }

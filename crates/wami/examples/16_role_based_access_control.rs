@@ -9,7 +9,8 @@
 //!
 //! Run with: `cargo run --example 16_role_based_access_control`
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami::arn::{TenantPath, WamiArn};
 use wami::context::WamiContext;
 use wami::service::{PolicyService, RoleService, UserService};

@@ -5,7 +5,8 @@
 use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::TrustedTokenIssuerStore;
 use crate::wami::sso_admin::trusted_token_issuer::TrustedTokenIssuer;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::error::Result;
 
 /// Service for managing trusted token issuers
@@ -43,7 +44,7 @@ impl<S: TrustedTokenIssuerStore> TrustedTokenIssuerService<S> {
     ) -> Result<TrustedTokenIssuer> {
         self.store
             .write()
-            .unwrap()
+            .await
             .create_trusted_token_issuer(issuer)
             .await
     }
@@ -55,7 +56,7 @@ impl<S: TrustedTokenIssuerStore> TrustedTokenIssuerService<S> {
     ) -> Result<Option<TrustedTokenIssuer>> {
         self.store
             .read()
-            .unwrap()
+            .await
             .get_trusted_token_issuer(issuer_arn)
             .await
     }
@@ -64,7 +65,7 @@ impl<S: TrustedTokenIssuerStore> TrustedTokenIssuerService<S> {
     pub async fn delete_trusted_token_issuer(&self, issuer_arn: &str) -> Result<()> {
         self.store
             .write()
-            .unwrap()
+            .await
             .delete_trusted_token_issuer(issuer_arn)
             .await
     }
@@ -76,7 +77,7 @@ impl<S: TrustedTokenIssuerStore> TrustedTokenIssuerService<S> {
     ) -> Result<Vec<TrustedTokenIssuer>> {
         self.store
             .read()
-            .unwrap()
+            .await
             .list_trusted_token_issuers(instance_arn)
             .await
     }

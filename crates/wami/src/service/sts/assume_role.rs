@@ -7,7 +7,8 @@ use crate::wami::sts::assume_role::{AssumeRoleRequest, AssumeRoleResponse, Assum
 use crate::wami::sts::session::SessionStatus;
 use crate::wami::sts::{Credentials, StsSession};
 use chrono::{Duration, Utc};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::arn::{Service, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
@@ -85,7 +86,7 @@ impl<S: AssumeRoleServiceStore> AssumeRoleService<S> {
         let role = if let Ok(wami_arn) = request.role_arn.parse::<crate::arn::WamiArn>() {
             if wami_arn.resource.resource_type == "role" {
                 // Search for role by matching wami_arn
-                let store_guard = self.read_store();
+                let store_guard = self.read_store().await;
                 let (roles, _, _) = store_guard.list_roles(None, None).await?;
                 roles
                     .into_iter()
@@ -103,7 +104,7 @@ impl<S: AssumeRoleServiceStore> AssumeRoleService<S> {
             let role_name = self.extract_role_name_from_arn(&request.role_arn)?;
             self.store
                 .read()
-                .unwrap()
+                .await
                 .get_role(&role_name)
                 .await?
                 .ok_or_else(|| AmiError::ResourceNotFound {
@@ -195,7 +196,7 @@ impl<S: AssumeRoleServiceStore> AssumeRoleService<S> {
             last_used: None,
         };
 
-        self.write_store().create_session(session).await?;
+        self.write_store().await.create_session(session).await?;
 
         Ok(AssumeRoleResponse {
             credentials,
@@ -279,13 +280,7 @@ mod tests {
 
         let role_arn = role.wami_arn.to_string();
 
-        service
-            .store
-            .write()
-            .unwrap()
-            .create_role(role)
-            .await
-            .unwrap();
+        service.store.write().await.create_role(role).await.unwrap();
 
         // Assume the role
         let request = AssumeRoleRequest {
@@ -329,6 +324,64 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_assume_role_with_aws_format_arn() {
+        // An ARN that does not parse as a WAMI ARN takes the AWS fallback path,
+        // which looks the role up by the name pulled out of the ARN.
+        let service = setup_service();
+        let context = test_context();
+
+        let role = build_role(
+            "LegacyRole".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+            Some("/".to_string()),
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        service.store.write().await.create_role(role).await.unwrap();
+
+        let response = service
+            .assume_role(
+                &context,
+                AssumeRoleRequest {
+                    role_arn: "arn:aws:iam::123456789012:role/LegacyRole".to_string(),
+                    role_session_name: "legacy-session".to_string(),
+                    duration_seconds: Some(3600),
+                    external_id: None,
+                    policy: None,
+                },
+                "arn:aws:iam::123456789012:user/alice",
+            )
+            .await
+            .unwrap();
+
+        assert!(response.assumed_role_user.arn.contains("LegacyRole"));
+    }
+
+    #[tokio::test]
+    async fn test_assume_role_with_aws_format_arn_unknown_role() {
+        let service = setup_service();
+        let context = test_context();
+
+        let result = service
+            .assume_role(
+                &context,
+                AssumeRoleRequest {
+                    role_arn: "arn:aws:iam::123456789012:role/Missing".to_string(),
+                    role_session_name: "legacy-session".to_string(),
+                    duration_seconds: Some(3600),
+                    external_id: None,
+                    policy: None,
+                },
+                "arn:aws:iam::123456789012:user/alice",
+            )
+            .await;
+
+        assert!(matches!(result, Err(AmiError::ResourceNotFound { .. })));
+    }
+
+    #[tokio::test]
     async fn test_assume_role_with_external_id() {
         let service = setup_service();
         let context = test_context();
@@ -347,13 +400,7 @@ mod tests {
 
         let role_arn = role.wami_arn.to_string();
 
-        service
-            .store
-            .write()
-            .unwrap()
-            .create_role(role)
-            .await
-            .unwrap();
+        service.store.write().await.create_role(role).await.unwrap();
 
         // Assume with external ID
         let request = AssumeRoleRequest {
@@ -395,13 +442,7 @@ mod tests {
 
         let role_arn = role.wami_arn.to_string();
 
-        service
-            .store
-            .write()
-            .unwrap()
-            .create_role(role)
-            .await
-            .unwrap();
+        service.store.write().await.create_role(role).await.unwrap();
 
         // Assume the role
         let request = AssumeRoleRequest {
@@ -421,7 +462,7 @@ mod tests {
         let sessions = service
             .store
             .read()
-            .unwrap()
+            .await
             .list_sessions(None)
             .await
             .unwrap();
@@ -469,13 +510,7 @@ mod tests {
         .unwrap();
 
         let role_arn = role.wami_arn.to_string();
-        service
-            .store
-            .write()
-            .unwrap()
-            .create_role(role)
-            .await
-            .unwrap();
+        service.store.write().await.create_role(role).await.unwrap();
 
         let km = KeyManager::generate();
         let request = AssumeRoleRequest {

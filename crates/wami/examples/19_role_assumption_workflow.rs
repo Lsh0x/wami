@@ -9,7 +9,8 @@
 //!
 //! Run with: `cargo run --example 19_role_assumption_workflow`
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami::arn::{TenantPath, WamiArn};
 use wami::context::WamiContext;
 use wami::service::{AssumeRoleService, RoleService, UserService};

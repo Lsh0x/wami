@@ -9,7 +9,8 @@ use crate::wami::policies::evaluation::{
     SimulatePrincipalPolicyRequest, StatementMatch,
 };
 use serde_json::Value;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_condition::evaluator::parse_condition_block;
 use wami_condition::{evaluate_condition_block, ConditionContext, ConditionValue};
 use wami_core::error::{AmiError, Result};
@@ -237,7 +238,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
                 let _user = self
                     .store
                     .read()
-                    .unwrap()
+                    .await
                     .get_user(principal_name)
                     .await?
                     .ok_or_else(|| AmiError::ResourceNotFound {
@@ -256,7 +257,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
                 let _role = self
                     .store
                     .read()
-                    .unwrap()
+                    .await
                     .get_role(principal_name)
                     .await?
                     .ok_or_else(|| AmiError::ResourceNotFound {
@@ -286,7 +287,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
                 let user = self
                     .store
                     .read()
-                    .unwrap()
+                    .await
                     .get_user(principal_name)
                     .await?
                     .ok_or_else(|| AmiError::ResourceNotFound {
@@ -298,7 +299,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
                 let role = self
                     .store
                     .read()
-                    .unwrap()
+                    .await
                     .get_role(principal_name)
                     .await?
                     .ok_or_else(|| AmiError::ResourceNotFound {
@@ -315,7 +316,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
 
         // Fetch the boundary policy if it exists
         if let Some(arn) = boundary_arn {
-            let policy = self.store.read().unwrap().get_policy(&arn).await?;
+            let policy = self.store.read().await.get_policy(&arn).await?;
             Ok(policy)
         } else {
             Ok(None)
@@ -687,7 +688,9 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
 mod tests {
     use super::*;
     use crate::store::memory::InMemoryWamiStore;
+    use crate::wami::identity::role::builder::build_role;
     use crate::wami::identity::user::builder::build_user;
+    use crate::wami::policies::policy::builder::build_policy;
     use wami_core::arn::{TenantPath, WamiArn};
     use wami_core::context::WamiContext;
 
@@ -832,13 +835,7 @@ mod tests {
         // Create a user
         let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
 
-        service
-            .store
-            .write()
-            .unwrap()
-            .create_user(user)
-            .await
-            .unwrap();
+        service.store.write().await.create_user(user).await.unwrap();
 
         // Create a policy document for testing
         let policy_doc = r#"{
@@ -866,6 +863,90 @@ mod tests {
 
         assert_eq!(response.evaluation_results.len(), 1);
         assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+    }
+
+    #[tokio::test]
+    async fn test_simulate_principal_policy_role_with_boundary() {
+        // Drives the `role` arms of both fetch_principal_policies and
+        // fetch_permissions_boundary, and the boundary lookup that follows.
+        let service = setup_service();
+        let context = test_context();
+
+        let boundary = build_policy(
+            "Boundary".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"ec2:DescribeInstances","Resource":"*"}]}"#
+                .to_string(),
+            None,
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        let boundary_arn = boundary.arn.clone();
+        service
+            .store
+            .write()
+            .await
+            .create_policy(boundary)
+            .await
+            .unwrap();
+
+        let mut role = build_role(
+            "AppRole".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+            Some("/".to_string()),
+            None,
+            None,
+            &context,
+        )
+        .unwrap();
+        role.permissions_boundary = Some(boundary_arn);
+        service.store.write().await.create_role(role).await.unwrap();
+
+        let identity = r#"{
+            "Version": "2012-10-17",
+            "Statement": [
+                {"Effect": "Allow", "Action": "ec2:DescribeInstances", "Resource": "*"},
+                {"Effect": "Allow", "Action": "s3:GetObject", "Resource": "*"}
+            ]
+        }"#;
+
+        let response = service
+            .simulate_principal_policy(SimulatePrincipalPolicyRequest {
+                policy_source_arn: "arn:aws:iam::123456789012:role/AppRole".to_string(),
+                action_names: vec![
+                    "ec2:DescribeInstances".to_string(),
+                    "s3:GetObject".to_string(),
+                ],
+                resource_arns: None,
+                policy_input_list: Some(vec![identity.to_string()]),
+                context_entries: None,
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(response.evaluation_results.len(), 2);
+        // Allowed by both the identity policy and the boundary.
+        assert_eq!(response.evaluation_results[0].eval_decision, "allowed");
+        // Allowed by the identity policy but outside the boundary.
+        assert_ne!(response.evaluation_results[1].eval_decision, "allowed");
+    }
+
+    #[tokio::test]
+    async fn test_simulate_principal_policy_unknown_role() {
+        let service = setup_service();
+
+        let result = service
+            .simulate_principal_policy(SimulatePrincipalPolicyRequest {
+                policy_source_arn: "arn:aws:iam::123456789012:role/Missing".to_string(),
+                action_names: vec!["ec2:DescribeInstances".to_string()],
+                resource_arns: None,
+                policy_input_list: None,
+                context_entries: None,
+            })
+            .await;
+
+        assert!(matches!(result, Err(AmiError::ResourceNotFound { .. })));
     }
 
     #[tokio::test]
@@ -1739,7 +1820,7 @@ mod tests {
         // Create a user first so the principal exists
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
         let user = build_user("alice".to_string(), None, &test_context()).unwrap();
-        store.write().unwrap().create_user(user).await.unwrap();
+        store.write().await.create_user(user).await.unwrap();
 
         let service = EvaluationService::new(store, "123456789012".to_string());
         let request = SimulatePrincipalPolicyRequest {

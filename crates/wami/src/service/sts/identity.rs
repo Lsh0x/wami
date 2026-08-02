@@ -5,7 +5,8 @@
 use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::{IdentityStore, UserStore};
 use crate::wami::sts::CallerIdentity;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::error::{AmiError, Result};
 
 pub trait StsIdentityServiceStore: IdentityStore + UserStore {}
@@ -67,7 +68,7 @@ impl<S: StsIdentityServiceStore> IdentityService<S> {
     ) -> Result<GetCallerIdentityResponse> {
         // Try to get from identity store first
         {
-            let store_guard = self.store.read().expect("store read lock poisoned");
+            let store_guard = self.store.read().await;
             if let Some(identity) = store_guard.get_identity(caller_arn).await? {
                 return Ok(GetCallerIdentityResponse {
                     user_id: identity.user_id,
@@ -83,7 +84,7 @@ impl<S: StsIdentityServiceStore> IdentityService<S> {
 
         // Get user (drop read lock before creating identity)
         let user = {
-            let store_guard = self.store.read().expect("store read lock poisoned");
+            let store_guard = self.store.read().await;
             store_guard.get_user(&user_name).await?
         }; // Drop read lock
 
@@ -98,7 +99,7 @@ impl<S: StsIdentityServiceStore> IdentityService<S> {
             };
 
             {
-                let mut store_guard = self.store.write().expect("store write lock poisoned");
+                let mut store_guard = self.store.write().await;
                 store_guard.create_identity(identity.clone()).await?;
             } // Drop write lock
 
@@ -116,11 +117,7 @@ impl<S: StsIdentityServiceStore> IdentityService<S> {
 
     /// List all identities
     pub async fn list_identities(&self) -> Result<Vec<CallerIdentity>> {
-        self.store
-            .read()
-            .expect("store read lock poisoned")
-            .list_identities()
-            .await
+        self.store.read().await.list_identities().await
     }
 
     // Helper method
@@ -182,13 +179,7 @@ mod tests {
 
         let user_arn = user.arn.clone();
 
-        service
-            .store
-            .write()
-            .unwrap()
-            .create_user(user)
-            .await
-            .unwrap();
+        service.store.write().await.create_user(user).await.unwrap();
 
         // Get caller identity
         let request = GetCallerIdentityRequest {};
@@ -211,13 +202,7 @@ mod tests {
             let user = build_user(format!("user{}", i), Some("/".to_string()), &context).unwrap();
             let arn = user.arn.clone();
 
-            service
-                .store
-                .write()
-                .unwrap()
-                .create_user(user)
-                .await
-                .unwrap();
+            service.store.write().await.create_user(user).await.unwrap();
 
             // Trigger identity creation
             let request = GetCallerIdentityRequest {};

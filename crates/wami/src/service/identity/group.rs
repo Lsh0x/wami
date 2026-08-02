@@ -7,7 +7,8 @@ use crate::store::traits::GroupStore;
 use crate::wami::identity::group::{
     builder as group_builder, CreateGroupRequest, Group, ListGroupsRequest, UpdateGroupRequest,
 };
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
@@ -64,7 +65,7 @@ impl<S: GroupStore> GroupService<S> {
         .await?;
 
         let group = group_builder::build_group(request.group_name, request.path, context)?;
-        self.write_store().create_group(group).await
+        self.write_store().await.create_group(group).await
     }
 
     /// Get a group by name
@@ -75,7 +76,7 @@ impl<S: GroupStore> GroupService<S> {
     ) -> Result<Option<Group>> {
         self.guard(context, WamiAction::IamReadRole, "group", group_name)
             .await?;
-        self.read_store().get_group(group_name).await
+        self.read_store().await.get_group(group_name).await
     }
 
     /// Update a group
@@ -94,6 +95,7 @@ impl<S: GroupStore> GroupService<S> {
 
         let mut group = self
             .read_store()
+            .await
             .get_group(&request.group_name)
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
@@ -108,14 +110,14 @@ impl<S: GroupStore> GroupService<S> {
             group = group_builder::update_group_path(group, new_path);
         }
 
-        self.write_store().update_group(group).await
+        self.write_store().await.update_group(group).await
     }
 
     /// Delete a group
     pub async fn delete_group(&self, context: &WamiContext, group_name: &str) -> Result<()> {
         self.guard(context, WamiAction::IamDeleteGroup, "group", group_name)
             .await?;
-        self.write_store().delete_group(group_name).await
+        self.write_store().await.delete_group(group_name).await
     }
 
     /// List groups with optional filtering
@@ -127,6 +129,7 @@ impl<S: GroupStore> GroupService<S> {
         self.guard(context, WamiAction::IamListUsers, "group", "*")
             .await?;
         self.read_store()
+            .await
             .list_groups(request.path_prefix.as_deref(), request.pagination.as_ref())
             .await
     }
@@ -146,6 +149,7 @@ impl<S: GroupStore> GroupService<S> {
         )
         .await?;
         self.write_store()
+            .await
             .add_user_to_group(group_name, user_name)
             .await
     }
@@ -165,6 +169,7 @@ impl<S: GroupStore> GroupService<S> {
         )
         .await?;
         self.write_store()
+            .await
             .remove_user_from_group(group_name, user_name)
             .await
     }
@@ -177,7 +182,10 @@ impl<S: GroupStore> GroupService<S> {
     ) -> Result<Vec<Group>> {
         self.guard(context, WamiAction::IamReadUser, "user", user_name)
             .await?;
-        self.read_store().list_groups_for_user(user_name).await
+        self.read_store()
+            .await
+            .list_groups_for_user(user_name)
+            .await
     }
 }
 
@@ -304,7 +312,7 @@ mod tests {
 
         let user =
             user_builder::build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
-        store.write().unwrap().create_user(user).await.unwrap();
+        store.write().await.create_user(user).await.unwrap();
 
         let request = CreateGroupRequest {
             group_name: "admins".to_string(),

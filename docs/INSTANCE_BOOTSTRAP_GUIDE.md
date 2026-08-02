@@ -64,7 +64,8 @@ let context = auth_service
 
 ```rust
 use wami::{InstanceBootstrap, InMemoryStore};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

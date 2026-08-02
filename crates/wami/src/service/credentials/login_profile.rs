@@ -4,7 +4,8 @@
 
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::LoginProfileStore;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
@@ -78,7 +79,10 @@ impl<S: LoginProfileStore> LoginProfileService<S> {
         )?;
 
         // Store it
-        self.write_store().create_login_profile(login_profile).await
+        self.write_store()
+            .await
+            .create_login_profile(login_profile)
+            .await
     }
 
     /// Get a login profile for a user
@@ -89,7 +93,7 @@ impl<S: LoginProfileStore> LoginProfileService<S> {
     ) -> Result<Option<LoginProfile>> {
         self.guard(context, WamiAction::IamManageCredentials, "user", user_name)
             .await?;
-        self.read_store().get_login_profile(user_name).await
+        self.read_store().await.get_login_profile(user_name).await
     }
 
     /// Update a login profile
@@ -109,6 +113,7 @@ impl<S: LoginProfileStore> LoginProfileService<S> {
         // Get existing profile
         let profile = self
             .read_store()
+            .await
             .get_login_profile(&request.user_name)
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
@@ -122,6 +127,7 @@ impl<S: LoginProfileStore> LoginProfileService<S> {
 
         // Store updated profile
         self.write_store()
+            .await
             .update_login_profile(updated_profile)
             .await
     }
@@ -130,7 +136,10 @@ impl<S: LoginProfileStore> LoginProfileService<S> {
     pub async fn delete_login_profile(&self, context: &WamiContext, user_name: &str) -> Result<()> {
         self.guard(context, WamiAction::IamManageCredentials, "user", user_name)
             .await?;
-        self.write_store().delete_login_profile(user_name).await
+        self.write_store()
+            .await
+            .delete_login_profile(user_name)
+            .await
     }
 }
 

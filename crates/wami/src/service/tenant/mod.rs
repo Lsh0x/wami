@@ -5,7 +5,8 @@
 use crate::store::traits::TenantStore;
 use crate::wami::tenant::operations::tenant_operations;
 use crate::wami::tenant::{Tenant, TenantId, TenantQuotas, TenantUsage};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::arn::{Service, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
@@ -34,7 +35,7 @@ impl<S: TenantStore> TenantService<S> {
             };
 
             // Check global uniqueness - verify tenant doesn't already exist
-            let exists = self.read_store().get_tenant(&tenant_id).await?;
+            let exists = self.read_store().await.get_tenant(&tenant_id).await?;
 
             if exists.is_none() {
                 return Ok(tenant_id);
@@ -147,52 +148,55 @@ impl<S: TenantStore> TenantService<S> {
             .to_string();
 
         // Persist
-        self.write_store().create_tenant(tenant).await
+        self.write_store().await.create_tenant(tenant).await
     }
 
     /// Get a tenant by ID
     pub async fn get_tenant(&self, tenant_id: &TenantId) -> Result<Option<Tenant>> {
-        self.read_store().get_tenant(tenant_id).await
+        self.read_store().await.get_tenant(tenant_id).await
     }
 
     /// Update a tenant
     pub async fn update_tenant(&self, tenant: Tenant) -> Result<Tenant> {
-        self.write_store().update_tenant(tenant).await
+        self.write_store().await.update_tenant(tenant).await
     }
 
     /// Delete a tenant
     pub async fn delete_tenant(&self, tenant_id: &TenantId) -> Result<()> {
-        self.write_store().delete_tenant(tenant_id).await
+        self.write_store().await.delete_tenant(tenant_id).await
     }
 
     /// List all tenants
     pub async fn list_tenants(&self) -> Result<Vec<Tenant>> {
-        self.read_store().list_tenants().await
+        self.read_store().await.list_tenants().await
     }
 
     /// List child tenants of a parent
     pub async fn list_child_tenants(&self, parent_id: &TenantId) -> Result<Vec<Tenant>> {
-        self.read_store().list_child_tenants(parent_id).await
+        self.read_store().await.list_child_tenants(parent_id).await
     }
 
     /// Get all ancestors of a tenant
     pub async fn get_ancestors(&self, tenant_id: &TenantId) -> Result<Vec<Tenant>> {
-        self.read_store().get_ancestors(tenant_id).await
+        self.read_store().await.get_ancestors(tenant_id).await
     }
 
     /// Get all descendants of a tenant
     pub async fn get_descendants(&self, tenant_id: &TenantId) -> Result<Vec<TenantId>> {
-        self.read_store().get_descendants(tenant_id).await
+        self.read_store().await.get_descendants(tenant_id).await
     }
 
     /// Get effective quotas for a tenant (considering hierarchy)
     pub async fn get_effective_quotas(&self, tenant_id: &TenantId) -> Result<TenantQuotas> {
-        self.read_store().get_effective_quotas(tenant_id).await
+        self.read_store()
+            .await
+            .get_effective_quotas(tenant_id)
+            .await
     }
 
     /// Get current usage for a tenant
     pub async fn get_tenant_usage(&self, tenant_id: &TenantId) -> Result<TenantUsage> {
-        self.read_store().get_tenant_usage(tenant_id).await
+        self.read_store().await.get_tenant_usage(tenant_id).await
     }
 }
 
@@ -548,5 +552,33 @@ mod tests {
 
         // IDs should be different (even though both are root tenants)
         assert_ne!(tenant1.id, tenant2.id);
+    }
+
+    #[tokio::test]
+    async fn test_effective_quotas_and_usage() {
+        let service = setup_service();
+        let context = test_context();
+        let tenant = service
+            .create_tenant(&context, "acme".to_string(), None, None)
+            .await
+            .unwrap();
+
+        // A fresh tenant carries the default quotas and no usage yet.
+        let quotas = service.get_effective_quotas(&tenant.id).await.unwrap();
+        assert_eq!(quotas.max_users, tenant.quotas.max_users);
+        assert_eq!(quotas.max_roles, tenant.quotas.max_roles);
+
+        let usage = service.get_tenant_usage(&tenant.id).await.unwrap();
+        assert_eq!(usage.tenant_id, tenant.id);
+        assert_eq!(usage.current_users, 0);
+    }
+
+    #[tokio::test]
+    async fn test_quotas_and_usage_reject_unknown_tenant() {
+        let service = setup_service();
+        let missing = TenantId::from_string("99999999").unwrap();
+
+        assert!(service.get_effective_quotas(&missing).await.is_err());
+        assert!(service.get_tenant_usage(&missing).await.is_err());
     }
 }

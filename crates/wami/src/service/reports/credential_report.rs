@@ -12,7 +12,8 @@ use crate::wami::reports::credential_report::{
     GenerateCredentialReportResponse, GetAccountSummaryRequest, GetAccountSummaryResponse,
     GetCredentialReportRequest, GetCredentialReportResponse,
 };
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::error::{AmiError, Result};
 
 pub trait CredentialReportServiceStore:
@@ -84,12 +85,7 @@ where
         _request: GenerateCredentialReportRequest,
     ) -> Result<GenerateCredentialReportResponse> {
         // Fetch all users
-        let (users, _, _) = self
-            .store
-            .read()
-            .expect("store read lock poisoned")
-            .list_users(None, None)
-            .await?;
+        let (users, _, _) = self.store.read().await.list_users(None, None).await?;
 
         // Generate CSV content
         let mut csv_content = String::from(
@@ -103,14 +99,14 @@ where
             let mfa_devices = self
                 .store
                 .read()
-                .unwrap()
+                .await
                 .list_mfa_devices(&user.user_name)
                 .await?;
 
             let access_keys = self
                 .store
                 .read()
-                .unwrap()
+                .await
                 .list_access_keys(&user.user_name, None)
                 .await?
                 .0;
@@ -118,7 +114,7 @@ where
             let has_login_profile = self
                 .store
                 .read()
-                .unwrap()
+                .await
                 .get_login_profile(&user.user_name)
                 .await?
                 .is_some();
@@ -162,7 +158,7 @@ where
 
         self.store
             .write()
-            .unwrap()
+            .await
             .store_credential_report(report)
             .await?;
 
@@ -180,7 +176,7 @@ where
         let report = self
             .store
             .read()
-            .unwrap()
+            .await
             .get_credential_report()
             .await?
             .ok_or_else(|| AmiError::ResourceNotFound {
@@ -205,7 +201,7 @@ where
         &self,
         _request: GetAccountSummaryRequest,
     ) -> Result<GetAccountSummaryResponse> {
-        let store_read = self.store.read().expect("store read lock poisoned");
+        let store_read = self.store.read().await;
 
         // Count users
         let (users, _, _) = store_read.list_users(None, None).await?;
@@ -294,13 +290,7 @@ mod tests {
         // Create some test users
         for i in 0..3 {
             let user = build_user(format!("user{}", i), Some("/".to_string()), &context).unwrap();
-            service
-                .store
-                .write()
-                .unwrap()
-                .create_user(user)
-                .await
-                .unwrap();
+            service.store.write().await.create_user(user).await.unwrap();
         }
 
         let request = GenerateCredentialReportRequest {};
@@ -317,13 +307,7 @@ mod tests {
 
         // Create a user
         let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
-        service
-            .store
-            .write()
-            .unwrap()
-            .create_user(user)
-            .await
-            .unwrap();
+        service.store.write().await.create_user(user).await.unwrap();
 
         // Generate report
         let gen_request = GenerateCredentialReportRequest {};
@@ -373,13 +357,7 @@ mod tests {
         // Create users
         for i in 0..5 {
             let user = build_user(format!("user{}", i), Some("/".to_string()), &context).unwrap();
-            service
-                .store
-                .write()
-                .unwrap()
-                .create_user(user)
-                .await
-                .unwrap();
+            service.store.write().await.create_user(user).await.unwrap();
         }
 
         let request = GetAccountSummaryRequest {};

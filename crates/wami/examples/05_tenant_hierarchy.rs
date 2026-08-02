@@ -9,7 +9,8 @@
 //!
 //! Run with: `cargo run --example 05_tenant_hierarchy`
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami::arn::{TenantPath, WamiArn};
 use wami::context::WamiContext;
 use wami::service::TenantService;

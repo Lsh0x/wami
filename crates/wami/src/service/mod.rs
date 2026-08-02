@@ -1,4 +1,3 @@
-#![allow(clippy::await_holding_lock)]
 #![allow(clippy::result_large_err)]
 #![allow(clippy::unnecessary_map_or)]
 //! Service Layer

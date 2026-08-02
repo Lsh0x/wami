@@ -5,7 +5,8 @@
 use crate::provider::{AwsProvider, CloudProvider};
 use crate::store::traits::PermissionSetStore;
 use crate::wami::sso_admin::permission_set::PermissionSet;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::error::Result;
 
 /// Service for managing permission sets
@@ -43,7 +44,7 @@ impl<S: PermissionSetStore> PermissionSetService<S> {
     ) -> Result<PermissionSet> {
         self.store
             .write()
-            .unwrap()
+            .await
             .create_permission_set(permission_set)
             .await
     }
@@ -55,7 +56,7 @@ impl<S: PermissionSetStore> PermissionSetService<S> {
     ) -> Result<Option<PermissionSet>> {
         self.store
             .read()
-            .unwrap()
+            .await
             .get_permission_set(permission_set_arn)
             .await
     }
@@ -67,7 +68,7 @@ impl<S: PermissionSetStore> PermissionSetService<S> {
     ) -> Result<PermissionSet> {
         self.store
             .write()
-            .unwrap()
+            .await
             .update_permission_set(permission_set)
             .await
     }
@@ -76,7 +77,7 @@ impl<S: PermissionSetStore> PermissionSetService<S> {
     pub async fn delete_permission_set(&self, permission_set_arn: &str) -> Result<()> {
         self.store
             .write()
-            .unwrap()
+            .await
             .delete_permission_set(permission_set_arn)
             .await
     }
@@ -85,7 +86,7 @@ impl<S: PermissionSetStore> PermissionSetService<S> {
     pub async fn list_permission_sets(&self, instance_arn: &str) -> Result<Vec<PermissionSet>> {
         self.store
             .read()
-            .unwrap()
+            .await
             .list_permission_sets(instance_arn)
             .await
     }

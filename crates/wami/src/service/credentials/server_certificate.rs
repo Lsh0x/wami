@@ -4,7 +4,8 @@
 
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::ServerCertificateStore;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
@@ -83,6 +84,7 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
 
         // Store it (note: private_key is part of ServerCertificate, not passed separately)
         self.write_store()
+            .await
             .create_server_certificate(certificate)
             .await
     }
@@ -101,6 +103,7 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         )
         .await?;
         self.read_store()
+            .await
             .get_server_certificate(certificate_name)
             .await
     }
@@ -122,6 +125,7 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         // Get existing certificate
         let mut certificate = self
             .read_store()
+            .await
             .get_server_certificate(&request.server_certificate_name)
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
@@ -139,6 +143,7 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
 
         // Store updated certificate
         self.write_store()
+            .await
             .update_server_certificate(certificate)
             .await
     }
@@ -157,6 +162,7 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         )
         .await?;
         self.write_store()
+            .await
             .delete_server_certificate(certificate_name)
             .await
     }
@@ -180,6 +186,7 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         };
 
         self.read_store()
+            .await
             .list_server_certificates(request.path_prefix.as_deref(), pagination.as_ref())
             .await
     }
@@ -243,6 +250,67 @@ mod tests {
             .unwrap();
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().server_certificate_name, "test-cert");
+    }
+
+    #[tokio::test]
+    async fn test_update_server_certificate() {
+        let service = setup_service();
+        let context = test_context();
+
+        service
+            .upload_server_certificate(
+                &context,
+                UploadServerCertificateRequest {
+                    server_certificate_name: "test-cert".to_string(),
+                    certificate_body:
+                        "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----".to_string(),
+                    private_key:
+                        "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----"
+                            .to_string(),
+                    certificate_chain: None,
+                    path: Some("/certs/".to_string()),
+                    tags: None,
+                },
+            )
+            .await
+            .unwrap();
+
+        // Renaming is not exercised here: the in-memory store looks the entry up
+        // by the *new* name, so a rename cannot find it. That is a store bug,
+        // untouched by this change.
+        let updated = service
+            .update_server_certificate(
+                &context,
+                UpdateServerCertificateRequest {
+                    server_certificate_name: "test-cert".to_string(),
+                    new_server_certificate_name: None,
+                    new_path: Some("/renamed/".to_string()),
+                },
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(updated.server_certificate_name, "test-cert");
+        assert_eq!(updated.path, "/renamed/");
+    }
+
+    #[tokio::test]
+    async fn test_update_server_certificate_not_found() {
+        let service = setup_service();
+        let context = test_context();
+
+        let result = service
+            .update_server_certificate(
+                &context,
+                UpdateServerCertificateRequest {
+                    server_certificate_name: "missing".to_string(),
+                    new_server_certificate_name: None,
+                    new_path: None,
+                },
+            )
+            .await;
+
+        assert!(result.is_err());
     }
 
     #[tokio::test]

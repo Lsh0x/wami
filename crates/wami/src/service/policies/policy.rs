@@ -8,7 +8,8 @@ use crate::wami::policies::policy::{
     builder as policy_builder, CreatePolicyRequest, ListPoliciesRequest, Policy,
     UpdatePolicyRequest,
 };
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
@@ -81,7 +82,7 @@ impl<S: PolicyStore> PolicyService<S> {
         )?;
 
         // Store it
-        self.write_store().create_policy(policy).await
+        self.write_store().await.create_policy(policy).await
     }
 
     /// Get a policy by ARN
@@ -92,7 +93,7 @@ impl<S: PolicyStore> PolicyService<S> {
     ) -> Result<Option<Policy>> {
         self.guard(context, WamiAction::IamReadPolicy, "policy", policy_arn)
             .await?;
-        self.read_store().get_policy(policy_arn).await
+        self.read_store().await.get_policy(policy_arn).await
     }
 
     /// Update a policy
@@ -113,7 +114,7 @@ impl<S: PolicyStore> PolicyService<S> {
         let policy = self
             .store
             .read()
-            .unwrap()
+            .await
             .get_policy(&request.policy_arn)
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
@@ -125,18 +126,14 @@ impl<S: PolicyStore> PolicyService<S> {
             policy_builder::update_policy(policy, request.description, request.default_version_id);
 
         // Store updated policy
-        self.store
-            .write()
-            .unwrap()
-            .update_policy(updated_policy)
-            .await
+        self.store.write().await.update_policy(updated_policy).await
     }
 
     /// Delete a policy
     pub async fn delete_policy(&self, context: &WamiContext, policy_arn: &str) -> Result<()> {
         self.guard(context, WamiAction::IamDeletePolicy, "policy", policy_arn)
             .await?;
-        self.write_store().delete_policy(policy_arn).await
+        self.write_store().await.delete_policy(policy_arn).await
     }
 
     /// List policies with optional filtering
@@ -149,7 +146,7 @@ impl<S: PolicyStore> PolicyService<S> {
             .await?;
         self.store
             .read()
-            .unwrap()
+            .await
             .list_policies(request.scope.as_deref(), request.pagination.as_ref())
             .await
     }

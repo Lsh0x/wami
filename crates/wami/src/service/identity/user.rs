@@ -8,7 +8,8 @@ use crate::wami::identity::root_user::ROOT_USER_NAME;
 use crate::wami::identity::user::{
     builder as user_builder, CreateUserRequest, ListUsersRequest, UpdateUserRequest, User,
 };
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
@@ -84,14 +85,14 @@ impl<S: UserStore> UserService<S> {
         };
 
         // Store it
-        self.write_store().create_user(user).await
+        self.write_store().await.create_user(user).await
     }
 
     /// Get a user by name
     pub async fn get_user(&self, context: &WamiContext, user_name: &str) -> Result<Option<User>> {
         self.guard(context, WamiAction::IamReadUser, "user", user_name)
             .await?;
-        self.read_store().get_user(user_name).await
+        self.read_store().await.get_user(user_name).await
     }
 
     /// Update a user
@@ -125,7 +126,7 @@ impl<S: UserStore> UserService<S> {
         let mut user = self
             .store
             .read()
-            .unwrap()
+            .await
             .get_user(&request.user_name)
             .await?
             .ok_or_else(|| AmiError::ResourceNotFound {
@@ -142,7 +143,7 @@ impl<S: UserStore> UserService<S> {
         }
 
         // Store updated user
-        self.write_store().update_user(user).await
+        self.write_store().await.update_user(user).await
     }
 
     /// Delete a user
@@ -158,7 +159,7 @@ impl<S: UserStore> UserService<S> {
 
         self.guard(context, WamiAction::IamDeleteUser, "user", user_name)
             .await?;
-        self.write_store().delete_user(user_name).await
+        self.write_store().await.delete_user(user_name).await
     }
 
     /// List users with optional filtering
@@ -170,6 +171,7 @@ impl<S: UserStore> UserService<S> {
         self.guard(context, WamiAction::IamListUsers, "user", "*")
             .await?;
         self.read_store()
+            .await
             .list_users(request.path_prefix.as_deref(), request.pagination.as_ref())
             .await
     }
@@ -183,14 +185,14 @@ impl<S: UserStore> UserService<S> {
     ) -> Result<()> {
         self.guard(context, WamiAction::IamUpdateUser, "user", user_name)
             .await?;
-        self.write_store().tag_user(user_name, tags).await
+        self.write_store().await.tag_user(user_name, tags).await
     }
 
     /// List tags for a user
     pub async fn list_user_tags(&self, context: &WamiContext, user_name: &str) -> Result<Vec<Tag>> {
         self.guard(context, WamiAction::IamReadUser, "user", user_name)
             .await?;
-        self.read_store().list_user_tags(user_name).await
+        self.read_store().await.list_user_tags(user_name).await
     }
 
     /// Untag a user
@@ -202,7 +204,10 @@ impl<S: UserStore> UserService<S> {
     ) -> Result<()> {
         self.guard(context, WamiAction::IamUpdateUser, "user", user_name)
             .await?;
-        self.write_store().untag_user(user_name, tag_keys).await
+        self.write_store()
+            .await
+            .untag_user(user_name, tag_keys)
+            .await
     }
 }
 

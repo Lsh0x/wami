@@ -11,7 +11,8 @@ Policy condition keys enable fine-grained access control by evaluating contextua
 ```rust
 use wami::service::policies::evaluation::{EvaluationService, SimulateCustomPolicyRequest, ContextEntry};
 use wami::store::memory::InMemoryWamiStore;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -458,7 +459,8 @@ use wami::service::policies::evaluation::{
     EvaluationService, SimulateCustomPolicyRequest, ContextEntry,
 };
 use wami::store::memory::InMemoryWamiStore;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
