@@ -186,6 +186,21 @@ pub struct IdTokenClaims {
     pub email: Option<String>,
 }
 
+// Two claims a reviewer will look for here and not find.
+//
+// `at_hash` is OPTIONAL for an ID token returned from the token endpoint in the
+// authorization code flow (OIDC Core §3.1.3.6 — it is only REQUIRED where a
+// token arrives through the front channel, which this library never does).
+// Emitting one would also mean choosing a hash for `alg: EdDSA`, which no
+// specification defines: implementations disagree between SHA-256 and Ed25519's
+// internal SHA-512. An `at_hash` a relying party computes differently is a hard
+// validation failure, where its absence is a no-op. Absent is the safer answer
+// until EdDSA has a settled convention.
+//
+// `auth_time`, `acr` and `amr` describe the authentication event, and wami does
+// not perform it — the host does, before it ever calls `authorize`. Supporting
+// them means the host passing the event in, which is additive and not yet done.
+
 /// The profile claims wami puts in an ID token when the scopes allow it.
 ///
 /// wami does not own your user directory. This is what the host hands over when

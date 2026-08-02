@@ -96,6 +96,25 @@ pub trait OAuthRefreshStore: Send + Sync {
     /// Same atomicity requirement as consuming a code, and for the same reason:
     /// rotation only detects a leak if exactly one of two concurrent uses can
     /// win.
+    ///
+    /// # Contract
+    ///
+    /// - Return `None` when `token` is unknown.
+    /// - On success, stamp `used_at`, set `replaced_by` to the replacement's
+    ///   token, persist the replacement, and return the token as it now stands.
+    /// - When the rotation cannot be granted — already used, or expired —
+    ///   return the existing record **unchanged** and persist nothing. The
+    ///   caller distinguishes "unknown", "expired" and "reused" from what comes
+    ///   back, and mints nothing of its own if the replacement is not named.
+    ///
+    /// **`used_at` must only ever be stamped by a rotation that won, or by
+    /// [`revoke_refresh_chain`].** A store that stamps it on a *failed*
+    /// presentation — say, to record an attempt — turns every expired token
+    /// into a reported leak, and every idle user into a forced sign-out across
+    /// the client. The field means "this token was spent", not "this token was
+    /// shown to us".
+    ///
+    /// [`revoke_refresh_chain`]: Self::revoke_refresh_chain
     async fn rotate_refresh_token(
         &mut self,
         token: &str,

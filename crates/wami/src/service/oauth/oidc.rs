@@ -57,6 +57,13 @@ impl<T: OAuthStore + OAuthAuthorizationStore + OAuthRefreshStore + OAuthConsentS
 ///
 /// A service without one still issues ID tokens; they carry `sub` and nothing
 /// else, which is all `openid` on its own entitles a client to.
+///
+/// # Cache it
+///
+/// This is called on every mint — once per sign-in, and again on every refresh
+/// for as long as the chain lives. An implementation that reaches across the
+/// network each time puts that latency on the token endpoint's critical path.
+/// Profile claims change rarely; cache them.
 #[async_trait]
 pub trait UserClaimsSource: Send + Sync {
     /// The profile of `user_name`, or `None` if there is nothing to release.
@@ -80,6 +87,13 @@ pub struct AuthorizationRequest {
     /// The client's nonce, echoed into the ID token.
     pub nonce: Option<String>,
     /// The client's opaque state, handed back untouched.
+    ///
+    /// wami does nothing with it, and cannot: `state` defends against CSRF by
+    /// being compared at the *callback*, and wami never sees the callback — it
+    /// has no browser session to bind to. The host must generate it, tie it to
+    /// the user agent's session, and reject a callback whose `state` does not
+    /// match. Passing it through here only saves the host from carrying it
+    /// itself; it is not a check.
     pub state: Option<String>,
 }
 
@@ -283,6 +297,17 @@ impl<S: OidcStore> OAuthService<S> {
     /// unknown, expired, replayed or mismatched code — all reported
     /// identically, because telling them apart tells an attacker which of their
     /// guesses was closest.
+    ///
+    /// # Not a transaction, on purpose
+    ///
+    /// The code is consumed in one store operation and the tokens are written
+    /// in another. A process that dies between the two leaves the code spent
+    /// and no tokens issued: the exchange fails and the user signs in again.
+    /// That is the direction to fail in. The alternative ordering — mint first,
+    /// consume after — turns the same crash into a code that stays redeemable
+    /// after tokens were handed out, which is the replay this whole path exists
+    /// to prevent. A store that can span both in a transaction is welcome to;
+    /// nothing here depends on it.
     pub async fn exchange_code(&self, exchange: CodeExchange) -> Result<OidcTokens> {
         let client = self
             .validate_client(&exchange.client_id, &exchange.client_secret)
@@ -387,8 +412,11 @@ impl<S: OidcStore> OAuthService<S> {
             });
         }
 
-        // No nonce on refresh: the client's nonce belonged to one sign-in, and
-        // replaying it into a later ID token would defeat what it is for.
+        // No nonce on refresh. OIDC Core §12.2: a refreshed ID token "SHOULD
+        // NOT have a nonce Claim, even when the ID Token issued at the time of
+        // the original authentication contained nonce". The nonce belonged to
+        // one sign-in; replaying it into a later token would defeat what the
+        // relying party checks it for.
         self.mint(&client, &spent.user_name, &spent.scopes, None)
             .await
     }
