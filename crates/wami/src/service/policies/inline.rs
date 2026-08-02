@@ -1040,14 +1040,6 @@ mod tests {
         ) -> wami_core::error::Result<Decision> {
             Ok(Decision::Allow(AllowReason::RootBypass))
         }
-        async fn check_or_deny(
-            &self,
-            _context: &WamiContext,
-            _action: &str,
-            _resource_arn: &WamiArn,
-        ) -> wami_core::error::Result<()> {
-            Ok(())
-        }
     }
 
     /// Mock authorizer that always denies.
@@ -1062,16 +1054,6 @@ mod tests {
             _resource_arn: &WamiArn,
         ) -> wami_core::error::Result<Decision> {
             Ok(Decision::Deny(DenyReason::NoMatch))
-        }
-        async fn check_or_deny(
-            &self,
-            _context: &WamiContext,
-            _action: &str,
-            _resource_arn: &WamiArn,
-        ) -> wami_core::error::Result<()> {
-            Err(wami_core::error::AmiError::AccessDenied {
-                message: "denied by mock".to_string(),
-            })
         }
     }
 
@@ -1307,5 +1289,72 @@ mod tests {
             service.delete_role_policy(&context, request).await,
             Err(wami_core::error::AmiError::AccessDenied { .. })
         ));
+    }
+
+    #[tokio::test]
+    async fn a_malformed_policy_is_refused_on_every_write_path() {
+        // Valid JSON, invalid policy — "Actions" for "Action". All three write
+        // paths must refuse it, not just the user one.
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = InlinePolicyService::new(store.clone());
+        let context = create_test_context().await;
+        let broken = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Deny","Actions":["iam:*"],"Resource":["*"]}]}"#;
+
+        {
+            let mut s = store.write().await;
+            let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+            s.create_user(user).await.unwrap();
+            let group = build_group("devs".to_string(), Some("/".to_string()), &context).unwrap();
+            s.create_group(group).await.unwrap();
+            let role = build_role(
+                "AppRole".to_string(),
+                r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+                Some("/".to_string()),
+                None,
+                None,
+                &context,
+            )
+            .unwrap();
+            s.create_role(role).await.unwrap();
+        }
+
+        let user_err = service
+            .put_user_policy(
+                &context,
+                PutUserPolicyRequest {
+                    user_name: "alice".to_string(),
+                    policy_name: "Broken".to_string(),
+                    policy_document: broken.to_string(),
+                },
+            )
+            .await
+            .expect_err("user path must refuse");
+        assert!(matches!(user_err, AmiError::InvalidParameter { .. }));
+
+        let group_err = service
+            .put_group_policy(
+                &context,
+                PutGroupPolicyRequest {
+                    group_name: "devs".to_string(),
+                    policy_name: "Broken".to_string(),
+                    policy_document: broken.to_string(),
+                },
+            )
+            .await
+            .expect_err("group path must refuse");
+        assert!(matches!(group_err, AmiError::InvalidParameter { .. }));
+
+        let role_err = service
+            .put_role_policy(
+                &context,
+                PutRolePolicyRequest {
+                    role_name: "AppRole".to_string(),
+                    policy_name: "Broken".to_string(),
+                    policy_document: broken.to_string(),
+                },
+            )
+            .await
+            .expect_err("role path must refuse");
+        assert!(matches!(role_err, AmiError::InvalidParameter { .. }));
     }
 }

@@ -396,16 +396,6 @@ mod tests {
         ) -> wami_core::error::Result<Decision> {
             Ok(Decision::Deny(DenyReason::NoMatch))
         }
-        async fn check_or_deny(
-            &self,
-            _context: &WamiContext,
-            _action: &str,
-            _resource_arn: &WamiArn,
-        ) -> wami_core::error::Result<()> {
-            Err(wami_core::error::AmiError::AccessDenied {
-                message: "denied by mock".to_string(),
-            })
-        }
     }
 
     #[tokio::test]

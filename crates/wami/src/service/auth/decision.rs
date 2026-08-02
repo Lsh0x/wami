@@ -368,4 +368,97 @@ mod tests {
         };
         assert!(anonymous.to_string().contains("#3"));
     }
+
+    #[test]
+    fn every_source_renders_for_an_audit_line() {
+        // Display is the audit surface: an unrendered variant is a log entry
+        // that says nothing on the day it is read.
+        let cases = [
+            (
+                PolicySource::UserManaged { arn: "a".into() },
+                "user managed policy a",
+            ),
+            (
+                PolicySource::UserInline { name: "n".into() },
+                "user inline policy n",
+            ),
+            (
+                PolicySource::GroupManaged {
+                    group: "g".into(),
+                    arn: "a".into(),
+                },
+                "managed policy a of group g",
+            ),
+            (
+                PolicySource::GroupInline {
+                    group: "g".into(),
+                    name: "n".into(),
+                },
+                "inline policy n of group g",
+            ),
+            (
+                PolicySource::RoleManaged {
+                    role: "r".into(),
+                    arn: "a".into(),
+                },
+                "managed policy a of role r",
+            ),
+            (
+                PolicySource::RoleInline {
+                    role: "r".into(),
+                    name: "n".into(),
+                },
+                "inline policy n of role r",
+            ),
+            (
+                PolicySource::PermissionsBoundary { arn: "b".into() },
+                "permissions boundary b",
+            ),
+        ];
+        for (source, expected) in cases {
+            assert_eq!(source.to_string(), expected);
+        }
+    }
+
+    #[test]
+    fn every_decision_renders_for_an_audit_line() {
+        let one = NonEmpty::one(statement(
+            PolicySource::UserInline { name: "p".into() },
+            Some("S"),
+        ));
+
+        assert!(Decision::Allow(AllowReason::RootBypass)
+            .to_string()
+            .contains("caller is root"));
+        assert!(Decision::Allow(AllowReason::Statements(one.clone()))
+            .to_string()
+            .starts_with("allowed by"));
+        assert!(Decision::Deny(DenyReason::NoMatch)
+            .to_string()
+            .contains("no statement matches"));
+        assert!(Decision::Deny(DenyReason::Statements(one))
+            .to_string()
+            .starts_with("denied by"));
+        assert!(
+            Decision::Deny(DenyReason::BoundaryMissing { arn: "b".into() })
+                .to_string()
+                .contains("was not found")
+        );
+    }
+
+    #[test]
+    fn a_non_empty_list_behaves_like_the_slice_it_wraps() {
+        let items = NonEmpty::new(vec![1, 2, 3]).unwrap();
+        assert_eq!(items.len(), 3);
+        assert_eq!(items.iter().sum::<i32>(), 6);
+        assert_eq!((&items).into_iter().copied().max(), Some(3));
+        assert_eq!(items.clone().into_iter().count(), 3);
+        assert_eq!(items.into_vec(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn is_allowed_matches_the_variant() {
+        assert!(Decision::Allow(AllowReason::RootBypass).is_allowed());
+        assert!(!Decision::Deny(DenyReason::NoMatch).is_allowed());
+    }
 }

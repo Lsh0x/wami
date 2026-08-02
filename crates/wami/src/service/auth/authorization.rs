@@ -1814,4 +1814,109 @@ mod tests {
             .expect_err("valid JSON that is not a valid policy must be refused");
         assert!(matches!(err, AmiError::InvalidParameter { .. }), "{err:?}");
     }
+
+    #[tokio::test]
+    async fn check_or_deny_quotes_the_reason_it_refused() {
+        // The convenience wrapper must not throw away the motivation — that is
+        // the whole point of the change for callers that never touch Decision.
+        let ctx = test_context();
+        let store = setup_store_with_user(&ctx).await;
+        store
+            .write()
+            .await
+            .put_user_policy("alice", "Blocked", deny_policy_json(&["iam:*"], &["*"]))
+            .await
+            .unwrap();
+
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+
+        let err = authz
+            .check_or_deny(&ctx, "iam:GetUser", &resource)
+            .await
+            .expect_err("an explicit deny must refuse");
+        let AmiError::AccessDenied { message } = &err else {
+            panic!("expected AccessDenied, got {err:?}");
+        };
+        assert!(message.contains("denied by"), "{message}");
+        assert!(message.contains("Blocked"), "{message}");
+    }
+
+    #[tokio::test]
+    async fn check_or_deny_passes_when_allowed() {
+        let ctx = test_context();
+        let store = setup_store_with_user(&ctx).await;
+        store
+            .write()
+            .await
+            .put_user_policy("alice", "Allow", allow_policy_json(&["iam:*"], &["*"]))
+            .await
+            .unwrap();
+
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        authz
+            .check_or_deny(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_managed_policy_attached_to_the_user_is_evaluated() {
+        // The inline path was covered; the managed one was not.
+        let ctx = test_context();
+        let store = setup_store_with_user(&ctx).await;
+        {
+            let mut s = store.write().await;
+            let policy = policy_builder::build_policy(
+                "ReadOnly".to_string(),
+                allow_policy_json(&["iam:GetUser"], &["*"]),
+                None,
+                None,
+                None,
+                &ctx,
+            )
+            .unwrap();
+            let arn = policy.arn.clone();
+            s.create_policy(policy).await.unwrap();
+            s.attach_user_policy("alice", &arn).await.unwrap();
+        }
+
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        let decision = authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
+
+        let Decision::Allow(AllowReason::Statements(refs)) = &decision else {
+            panic!("expected an allow from the managed policy, got {decision:?}");
+        };
+        assert!(matches!(
+            refs.first().policy,
+            PolicySource::UserManaged { .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn a_missing_user_cannot_have_a_boundary_to_apply() {
+        // The caller is authenticated but the user record is gone. There is no
+        // boundary to intersect with, so an allow already found stands.
+        let ctx = test_context();
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        store
+            .write()
+            .await
+            .put_user_policy("alice", "Allow", allow_policy_json(&["iam:*"], &["*"]))
+            .await
+            .unwrap();
+
+        let authz = AuthorizationService::new(store);
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+        assert!(authz
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap()
+            .is_allowed());
+    }
 }
