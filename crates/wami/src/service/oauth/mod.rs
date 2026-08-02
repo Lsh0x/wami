@@ -245,10 +245,14 @@ impl<S: OAuthStore> OAuthService<S> {
         token: &str,
         audience: &str,
     ) -> Result<TokenIntrospection> {
+        // Lenient: this service introspects its own tokens, and some of them
+        // may predate `with_explicit_typ`. Refusing those would make flipping
+        // the flag an outage.
         let Ok(claims) = self.keys.verify_claims_as::<OAuthClaims>(
             token,
             audience,
             crate::wami::sts::jwt::TokenType::AccessToken,
+            crate::wami::sts::jwt::TypePolicy::Lenient,
         ) else {
             return Ok(TokenIntrospection::inactive());
         };
@@ -287,6 +291,7 @@ impl<S: OAuthStore> OAuthService<S> {
             token,
             audience,
             crate::wami::sts::jwt::TokenType::AccessToken,
+            crate::wami::sts::jwt::TypePolicy::Lenient,
         ) {
             self.store
                 .write()

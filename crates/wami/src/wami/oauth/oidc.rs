@@ -176,6 +176,20 @@ impl UserConsent {
 /// (`auth_time`) or care whether a password or a passkey was used
 /// (`acr`/`amr`). Without it they cannot tell, and some will refuse to
 /// federate.
+///
+/// # It describes one sign-in, for the life of one chain
+///
+/// The event is fixed when the authorization code is issued and carried
+/// unchanged through every refresh — `auth_time` must be, per OIDC Core §12.2,
+/// and `acr`/`amr` follow it because they describe the same moment.
+///
+/// So a user who signs in with a password and later adds a hardware key keeps
+/// reporting `amr: ["pwd"]` until the chain ends. That is not a gap to patch
+/// with a way to amend the event in place: a stronger authentication is a new
+/// authentication, and the honest way to reflect it is a new authorization —
+/// which mints a new chain with a new event. A relying party that needs a
+/// *fresh* assurance about how someone authenticated must ask for one, not
+/// trust a claim minted a month ago.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AuthenticationEvent {
     /// When the user actually authenticated.

@@ -63,8 +63,8 @@ pub struct Jwk {
 /// `at+jwt` unannounced would break a resource server that pins the old value.
 /// Issuance is opt-in — see
 /// [`OAuthService::with_explicit_typ`][crate::service::oauth::OAuthService::with_explicit_typ]
-/// — and verification stays lenient about which of the two it sees, so turning
-/// it on does not invalidate the tokens already in flight.
+/// — and [`KeyManager::verify_claims`] never looks at the label at all, so a
+/// verifier written before any of this existed keeps working unchanged.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TokenType {
     /// `JWT` — the unlabelled default. What every token carried before RFC 9068
@@ -96,6 +96,20 @@ impl TokenType {
             _ => None,
         }
     }
+}
+
+/// How strictly a verifier holds a token to its declared [`TokenType`].
+///
+/// The distinction exists because RFC 9068 conformance and a live migration
+/// want opposite things, and only the deployment knows which it is in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TypePolicy {
+    /// An unlabelled token, or one labelled `JWT`, passes anywhere. Only a
+    /// label that is *more* specific and *wrong* is refused.
+    Lenient,
+    /// The label must be exactly what was asked for. An unlabelled token is
+    /// refused. This is RFC 9068 §4 as written.
+    Strict,
 }
 
 /// Structured claims embedded in a signed JWT for STS credentials.
@@ -340,64 +354,101 @@ impl KeyManager {
     /// [`KeyManager::verify_token`] is this with `StsClaims` filled in; the two
     /// share every check, so key rotation and audience validation cannot drift
     /// apart between issuers.
+    ///
+    /// The `typ` header is **not** examined. This is the historical door and
+    /// its contract predates RFC 9068 typing: a verifier that has been calling
+    /// it since before [`TokenType`] existed must not start failing because
+    /// some issuer, elsewhere, turned labelling on. Callers who want the label
+    /// enforced ask for it — see [`verify_claims_as`].
+    ///
+    /// [`verify_claims_as`]: Self::verify_claims_as
     pub fn verify_claims<C: DeserializeOwned>(
         &self,
         token: &str,
         audience: &str,
     ) -> Result<C, JwtError> {
-        self.verify_claims_as(token, audience, TokenType::Jwt)
+        self.verify_signed_claims(token, audience)
     }
 
     /// Verify a token that must be of a given kind, and deserialise it.
     ///
-    /// # What the `typ` header is allowed to say
+    /// The signature and the audience are checked first, always. The label is
+    /// examined only once the token has proven genuine, so no decision here
+    /// rests on bytes an attacker chose.
     ///
-    /// A token may be labelled less specifically than expected, never
-    /// differently. Concretely:
+    /// # Which labels pass
     ///
-    /// | expecting | header says | |
-    /// |---|---|---|
-    /// | [`TokenType::AccessToken`] | absent, `JWT`, or `at+jwt` | accepted |
-    /// | [`TokenType::Jwt`] | absent or `JWT` | accepted |
-    /// | [`TokenType::Jwt`] | `at+jwt` | **refused** |
-    /// | either | anything else | refused |
+    /// | policy | expecting | header says | |
+    /// |---|---|---|---|
+    /// | [`Lenient`] | [`AccessToken`] | absent, `JWT`, or `at+jwt` | accepted |
+    /// | [`Lenient`] | [`Jwt`] | absent or `JWT` | accepted |
+    /// | [`Lenient`] | [`Jwt`] | `at+jwt` | refused |
+    /// | [`Strict`] | either | exactly the expected label | accepted |
+    /// | either | either | anything unrecognised | refused |
     ///
-    /// The asymmetry is the whole point, and it is what makes explicit typing
-    /// safe to turn on mid-flight. An access token is accepted with the old
-    /// unlabelled header, so enabling
-    /// [`with_explicit_typ`][crate::service::oauth::OAuthService::with_explicit_typ]
-    /// does not invalidate the tokens already issued. But once a token *is*
-    /// labelled `at+jwt`, nothing will read it as an ID token — which is the
-    /// confusion RFC 9068 exists to end.
+    /// # Choosing a policy
+    ///
+    /// [`Lenient`] is for a deployment mid-migration: a token issued before
+    /// labelling was enabled carries no useful `typ`, and refusing it would
+    /// mean an outage every time an issuer flips
+    /// [`with_explicit_typ`][crate::service::oauth::OAuthService::with_explicit_typ].
+    /// It still closes the direction that matters — a token labelled `at+jwt`
+    /// will not pass as an ID token.
+    ///
+    /// [`Strict`] is what RFC 9068 §4 actually asks of a resource server:
+    ///
+    /// > The resource server MUST verify that the `typ` header value is
+    /// > `at+jwt` or `application/at+jwt` and reject tokens carrying any other
+    /// > value.
+    ///
+    /// Reach for it once every issuer you accept is labelling. Until then it
+    /// refuses your own legacy tokens, which is the point of it being a
+    /// choice rather than a default.
     ///
     /// # Errors
     ///
-    /// [`JwtError::TokenTypeMismatch`] when the label is wrong, before the
-    /// signature is examined. A forged label is caught anyway: `typ` is inside
-    /// the signed JOSE header, so changing it breaks the signature.
+    /// [`JwtError::TokenTypeMismatch`] when the token is genuine but labelled
+    /// something this call cannot accept.
+    ///
+    /// [`Lenient`]: TypePolicy::Lenient
+    /// [`Strict`]: TypePolicy::Strict
+    /// [`AccessToken`]: TokenType::AccessToken
+    /// [`Jwt`]: TokenType::Jwt
     pub fn verify_claims_as<C: DeserializeOwned>(
         &self,
         token: &str,
         audience: &str,
         expected: TokenType,
+        policy: TypePolicy,
     ) -> Result<C, JwtError> {
-        if let Some(declared) = jsonwebtoken::decode_header(token)
+        // Signature and audience first. Everything below reads a header that
+        // has already been proven to be the one the issuer signed.
+        let claims = self.verify_signed_claims(token, audience)?;
+
+        let declared = jsonwebtoken::decode_header(token)
             .map_err(JwtError::Decode)?
-            .typ
-        {
-            let acceptable = match TokenType::parse(&declared) {
-                Some(TokenType::Jwt) => true,
-                Some(TokenType::AccessToken) => expected == TokenType::AccessToken,
-                None => false,
-            };
-            if !acceptable {
-                return Err(JwtError::TokenTypeMismatch {
-                    expected: expected.as_str(),
-                    found: declared,
-                });
-            }
+            .typ;
+
+        let acceptable = match (declared.as_deref().map(TokenType::parse), policy) {
+            // No label. Genuine, and says nothing about what it is.
+            (None, TypePolicy::Lenient) => true,
+            (None, TypePolicy::Strict) => false,
+            // A label nobody recognises — `dpop+jwt`, say. Never ours.
+            (Some(None), _) => false,
+            (Some(Some(found)), TypePolicy::Strict) => found == expected,
+            // Lenient: `JWT` is the unlabelled shape spelled out, so it passes
+            // wherever no label would. Anything more specific must match.
+            (Some(Some(TokenType::Jwt)), TypePolicy::Lenient) => true,
+            (Some(Some(found)), TypePolicy::Lenient) => found == expected,
+        };
+
+        if !acceptable {
+            return Err(JwtError::TokenTypeMismatch {
+                expected: expected.as_str(),
+                found: declared.unwrap_or_else(|| "<absent>".to_string()),
+            });
         }
-        self.verify_signed_claims(token, audience)
+        Ok(claims)
     }
 
     /// Everything after the `typ` check: key lookup, signature, audience.
@@ -624,45 +675,108 @@ mod tests {
     }
 
     #[test]
-    fn an_unlabelled_token_still_verifies_as_either_kind() {
-        // The whole reason typing is opt-in: nothing already in flight breaks.
+    fn the_historical_door_never_looks_at_the_label() {
+        // `verify_claims` predates typing. A verifier calling it must not start
+        // failing because some issuer, elsewhere, turned labelling on — it did
+        // not ask for the label and never agreed to be bound by it.
+        let km = KeyManager::generate();
+        let claims = build_sts_claims(&test_credentials(), &test_claims_context());
+
+        for typ in [TokenType::Jwt, TokenType::AccessToken] {
+            let token = km.sign_claims_as(&claims, typ).unwrap();
+            assert!(
+                km.verify_claims::<StsClaims>(&token, AUD).is_ok(),
+                "{typ:?} was refused by the untyped door"
+            );
+            assert!(km.verify_token(&token, AUD).is_ok());
+        }
+    }
+
+    #[test]
+    fn leniently_an_unlabelled_token_passes_as_either_kind() {
+        // The reason typing can be switched on mid-flight: tokens issued
+        // before it carry no useful label, and still verify.
         let km = KeyManager::generate();
         let claims = build_sts_claims(&test_credentials(), &test_claims_context());
         let token = km.sign_claims(&claims).unwrap();
 
-        assert!(km
-            .verify_claims_as::<StsClaims>(&token, AUD, TokenType::Jwt)
-            .is_ok());
-        assert!(km
-            .verify_claims_as::<StsClaims>(&token, AUD, TokenType::AccessToken)
-            .is_ok());
+        for expected in [TokenType::Jwt, TokenType::AccessToken] {
+            assert!(km
+                .verify_claims_as::<StsClaims>(&token, AUD, expected, TypePolicy::Lenient)
+                .is_ok());
+        }
     }
 
     #[test]
-    fn an_access_token_cannot_be_read_as_an_id_token() {
-        // The protection RFC 9068 exists to give. Once a token says `at+jwt`,
-        // no verifier expecting an ID token will take it.
+    fn leniently_an_access_token_still_cannot_be_read_as_an_id_token() {
+        // The one direction lenience does not forgive, and the confusion
+        // RFC 9068 exists to end.
         let km = KeyManager::generate();
         let claims = build_sts_claims(&test_credentials(), &test_claims_context());
         let token = km.sign_claims_as(&claims, TokenType::AccessToken).unwrap();
 
         assert!(km
-            .verify_claims_as::<StsClaims>(&token, AUD, TokenType::AccessToken)
+            .verify_claims_as::<StsClaims>(&token, AUD, TokenType::AccessToken, TypePolicy::Lenient)
             .is_ok());
 
-        let err = km
-            .verify_claims_as::<StsClaims>(&token, AUD, TokenType::Jwt)
-            .unwrap_err();
-        match err {
+        match km
+            .verify_claims_as::<StsClaims>(&token, AUD, TokenType::Jwt, TypePolicy::Lenient)
+            .unwrap_err()
+        {
             JwtError::TokenTypeMismatch { found, expected } => {
                 assert_eq!(found, "at+jwt");
                 assert_eq!(expected, "JWT");
             }
             other => panic!("got {other:?}"),
         }
+    }
 
-        // `verify_claims` is the ID-token-shaped door, so it refuses too.
-        assert!(km.verify_claims::<StsClaims>(&token, AUD).is_err());
+    #[test]
+    fn strictly_only_the_exact_label_passes() {
+        // RFC 9068 §4 as written: a resource server rejects anything that is
+        // not `at+jwt`, an unlabelled legacy token included. That is why it is
+        // a choice — turning it on before every issuer labels locks them out.
+        let km = KeyManager::generate();
+        let claims = build_sts_claims(&test_credentials(), &test_claims_context());
+
+        let labelled = km.sign_claims_as(&claims, TokenType::AccessToken).unwrap();
+        assert!(km
+            .verify_claims_as::<StsClaims>(
+                &labelled,
+                AUD,
+                TokenType::AccessToken,
+                TypePolicy::Strict
+            )
+            .is_ok());
+
+        let legacy = km.sign_claims(&claims).unwrap();
+        let err = km
+            .verify_claims_as::<StsClaims>(&legacy, AUD, TokenType::AccessToken, TypePolicy::Strict)
+            .unwrap_err();
+        assert!(
+            matches!(&err, JwtError::TokenTypeMismatch { found, .. } if found == "JWT"),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn a_bad_signature_is_reported_as_such_even_when_the_label_is_also_wrong() {
+        // The label is examined only after the token has proven genuine, so no
+        // answer here is decided by bytes an attacker chose.
+        let km = KeyManager::generate();
+        let other = KeyManager::generate();
+        let claims = build_sts_claims(&test_credentials(), &test_claims_context());
+        let foreign = other
+            .sign_claims_as(&claims, TokenType::AccessToken)
+            .unwrap();
+
+        let err = km
+            .verify_claims_as::<StsClaims>(&foreign, AUD, TokenType::Jwt, TypePolicy::Lenient)
+            .unwrap_err();
+        assert!(
+            !matches!(err, JwtError::TokenTypeMismatch { .. }),
+            "the label must not be judged before the signature: {err:?}"
+        );
     }
 
     #[test]
@@ -691,7 +805,7 @@ mod tests {
     }
 
     #[test]
-    fn a_typ_nobody_recognises_is_refused_for_either_kind() {
+    fn a_typ_nobody_recognises_is_refused_under_either_policy() {
         let km = KeyManager::generate();
         let claims = build_sts_claims(&test_credentials(), &test_claims_context());
         let mut header = Header::new(Algorithm::EdDSA);
@@ -706,10 +820,17 @@ mod tests {
         .unwrap();
 
         for expected in [TokenType::Jwt, TokenType::AccessToken] {
-            assert!(km
-                .verify_claims_as::<StsClaims>(&token, AUD, expected)
-                .is_err());
+            for policy in [TypePolicy::Lenient, TypePolicy::Strict] {
+                assert!(
+                    km.verify_claims_as::<StsClaims>(&token, AUD, expected, policy)
+                        .is_err(),
+                    "{expected:?}/{policy:?} accepted dpop+jwt"
+                );
+            }
         }
+
+        // But the untyped door does not care, by design.
+        assert!(km.verify_claims::<StsClaims>(&token, AUD).is_ok());
     }
 
     #[test]

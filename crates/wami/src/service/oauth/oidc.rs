@@ -38,7 +38,7 @@ use crate::wami::oauth::{
     GrantType, OAuthClaims, OAuthClient, RefreshToken, UserConsent, UserInfo, UserProfile,
     AUTHORIZATION_CODE_LIFETIME, REFRESH_TOKEN_LIFETIME,
 };
-use crate::wami::sts::jwt::TokenType;
+use crate::wami::sts::jwt::{TokenType, TypePolicy};
 
 /// Combined bound for a store that can serve the user-facing flows.
 pub trait OidcStore:
@@ -450,7 +450,12 @@ impl<S: OidcStore> OAuthService<S> {
 
         let claims = self
             .keys
-            .verify_claims_as::<OAuthClaims>(access_token, audience, TokenType::AccessToken)
+            .verify_claims_as::<OAuthClaims>(
+                access_token,
+                audience,
+                TokenType::AccessToken,
+                TypePolicy::Lenient,
+            )
             .map_err(|_| refused())?;
 
         let scopes: Vec<String> = claims
@@ -1382,12 +1387,29 @@ mod tests {
         let id = jsonwebtoken::decode_header(tokens.id_token.as_ref().unwrap()).unwrap();
         assert_eq!(id.typ.as_deref(), Some("JWT"));
 
+        // Two independent barriers, checked one at a time. The audience: an
+        // access token names the API, so it does not verify against the
+        // client. And the label, isolated by asking with the *right* audience
+        // — only the `typ` can refuse it here.
         assert!(
             service
                 .keys
                 .verify_claims::<IdTokenClaims>(&tokens.access_token, "app")
                 .is_err(),
-            "a labelled access token must not pass as an ID token"
+            "the audience alone should have refused it"
+        );
+        let by_label = service.keys.verify_claims_as::<IdTokenClaims>(
+            &tokens.access_token,
+            AUD,
+            TokenType::Jwt,
+            TypePolicy::Lenient,
+        );
+        assert!(
+            matches!(
+                by_label,
+                Err(crate::wami::sts::jwt::JwtError::TokenTypeMismatch { .. })
+            ),
+            "the label alone should have refused it, got {by_label:?}"
         );
     }
 

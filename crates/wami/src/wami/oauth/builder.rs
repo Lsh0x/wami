@@ -44,6 +44,19 @@ pub fn build_client(
             message: "a client with no grant types can never obtain a token".to_string(),
         });
     }
+    // An access token is addressed to `audience`, an ID token to `client_id`.
+    // Letting them be the same string collapses the only thing that tells the
+    // two apart for a verifier that has not opted into RFC 9068 typing: an
+    // access token would then deserialise and verify as an ID token, which is
+    // exactly the confusion the audience split exists to prevent.
+    if audience == client_id {
+        return Err(AmiError::InvalidParameter {
+            message: format!(
+                "client {client_id} cannot use its own id as its audience: an access token \
+                 and an ID token would then be addressed identically"
+            ),
+        });
+    }
 
     Ok(OAuthClient {
         client_id,
@@ -189,6 +202,36 @@ mod tests {
             )
             .is_err());
         }
+    }
+
+    #[test]
+    fn a_client_cannot_take_its_own_id_as_its_audience() {
+        // Then an access token (aud = the audience) and an ID token (aud = the
+        // client id) would be addressed identically, and the audience — the
+        // only barrier before RFC 9068 typing — would stop separating them.
+        let err = build_client(
+            "gallery".into(),
+            "s",
+            "Gallery".into(),
+            vec![GrantType::AuthorizationCode],
+            vec!["openid".into()],
+            "gallery".into(),
+            vec![],
+        )
+        .unwrap_err();
+        assert!(matches!(err, AmiError::InvalidParameter { .. }));
+
+        // A different audience is fine.
+        assert!(build_client(
+            "gallery".into(),
+            "s",
+            "Gallery".into(),
+            vec![GrantType::AuthorizationCode],
+            vec!["openid".into()],
+            "photos-api".into(),
+            vec![],
+        )
+        .is_ok());
     }
 
     #[test]

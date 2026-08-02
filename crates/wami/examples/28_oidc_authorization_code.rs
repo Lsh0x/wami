@@ -34,7 +34,7 @@ use wami::wami::oauth::{
     build_client, derive_s256_challenge, generate_client_secret, AuthenticationEvent,
     CodeChallenge, GrantType, IdTokenClaims, OAuthClaims, UserProfile,
 };
-use wami::wami::sts::jwt::{KeyManager, TokenType};
+use wami::wami::sts::jwt::{KeyManager, TokenType, TypePolicy};
 use wami_core::error::Result;
 
 const AUDIENCE: &str = "photos-api";
@@ -177,10 +177,15 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         id.email
     );
 
-    // A verifier of access tokens has to say so, now that they are labelled.
-    // `verify_claims` is the ID-token-shaped door and refuses an `at+jwt`.
-    let access: OAuthClaims =
-        keys.verify_claims_as(&tokens.access_token, AUDIENCE, TokenType::AccessToken)?;
+    // Strict, because this deployment labels everything it issues — RFC 9068
+    // §4 as written. A resource server still accepting tokens from an issuer
+    // that has not migrated would pass `TypePolicy::Lenient` instead.
+    let access: OAuthClaims = keys.verify_claims_as(
+        &tokens.access_token,
+        AUDIENCE,
+        TokenType::AccessToken,
+        TypePolicy::Strict,
+    )?;
     println!("   Access token → what may be done");
     println!("      sub={} client_id={}", access.sub, access.client_id);
     println!("      scope={}", access.scope);
@@ -199,6 +204,18 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         "   headers say typ={:?} (access) vs {:?} (id)",
         jsonwebtoken::decode_header(&tokens.access_token)?.typ,
         jsonwebtoken::decode_header(tokens.id_token.as_ref().unwrap())?.typ,
+    );
+
+    // The label refuses it on its own, with the audience held right.
+    let mislabelled: std::result::Result<IdTokenClaims, _> = keys.verify_claims_as(
+        &tokens.access_token,
+        AUDIENCE,
+        TokenType::Jwt,
+        TypePolicy::Lenient,
+    );
+    println!(
+        "   and the label alone refuses it as an ID token: {}",
+        mislabelled.is_err()
     );
 
     let info = service.user_info(&tokens.access_token, AUDIENCE).await?;
