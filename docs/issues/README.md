@@ -10,6 +10,11 @@ This directory tracks feature requests, enhancements, and major work items for t
 |----|-------|----------|------|--------|
 | [#001](ISSUE_001_CONDITION_KEYS.md) | Implement Policy Condition Keys | High | Feature Enhancement | 🔴 Open |
 | [#002](ISSUE_002_PROVIDER_SYNC.md) | Implement Cloud Provider Synchronization | High | Feature Enhancement | 🔴 Open |
+| [#003](../issues/wami/todo/feature-2025-11-07-jwt-core-implementation.md) | Core JWT Implementation (Native Rust) | High | Feature Enhancement | 🔴 Open |
+| [#004](../issues/wami/todo/feature-2025-11-07-jwt-sts-integration.md) | JWT Integration in STS Session Tokens | High | Feature Enhancement | 🔴 Open |
+| [#005](../issues/wami/todo/feature-2025-11-07-jwt-authentication.md) | JWT Authentication | High | Feature Enhancement | 🔴 Open |
+| [#006](../issues/wami/todo/feature-2025-11-07-jwt-oidc-parsing.md) | OIDC JWT Parsing and Validation | Medium | Feature Enhancement | 🔴 Open |
+| [#007](../issues/wami/todo/feature-2025-11-07-jwt-api-tokens.md) | JWT API Tokens for External Clients | Medium | Feature Enhancement | 🔴 Open |
 
 ### Closed Issues
 
@@ -17,8 +22,8 @@ This directory tracks feature requests, enhancements, and major work items for t
 
 ## Issue Statistics
 
-- **Total Issues**: 2
-- **Open**: 2 (100%)
+- **Total Issues**: 7
+- **Open**: 7 (100%)
 - **Closed**: 0 (0%)
 - **In Progress**: 0
 
@@ -26,6 +31,11 @@ This directory tracks feature requests, enhancements, and major work items for t
 
 - [Issue #001: Policy Condition Keys](ISSUE_001_CONDITION_KEYS.md) - Add comprehensive condition support to policy evaluation
 - [Issue #002: Provider Synchronization](ISSUE_002_PROVIDER_SYNC.md) - Sync WAMI resources to actual cloud providers (AWS/GCP/Azure)
+- [Issue #003: Core JWT Implementation](../issues/wami/todo/feature-2025-11-07-jwt-core-implementation.md) - Native Rust JWT library (JWS + JWE)
+- [Issue #004: JWT STS Integration](../issues/wami/todo/feature-2025-11-07-jwt-sts-integration.md) - JWT tokens for STS sessions
+- [Issue #005: JWT Authentication](../issues/wami/todo/feature-2025-11-07-jwt-authentication.md) - JWT-based authentication
+- [Issue #006: OIDC JWT Parsing](../issues/wami/todo/feature-2025-11-07-jwt-oidc-parsing.md) - OIDC JWT validation and federation
+- [Issue #007: JWT API Tokens](../issues/wami/todo/feature-2025-11-07-jwt-api-tokens.md) - API tokens for external clients
 
 ## Issue Template
 

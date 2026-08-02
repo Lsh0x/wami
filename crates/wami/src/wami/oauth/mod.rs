@@ -9,7 +9,7 @@
 //! expire.
 //!
 //! The flows that involve a human — authorization code with PKCE, consent, ID
-//! tokens, refresh rotation — live in [`oidc`]. What separates them is not the
+//! tokens, refresh rotation — live in [`oidc`](crate::wami::oauth::oidc). What separates them is not the
 //! cryptography but the browser: a value travels through a user agent nobody
 //! controls, and everything there exists to survive that trip.
 //!
