@@ -2,6 +2,11 @@
 //!
 //! Orchestrates service-specific credential management operations.
 
+use crate::credentials::service_credential::{
+    builder as cred_builder, CreateServiceSpecificCredentialRequest,
+    DeleteServiceSpecificCredentialRequest, ListServiceSpecificCredentialsRequest,
+    ServiceSpecificCredential, UpdateServiceSpecificCredentialRequest,
+};
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::ServiceCredentialStore;
 use std::sync::Arc;
@@ -9,11 +14,6 @@ use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
-use wami_credentials::service_credential::{
-    builder as cred_builder, CreateServiceSpecificCredentialRequest,
-    DeleteServiceSpecificCredentialRequest, ListServiceSpecificCredentialsRequest,
-    ServiceSpecificCredential, UpdateServiceSpecificCredentialRequest,
-};
 
 /// Service for managing IAM service-specific credentials
 ///

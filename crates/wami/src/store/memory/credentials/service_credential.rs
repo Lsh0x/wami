@@ -1,10 +1,10 @@
 //! Service-Specific Credential Store Implementation for InMemoryWamiStore
 
+use crate::credentials::service_credential::ServiceSpecificCredential;
 use crate::store::memory::InMemoryWamiStore;
 use crate::store::traits::ServiceCredentialStore;
 use async_trait::async_trait;
 use wami_core::error::Result;
-use wami_credentials::service_credential::ServiceSpecificCredential;
 
 #[async_trait]
 impl ServiceCredentialStore for InMemoryWamiStore {

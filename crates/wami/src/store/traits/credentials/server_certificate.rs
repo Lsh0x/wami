@@ -1,10 +1,10 @@
 //! Server Certificate Store Trait
 
+use crate::credentials::server_certificate::ServerCertificateMetadata;
+use crate::credentials::ServerCertificate;
 use async_trait::async_trait;
 use wami_core::error::Result;
 use wami_core::types::PaginationParams;
-use wami_credentials::server_certificate::ServerCertificateMetadata;
-use wami_credentials::ServerCertificate;
 
 /// Trait for server certificate storage operations
 #[async_trait]

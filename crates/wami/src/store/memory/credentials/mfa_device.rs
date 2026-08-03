@@ -1,10 +1,10 @@
 //! MFA Device Store Implementation for InMemoryWamiStore
 
+use crate::credentials::MfaDevice;
 use crate::store::memory::InMemoryWamiStore;
 use crate::store::traits::MfaDeviceStore;
 use async_trait::async_trait;
 use wami_core::error::Result;
-use wami_credentials::MfaDevice;
 
 #[async_trait]
 impl MfaDeviceStore for InMemoryWamiStore {

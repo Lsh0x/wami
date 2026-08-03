@@ -2,9 +2,9 @@
 //!
 //! Focused trait for login profile storage operations
 
+use crate::credentials::LoginProfile;
 use async_trait::async_trait;
 use wami_core::error::Result;
-use wami_credentials::LoginProfile;
 
 /// Store trait for IAM login profile operations
 #[async_trait]

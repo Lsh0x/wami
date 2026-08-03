@@ -1,10 +1,10 @@
 //! Signing Certificate Store Implementation for InMemoryWamiStore
 
+use crate::credentials::signing_certificate::SigningCertificate;
 use crate::store::memory::InMemoryWamiStore;
 use crate::store::traits::SigningCertificateStore;
 use async_trait::async_trait;
 use wami_core::error::Result;
-use wami_credentials::signing_certificate::SigningCertificate;
 
 #[async_trait]
 impl SigningCertificateStore for InMemoryWamiStore {

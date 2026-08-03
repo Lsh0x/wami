@@ -2,6 +2,9 @@
 //!
 //! Orchestrates access key management operations.
 
+use crate::credentials::access_key::{
+    builder as access_key_builder, AccessKey, CreateAccessKeyRequest, ListAccessKeysRequest,
+};
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::AccessKeyStore;
 use std::sync::Arc;
@@ -9,9 +12,6 @@ use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
-use wami_credentials::access_key::{
-    builder as access_key_builder, AccessKey, CreateAccessKeyRequest, ListAccessKeysRequest,
-};
 
 /// Service for managing IAM access keys
 ///
@@ -285,7 +285,7 @@ mod tests {
         let context = test_context();
 
         // Update is idempotent - creates/updates even if access key doesn't exist
-        use wami_credentials::build_access_key;
+        use crate::credentials::build_access_key;
         let access_key = build_access_key("alice".to_string(), &context).unwrap();
         let mut nonexistent_key = access_key;
         nonexistent_key.access_key_id = "nonexistent-key-id".to_string();
@@ -349,7 +349,8 @@ mod tests {
         let service = AccessKeyService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
 
-        let access_key = wami_credentials::build_access_key("alice".to_string(), &context).unwrap();
+        let access_key =
+            crate::credentials::build_access_key("alice".to_string(), &context).unwrap();
 
         let result = service.update_access_key(&context, access_key).await;
         assert!(matches!(

@@ -1,11 +1,11 @@
 //! Access Key Store Implementation for InMemoryWamiStore
 
+use crate::credentials::AccessKey;
 use crate::store::memory::InMemoryWamiStore;
 use crate::store::traits::AccessKeyStore;
 use async_trait::async_trait;
 use wami_core::error::Result;
 use wami_core::types::PaginationParams;
-use wami_credentials::AccessKey;
 
 #[async_trait]
 impl AccessKeyStore for InMemoryWamiStore {

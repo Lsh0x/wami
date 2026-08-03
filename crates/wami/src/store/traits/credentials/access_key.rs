@@ -2,10 +2,10 @@
 //!
 //! Focused trait for access key storage operations
 
+use crate::credentials::AccessKey;
 use async_trait::async_trait;
 use wami_core::error::Result;
 use wami_core::types::PaginationParams;
-use wami_credentials::AccessKey;
 
 /// Store trait for IAM access key operations
 #[async_trait]
