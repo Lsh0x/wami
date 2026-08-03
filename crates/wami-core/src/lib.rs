@@ -4,6 +4,7 @@ pub mod actions;
 pub mod arn;
 pub mod context;
 pub mod error;
+pub mod traits;
 pub mod types;
 
 pub use actions::{ActionInfo, ActionParseError, ActionRegistry, WamiAction, WamiServicePrefix};

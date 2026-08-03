@@ -1086,7 +1086,6 @@ dependencies = [
  "wami-provider-azure",
  "wami-provider-custom",
  "wami-provider-gcp",
- "wami-traits",
 ]
 
 [[package]]
@@ -1182,14 +1181,7 @@ name = "wami-service"
 version = "0.1.0"
 dependencies = [
  "wami-core",
- "wami-traits",
-]
-
-[[package]]
-name = "wami-traits"
-version = "0.1.0"
-dependencies = [
- "wami-core",
+ "wami-macros",
 ]
 
 [[package]]
