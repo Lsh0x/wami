@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:da79489f0d43e702a6ce2a24c09a353e10be3f43572c37b7ef5e85304fda8ebd",
+  "doc": "Create a new application",
+  "file": "service/sso_admin/application.rs",
+  "id": "code:service/sso_admin/application.rs::function::ApplicationService<S>::create_application",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 47,
+  "line_start": 41,
+  "name": "create_application",
+  "signature": "pub async fn create_application(&self, application: Application) -> Result<Application>"
+}

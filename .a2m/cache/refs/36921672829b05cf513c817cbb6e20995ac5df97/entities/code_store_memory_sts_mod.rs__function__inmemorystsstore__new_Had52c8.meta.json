@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5d6e6c7e760ec31df1d001ea20838872028026c3215084a2173b5937b041dbb9",
+  "doc": "Create a new empty STS store",
+  "file": "store/memory/sts/mod.rs",
+  "id": "code:store/memory/sts/mod.rs::function::InMemoryStsStore::new",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 36,
+  "line_start": 34,
+  "name": "new",
+  "signature": "pub fn new() -> Self"
+}

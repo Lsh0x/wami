@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:2c5801b39c70113c426721f8616a6e328812a94495d155b32dd7d99ca87c8f0c",
+  "doc": "Authentication Service\n\nHandles credential validation and context creation for WAMI operations.",
+  "file": "service/auth/authentication.rs",
+  "id": "code:service/auth/authentication.rs::struct::AuthenticationService",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 51,
+  "line_start": 46,
+  "name": "AuthenticationService",
+  "signature": "pub struct AuthenticationService<S>"
+}

@@ -1,0 +1,31 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/tenant/mod.rs::function::TenantStore for InMemoryTenantStore::create_tenant",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for InMemoryTenantStore::get_tenant",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for InMemoryTenantStore::update_tenant",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for InMemoryTenantStore::delete_tenant",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for InMemoryTenantStore::list_tenants",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for InMemoryTenantStore::list_child_tenants",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for InMemoryTenantStore::get_ancestors",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for InMemoryTenantStore::get_descendants",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for InMemoryTenantStore::get_effective_quotas",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for InMemoryTenantStore::get_tenant_usage"
+  ],
+  "content_hash": "sha256:9b189281d1861d61ee92bb75f4baea5c2117f98ce43bbd94cd0eeb8238ac90f8",
+  "doc": "",
+  "file": "store/memory/tenant/mod.rs",
+  "id": "code:store/memory/tenant/mod.rs::impl::TenantStore for InMemoryTenantStore",
+  "implemented_by": [],
+  "implements": [
+    "code:store/traits/tenant/mod.rs::trait::TenantStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 132,
+  "line_start": 28,
+  "name": "TenantStore for InMemoryTenantStore",
+  "signature": "impl TenantStore for InMemoryTenantStore"
+}

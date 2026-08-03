@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3f71097e3dbaa6ff4c18b80ac700a5bbc828ce1943569f2fd6673f99eae0ab35",
+  "doc": "",
+  "file": "wami/policies/inline/requests.rs",
+  "id": "code:wami/policies/inline/requests.rs::struct::ListGroupPoliciesRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 79,
+  "line_start": 76,
+  "name": "ListGroupPoliciesRequest",
+  "signature": "pub struct ListGroupPoliciesRequest"
+}

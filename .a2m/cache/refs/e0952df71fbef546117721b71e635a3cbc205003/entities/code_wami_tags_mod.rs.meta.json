@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "0dd96fbb9a3db21677a818d48af2d3f61cbabcd06c2ea2703db49a76f66322f1",
+  "doc": "",
+  "file": "wami/tags/mod.rs",
+  "id": "code:wami/tags/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 8,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

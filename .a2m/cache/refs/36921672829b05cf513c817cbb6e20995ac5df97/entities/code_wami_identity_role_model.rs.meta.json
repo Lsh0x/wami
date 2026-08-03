@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/identity/role/model.rs::struct::Role"
+  ],
+  "content_hash": "7ad69cdcd07f6adb947b19355a7c2e8ff4346dfa603947178d3c40a909394aa8",
+  "doc": "",
+  "file": "wami/identity/role/model.rs",
+  "id": "code:wami/identity/role/model.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 39,
+  "line_start": 1,
+  "name": "model",
+  "signature": ""
+}

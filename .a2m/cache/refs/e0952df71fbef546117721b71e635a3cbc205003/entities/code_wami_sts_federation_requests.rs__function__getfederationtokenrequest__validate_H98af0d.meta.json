@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f7cfb9448b36195fbd47da2412a1235667ec8e4e8db9eddf2e7fd4c85de49a10",
+  "doc": "",
+  "file": "wami/sts/federation/requests.rs",
+  "id": "code:wami/sts/federation/requests.rs::function::GetFederationTokenRequest::validate",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 63,
+  "line_start": 35,
+  "name": "validate",
+  "signature": "pub fn validate(&self) -> Result<()>"
+}

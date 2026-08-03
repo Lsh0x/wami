@@ -1,0 +1,25 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/cloud-provider/wami-provider-aws/src/lib.rs::function::AwsProvider::random_alphanumeric",
+    "code:crates/cloud-provider/wami-provider-azure/src/lib.rs::function::CloudProvider for AzureProvider::generate_resource_id",
+    "code:crates/wami-credentials/src/access_key/builder.rs::function::build_access_key",
+    "code:crates/wami-credentials/src/service_credential/builder.rs::function::build_service_credential",
+    "code:crates/wami/examples/11_hybrid_cloud_setup.rs::function::CloudProvider for OnPremiseProvider::generate_resource_id",
+    "code:wami/identity/service_linked_role/builder.rs::function::build_deletion_task"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:uuid::Uuid::new_v4",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "new_v4",
+  "signature": "uuid::Uuid::new_v4"
+}

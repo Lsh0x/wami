@@ -1,0 +1,15 @@
+%% id: code:service/gdpr/mod.rs::function::GdprService<S>::grant_consent
+%% kind: function
+%% file: service/gdpr/mod.rs:37-88
+%% content_hash: sha256:0ec4889461cc13b2cd6c210036d8356f91156cace4522907a8c29a96d7e12ba0
+%% signature: pub async fn grant_consent(
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_service_gdpr_mod_rs__function__GdprService_S___grant_consent_H709ee620:::function[grant_consent]
+  code_service_gdpr_mod_rs__function__GdprService_S___grant_consent_H709ee620 -- calls --> code_service_gdpr_mod_rs__function__GdprService_S___revoke_consent_H55f80517:::function[revoke_consent]
+  code_service_gdpr_mod_rs__function__GdprService_S___grant_consent_H709ee620 -- calls --> code_service_gdpr_mod_rs__function__generate_id_H7ed8ff97:::function[generate_id]
+  code_service_gdpr_mod_rs__function__GdprService_S___grant_consent_H709ee620 -- calls --> code_wami_gdpr_operations_rs__function__validate_consent_H380d48e4:::function[validate_consent]
+  code_service_gdpr_mod_rs__function__GdprService_S___grant_consent_H709ee620 -- calls --> extern_Utc__now_H7825cf5c:::function[now]
+  code_service_gdpr_mod_rs__function__GdprService_S___grant_consent_H709ee620 -- calls --> code_wami_gdpr_operations_rs__function__build_consent_audit_event_H41a9e22f:::function[build_consent_audit_event]

@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/policies/tests.rs::function::test_context",
+    "extern:policy_builder::build_policy"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:9b59f1146358339441b898f6c4f8cf51c2d460991f3de3c417d8b99811e379ab",
+  "doc": "",
+  "file": "store/memory/policies/tests.rs",
+  "id": "code:store/memory/policies/tests.rs::function::test_policy_list_with_path_prefix",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 189,
+  "line_start": 158,
+  "name": "test_policy_list_with_path_prefix",
+  "signature": "async fn test_policy_list_with_path_prefix()"
+}

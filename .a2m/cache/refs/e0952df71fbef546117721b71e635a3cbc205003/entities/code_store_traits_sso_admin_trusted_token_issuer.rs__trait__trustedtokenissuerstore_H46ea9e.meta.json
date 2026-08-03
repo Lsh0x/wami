@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:32a8c9754f04abb75b954e043eb775fbf3634244e7e868c05b99050d8e7eb661",
+  "doc": "",
+  "file": "store/traits/sso_admin/trusted_token_issuer.rs",
+  "id": "code:store/traits/sso_admin/trusted_token_issuer.rs::trait::TrustedTokenIssuerStore",
+  "implemented_by": [
+    "code:store/memory/sso_admin/trusted_token_issuer.rs::impl::TrustedTokenIssuerStore for InMemorySsoAdminStore",
+    "code:store/memory/sso_admin/trusted_token_issuer.rs::impl::TrustedTokenIssuerStore for super::super::wami::InMemoryWamiStore"
+  ],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "trait",
+  "line_end": 26,
+  "line_start": 9,
+  "name": "TrustedTokenIssuerStore",
+  "signature": "pub trait TrustedTokenIssuerStore: Send + Sync"
+}

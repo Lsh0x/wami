@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/error.rs::enum::AmiError",
+    "code:crates/wami-core/src/error.rs::type_alias::Result"
+  ],
+  "content_hash": "6700301bdc996a136fd304b836d4231d9f108bad0140b8d3ca2f13c53b84ef6d",
+  "doc": "",
+  "file": "crates/wami-core/src/error.rs",
+  "id": "code:crates/wami-core/src/error.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 79,
+  "line_start": 1,
+  "name": "error",
+  "signature": ""
+}

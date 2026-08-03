@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-provider/src/registry.rs::struct::ProviderRegistry",
+    "code:crates/wami-provider/src/registry.rs::impl::ProviderRegistry"
+  ],
+  "content_hash": "1fbc34973bef52cb65487e18a18d066a9bb81c7b86d05138ee3e1b47e2fa121c",
+  "doc": "",
+  "file": "crates/wami-provider/src/registry.rs",
+  "id": "code:crates/wami-provider/src/registry.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 160,
+  "line_start": 1,
+  "name": "registry",
+  "signature": ""
+}

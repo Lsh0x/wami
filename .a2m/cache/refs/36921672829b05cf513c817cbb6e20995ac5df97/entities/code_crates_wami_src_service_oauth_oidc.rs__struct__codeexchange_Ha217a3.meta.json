@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:da781baf3e13e4c2be0c398a17c108fc15f496ab0a9dc0e29c0fac9e1dbf04e9",
+  "doc": "",
+  "file": "crates/wami/src/service/oauth/oidc.rs",
+  "id": "code:crates/wami/src/service/oauth/oidc.rs::struct::CodeExchange",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 126,
+  "line_start": 115,
+  "name": "CodeExchange",
+  "signature": "pub struct CodeExchange"
+}

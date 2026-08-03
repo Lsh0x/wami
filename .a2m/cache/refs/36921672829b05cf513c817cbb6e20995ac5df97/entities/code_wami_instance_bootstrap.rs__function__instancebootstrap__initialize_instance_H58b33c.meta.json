@@ -1,0 +1,28 @@
+{
+  "callees": [
+    "code:wami/instance/bootstrap.rs::function::InstanceBootstrap::create_platform_roles",
+    "code:wami/instance/bootstrap.rs::function::InstanceBootstrap::generate_access_key_id",
+    "code:wami/instance/bootstrap.rs::function::InstanceBootstrap::generate_secret_access_key",
+    "extern:Utc::now",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder",
+    "code:service/auth/authentication.rs::function::hash_secret"
+  ],
+  "callers": [
+    "code:crates/wami/examples/26_secure_instance_bootstrap.rs::function::main",
+    "code:crates/wami/tests/one_store_many_services.rs::function::bootstrapped"
+  ],
+  "children": [],
+  "content_hash": "sha256:40159b2e32e6a5e2f35deb2564720126a6b98a68dcc506dc646b821fca82691d",
+  "doc": "Initialize a new WAMI instance with root user and credentials\n\nThis creates:\n1. A root user with ARN: `arn:wami:iam:0:wami:{instance_id}:user/root`\n2. An access key pair for the root user\n3. Securely hashed secret (bcrypt)\n\n# Security\n\n- Access key secret is hashed with bcrypt before storage\n- Secret is returned in plaintext ONLY during this initialization\n- Secrets cannot be retrieved later (by design)\n- Root access requires these credentials (prevents brute force attacks)\n\n# Arguments\n\n* `store` - The store to persist the root user and credentials\n* `instance_id` - Unique identifier for this WAMI instance\n\n# Returns\n\n`RootCredentials` containing the access key ID and secret key.\n**CRITICAL:** Save these credentials securely - they cannot be retrieved later!\n\n# Example\n\n```rust,no_run\nuse wami::{InstanceBootstrap, store::memory::InMemoryWamiStore};\nuse std::sync::Arc;\nuse tokio::sync::RwLock;\n\n#[tokio::main]\nasync fn main() -> Result<(), Box<dyn std::error::Error>> {\nlet store = Arc::new(RwLock::new(InMemoryWamiStore::default()));\n\nlet creds = InstanceBootstrap::initialize_instance(\nstore,\n\"999888777\",\n).await?;\n\n// MUST save these - they're shown only once!\nprintln!(\"Access Key: {}\", creds.access_key_id);\nprintln!(\"Secret Key: {}\", creds.secret_access_key);\n\nOk(())\n}\n```",
+  "file": "wami/instance/bootstrap.rs",
+  "id": "code:wami/instance/bootstrap.rs::function::InstanceBootstrap::initialize_instance",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 219,
+  "line_start": 135,
+  "name": "initialize_instance",
+  "signature": "pub async fn initialize_instance<S>("
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3ef33ea5acd1fa08b94bb618bfe982741bfa69b9e527eb6b487e90d4b515a42c",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::struct::TenantPath",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 65,
+  "line_start": 62,
+  "name": "TenantPath",
+  "signature": "pub struct TenantPath"
+}

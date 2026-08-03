@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:647a58453a5b2e6804665d7a890374a693658660645f13f5ada85c6b69896930",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wami_encryption_algorithm_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 8042,
+  "line_start": 8036,
+  "name": "test_wami_encryption_algorithm_key",
+  "signature": "fn test_wami_encryption_algorithm_key()"
+}

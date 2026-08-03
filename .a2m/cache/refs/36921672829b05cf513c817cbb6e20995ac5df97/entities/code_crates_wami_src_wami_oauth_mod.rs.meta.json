@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "e0fe185e05264cb3b6192ce945fe7ba6ae52317e393bfbcebcf34ca554f1fed7",
+  "doc": "",
+  "file": "crates/wami/src/wami/oauth/mod.rs",
+  "id": "code:crates/wami/src/wami/oauth/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 36,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

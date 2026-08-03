@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/context.rs::function::Step::principal",
+    "code:crates/wami-core/src/context.rs::function::Step::via",
+    "code:crates/wami-core/src/context.rs::function::Step::service",
+    "code:crates/wami-core/src/context.rs::function::Step::segment"
+  ],
+  "content_hash": "sha256:b726899b2575cd767beea92da75c97b985193a65147787fdb377f3d1b0574c9f",
+  "doc": "",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::impl::Step",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 133,
+  "line_start": 94,
+  "name": "Step",
+  "signature": "impl Step"
+}

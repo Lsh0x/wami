@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ff20183d0fa6ced3957fc5684170f69db46038062f91a831f48e3e74ac06546e",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wami_condition_web_app_example",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7929,
+  "line_start": 7908,
+  "name": "test_wami_condition_web_app_example",
+  "signature": "fn test_wami_condition_web_app_example()"
+}

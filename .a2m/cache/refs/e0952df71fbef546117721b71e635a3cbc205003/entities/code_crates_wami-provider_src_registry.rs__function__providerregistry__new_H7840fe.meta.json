@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5d6e6c7e760ec31df1d001ea20838872028026c3215084a2173b5937b041dbb9",
+  "doc": "Creates an empty provider registry.",
+  "file": "crates/wami-provider/src/registry.rs",
+  "id": "code:crates/wami-provider/src/registry.rs::function::ProviderRegistry::new",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 23,
+  "line_start": 21,
+  "name": "new",
+  "signature": "pub fn new() -> Self"
+}

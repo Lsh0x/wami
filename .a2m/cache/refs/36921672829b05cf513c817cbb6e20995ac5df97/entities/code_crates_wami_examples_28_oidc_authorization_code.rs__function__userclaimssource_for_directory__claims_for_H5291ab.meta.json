@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:820ef8181ecb36aea585396ea3807ecadfd6b8247158487e66a881b2a1da2ffa",
+  "doc": "",
+  "file": "crates/wami/examples/28_oidc_authorization_code.rs",
+  "id": "code:crates/wami/examples/28_oidc_authorization_code.rs::function::UserClaimsSource for Directory::claims_for",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 47,
+  "line_start": 42,
+  "name": "claims_for",
+  "signature": "async fn claims_for(&self, user_name: &str) -> Result<Option<UserProfile>>"
+}

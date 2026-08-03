@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/sts/federation/requests.rs::function::GetFederationTokenRequest::validate"
+  ],
+  "content_hash": "sha256:9104a947e575bf9935dd7d3398cc550d3896e47a006263fd07ba73847628dc0e",
+  "doc": "",
+  "file": "wami/sts/federation/requests.rs",
+  "id": "code:wami/sts/federation/requests.rs::impl::GetFederationTokenRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 64,
+  "line_start": 32,
+  "name": "GetFederationTokenRequest",
+  "signature": "impl GetFederationTokenRequest"
+}

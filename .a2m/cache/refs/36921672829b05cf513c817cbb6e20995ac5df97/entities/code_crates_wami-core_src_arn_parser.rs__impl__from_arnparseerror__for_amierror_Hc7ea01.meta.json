@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/arn/parser.rs::function::From<ArnParseError> for AmiError::from"
+  ],
+  "content_hash": "sha256:f7b580d939acb128dff2997ccbfe2c4f6896005813c1d7bc9afe2ef20c5d8f18",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/parser.rs",
+  "id": "code:crates/wami-core/src/arn/parser.rs::impl::From<ArnParseError> for AmiError",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 36,
+  "line_start": 30,
+  "name": "From<ArnParseError> for AmiError",
+  "signature": "impl From<ArnParseError> for AmiError"
+}

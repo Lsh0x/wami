@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "extern:DateTime::from_timestamp"
+  ],
+  "callers": [
+    "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::issue_token"
+  ],
+  "children": [],
+  "content_hash": "sha256:6f1774c8b34ac0cebb74acf7ead5555fbeb2376f1e21f382044f029813400242",
+  "doc": "The record kept so the token can later be revoked.",
+  "file": "crates/wami/src/wami/oauth/builder.rs",
+  "id": "code:crates/wami/src/wami/oauth/builder.rs::function::build_token_record",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 98,
+  "line_start": 85,
+  "name": "build_token_record",
+  "signature": "pub fn build_token_record(claims: &OAuthClaims, issued_at: DateTime<Utc>) -> AccessToken"
+}

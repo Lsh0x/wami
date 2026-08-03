@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:8b4536d2cf6ac369e95f14f1c04961a07d3f36f4e31e03c6b5b49bd6b5d51a97",
+  "doc": "Delete a SAML provider",
+  "file": "service/identity/identity_provider.rs",
+  "id": "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::delete_saml_provider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 112,
+  "line_start": 109,
+  "name": "delete_saml_provider",
+  "signature": "pub async fn delete_saml_provider(&self, arn: &str) -> Result<()>"
+}

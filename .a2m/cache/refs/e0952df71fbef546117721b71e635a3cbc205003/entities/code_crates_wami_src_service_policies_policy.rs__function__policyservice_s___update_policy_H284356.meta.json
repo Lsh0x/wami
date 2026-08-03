@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::get_policy",
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::guard",
+    "extern:policy_builder::update_policy"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:af783c0ad3ba3a7a2b7466a66de9a07d4bc93d81ab0f8084c23b87dd2b801fa1",
+  "doc": "Update a policy",
+  "file": "crates/wami/src/service/policies/policy.rs",
+  "id": "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::update_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 130,
+  "line_start": 100,
+  "name": "update_policy",
+  "signature": "pub async fn update_policy("
+}

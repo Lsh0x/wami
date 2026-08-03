@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::builder",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:8350de4f85c4ecbe16fd14571834f09264cede5e3efd0bac16ce7206bc33b117",
+  "doc": "",
+  "file": "crates/wami/examples/14_policy_basics.rs",
+  "id": "code:crates/wami/examples/14_policy_basics.rs::function::main",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 196,
+  "line_start": 22,
+  "name": "main",
+  "signature": "async fn main() -> Result<(), Box<dyn std::error::Error>>"
+}

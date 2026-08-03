@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3f349fca953553f4c19e27f773b4f0ed2691d88a5e64625829000515a1785698",
+  "doc": "",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::struct::Resource",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 251,
+  "line_start": 245,
+  "name": "Resource",
+  "signature": "pub struct Resource"
+}

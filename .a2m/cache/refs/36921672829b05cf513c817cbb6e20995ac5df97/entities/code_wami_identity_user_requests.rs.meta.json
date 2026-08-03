@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/identity/user/requests.rs::struct::CreateUserRequest",
+    "code:wami/identity/user/requests.rs::struct::UpdateUserRequest",
+    "code:wami/identity/user/requests.rs::struct::ListUsersRequest",
+    "code:wami/identity/user/requests.rs::struct::ListUsersResponse"
+  ],
+  "content_hash": "79fa008b4e836902027681a2df383593815056dc978ed41c4883131f41e644f2",
+  "doc": "",
+  "file": "wami/identity/user/requests.rs",
+  "id": "code:wami/identity/user/requests.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 39,
+  "line_start": 1,
+  "name": "requests",
+  "signature": ""
+}

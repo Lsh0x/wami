@@ -1,0 +1,22 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/policies/policy/builder.rs::function::build_policy",
+    "code:wami/policies/policy/builder.rs::function::update_policy",
+    "code:wami/policies/policy/builder.rs::function::add_provider_to_policy"
+  ],
+  "content_hash": "5abbb79219b5e8f03ec4d8f0435e39f6ac4878cdac97420f8adbca17aed325d4",
+  "doc": "",
+  "file": "wami/policies/policy/builder.rs",
+  "id": "code:wami/policies/policy/builder.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 81,
+  "line_start": 1,
+  "name": "builder",
+  "signature": ""
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3382d00d79b749eb5d59271a3c27c3f45d73f0dd0c6eeba077971e8a720410b4",
+  "doc": "Increment usage count for SAML provider (pure function)",
+  "file": "wami/identity/identity_provider/builder.rs",
+  "id": "code:wami/identity/identity_provider/builder.rs::function::increment_saml_usage",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 158,
+  "line_start": 155,
+  "name": "increment_saml_usage",
+  "signature": "pub fn increment_saml_usage(mut provider: SamlProvider) -> SamlProvider"
+}

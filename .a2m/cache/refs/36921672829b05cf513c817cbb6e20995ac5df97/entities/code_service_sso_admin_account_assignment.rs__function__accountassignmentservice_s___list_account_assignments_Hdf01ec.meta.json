@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5d23a0ef54982ff8010d28b57471177e9ec238a0dc7d1aa09e0cded71444fb80",
+  "doc": "List account assignments for a permission set in an account",
+  "file": "service/sso_admin/account_assignment.rs",
+  "id": "code:service/sso_admin/account_assignment.rs::function::AccountAssignmentService<S>::list_account_assignments",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 84,
+  "line_start": 74,
+  "name": "list_account_assignments",
+  "signature": "pub async fn list_account_assignments("
+}

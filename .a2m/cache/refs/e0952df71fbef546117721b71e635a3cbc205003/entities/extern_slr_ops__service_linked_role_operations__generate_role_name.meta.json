@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/identity/service_linked_role.rs::function::ServiceLinkedRoleService<S>::create_service_linked_role"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:slr_ops::service_linked_role_operations::generate_role_name",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "generate_role_name",
+  "signature": "slr_ops::service_linked_role_operations::generate_role_name"
+}

@@ -1,0 +1,29 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::profile_of",
+    "extern:Utc::now",
+    "extern:AmiError::StoreError",
+    "code:crates/wami/src/wami/oauth/builder.rs::function::build_user_claims",
+    "code:crates/wami/src/wami/oauth/oidc.rs::function::build_id_token_claims",
+    "code:crates/wami/src/wami/oauth/oidc.rs::function::generate_opaque_value",
+    "code:crates/wami/src/wami/oauth/builder.rs::function::build_token_record"
+  ],
+  "callers": [
+    "code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::exchange_code",
+    "code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::refresh_tokens"
+  ],
+  "children": [],
+  "content_hash": "sha256:ce6aef3cfa8e1c3101369804728acc5c1e5a9c8088b0b9b224bf8e41c758932f",
+  "doc": "Mint the access, refresh and (when `openid` is granted) ID tokens.\n\nOne place, so the code and refresh paths cannot drift into issuing\ndifferently-shaped tokens.",
+  "file": "crates/wami/src/service/oauth/oidc.rs",
+  "id": "code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::mint",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 534,
+  "line_start": 472,
+  "name": "mint",
+  "signature": "async fn mint("
+}

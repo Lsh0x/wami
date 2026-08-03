@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/examples/26_secure_instance_bootstrap.rs::function::main",
+    "code:crates/wami/examples/26_secure_instance_bootstrap.rs::function::store_credentials_securely",
+    "code:crates/wami/examples/26_secure_instance_bootstrap.rs::function::retrieve_credentials_from_vault",
+    "code:crates/wami/examples/26_secure_instance_bootstrap.rs::function::rotate_root_credentials"
+  ],
+  "content_hash": "c3d0229aec85d735f4bf485ede305a0a35cb14a2c6c742c9367279263719eba3",
+  "doc": "",
+  "file": "crates/wami/examples/26_secure_instance_bootstrap.rs",
+  "id": "code:crates/wami/examples/26_secure_instance_bootstrap.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 266,
+  "line_start": 1,
+  "name": "26_secure_instance_bootstrap",
+  "signature": ""
+}

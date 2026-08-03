@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:4c05b1f56710d75286706c035b295c47e4762bdd7de2ec9145d810c76fb75004",
+  "doc": "",
+  "file": "crates/wami/examples/11_hybrid_cloud_setup.rs",
+  "id": "code:crates/wami/examples/11_hybrid_cloud_setup.rs::function::CloudProvider for OnPremiseProvider::resource_limits",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 82,
+  "line_start": 80,
+  "name": "resource_limits",
+  "signature": "fn resource_limits(&self) -> &ResourceLimits"
+}

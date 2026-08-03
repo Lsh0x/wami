@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e9cc546dd66ce2381c5d9cd4e6b84990fe0f1f6b3db33704bd75b191e9bbb38a",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wami_trace_id_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7673,
+  "line_start": 7666,
+  "name": "test_wami_trace_id_key",
+  "signature": "fn test_wami_trace_id_key()"
+}

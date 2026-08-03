@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-core/src/error/helpers.rs::function::OptionExt<T> for Option<T>::or_not_found"
+  ],
+  "children": [],
+  "content_hash": "sha256:db8236ee8cebb96e2d7aaaba5770bc1a7d230ba1118c9a4bee912c30b951c952",
+  "doc": "Create a \"Resource not found\" error with a formatted message\n\n# Example\n\n```rust\nuse wami_core::error::AmiError;\n\nlet error = AmiError::resource_not_found(\"User\", \"alice\");\nassert!(error.to_string().contains(\"User: alice\"));\n```",
+  "file": "crates/wami-core/src/error/helpers.rs",
+  "id": "code:crates/wami-core/src/error/helpers.rs::function::AmiError::resource_not_found",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 23,
+  "line_start": 19,
+  "name": "resource_not_found",
+  "signature": "pub fn resource_not_found(resource_type: &str, resource_id: &str) -> Self"
+}

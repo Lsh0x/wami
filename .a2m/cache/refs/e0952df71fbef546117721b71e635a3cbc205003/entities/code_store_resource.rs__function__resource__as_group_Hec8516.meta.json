@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:84e188659ec457b23567f302d11b25e1939552873c13e275c351c691b300b75f",
+  "doc": "Tries to downcast to Group",
+  "file": "store/resource.rs",
+  "id": "code:store/resource.rs::function::Resource::as_group",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 162,
+  "line_start": 156,
+  "name": "as_group",
+  "signature": "pub fn as_group(&self) -> Option<&Group>"
+}

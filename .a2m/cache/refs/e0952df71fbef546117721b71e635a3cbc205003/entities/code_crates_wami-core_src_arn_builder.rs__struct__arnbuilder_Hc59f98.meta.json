@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c5e47287874836f3f95b79147e4ad6d6b73c1722a863c099a2bf1e118684f1d3",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/builder.rs",
+  "id": "code:crates/wami-core/src/arn/builder.rs::struct::ArnBuilder",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 55,
+  "line_start": 49,
+  "name": "ArnBuilder",
+  "signature": "pub struct ArnBuilder"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:53eef273360ad4267b4ec2ddb014e97648f1117d62677bdb57721073b9c2d124",
+  "doc": "",
+  "file": "wami/identity/identity_provider/requests.rs",
+  "id": "code:wami/identity/identity_provider/requests.rs::struct::UntagIdentityProviderRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 145,
+  "line_start": 140,
+  "name": "UntagIdentityProviderRequest",
+  "signature": "pub struct UntagIdentityProviderRequest"
+}

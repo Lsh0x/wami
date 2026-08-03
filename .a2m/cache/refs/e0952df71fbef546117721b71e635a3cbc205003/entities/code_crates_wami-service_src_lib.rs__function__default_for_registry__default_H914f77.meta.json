@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3a5a7f82ed4bd4560b360efab3878115a2b77e378f84d7ded1e1177b6ac53798",
+  "doc": "",
+  "file": "crates/wami-service/src/lib.rs",
+  "id": "code:crates/wami-service/src/lib.rs::function::Default for Registry::default",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 30,
+  "line_start": 28,
+  "name": "default",
+  "signature": "fn default() -> Self"
+}

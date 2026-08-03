@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3fcc2d98f94660b729a5820a93ebd677493f8cc8ffe39bd9c058a9ff726b4609",
+  "doc": "",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::function::Serialize for WamiArn::serialize",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 416,
+  "line_start": 411,
+  "name": "serialize",
+  "signature": "fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>"
+}

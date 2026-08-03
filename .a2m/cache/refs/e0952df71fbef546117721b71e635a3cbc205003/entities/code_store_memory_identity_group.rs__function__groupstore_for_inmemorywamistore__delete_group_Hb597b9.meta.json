@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c124528869b6fb0d653ba7e523aa8113f1b18a272df80709d4b14dcc53400cce",
+  "doc": "",
+  "file": "store/memory/identity/group.rs",
+  "id": "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::delete_group",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 33,
+  "line_start": 26,
+  "name": "delete_group",
+  "signature": "async fn delete_group(&mut self, group_name: &str) -> Result<()>"
+}

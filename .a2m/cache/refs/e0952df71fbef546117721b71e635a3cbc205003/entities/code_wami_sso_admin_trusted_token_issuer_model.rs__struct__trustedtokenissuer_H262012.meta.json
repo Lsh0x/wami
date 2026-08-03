@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d6557c36f22bb4babb37007fffb4f7208d5102e34050b553fbd52625f8193b75",
+  "doc": "",
+  "file": "wami/sso_admin/trusted_token_issuer/model.rs",
+  "id": "code:wami/sso_admin/trusted_token_issuer/model.rs::struct::TrustedTokenIssuer",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 25,
+  "line_start": 8,
+  "name": "TrustedTokenIssuer",
+  "signature": "pub struct TrustedTokenIssuer"
+}

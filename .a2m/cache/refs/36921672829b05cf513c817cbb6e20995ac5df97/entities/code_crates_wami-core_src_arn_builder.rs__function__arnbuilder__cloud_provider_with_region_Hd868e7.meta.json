@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/arn/builder.rs::function::ArnBuilder::cloud_mapping",
+    "code:crates/wami-core/src/arn/types.rs::function::CloudMapping::with_region"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7c54b5b1f8b87ed26bc95436730ef514d79351421f7e3c2b9625c23ff2e05ab6",
+  "doc": "Sets the cloud provider mapping with a specific region.\n\n# Examples\n\n```\nuse wami_core::arn::WamiArn;\n\nlet builder = WamiArn::builder()\n.cloud_provider_with_region(\"aws\", \"223344556677\", \"us-east-1\");\n```",
+  "file": "crates/wami-core/src/arn/builder.rs",
+  "id": "code:crates/wami-core/src/arn/builder.rs::function::ArnBuilder::cloud_provider_with_region",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 186,
+  "line_start": 178,
+  "name": "cloud_provider_with_region",
+  "signature": "pub fn cloud_provider_with_region("
+}

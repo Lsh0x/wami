@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:4ae74ad103cc4ac45c3e6c192428f3f14583e8e881dbef2c0f0375c6e2492ec7",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::function::fmt::Display for TenantPath::fmt",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 198,
+  "line_start": 196,
+  "name": "fmt",
+  "signature": "fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result"
+}

@@ -1,0 +1,24 @@
+{
+  "callees": [
+    "extern:Uuid::new_v4"
+  ],
+  "callers": [
+    "code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::authorize",
+    "code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::refresh_tokens",
+    "code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::mint"
+  ],
+  "children": [],
+  "content_hash": "sha256:dfae48c8e524c1fd3478d92d9116deb525067f7bb8c2c5fea3d12dfa500f1192",
+  "doc": "Generate an opaque, unguessable value for a code or refresh token.",
+  "file": "crates/wami/src/wami/oauth/oidc.rs",
+  "id": "code:crates/wami/src/wami/oauth/oidc.rs::function::generate_opaque_value",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 248,
+  "line_start": 246,
+  "name": "generate_opaque_value",
+  "signature": "pub fn generate_opaque_value() -> String"
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c5251293eb0ef1309d386fe280c6172cec9cf060f153acea7d333cc5057d48a6",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_foranyvalue_numeric_greater_than_single_string_actual",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 278,
+  "line_start": 269,
+  "name": "test_foranyvalue_numeric_greater_than_single_string_actual",
+  "signature": "fn test_foranyvalue_numeric_greater_than_single_string_actual()"
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami/examples/22_identity_providers_federation.rs::function::main",
+    "code:crates/wami/examples/24_policy_attachment.rs::function::main"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:env_logger::init",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "init",
+  "signature": "env_logger::init"
+}

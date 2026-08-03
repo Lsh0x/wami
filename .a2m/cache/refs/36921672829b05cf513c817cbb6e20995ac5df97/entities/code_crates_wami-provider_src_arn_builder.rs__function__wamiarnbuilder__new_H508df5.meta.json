@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "extern:std::env::var"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:dfd06cde954438115aa0c23a03bbb2252bcfc4c55b83d80767676e6006ca8b5c",
+  "doc": "Creates a new ARN builder\n\nAutomatically reads salt from `WAMI_ARN_SALT` environment variable if available.",
+  "file": "crates/wami-provider/src/arn_builder.rs",
+  "id": "code:crates/wami-provider/src/arn_builder.rs::function::WamiArnBuilder::new",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 53,
+  "line_start": 49,
+  "name": "new",
+  "signature": "pub fn new() -> Self"
+}

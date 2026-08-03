@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:wami/sts/session/model.rs::function::StsSession::is_expired"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:df7ec2593dc229d5e418617ff5e479d4c357148361141c93f1309c7ec8619d81",
+  "doc": "Check if session is valid (not expired, not revoked)",
+  "file": "wami/sts/session/model.rs",
+  "id": "code:wami/sts/session/model.rs::function::StsSession::is_valid",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 78,
+  "line_start": 76,
+  "name": "is_valid",
+  "signature": "pub fn is_valid(&self) -> bool"
+}

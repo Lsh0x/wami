@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/policies/permissions_boundary/model.rs::struct::PermissionsBoundary",
+    "code:wami/policies/permissions_boundary/model.rs::impl::PermissionsBoundary"
+  ],
+  "content_hash": "96c4bdfe2b461e2f97b3983146dbf688a01f31afe93a92641bc460dd057e5c17",
+  "doc": "",
+  "file": "wami/policies/permissions_boundary/model.rs",
+  "id": "code:wami/policies/permissions_boundary/model.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 113,
+  "line_start": 1,
+  "name": "model",
+  "signature": ""
+}

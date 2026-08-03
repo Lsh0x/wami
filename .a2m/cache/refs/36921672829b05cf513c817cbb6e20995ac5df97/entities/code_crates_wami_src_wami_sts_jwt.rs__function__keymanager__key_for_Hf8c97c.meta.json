@@ -1,0 +1,24 @@
+{
+  "callees": [
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::active",
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::retired",
+    "extern:std::iter::once"
+  ],
+  "callers": [
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::verify_claims"
+  ],
+  "children": [],
+  "content_hash": "sha256:ff08ef67914f830651b57b222baf259908b151083b320d7366436d3df7963427",
+  "doc": "Find a key by id, active or retired.",
+  "file": "crates/wami/src/wami/sts/jwt.rs",
+  "id": "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::key_for",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 373,
+  "line_start": 369,
+  "name": "key_for",
+  "signature": "fn key_for(&self, kid: &str) -> Option<&KeyPair>"
+}

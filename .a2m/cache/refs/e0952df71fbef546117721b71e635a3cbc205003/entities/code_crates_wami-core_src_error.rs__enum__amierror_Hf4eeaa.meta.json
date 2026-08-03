@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:4c683078e1153719d81eeb591c27196f8ff42e3eb7536d9c3bfc1df007810d74",
+  "doc": "",
+  "file": "crates/wami-core/src/error.rs",
+  "id": "code:crates/wami-core/src/error.rs::enum::AmiError",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 69,
+  "line_start": 4,
+  "name": "AmiError",
+  "signature": "pub enum AmiError"
+}

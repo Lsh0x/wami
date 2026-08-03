@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:60b601b6dc596230cb4e91f79fb630ea2410c14220925b443c2c4ed80ae733b3",
+  "doc": "",
+  "file": "store/memory/tenant/mod.rs",
+  "id": "code:store/memory/tenant/mod.rs::function::TenantStore for InMemoryTenantStore::create_tenant",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 38,
+  "line_start": 29,
+  "name": "create_tenant",
+  "signature": "async fn create_tenant(&mut self, tenant: Tenant) -> Result<Tenant>"
+}

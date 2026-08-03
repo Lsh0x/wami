@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:73fe9ab345ff0e924cdb269b23de85295009049752d3044ed521ad2216ecc69f",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_foranyvalue_numeric_less_than_non_numeric_member_false",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 266,
+  "line_start": 252,
+  "name": "test_foranyvalue_numeric_less_than_non_numeric_member_false",
+  "signature": "fn test_foranyvalue_numeric_less_than_non_numeric_member_false()"
+}

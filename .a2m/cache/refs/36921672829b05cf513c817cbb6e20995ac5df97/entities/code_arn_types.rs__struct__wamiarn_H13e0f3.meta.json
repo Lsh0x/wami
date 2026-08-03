@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:2de4d4d4ddf3e472564f23b537fdb739c971e3dc1a7bad9b9403c5411fbedb5c",
+  "doc": "",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::struct::WamiArn",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 48,
+  "line_start": 33,
+  "name": "WamiArn",
+  "signature": "pub struct WamiArn"
+}

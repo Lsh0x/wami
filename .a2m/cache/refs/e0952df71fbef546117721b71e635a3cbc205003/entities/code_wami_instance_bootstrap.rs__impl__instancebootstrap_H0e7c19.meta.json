@@ -1,0 +1,24 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/instance/bootstrap.rs::function::InstanceBootstrap::initialize_instance",
+    "code:wami/instance/bootstrap.rs::function::InstanceBootstrap::generate_access_key_id",
+    "code:wami/instance/bootstrap.rs::function::InstanceBootstrap::generate_secret_access_key",
+    "code:wami/instance/bootstrap.rs::function::InstanceBootstrap::create_platform_roles",
+    "code:wami/instance/bootstrap.rs::function::InstanceBootstrap::is_initialized"
+  ],
+  "content_hash": "sha256:a578f7a1f1d5fd2a794e5de3cff32e0fe8d3601eaa8e909d9b15c4ce69a69d0f",
+  "doc": "",
+  "file": "wami/instance/bootstrap.rs",
+  "id": "code:wami/instance/bootstrap.rs::impl::InstanceBootstrap",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 382,
+  "line_start": 87,
+  "name": "InstanceBootstrap",
+  "signature": "impl InstanceBootstrap"
+}

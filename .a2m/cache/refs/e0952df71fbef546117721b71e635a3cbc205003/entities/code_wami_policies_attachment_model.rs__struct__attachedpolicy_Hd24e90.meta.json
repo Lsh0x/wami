@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0c3a7cf114826c9573249b670512d3b381716da7de36554ce624e960f158458f",
+  "doc": "",
+  "file": "wami/policies/attachment/model.rs",
+  "id": "code:wami/policies/attachment/model.rs::struct::AttachedPolicy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 12,
+  "line_start": 7,
+  "name": "AttachedPolicy",
+  "signature": "pub struct AttachedPolicy"
+}

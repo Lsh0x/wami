@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3651726ddb9f650397f4e8a5574a635b29d734f659ce849d3d964cc8e025ae07",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_ip_address_expected_type_mismatch",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 18,
+  "line_start": 6,
+  "name": "test_ip_address_expected_type_mismatch",
+  "signature": "fn test_ip_address_expected_type_mismatch()"
+}

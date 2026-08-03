@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:user_builder::build_user"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d712bc15fa1dfc8660e9728a248970a25889c87b3ed3a4db5a209106ca9517bb",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_user_list_with_pagination",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 177,
+  "line_start": 155,
+  "name": "test_user_list_with_pagination",
+  "signature": "async fn test_user_list_with_pagination()"
+}

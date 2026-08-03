@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:4c6831e65f92d8fb893c7a06a33d06d993a03e9957c2c4aef871718ed77427cd",
+  "doc": "",
+  "file": "wami/tags/requests.rs",
+  "id": "code:wami/tags/requests.rs::struct::ListResourceTagsRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 35,
+  "line_start": 30,
+  "name": "ListResourceTagsRequest",
+  "signature": "pub struct ListResourceTagsRequest"
+}

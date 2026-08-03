@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/tenant/mod.rs::function::InMemoryTenantStore::new"
+  ],
+  "content_hash": "sha256:9b0f198c9163844af722cd5f9891106b8b5a93507df4b283ee2dee3af479e3bd",
+  "doc": "",
+  "file": "store/memory/tenant/mod.rs",
+  "id": "code:store/memory/tenant/mod.rs::impl::InMemoryTenantStore",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 25,
+  "line_start": 18,
+  "name": "InMemoryTenantStore",
+  "signature": "impl InMemoryTenantStore"
+}

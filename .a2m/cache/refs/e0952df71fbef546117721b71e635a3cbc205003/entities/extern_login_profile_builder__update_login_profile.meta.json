@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:store/memory/credentials/tests.rs::function::test_login_profile_update"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:login_profile_builder::update_login_profile",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "update_login_profile",
+  "signature": "login_profile_builder::update_login_profile"
+}

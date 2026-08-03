@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:dd19ae8b6c7c67575b47d561e502250de5b7c225995340765537d42ca14830d4",
+  "doc": "Delete an account assignment",
+  "file": "service/sso_admin/account_assignment.rs",
+  "id": "code:service/sso_admin/account_assignment.rs::function::AccountAssignmentService<S>::delete_account_assignment",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 71,
+  "line_start": 65,
+  "name": "delete_account_assignment",
+  "signature": "pub async fn delete_account_assignment(&self, assignment_id: &str) -> Result<()>"
+}

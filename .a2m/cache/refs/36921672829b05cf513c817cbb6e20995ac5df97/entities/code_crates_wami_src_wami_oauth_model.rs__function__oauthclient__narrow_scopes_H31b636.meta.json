@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:adcfb2c0cb3779c7d3a4c0f6ecb8f1c76653a5f7af9b33969ad3add93c1424ad",
+  "doc": "The subset of `requested` this client may have, or the first scope it\nmay not.\n\nAn empty request means \"everything you are entitled to\", matching\nRFC 6749 §3.3, where an omitted scope leaves the choice to the server.",
+  "file": "crates/wami/src/wami/oauth/model.rs",
+  "id": "code:crates/wami/src/wami/oauth/model.rs::function::OAuthClient::narrow_scopes",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 86,
+  "line_start": 78,
+  "name": "narrow_scopes",
+  "signature": "pub fn narrow_scopes<'a>(&self, requested: &'a [String]) -> Result<Vec<String>, &'a str>"
+}

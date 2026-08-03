@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:8bf70b7371fb5428548a08570e7fd8ca20cebfe1076daf79a3e353f27a682dc8",
+  "doc": "Returns true if this ARN belongs to the given tenant path or its descendants.",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::function::WamiArn::belongs_to_tenant",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 390,
+  "line_start": 388,
+  "name": "belongs_to_tenant",
+  "signature": "pub fn belongs_to_tenant(&self, tenant_path: &TenantPath) -> bool"
+}

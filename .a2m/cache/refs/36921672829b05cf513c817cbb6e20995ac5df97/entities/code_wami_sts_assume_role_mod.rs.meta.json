@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "3f2d92d7747834d1075d8ea452e36d168b38955c44457bb66be446ea7828023c",
+  "doc": "",
+  "file": "wami/sts/assume_role/mod.rs",
+  "id": "code:wami/sts/assume_role/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 11,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

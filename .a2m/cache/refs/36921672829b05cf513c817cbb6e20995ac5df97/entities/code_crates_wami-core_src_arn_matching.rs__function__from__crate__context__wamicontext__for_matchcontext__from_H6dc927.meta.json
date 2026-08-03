@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:9d31c9aa03a9ea8c36150f73e51ad04a308387fa216a5ecdc00ad89736d278a3",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/matching.rs",
+  "id": "code:crates/wami-core/src/arn/matching.rs::function::From<&crate::context::WamiContext> for MatchContext::from",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 79,
+  "line_start": 73,
+  "name": "from",
+  "signature": "fn from(ctx: &crate::context::WamiContext) -> Self"
+}

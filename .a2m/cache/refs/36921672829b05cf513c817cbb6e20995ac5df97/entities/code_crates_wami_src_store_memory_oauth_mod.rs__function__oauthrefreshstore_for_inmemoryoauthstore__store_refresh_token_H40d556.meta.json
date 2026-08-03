@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:96e235e5b01af1e990cbab41679a6102c8b21fa2ee7d3543829fa3efb9bd5a9a",
+  "doc": "",
+  "file": "crates/wami/src/store/memory/oauth/mod.rs",
+  "id": "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthRefreshStore for InMemoryOAuthStore::store_refresh_token",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 145,
+  "line_start": 142,
+  "name": "store_refresh_token",
+  "signature": "async fn store_refresh_token(&mut self, token: RefreshToken) -> Result<()>"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:aaa1209954655fb70a651f02f00472b455d13a7ec476d5b18b406ecb532bc5bf",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::request_protocol",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 384,
+  "line_start": 381,
+  "name": "request_protocol",
+  "signature": "pub fn request_protocol(mut self, protocol: impl Into<String>) -> Self"
+}

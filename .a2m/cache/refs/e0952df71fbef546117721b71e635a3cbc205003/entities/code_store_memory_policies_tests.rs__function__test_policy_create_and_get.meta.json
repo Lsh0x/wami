@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/policies/tests.rs::function::test_context",
+    "extern:policy_builder::build_policy"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:2325f5cc91e0f38fdd04728cd153685bc28de49e6cbca7f8bf5540386b8554d1",
+  "doc": "",
+  "file": "store/memory/policies/tests.rs",
+  "id": "code:store/memory/policies/tests.rs::function::test_policy_create_and_get",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 49,
+  "line_start": 24,
+  "name": "test_policy_create_and_get",
+  "signature": "async fn test_policy_create_and_get()"
+}

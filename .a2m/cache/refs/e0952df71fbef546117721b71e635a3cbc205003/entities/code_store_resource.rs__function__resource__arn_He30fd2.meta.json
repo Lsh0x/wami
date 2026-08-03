@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5eaad1c729a092b2bc1a5790a885bcc883dae28796939ea53aaed69e87269c8c",
+  "doc": "Extracts the ARN from any resource type\n\nReturns the cloud provider ARN (AWS-format) as a string reference.\nFor resources that only have WAMI ARNs, this returns a temporary allocation.",
+  "file": "store/resource.rs",
+  "id": "code:store/resource.rs::function::Resource::arn",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 107,
+  "line_start": 91,
+  "name": "arn",
+  "signature": "pub fn arn(&self) -> String"
+}

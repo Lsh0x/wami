@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::guard",
+    "extern:group_builder::build_group"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5bdcdf187d3cd5c83bb767755d3c1fd196196f4c27d2bf878912b5237f67e97b",
+  "doc": "Create a new group",
+  "file": "crates/wami/src/service/identity/group.rs",
+  "id": "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::create_group",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 69,
+  "line_start": 54,
+  "name": "create_group",
+  "signature": "pub async fn create_group("
+}

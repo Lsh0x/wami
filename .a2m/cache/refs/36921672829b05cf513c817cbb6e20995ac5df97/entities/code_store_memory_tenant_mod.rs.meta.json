@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/tenant/mod.rs::struct::InMemoryTenantStore",
+    "code:store/memory/tenant/mod.rs::impl::InMemoryTenantStore",
+    "code:store/memory/tenant/mod.rs::impl::TenantStore for InMemoryTenantStore",
+    "code:store/memory/tenant/mod.rs::impl::TenantStore for super::wami::InMemoryWamiStore"
+  ],
+  "content_hash": "573d984b97b9ea6f87ff1ae7da8992294a85f58d20fbf79eaea66eb2d7914b2b",
+  "doc": "",
+  "file": "store/memory/tenant/mod.rs",
+  "id": "code:store/memory/tenant/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 250,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

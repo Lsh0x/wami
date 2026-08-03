@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:1091bd86854d33b2393e44682d92154c63c799041a3b15a95bfe16dc44e63cb4",
+  "doc": "Detach a managed policy from a group",
+  "file": "crates/wami/src/service/policies/attachment.rs",
+  "id": "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::detach_group_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 308,
+  "line_start": 267,
+  "name": "detach_group_policy",
+  "signature": "pub async fn detach_group_policy("
+}

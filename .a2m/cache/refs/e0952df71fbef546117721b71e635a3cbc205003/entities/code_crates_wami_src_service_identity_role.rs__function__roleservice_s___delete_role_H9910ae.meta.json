@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:76dd7e2cbb5179cbc8a88baaaea56980a806482e3b16cbb611078cdbdbf27a0a",
+  "doc": "Delete a role",
+  "file": "crates/wami/src/service/identity/role.rs",
+  "id": "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::delete_role",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 134,
+  "line_start": 130,
+  "name": "delete_role",
+  "signature": "pub async fn delete_role(&self, context: &WamiContext, role_name: &str) -> Result<()>"
+}

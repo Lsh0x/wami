@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/identity/user.rs::function::UserService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c317c38024d7198f113c1879ed372cdf382cdfcdf9890ae24bc0c1084133a5e7",
+  "doc": "Delete a user\n\nThe root user cannot be deleted.",
+  "file": "crates/wami/src/service/identity/user.rs",
+  "id": "code:crates/wami/src/service/identity/user.rs::function::UserService<S>::delete_user",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 163,
+  "line_start": 152,
+  "name": "delete_user",
+  "signature": "pub async fn delete_user(&self, context: &WamiContext, user_name: &str) -> Result<()>"
+}

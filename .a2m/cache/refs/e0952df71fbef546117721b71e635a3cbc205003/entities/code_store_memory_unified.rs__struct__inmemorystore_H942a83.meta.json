@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:1f4ba6b6270750b1db11eb357aa2798c31f06612d1c0a3831f59909d48d64f25",
+  "doc": "",
+  "file": "store/memory/unified.rs",
+  "id": "code:store/memory/unified.rs::struct::InMemoryStore",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 23,
+  "line_start": 18,
+  "name": "InMemoryStore",
+  "signature": "pub struct InMemoryStore"
+}

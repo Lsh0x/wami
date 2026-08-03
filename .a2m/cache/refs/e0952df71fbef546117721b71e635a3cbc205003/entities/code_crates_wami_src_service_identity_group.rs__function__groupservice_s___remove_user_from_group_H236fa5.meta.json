@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:46a488bd0af31f940653ade39b212d395a9e8c18ce718f364b21f2881473f4f8",
+  "doc": "Remove a user from a group",
+  "file": "crates/wami/src/service/identity/group.rs",
+  "id": "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::remove_user_from_group",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 175,
+  "line_start": 158,
+  "name": "remove_user_from_group",
+  "signature": "pub async fn remove_user_from_group("
+}

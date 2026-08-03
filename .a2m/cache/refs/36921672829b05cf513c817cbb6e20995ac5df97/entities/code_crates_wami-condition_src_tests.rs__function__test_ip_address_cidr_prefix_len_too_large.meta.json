@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:42ef9b66b5af160307877808db6be5e7c7601c0d24b2b2d30c0f1fd291299bf4",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_ip_address_cidr_prefix_len_too_large",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 4318,
+  "line_start": 4303,
+  "name": "test_ip_address_cidr_prefix_len_too_large",
+  "signature": "fn test_ip_address_cidr_prefix_len_too_large()"
+}

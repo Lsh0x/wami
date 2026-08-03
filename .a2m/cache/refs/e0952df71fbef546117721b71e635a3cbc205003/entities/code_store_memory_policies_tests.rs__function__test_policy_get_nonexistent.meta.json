@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:011e9bedef8db171cc1cec36dd223e4293780a5b684c95ecd0b1ce8eceb2c918",
+  "doc": "",
+  "file": "store/memory/policies/tests.rs",
+  "id": "code:store/memory/policies/tests.rs::function::test_policy_get_nonexistent",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 60,
+  "line_start": 52,
+  "name": "test_policy_get_nonexistent",
+  "signature": "async fn test_policy_get_nonexistent()"
+}

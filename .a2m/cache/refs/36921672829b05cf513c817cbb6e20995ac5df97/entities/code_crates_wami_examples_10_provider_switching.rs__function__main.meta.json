@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::builder",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:63a01a58eeaa781d3cdb3d019966e28ef944da575f93ba6161e93a3e8b5cda43",
+  "doc": "",
+  "file": "crates/wami/examples/10_provider_switching.rs",
+  "id": "code:crates/wami/examples/10_provider_switching.rs::function::main",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 126,
+  "line_start": 21,
+  "name": "main",
+  "signature": "async fn main() -> Result<(), Box<dyn std::error::Error>>"
+}

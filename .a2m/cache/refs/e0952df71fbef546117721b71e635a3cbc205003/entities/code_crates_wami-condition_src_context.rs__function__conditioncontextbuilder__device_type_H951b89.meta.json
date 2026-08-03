@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:97779fc6c4fe1c1f7758cead56524ff0fbf61f5fb731aeb4fb60ab2c3230fe9f",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::device_type",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 450,
+  "line_start": 447,
+  "name": "device_type",
+  "signature": "pub fn device_type(mut self, device_type: impl Into<String>) -> Self"
+}

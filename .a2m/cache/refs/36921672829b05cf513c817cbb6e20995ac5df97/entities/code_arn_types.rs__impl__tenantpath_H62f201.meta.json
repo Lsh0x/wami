@@ -1,0 +1,31 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:arn/types.rs::function::TenantPath::new",
+    "code:arn/types.rs::function::TenantPath::single",
+    "code:arn/types.rs::function::TenantPath::from_segments",
+    "code:arn/types.rs::function::TenantPath::as_string",
+    "code:arn/types.rs::function::TenantPath::root",
+    "code:arn/types.rs::function::TenantPath::leaf",
+    "code:arn/types.rs::function::TenantPath::root_u64",
+    "code:arn/types.rs::function::TenantPath::leaf_u64",
+    "code:arn/types.rs::function::TenantPath::depth",
+    "code:arn/types.rs::function::TenantPath::starts_with",
+    "code:arn/types.rs::function::TenantPath::is_descendant_of",
+    "code:arn/types.rs::function::TenantPath::is_ancestor_of"
+  ],
+  "content_hash": "sha256:82a0670f7612bb5b1bd1fc81adb75dcec7b0d8e7889e5b4349420c6fe7992bc5",
+  "doc": "",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::impl::TenantPath",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 148,
+  "line_start": 61,
+  "name": "TenantPath",
+  "signature": "impl TenantPath"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:dd99b0822d3ee8db557a2c20dffbe4d3df80b2b6abefd656669273727d3ffd77",
+  "doc": "",
+  "file": "wami/identity/role/model.rs",
+  "id": "code:wami/identity/role/model.rs::struct::Role",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 38,
+  "line_start": 11,
+  "name": "Role",
+  "signature": "pub struct Role"
+}

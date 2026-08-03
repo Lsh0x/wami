@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:14cf1a809ddb6b711b2b701e3ef6e3a878827c651692764d3936475e18f505b9",
+  "doc": "",
+  "file": "wami/identity/service_linked_role/model.rs",
+  "id": "code:wami/identity/service_linked_role/model.rs::struct::DeletionTaskInfo",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 54,
+  "line_start": 43,
+  "name": "DeletionTaskInfo",
+  "signature": "pub struct DeletionTaskInfo"
+}

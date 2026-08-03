@@ -1,0 +1,26 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/auth/authorizer.rs::function::iam_resource_arn"
+  ],
+  "callers": [
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::create_policy",
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::get_policy",
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::update_policy",
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::delete_policy",
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::list_policies"
+  ],
+  "children": [],
+  "content_hash": "sha256:1e034c2329cbd6cf3e4e3135f2606ce8ccd1123ee6b5ec5b862a94bd433be726",
+  "doc": "Internal: check authorization if an authorizer is set.",
+  "file": "crates/wami/src/service/policies/policy.rs",
+  "id": "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::guard",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 57,
+  "line_start": 45,
+  "name": "guard",
+  "signature": "async fn guard("
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/operators.rs::function::evaluate_operator"
+  ],
+  "children": [],
+  "content_hash": "sha256:4f732b6d895b0f5648ced04e594b3251a292a554deead5677440a5406d965366",
+  "doc": "",
+  "file": "crates/wami-condition/src/operators.rs",
+  "id": "code:crates/wami-condition/src/operators.rs::function::evaluate_binary_equals",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 841,
+  "line_start": 828,
+  "name": "evaluate_binary_equals",
+  "signature": "fn evaluate_binary_equals("
+}

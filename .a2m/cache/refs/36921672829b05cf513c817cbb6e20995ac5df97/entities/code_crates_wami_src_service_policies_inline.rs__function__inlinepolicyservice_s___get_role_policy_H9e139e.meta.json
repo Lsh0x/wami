@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ef649e6b6782c12d626d4ae0f3d4865eac1b90d8d834b14f2193e035f77e41d3",
+  "doc": "Get an inline policy from a role",
+  "file": "crates/wami/src/service/policies/inline.rs",
+  "id": "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::get_role_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 485,
+  "line_start": 446,
+  "name": "get_role_policy",
+  "signature": "pub async fn get_role_policy("
+}

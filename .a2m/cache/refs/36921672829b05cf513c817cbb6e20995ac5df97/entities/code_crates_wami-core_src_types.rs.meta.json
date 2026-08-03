@@ -1,0 +1,29 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/types.rs::struct::AmiResponse",
+    "code:crates/wami-core/src/types.rs::impl::AmiResponse<T>",
+    "code:crates/wami-core/src/types.rs::struct::AwsConfig",
+    "code:crates/wami-core/src/types.rs::impl::Default for AwsConfig",
+    "code:crates/wami-core/src/types.rs::impl::AwsConfig",
+    "code:crates/wami-core/src/types.rs::struct::PaginationParams",
+    "code:crates/wami-core/src/types.rs::struct::Tag",
+    "code:crates/wami-core/src/types.rs::struct::PolicyDocument",
+    "code:crates/wami-core/src/types.rs::struct::PolicyStatement",
+    "code:crates/wami-core/src/types.rs::function::string_or_vec"
+  ],
+  "content_hash": "85eee4735aadea4cb7820249edbe82e6447330733f55b51a6cc1e03335603666",
+  "doc": "",
+  "file": "crates/wami-core/src/types.rs",
+  "id": "code:crates/wami-core/src/types.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 145,
+  "line_start": 1,
+  "name": "types",
+  "signature": ""
+}

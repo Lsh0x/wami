@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/sts/mod.rs::function::InMemoryStsStore::new"
+  ],
+  "content_hash": "sha256:5274092a4aaf598ce95035c1d60b206b04cd0604eb7561be6a154d889c570332",
+  "doc": "",
+  "file": "store/memory/sts/mod.rs",
+  "id": "code:store/memory/sts/mod.rs::impl::InMemoryStsStore",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 37,
+  "line_start": 32,
+  "name": "InMemoryStsStore",
+  "signature": "impl InMemoryStsStore"
+}

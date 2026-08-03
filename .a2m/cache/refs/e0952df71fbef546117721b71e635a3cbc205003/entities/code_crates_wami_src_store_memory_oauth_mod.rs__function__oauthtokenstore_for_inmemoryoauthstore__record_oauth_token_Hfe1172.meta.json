@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:71064d1020725dcfe120898fe74dc70e86e55c52f1ae09370555a072ce1c4970",
+  "doc": "",
+  "file": "crates/wami/src/store/memory/oauth/mod.rs",
+  "id": "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthTokenStore for InMemoryOAuthStore::record_oauth_token",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 75,
+  "line_start": 72,
+  "name": "record_oauth_token",
+  "signature": "async fn record_oauth_token(&mut self, token: AccessToken) -> Result<AccessToken>"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b9b0833e80c8369cd39d4fd17838039f4bc22ac62bf8ac289e425038250054f0",
+  "doc": "",
+  "file": "wami/policies/permissions_boundary/requests.rs",
+  "id": "code:wami/policies/permissions_boundary/requests.rs::enum::PrincipalType",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 12,
+  "line_start": 7,
+  "name": "PrincipalType",
+  "signature": "pub enum PrincipalType"
+}

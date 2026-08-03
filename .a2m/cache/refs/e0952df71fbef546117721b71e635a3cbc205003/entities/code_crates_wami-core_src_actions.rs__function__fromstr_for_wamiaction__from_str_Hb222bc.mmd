@@ -1,0 +1,14 @@
+%% id: code:crates/wami-core/src/actions.rs::function::FromStr for WamiAction::from_str
+%% kind: function
+%% file: crates/wami-core/src/actions.rs:574-693
+%% content_hash: sha256:2e25bc5833cddded70fedbc7c0757785deb4effdc13e095c011ead3e0d102a1e
+%% signature: fn from_str(s: &str) -> Result<Self, Self::Err>
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_crates_wami_core_src_actions_rs__function__FromStr_for_WamiAction__from_str_Hb222bc20:::function[from_str]
+  code_crates_wami_core_src_actions_rs__function__FromStr_for_WamiAction__from_str_Hb222bc20 -- calls --> extern_ActionParseError__InvalidFormat_H4aef7871:::function[InvalidFormat]
+  code_crates_wami_core_src_actions_rs__function__FromStr_for_WamiAction__from_str_Hb222bc20 -- calls --> code_crates_wami_core_src_actions_rs__function__FromStr_for_WamiServicePrefix__from_str_H102baac7:::function[from_str]
+  code_crates_wami_core_src_actions_rs__function__FromStr_for_WamiAction__from_str_Hb222bc20 -- calls --> extern_ActionParseError__Unknown_H047c5607:::function[Unknown]
+  code_crates_wami_core_src_actions_rs__function__Deserialize__de__for_WamiAction__deserialize_He6c12c18:::function[deserialize] -- calls --> code_crates_wami_core_src_actions_rs__function__FromStr_for_WamiAction__from_str_Hb222bc20

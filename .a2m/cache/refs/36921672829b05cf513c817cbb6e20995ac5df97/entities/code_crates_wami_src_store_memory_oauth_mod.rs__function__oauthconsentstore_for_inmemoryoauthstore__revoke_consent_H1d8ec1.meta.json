@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0cae94882daf0223bd08cc27f63b2afaaf0579b3842b50541f9d528febd0a4c2",
+  "doc": "",
+  "file": "crates/wami/src/store/memory/oauth/mod.rs",
+  "id": "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthConsentStore for InMemoryOAuthStore::revoke_consent",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 209,
+  "line_start": 204,
+  "name": "revoke_consent",
+  "signature": "async fn revoke_consent(&mut self, client_id: &str, user_name: &str) -> Result<bool>"
+}

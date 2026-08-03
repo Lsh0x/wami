@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/operators.rs::function::ip_matches_cidr"
+  ],
+  "children": [],
+  "content_hash": "sha256:b9a5d2839e4a447c4ae1bcb8dff7ae60d9fb89e7a593b3d4e8bbf706db0aea6a",
+  "doc": "",
+  "file": "crates/wami-condition/src/operators.rs",
+  "id": "code:crates/wami-condition/src/operators.rs::function::ip_in_cidr_v4",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 781,
+  "line_start": 757,
+  "name": "ip_in_cidr_v4",
+  "signature": "fn ip_in_cidr_v4(ip: [u8; 4], network: [u8; 4], prefix_len: u8) -> bool"
+}

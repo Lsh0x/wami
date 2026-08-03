@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:17399ba8f26e74b6f9a5e95f6484dc5ac7ec6c6676471b863c1f231319a57b79",
+  "doc": "",
+  "file": "store/traits/identity/role.rs",
+  "id": "code:store/traits/identity/role.rs::trait::RoleStore",
+  "implemented_by": [
+    "code:store/memory/identity/role.rs::impl::RoleStore for InMemoryWamiStore"
+  ],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "trait",
+  "line_end": 59,
+  "line_start": 12,
+  "name": "RoleStore",
+  "signature": "pub trait RoleStore: Send + Sync"
+}

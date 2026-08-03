@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:486a999ee60dc3ea8a17fa49d3f004808c777b80a6510f990c94e1230f9f8c47",
+  "doc": "",
+  "file": "store/memory/identity/user.rs",
+  "id": "code:store/memory/identity/user.rs::function::UserStore for InMemoryWamiStore::list_user_tags",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 91,
+  "line_start": 85,
+  "name": "list_user_tags",
+  "signature": "async fn list_user_tags(&self, user_name: &str) -> Result<Vec<Tag>>"
+}

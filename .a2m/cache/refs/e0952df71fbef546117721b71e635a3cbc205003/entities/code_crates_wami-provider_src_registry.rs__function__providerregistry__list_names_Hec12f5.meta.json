@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:bb7932a32e228459d406476b939d11cb69f294ee4cb0977c08bf3a6c00f9d135",
+  "doc": "Lists the registered provider names in unspecified order.",
+  "file": "crates/wami-provider/src/registry.rs",
+  "id": "code:crates/wami-provider/src/registry.rs::function::ProviderRegistry::list_names",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 52,
+  "line_start": 50,
+  "name": "list_names",
+  "signature": "pub fn list_names(&self) -> Vec<String>"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:443284b9020a92f0112ee34daed1163dfdacd6d51fdd39d33bfb816bbf1721e5",
+  "doc": "",
+  "file": "crates/wami-core/src/types.rs",
+  "id": "code:crates/wami-core/src/types.rs::struct::Tag",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 87,
+  "line_start": 84,
+  "name": "Tag",
+  "signature": "pub struct Tag"
+}

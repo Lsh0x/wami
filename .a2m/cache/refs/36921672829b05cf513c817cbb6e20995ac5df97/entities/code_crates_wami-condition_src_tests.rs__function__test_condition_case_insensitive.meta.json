@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5685637b0f94a2d57ba4e6803b4e211c1250aa367d5a58732dfe56255c53e79d",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_case_insensitive",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 2256,
+  "line_start": 2242,
+  "name": "test_condition_case_insensitive",
+  "signature": "fn test_condition_case_insensitive()"
+}

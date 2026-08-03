@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:wami/identity/root_user.rs::function::RootUser::arn"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f6a349afd6090a4f793be389120bd9975267846be857a501a8e329a2548f92ed",
+  "doc": "Get the AWS-compatible ARN",
+  "file": "wami/identity/root_user.rs",
+  "id": "code:wami/identity/root_user.rs::function::RootUser::aws_arn",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 133,
+  "line_start": 131,
+  "name": "aws_arn",
+  "signature": "pub fn aws_arn(&self) -> &str"
+}

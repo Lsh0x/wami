@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:40d1f42c8ae9d1c5224b25cc53d594b2309c4b6d2329995ed079fca94a66d775",
+  "doc": "",
+  "file": "crates/wami/examples/28_oidc_authorization_code.rs",
+  "id": "code:crates/wami/examples/28_oidc_authorization_code.rs::const::REDIRECT",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "const",
+  "line_end": 35,
+  "line_start": 35,
+  "name": "REDIRECT",
+  "signature": "const REDIRECT: &str = \"https://gallery.example.test/callback\";"
+}

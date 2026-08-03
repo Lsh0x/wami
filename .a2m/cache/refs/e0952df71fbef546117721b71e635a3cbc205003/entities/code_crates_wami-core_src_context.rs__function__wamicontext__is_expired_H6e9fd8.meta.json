@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::session_info",
+    "extern:chrono::Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:40864b8848b1ae913f5e54ca75e2acad1a1e54324d2d4f2dd2ecb78613dd3892",
+  "doc": "Check if the session has expired (for temporary credentials)",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::function::WamiContext::is_expired",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 451,
+  "line_start": 445,
+  "name": "is_expired",
+  "signature": "pub fn is_expired(&self) -> bool"
+}

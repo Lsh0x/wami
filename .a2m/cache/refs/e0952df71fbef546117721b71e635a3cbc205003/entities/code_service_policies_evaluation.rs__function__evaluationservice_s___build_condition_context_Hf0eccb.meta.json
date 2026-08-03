@@ -1,0 +1,30 @@
+{
+  "callees": [
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::extract_account_id_from_arn",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder",
+    "extern:chrono::Utc::now",
+    "extern:ConditionValue::String",
+    "extern:ConditionValue::Array",
+    "extern:ConditionValue::Number",
+    "extern:ConditionValue::Boolean",
+    "extern:chrono::DateTime::parse_from_rfc3339"
+  ],
+  "callers": [
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::simulate_custom_policy",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::simulate_principal_policy"
+  ],
+  "children": [],
+  "content_hash": "sha256:258a3eb9054d83dadf8601a5c94f26d7f00aa8ab4b67784bce0486fcb0897a91",
+  "doc": "Build a ConditionContext from request context entries",
+  "file": "service/policies/evaluation.rs",
+  "id": "code:service/policies/evaluation.rs::function::EvaluationService<S>::build_condition_context",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 661,
+  "line_start": 534,
+  "name": "build_condition_context",
+  "signature": "fn build_condition_context("
+}

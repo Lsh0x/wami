@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:store/memory/tenant/mod.rs::function::TenantStore for super::wami::InMemoryWamiStore::get_tenant_usage"
+  ],
+  "children": [],
+  "content_hash": "sha256:dc2aadb23f697c8749cb3806e0e71b95795058078f30a9bc49d7114b9483bcb5",
+  "doc": "",
+  "file": "store/memory/tenant/mod.rs",
+  "id": "code:store/memory/tenant/mod.rs::function::TenantStore for super::wami::InMemoryWamiStore::list_child_tenants",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 188,
+  "line_start": 176,
+  "name": "list_child_tenants",
+  "signature": "async fn list_child_tenants(&self, parent_id: &TenantId) -> Result<Vec<Tenant>>"
+}

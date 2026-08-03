@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:user_builder::build_user"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:613bdcf6688e2279e2163acee2c955e4527a5981c55f76c7277b3e555e1d1fde",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_user_tag_operations",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 216,
+  "line_start": 180,
+  "name": "test_user_tag_operations",
+  "signature": "async fn test_user_tag_operations()"
+}

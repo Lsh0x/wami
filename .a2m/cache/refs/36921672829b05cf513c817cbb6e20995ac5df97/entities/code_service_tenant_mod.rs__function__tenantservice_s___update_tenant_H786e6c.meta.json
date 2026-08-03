@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:359a544e0655cf50bedc76867c6885422ac0c480137a61b0332de8ccf7cdf6ae",
+  "doc": "Update a tenant",
+  "file": "service/tenant/mod.rs",
+  "id": "code:service/tenant/mod.rs::function::TenantService<S>::update_tenant",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 162,
+  "line_start": 160,
+  "name": "update_tenant",
+  "signature": "pub async fn update_tenant(&self, tenant: Tenant) -> Result<Tenant>"
+}

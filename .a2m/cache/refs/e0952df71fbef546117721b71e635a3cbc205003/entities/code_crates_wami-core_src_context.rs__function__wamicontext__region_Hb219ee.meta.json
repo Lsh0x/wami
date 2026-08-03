@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:9d81350f35926ad539ce2a15db0c168161951c0decf583f1d370d24ccc60f349",
+  "doc": "Get the default region (if set)",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::function::WamiContext::region",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 406,
+  "line_start": 404,
+  "name": "region",
+  "signature": "pub fn region(&self) -> Option<&str>"
+}

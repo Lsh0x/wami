@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a4a4e54aefb6f687de6fa232865ba8f221f6fddcebd42cb56b870a7e4f2b3478",
+  "doc": "Set role's permissions boundary (pure transformation)",
+  "file": "wami/identity/role/builder.rs",
+  "id": "code:wami/identity/role/builder.rs::function::set_permissions_boundary",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 126,
+  "line_start": 123,
+  "name": "set_permissions_boundary",
+  "signature": "pub fn set_permissions_boundary(mut role: Role, boundary_arn: String) -> Role"
+}

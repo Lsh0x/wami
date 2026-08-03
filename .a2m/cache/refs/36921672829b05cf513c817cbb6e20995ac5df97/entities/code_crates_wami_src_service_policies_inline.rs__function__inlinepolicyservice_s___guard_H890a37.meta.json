@@ -1,0 +1,33 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/auth/authorizer.rs::function::iam_resource_arn"
+  ],
+  "callers": [
+    "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::put_user_policy",
+    "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::get_user_policy",
+    "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::delete_user_policy",
+    "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::list_user_policies",
+    "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::put_group_policy",
+    "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::get_group_policy",
+    "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::delete_group_policy",
+    "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::list_group_policies",
+    "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::put_role_policy",
+    "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::get_role_policy",
+    "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::delete_role_policy",
+    "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::list_role_policies"
+  ],
+  "children": [],
+  "content_hash": "sha256:1e034c2329cbd6cf3e4e3135f2606ce8ccd1123ee6b5ec5b862a94bd433be726",
+  "doc": "Internal: check authorization if an authorizer is set.",
+  "file": "crates/wami/src/service/policies/inline.rs",
+  "id": "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::guard",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 60,
+  "line_start": 48,
+  "name": "guard",
+  "signature": "async fn guard("
+}

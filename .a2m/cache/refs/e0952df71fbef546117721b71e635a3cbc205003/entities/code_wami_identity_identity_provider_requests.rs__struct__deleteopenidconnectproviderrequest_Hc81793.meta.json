@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:77694902df27425281a87aa98a196e4cf9cb481bf11bff6f1f39ab7cf8db8c64",
+  "doc": "",
+  "file": "wami/identity/identity_provider/requests.rs",
+  "id": "code:wami/identity/identity_provider/requests.rs::struct::DeleteOpenIDConnectProviderRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 109,
+  "line_start": 106,
+  "name": "DeleteOpenIDConnectProviderRequest",
+  "signature": "pub struct DeleteOpenIDConnectProviderRequest"
+}

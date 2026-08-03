@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f4e70a1f43c2ab9ba23bb79af840ee6f7753aab07b7cc780769baefcdbbb7a7a",
+  "doc": "Returns the service name as a string.",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::function::Service::as_str",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 307,
+  "line_start": 300,
+  "name": "as_str",
+  "signature": "pub fn as_str(&self) -> &str"
+}

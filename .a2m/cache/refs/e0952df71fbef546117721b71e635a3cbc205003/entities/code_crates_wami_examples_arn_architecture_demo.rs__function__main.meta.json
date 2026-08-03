@@ -1,0 +1,24 @@
+{
+  "callees": [
+    "code:crates/wami/examples/arn_architecture_demo.rs::function::demo_arn_generation",
+    "code:crates/wami/examples/arn_architecture_demo.rs::function::demo_arn_parsing",
+    "code:crates/wami/examples/arn_architecture_demo.rs::function::demo_multi_provider",
+    "code:crates/wami/examples/arn_architecture_demo.rs::function::demo_pattern_matching",
+    "code:crates/wami/examples/arn_architecture_demo.rs::function::demo_security"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e9f9fe193d13c1f6f44d20a91b90c7273a48d2c0e3aa78a3ddbbbd1a63372948",
+  "doc": "",
+  "file": "crates/wami/examples/arn_architecture_demo.rs",
+  "id": "code:crates/wami/examples/arn_architecture_demo.rs::function::main",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 30,
+  "line_start": 10,
+  "name": "main",
+  "signature": "fn main() -> Result<(), Box<dyn std::error::Error>>"
+}

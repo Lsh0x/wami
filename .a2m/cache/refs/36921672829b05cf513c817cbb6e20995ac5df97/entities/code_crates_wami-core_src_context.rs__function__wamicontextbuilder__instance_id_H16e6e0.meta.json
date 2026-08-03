@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-core/src/context.rs::function::WamiContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:5f2dc93f5e21ae2ad23df5879632ea0fc9f97faa94d3e4b176b00a5f1107b768",
+  "doc": "Set the instance ID",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::function::WamiContextBuilder::instance_id",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 480,
+  "line_start": 477,
+  "name": "instance_id",
+  "signature": "pub fn instance_id(mut self, instance_id: impl Into<String>) -> Self"
+}

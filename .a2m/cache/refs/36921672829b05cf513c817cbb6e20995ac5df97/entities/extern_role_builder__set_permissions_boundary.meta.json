@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::create_role"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:role_builder::set_permissions_boundary",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "set_permissions_boundary",
+  "signature": "role_builder::set_permissions_boundary"
+}

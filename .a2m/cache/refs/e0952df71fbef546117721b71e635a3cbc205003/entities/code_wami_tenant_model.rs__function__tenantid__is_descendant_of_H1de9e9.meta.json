@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:wami/tenant/model.rs::function::TenantId::segments"
+  ],
+  "callers": [
+    "code:wami/tenant/model.rs::function::TenantId::is_ancestor_of"
+  ],
+  "children": [],
+  "content_hash": "sha256:3bde24396d1ef625cabed1311e3ffa0941d287670b34ad186c7789b9f1467536",
+  "doc": "Check if this tenant is a descendant of another",
+  "file": "wami/tenant/model.rs",
+  "id": "code:wami/tenant/model.rs::function::TenantId::is_descendant_of",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 114,
+  "line_start": 109,
+  "name": "is_descendant_of",
+  "signature": "pub fn is_descendant_of(&self, other: &TenantId) -> bool"
+}

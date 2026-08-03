@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:52764a9df5a3999066fcc0bf471be576d67471c0699072ede2c5acadd2095bbf",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_forallvalues_string_equals_missing_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 3860,
+  "line_start": 3848,
+  "name": "test_forallvalues_string_equals_missing_key",
+  "signature": "fn test_forallvalues_string_equals_missing_key()"
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:group_builder::build_group"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a40dc3408f22fdcd0a4d647483879bdc4c6ce30103bbe9ae79969df5687e6bc8",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_group_list_path_prefix_empty_string",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 947,
+  "line_start": 928,
+  "name": "test_group_list_path_prefix_empty_string",
+  "signature": "async fn test_group_list_path_prefix_empty_string()"
+}

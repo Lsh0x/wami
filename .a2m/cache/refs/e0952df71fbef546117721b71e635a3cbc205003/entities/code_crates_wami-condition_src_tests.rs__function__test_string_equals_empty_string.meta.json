@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::create_test_context",
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:4879853d3aa1f1f775b54fab072a64ee34e6d6aed19ebe1fdefa1604db664908",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_string_equals_empty_string",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 405,
+  "line_start": 393,
+  "name": "test_string_equals_empty_string",
+  "signature": "fn test_string_equals_empty_string()"
+}

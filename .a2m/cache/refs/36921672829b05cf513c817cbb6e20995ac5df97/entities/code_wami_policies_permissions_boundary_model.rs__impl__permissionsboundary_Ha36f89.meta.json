@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/policies/permissions_boundary/model.rs::function::PermissionsBoundary::validate_arn"
+  ],
+  "content_hash": "sha256:c2c3dd46254212b16655e463c02d73b88160fe3887f683dab4097967c447be0f",
+  "doc": "",
+  "file": "wami/policies/permissions_boundary/model.rs",
+  "id": "code:wami/policies/permissions_boundary/model.rs::impl::PermissionsBoundary",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 62,
+  "line_start": 36,
+  "name": "PermissionsBoundary",
+  "signature": "impl PermissionsBoundary"
+}

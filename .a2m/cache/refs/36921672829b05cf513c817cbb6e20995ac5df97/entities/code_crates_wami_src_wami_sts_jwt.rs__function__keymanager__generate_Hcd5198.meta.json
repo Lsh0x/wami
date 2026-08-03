@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "extern:SigningKey::generate"
+  ],
+  "callers": [
+    "code:crates/wami/examples/27_oauth_client_credentials.rs::function::main",
+    "code:crates/wami/examples/28_oidc_authorization_code.rs::function::main"
+  ],
+  "children": [],
+  "content_hash": "sha256:0c3930fd1d69d43179b8626c6157bb2d3cea8baa869876034ad788b433393496",
+  "doc": "Generate a new random Ed25519 keypair.",
+  "file": "crates/wami/src/wami/sts/jwt.rs",
+  "id": "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::generate",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 170,
+  "line_start": 165,
+  "name": "generate",
+  "signature": "pub fn generate() -> Self"
+}

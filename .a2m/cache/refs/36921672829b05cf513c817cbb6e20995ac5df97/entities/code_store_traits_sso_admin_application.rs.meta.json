@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/traits/sso_admin/application.rs::trait::ApplicationStore"
+  ],
+  "content_hash": "01606b16a528867ea03b4cb1683a46d90fb765c2da93a3630a844e74f0db92f2",
+  "doc": "",
+  "file": "store/traits/sso_admin/application.rs",
+  "id": "code:store/traits/sso_admin/application.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 16,
+  "line_start": 1,
+  "name": "application",
+  "signature": ""
+}

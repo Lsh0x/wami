@@ -1,0 +1,22 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/actions.rs::function::ActionRegistry::list_actions",
+    "code:crates/wami-core/src/actions.rs::function::ActionRegistry::list_by_prefix",
+    "code:crates/wami-core/src/actions.rs::function::ActionRegistry::list_prefixes"
+  ],
+  "content_hash": "sha256:f2e18c2c6db73f728c7f4c2d3d983edd476e3b1bd5891f4bf07b64484c9ee4fd",
+  "doc": "",
+  "file": "crates/wami-core/src/actions.rs",
+  "id": "code:crates/wami-core/src/actions.rs::impl::ActionRegistry",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 798,
+  "line_start": 779,
+  "name": "ActionRegistry",
+  "signature": "impl ActionRegistry"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:6b726f34a4a2a02f2f5c138fe12c5b2545ce5970660262e189fe0d18414b3578",
+  "doc": "",
+  "file": "crates/wami/src/service/oauth/oidc.rs",
+  "id": "code:crates/wami/src/service/oauth/oidc.rs::struct::AuthorizationRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 84,
+  "line_start": 68,
+  "name": "AuthorizationRequest",
+  "signature": "pub struct AuthorizationRequest"
+}

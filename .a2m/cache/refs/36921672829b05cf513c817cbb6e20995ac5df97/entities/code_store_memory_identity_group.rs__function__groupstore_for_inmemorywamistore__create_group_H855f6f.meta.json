@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:57ab7550df63924fb1bfae22349824ebbc5ffbe499a18770951ac1511bbe7c37",
+  "doc": "",
+  "file": "store/memory/identity/group.rs",
+  "id": "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::create_group",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 15,
+  "line_start": 12,
+  "name": "create_group",
+  "signature": "async fn create_group(&mut self, group: Group) -> Result<Group>"
+}

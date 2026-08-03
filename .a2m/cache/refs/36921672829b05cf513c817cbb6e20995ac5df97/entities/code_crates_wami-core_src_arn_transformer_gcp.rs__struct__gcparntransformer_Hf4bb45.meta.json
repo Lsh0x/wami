@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c1d4652e546f42f725d35066ec33c6a1e5d6c30c208f6e28d0f70bf90a1723ea",
+  "doc": "GCP ARN transformer.\n\nConverts between WAMI ARNs and GCP resource name format:\n`//iam.googleapis.com/projects/{project_id}/serviceAccounts/{resource_id}`\n\nNote: GCP uses \"resource names\" rather than ARNs, but we use a simplified\nARN-like format for consistency.",
+  "file": "crates/wami-core/src/arn/transformer/gcp.rs",
+  "id": "code:crates/wami-core/src/arn/transformer/gcp.rs::struct::GcpArnTransformer",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 12,
+  "line_start": 12,
+  "name": "GcpArnTransformer",
+  "signature": "pub struct GcpArnTransformer;"
+}

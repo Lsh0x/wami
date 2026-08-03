@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ed66ad433d75bd8cf386dc260a77ddfc165476d37eda35081e14f46774d55888",
+  "doc": "",
+  "file": "wami/identity/identity_provider/requests.rs",
+  "id": "code:wami/identity/identity_provider/requests.rs::struct::UpdateSAMLProviderRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 30,
+  "line_start": 25,
+  "name": "UpdateSAMLProviderRequest",
+  "signature": "pub struct UpdateSAMLProviderRequest"
+}

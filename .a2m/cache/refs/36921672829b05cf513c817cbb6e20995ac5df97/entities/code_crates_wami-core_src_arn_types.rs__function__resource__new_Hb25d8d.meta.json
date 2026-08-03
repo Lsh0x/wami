@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3fc35c89506eb1cdf337848a2808ffe1cd1dbfb87f5633b5ea9e1336fbddcb36",
+  "doc": "Creates a new resource.",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::function::Resource::new",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 266,
+  "line_start": 261,
+  "name": "new",
+  "signature": "pub fn new(resource_type: impl Into<String>, resource_id: impl Into<String>) -> Self"
+}

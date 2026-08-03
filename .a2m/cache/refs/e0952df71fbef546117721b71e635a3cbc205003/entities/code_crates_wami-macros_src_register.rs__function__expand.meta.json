@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami-macros/src/register.rs::function::generate"
+  ],
+  "callers": [
+    "code:crates/wami-macros/src/lib.rs::function::register_services"
+  ],
+  "children": [],
+  "content_hash": "sha256:689d086ed2000291cb6151a47886fc581768b607dcd547589b71778846bad787",
+  "doc": "",
+  "file": "crates/wami-macros/src/register.rs",
+  "id": "code:crates/wami-macros/src/register.rs::function::expand",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 13,
+  "line_start": 6,
+  "name": "expand",
+  "signature": "pub fn expand(input: TokenStream) -> TokenStream"
+}

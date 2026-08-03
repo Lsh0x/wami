@@ -1,0 +1,26 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/auth/authorizer.rs::function::iam_resource_arn"
+  ],
+  "callers": [
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::create_role",
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::get_role",
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::update_role",
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::delete_role",
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::list_roles"
+  ],
+  "children": [],
+  "content_hash": "sha256:1e034c2329cbd6cf3e4e3135f2606ce8ccd1123ee6b5ec5b862a94bd433be726",
+  "doc": "",
+  "file": "crates/wami/src/service/identity/role.rs",
+  "id": "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::guard",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 49,
+  "line_start": 37,
+  "name": "guard",
+  "signature": "async fn guard("
+}

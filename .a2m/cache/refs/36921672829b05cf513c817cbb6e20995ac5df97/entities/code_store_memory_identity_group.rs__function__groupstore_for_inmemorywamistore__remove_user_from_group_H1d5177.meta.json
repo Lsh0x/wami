@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e82ca91582ddcd656a95fdb58a52f662abc07abf3f76bce31dc6d8a55c061ebe",
+  "doc": "",
+  "file": "store/memory/identity/group.rs",
+  "id": "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::remove_user_from_group",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 98,
+  "line_start": 93,
+  "name": "remove_user_from_group",
+  "signature": "async fn remove_user_from_group(&mut self, group_name: &str, user_name: &str) -> Result<()>"
+}

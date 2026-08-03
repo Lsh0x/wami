@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:6a377100fcbbf0f5e4885718db7058273ad505b7fb8575d4a03a3b3238f9357f",
+  "doc": "",
+  "file": "store/memory/sso_admin/account_assignment.rs",
+  "id": "code:store/memory/sso_admin/account_assignment.rs::function::AccountAssignmentStore for super::super::wami::InMemoryWamiStore::get_account_assignment",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 71,
+  "line_start": 66,
+  "name": "get_account_assignment",
+  "signature": "async fn get_account_assignment("
+}

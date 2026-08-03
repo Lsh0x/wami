@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5e355d58ad8ec5b4bc13d4a8176b2ad2848161df5c148887672adba09c5a7d9a",
+  "doc": "Create a \"Resource limit exceeded\" error\n\n# Example\n\n```rust\nuse wami_core::error::AmiError;\n\nlet error = AmiError::resource_limit_exceeded(\"AccessKey\", 2);\n```",
+  "file": "crates/wami-core/src/error/helpers.rs",
+  "id": "code:crates/wami-core/src/error/helpers.rs::function::AmiError::resource_limit_exceeded",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 100,
+  "line_start": 95,
+  "name": "resource_limit_exceeded",
+  "signature": "pub fn resource_limit_exceeded(resource_type: &str, limit: usize) -> Self"
+}

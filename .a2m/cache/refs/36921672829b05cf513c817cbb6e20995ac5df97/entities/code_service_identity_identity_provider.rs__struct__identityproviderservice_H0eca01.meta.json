@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d8ad80d83d4c6b474c0209a8023ef672c2f2140df7a42784f5a378d0b5b1ac79",
+  "doc": "",
+  "file": "service/identity/identity_provider.rs",
+  "id": "code:service/identity/identity_provider.rs::struct::IdentityProviderService",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 25,
+  "line_start": 23,
+  "name": "IdentityProviderService",
+  "signature": "pub struct IdentityProviderService<S>"
+}

@@ -1,0 +1,13 @@
+%% id: extern:Sha256::digest
+%% kind: extern
+%% file: :0-0
+%% content_hash: 
+%% signature: Sha256::digest
+graph LR
+  classDef extern fill:#f5f5f5,stroke:#424242
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  extern_Sha256__digest_H072da964:::extern[digest]
+  code_crates_wami_src_wami_oauth_oidc_rs__function__CodeChallenge__verify_H8ca5977b:::function[verify] -- calls --> extern_Sha256__digest_H072da964
+  code_crates_wami_src_wami_oauth_oidc_rs__function__derive_s256_challenge_He462b31a:::function[derive_s256_challenge] -- calls --> extern_Sha256__digest_H072da964
+  code_crates_wami_src_wami_sts_jwt_rs__function__thumbprint_Hd9c6588e:::function[thumbprint] -- calls --> extern_Sha256__digest_H072da964

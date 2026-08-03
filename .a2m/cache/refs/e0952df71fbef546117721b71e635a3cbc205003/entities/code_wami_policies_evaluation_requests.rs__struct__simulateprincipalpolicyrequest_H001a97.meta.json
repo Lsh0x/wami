@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:eed3a0e817b203315d50cb30088827f994397e20e4ad77f3ad49868e988ef665",
+  "doc": "",
+  "file": "wami/policies/evaluation/requests.rs",
+  "id": "code:wami/policies/evaluation/requests.rs::struct::SimulatePrincipalPolicyRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 33,
+  "line_start": 22,
+  "name": "SimulatePrincipalPolicyRequest",
+  "signature": "pub struct SimulatePrincipalPolicyRequest"
+}

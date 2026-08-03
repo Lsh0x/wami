@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "5dfb1f53d5d6b6fd0ed7d1cab60ba21a8cd842373345aaf22fe2e0756b9c53d4",
+  "doc": "",
+  "file": "wami/tenant/operations.rs",
+  "id": "code:wami/tenant/operations.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 224,
+  "line_start": 1,
+  "name": "operations",
+  "signature": ""
+}

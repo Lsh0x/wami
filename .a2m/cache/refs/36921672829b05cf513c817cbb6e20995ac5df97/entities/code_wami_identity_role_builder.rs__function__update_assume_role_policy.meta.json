@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d0ee71b42877e788806678456e6eb91522f4b0d621db3d46d6cfc6a9e7a5f2f6",
+  "doc": "Update role's assume role policy (pure transformation)",
+  "file": "wami/identity/role/builder.rs",
+  "id": "code:wami/identity/role/builder.rs::function::update_assume_role_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 108,
+  "line_start": 105,
+  "name": "update_assume_role_policy",
+  "signature": "pub fn update_assume_role_policy(mut role: Role, new_policy: String) -> Role"
+}

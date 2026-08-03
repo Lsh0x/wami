@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:96bda0e2c053858777e1a2ca6d3c464cc8bd35c60aed071c122c4650dd57b228",
+  "doc": "Create with an authorization guard.",
+  "file": "crates/wami/src/service/identity/group.rs",
+  "id": "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::with_authorizer",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 37,
+  "line_start": 32,
+  "name": "with_authorizer",
+  "signature": "pub fn with_authorizer(store: Arc<RwLock<S>>, authz: Arc<dyn Authorizer>) -> Self"
+}

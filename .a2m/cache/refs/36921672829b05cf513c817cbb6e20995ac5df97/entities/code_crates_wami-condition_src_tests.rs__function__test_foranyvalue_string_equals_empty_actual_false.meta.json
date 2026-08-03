@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0c17f8f40d13ca6ee49451d99f36291d83d5052ffac6525f9a2a51f171e42a0e",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_foranyvalue_string_equals_empty_actual_false",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 223,
+  "line_start": 212,
+  "name": "test_foranyvalue_string_equals_empty_actual_false",
+  "signature": "fn test_foranyvalue_string_equals_empty_actual_false()"
+}

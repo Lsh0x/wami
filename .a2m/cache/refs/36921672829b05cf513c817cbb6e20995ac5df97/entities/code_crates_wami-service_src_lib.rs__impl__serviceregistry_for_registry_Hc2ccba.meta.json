@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-service/src/lib.rs::function::ServiceRegistry for Registry::register",
+    "code:crates/wami-service/src/lib.rs::function::ServiceRegistry for Registry::get"
+  ],
+  "content_hash": "sha256:051e70c2b0528d86721d5976d36e4953423edacdf57e062f36e97d0d39255abc",
+  "doc": "",
+  "file": "crates/wami-service/src/lib.rs",
+  "id": "code:crates/wami-service/src/lib.rs::impl::ServiceRegistry for Registry",
+  "implemented_by": [],
+  "implements": [
+    "code:crates/wami-traits/src/lib.rs::trait::ServiceRegistry"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 49,
+  "line_start": 33,
+  "name": "ServiceRegistry for Registry",
+  "signature": "impl ServiceRegistry for Registry"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:9b64958e56e6b73b88c19a43c6ddd49b9744a28d33b9da2287ae55f998246a78",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wami_proxy_detected_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7633,
+  "line_start": 7629,
+  "name": "test_wami_proxy_detected_key",
+  "signature": "fn test_wami_proxy_detected_key()"
+}

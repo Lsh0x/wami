@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "extern:serde_json::from_str",
+    "code:crates/wami-condition/src/evaluator.rs::function::parse_condition_block"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:06fe76f7d6a889e73d0edb67c2fb794ed47822ec26bcb97d73bc3b8cd2b3dfaa",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_resource_limits",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 1661,
+  "line_start": 1647,
+  "name": "test_condition_resource_limits",
+  "signature": "fn test_condition_resource_limits()"
+}

@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::builder",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder",
+    "code:wami/tenant/model.rs::function::TenantId::root"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:4d5acf85210a57d306864a8e2c7449d45d39d80e6659bd465e901a8f20d28f35",
+  "doc": "",
+  "file": "crates/wami/examples/06_tenant_quotas_and_limits.rs",
+  "id": "code:crates/wami/examples/06_tenant_quotas_and_limits.rs::function::main",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 178,
+  "line_start": 21,
+  "name": "main",
+  "signature": "async fn main() -> Result<(), Box<dyn std::error::Error>>"
+}

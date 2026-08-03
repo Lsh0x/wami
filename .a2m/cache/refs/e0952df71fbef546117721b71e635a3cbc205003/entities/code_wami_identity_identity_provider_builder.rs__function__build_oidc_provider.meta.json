@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder",
+    "extern:Utc::now"
+  ],
+  "callers": [
+    "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::create_oidc_provider"
+  ],
+  "children": [],
+  "content_hash": "sha256:63bc7e21311b3731bc79297e16fbc1426c25b93e802e0c5578bea44b29995b29",
+  "doc": "",
+  "file": "wami/identity/identity_provider/builder.rs",
+  "id": "code:wami/identity/identity_provider/builder.rs::function::build_oidc_provider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 91,
+  "line_start": 54,
+  "name": "build_oidc_provider",
+  "signature": "pub fn build_oidc_provider("
+}

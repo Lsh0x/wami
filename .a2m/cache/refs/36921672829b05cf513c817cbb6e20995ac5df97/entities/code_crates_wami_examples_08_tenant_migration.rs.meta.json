@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/examples/08_tenant_migration.rs::function::main"
+  ],
+  "content_hash": "d989055fc2d513d694b8750d6743bc4e6bf46bdcf6cc20fa21f13cf1f5df463a",
+  "doc": "",
+  "file": "crates/wami/examples/08_tenant_migration.rs",
+  "id": "code:crates/wami/examples/08_tenant_migration.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 232,
+  "line_start": 1,
+  "name": "08_tenant_migration",
+  "signature": ""
+}

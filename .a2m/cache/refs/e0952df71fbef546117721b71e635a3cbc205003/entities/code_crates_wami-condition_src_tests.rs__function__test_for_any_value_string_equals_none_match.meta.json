@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:246c361df5773a8b9f9f2d2a99b93447abc1de20e09a734d1427d45f89f7d4c9",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_for_any_value_string_equals_none_match",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 1203,
+  "line_start": 1188,
+  "name": "test_for_any_value_string_equals_none_match",
+  "signature": "fn test_for_any_value_string_equals_none_match()"
+}

@@ -1,0 +1,30 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "code:crates/wami-condition/src/tests.rs::function::test_condition_resource_limits",
+    "code:crates/wami-condition/src/tests.rs::function::test_condition_deeply_nested_structure",
+    "code:crates/wami-condition/src/tests.rs::function::test_condition_malformed_json_handling",
+    "code:crates/wami-condition/src/tests.rs::function::test_condition_parse_invalid_structure",
+    "code:crates/wami/src/service/auth/policy_evaluator.rs::function::parse_policy_doc",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::simulate_custom_policy",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::simulate_principal_policy",
+    "code:wami/identity/identity_provider/operations.rs::function::parse_oidc_discovery",
+    "code:wami/policies/permissions_boundary/operations.rs::function::is_allowed_by_boundary"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:serde_json::from_str",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "from_str",
+  "signature": "serde_json::from_str"
+}

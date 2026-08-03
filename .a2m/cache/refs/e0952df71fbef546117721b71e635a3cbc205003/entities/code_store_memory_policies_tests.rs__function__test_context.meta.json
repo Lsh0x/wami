@@ -1,0 +1,27 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::builder"
+  ],
+  "callers": [
+    "code:store/memory/policies/tests.rs::function::test_policy_create_and_get",
+    "code:store/memory/policies/tests.rs::function::test_policy_delete",
+    "code:store/memory/policies/tests.rs::function::test_policy_list_multiple",
+    "code:store/memory/policies/tests.rs::function::test_policy_list_with_pagination",
+    "code:store/memory/policies/tests.rs::function::test_policy_list_with_path_prefix",
+    "code:store/memory/policies/tests.rs::function::test_policy_update"
+  ],
+  "children": [],
+  "content_hash": "sha256:387fcea704eea104795b1ebd6aa533a8b56c111b6c011a688c6ed3d9d37ce710",
+  "doc": "",
+  "file": "store/memory/policies/tests.rs",
+  "id": "code:store/memory/policies/tests.rs::function::test_context",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 21,
+  "line_start": 10,
+  "name": "test_context",
+  "signature": "fn test_context() -> WamiContext"
+}

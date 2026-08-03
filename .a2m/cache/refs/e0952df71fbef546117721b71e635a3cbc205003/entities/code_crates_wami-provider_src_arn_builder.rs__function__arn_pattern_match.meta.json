@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "extern:regex::escape"
+  ],
+  "callers": [
+    "code:crates/wami-provider/src/arn_builder.rs::function::ParsedArn::matches_pattern",
+    "code:crates/wami/examples/arn_architecture_demo.rs::function::demo_pattern_matching"
+  ],
+  "children": [],
+  "content_hash": "sha256:415a31ee2debad2f2c7d466987f9032b16c1608fa88b6147c7c6c9c0e5c42312",
+  "doc": "Matches an ARN against a wildcard pattern\n\nSupports `*` (match any) and `?` (match single char) wildcards.",
+  "file": "crates/wami-provider/src/arn_builder.rs",
+  "id": "code:crates/wami-provider/src/arn_builder.rs::function::arn_pattern_match",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 283,
+  "line_start": 272,
+  "name": "arn_pattern_match",
+  "signature": "pub fn arn_pattern_match(arn: &str, pattern: &str) -> bool"
+}

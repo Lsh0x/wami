@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d214cf6ba81758e5915c7574ba0e471b192ba5532658c704185f108d27aacb4f",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_forallvalues_ip_missing_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7004,
+  "line_start": 6990,
+  "name": "test_forallvalues_ip_missing_key",
+  "signature": "fn test_forallvalues_ip_missing_key()"
+}

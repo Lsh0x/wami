@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/mod.rs::trait::Store"
+  ],
+  "content_hash": "4ccc452e963ee4d6034ea9b80314a213ea294cd05cdc45519fcd2912ca568bf2",
+  "doc": "",
+  "file": "store/mod.rs",
+  "id": "code:store/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 37,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

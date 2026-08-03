@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:6fb104fc9143e170e95a2454bd34b653c14f11eb06c301b1c62b96bad018101d",
+  "doc": "",
+  "file": "wami/tenant/model.rs",
+  "id": "code:wami/tenant/model.rs::function::std::fmt::Display for TenantId::fmt",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 167,
+  "line_start": 165,
+  "name": "fmt",
+  "signature": "fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result"
+}

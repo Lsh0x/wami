@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "extern:String::deserialize",
+    "code:wami/tenant/model.rs::function::TenantId::from_string"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a314177a4db0dc5a0827a40e57356800eea573a32976d6a4586c67bc1377b514",
+  "doc": "",
+  "file": "wami/tenant/model.rs",
+  "id": "code:wami/tenant/model.rs::function::Deserialize<'de> for TenantId::deserialize",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 188,
+  "line_start": 182,
+  "name": "deserialize",
+  "signature": "fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>"
+}

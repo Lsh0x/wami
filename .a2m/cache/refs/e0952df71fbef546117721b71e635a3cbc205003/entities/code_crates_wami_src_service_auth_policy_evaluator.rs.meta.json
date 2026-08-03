@@ -1,0 +1,27 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/auth/policy_evaluator.rs::enum::PolicyEffect",
+    "code:crates/wami/src/service/auth/policy_evaluator.rs::struct::StatementHit",
+    "code:crates/wami/src/service/auth/policy_evaluator.rs::function::evaluate_policy_document",
+    "code:crates/wami/src/service/auth/policy_evaluator.rs::function::matches_action",
+    "code:crates/wami/src/service/auth/policy_evaluator.rs::function::matches_resource",
+    "code:crates/wami/src/service/auth/policy_evaluator.rs::function::build_condition_context",
+    "code:crates/wami/src/service/auth/policy_evaluator.rs::function::matches_condition",
+    "code:crates/wami/src/service/auth/policy_evaluator.rs::function::parse_policy_doc"
+  ],
+  "content_hash": "c1f94f650315a1e1406f974aedcafc3a568903b07ef073bbfb1d5e1545f45962",
+  "doc": "",
+  "file": "crates/wami/src/service/auth/policy_evaluator.rs",
+  "id": "code:crates/wami/src/service/auth/policy_evaluator.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 566,
+  "line_start": 1,
+  "name": "policy_evaluator",
+  "signature": ""
+}

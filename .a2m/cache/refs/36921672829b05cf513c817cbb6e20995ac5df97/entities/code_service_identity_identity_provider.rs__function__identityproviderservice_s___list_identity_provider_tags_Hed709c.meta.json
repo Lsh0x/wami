@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d9da7c3ba9db6dc1233304ef185c55ba0171802a0d28969224612397984bfd5f",
+  "doc": "List tags for an identity provider",
+  "file": "service/identity/identity_provider.rs",
+  "id": "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::list_identity_provider_tags",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 267,
+  "line_start": 264,
+  "name": "list_identity_provider_tags",
+  "signature": "pub async fn list_identity_provider_tags(&self, arn: &str) -> Result<Vec<Tag>>"
+}

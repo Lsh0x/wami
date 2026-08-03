@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:8818658ac849e87fbeba20a1a591114241f1b0fbfcddb0f66c857a44d50bf714",
+  "doc": "",
+  "file": "store/memory/identity/user.rs",
+  "id": "code:store/memory/identity/user.rs::function::UserStore for InMemoryWamiStore::get_user_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 149,
+  "line_start": 144,
+  "name": "get_user_policy",
+  "signature": "async fn get_user_policy(&self, user_name: &str, policy_name: &str) -> Result<Option<String>>"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:8b1e215d5057d3004dc390ebdaf38d6d19f88eda213d22339544c198e55c6747",
+  "doc": "Tenant the platform root user belongs to.",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::const::ROOT_TENANT_ID",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "const",
+  "line_end": 11,
+  "line_start": 11,
+  "name": "ROOT_TENANT_ID",
+  "signature": "pub const ROOT_TENANT_ID: u64 = 0;"
+}

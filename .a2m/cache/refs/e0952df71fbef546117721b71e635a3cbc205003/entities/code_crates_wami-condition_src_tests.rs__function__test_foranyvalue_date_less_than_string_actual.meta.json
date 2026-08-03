@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "extern:chrono::Utc::now",
+    "extern:chrono::Duration::hours",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e21c301a97b039c01c9dac23e7d298e9de07aa9fb89f7aa0278d681749829e16",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_foranyvalue_date_less_than_string_actual",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 4107,
+  "line_start": 4090,
+  "name": "test_foranyvalue_date_less_than_string_actual",
+  "signature": "fn test_foranyvalue_date_less_than_string_actual()"
+}

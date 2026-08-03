@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/traits/sso_admin/trusted_token_issuer.rs::trait::TrustedTokenIssuerStore"
+  ],
+  "content_hash": "76fce11dfe9ad50b490449d6c8f5cdb90db064bac665b0d77d3e821ddf48b824",
+  "doc": "",
+  "file": "store/traits/sso_admin/trusted_token_issuer.rs",
+  "id": "code:store/traits/sso_admin/trusted_token_issuer.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 27,
+  "line_start": 1,
+  "name": "trusted_token_issuer",
+  "signature": ""
+}

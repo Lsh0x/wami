@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a882c85a3dbd989c1091ac0901aeb165aacbe28fc9484ae1385c8430744576e4",
+  "doc": "",
+  "file": "wami/tenant/model.rs",
+  "id": "code:wami/tenant/model.rs::enum::QuotaMode",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 292,
+  "line_start": 287,
+  "name": "QuotaMode",
+  "signature": "pub enum QuotaMode"
+}

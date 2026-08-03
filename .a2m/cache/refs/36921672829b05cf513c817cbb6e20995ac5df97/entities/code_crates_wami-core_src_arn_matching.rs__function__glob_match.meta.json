@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/arn/matching.rs::function::glob_match_recursive"
+  ],
+  "callers": [
+    "code:crates/wami-core/src/arn/matching.rs::function::matches_arn_pattern",
+    "code:crates/wami/src/service/auth/policy_evaluator.rs::function::matches_action"
+  ],
+  "children": [],
+  "content_hash": "sha256:bad1d52d149e8f4d057f3a75e1e46ddcc38562183bb652ccb596a6bc1e93b0ce",
+  "doc": "Match a resource pattern against a resource string (no variable substitution).\n\nThis is the raw glob matcher supporting `*` and `**`.\n\n`*` matches any characters except `/`.\n`**` matches zero or more path segments (including `/`).\nA trailing `/**` also matches the path without the trailing `/` (e.g.,\n`a/b/**` matches both `a/b` and `a/b/c/d`).",
+  "file": "crates/wami-core/src/arn/matching.rs",
+  "id": "code:crates/wami-core/src/arn/matching.rs::function::glob_match",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 170,
+  "line_start": 147,
+  "name": "glob_match",
+  "signature": "pub fn glob_match(pattern: &str, text: &str) -> bool"
+}

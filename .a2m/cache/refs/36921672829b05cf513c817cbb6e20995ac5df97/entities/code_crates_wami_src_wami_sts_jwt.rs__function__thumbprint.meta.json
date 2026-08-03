@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "extern:Sha256::digest"
+  ],
+  "callers": [
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyPair::new"
+  ],
+  "children": [],
+  "content_hash": "sha256:efbc1aa3ec95e1a3aa27526707df12da29fdba01dcd62bd0bf7cbf09e4c30b6f",
+  "doc": "RFC 7638 JWK thumbprint of an Ed25519 public key.\n\nThe digest is taken over the canonical JWK — required members only, in\nlexicographic order, no whitespace — as RFC 8037 §2 defines them for OKP.\n\nHashing the raw 32 public key bytes would have been simpler and would have\nproduced a *different* id for the same key than any standards-conforming\nparty computes from the published JWKS. Two ids for one key, with nothing to\nsay which is wrong.",
+  "file": "crates/wami/src/wami/sts/jwt.rs",
+  "id": "code:crates/wami/src/wami/sts/jwt.rs::function::thumbprint",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 161,
+  "line_start": 157,
+  "name": "thumbprint",
+  "signature": "fn thumbprint(verifying_key: &VerifyingKey) -> String"
+}

@@ -1,0 +1,24 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:service/auth/authentication.rs::struct::AuthenticationService",
+    "code:service/auth/authentication.rs::impl::AuthenticationService<S>",
+    "code:service/auth/authentication.rs::function::constant_time_compare",
+    "code:service/auth/authentication.rs::function::hash_secret",
+    "code:service/auth/authentication.rs::function::verify_secret"
+  ],
+  "content_hash": "f94b01d6e44d87783365adc97d77871789a2ad5eb611c98c589d1194aed18760",
+  "doc": "",
+  "file": "service/auth/authentication.rs",
+  "id": "code:service/auth/authentication.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 267,
+  "line_start": 1,
+  "name": "authentication",
+  "signature": ""
+}

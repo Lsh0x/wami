@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/arn/types.rs::function::fmt::Display for TenantPath::fmt"
+  ],
+  "content_hash": "sha256:7ca555c837b394f34b85a453d2c02402f33aad5667923c6d8acd7323a0cf7555",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::impl::fmt::Display for TenantPath",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 199,
+  "line_start": 195,
+  "name": "fmt::Display for TenantPath",
+  "signature": "impl fmt::Display for TenantPath"
+}

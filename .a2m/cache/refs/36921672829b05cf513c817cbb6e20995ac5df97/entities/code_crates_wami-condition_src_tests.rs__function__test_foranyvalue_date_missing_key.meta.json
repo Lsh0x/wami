@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder",
+    "extern:chrono::Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:31bbc85accd9a2f3e1af661044ed9e686ba80188913c228abc41b582f6f42566",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_foranyvalue_date_missing_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 6966,
+  "line_start": 6946,
+  "name": "test_foranyvalue_date_missing_key",
+  "signature": "fn test_foranyvalue_date_missing_key()"
+}

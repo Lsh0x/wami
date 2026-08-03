@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/arn/parser.rs::function::FromStr for WamiArn::from_str"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f3e5eb3bceeeb9534d6e9d83468357a54bbfaac1ec6f7b2ffa19b4a705e1813b",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/parser.rs",
+  "id": "code:crates/wami-core/src/arn/parser.rs::function::parse_arn",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 248,
+  "line_start": 246,
+  "name": "parse_arn",
+  "signature": "pub fn parse_arn(s: &str) -> Result<WamiArn>"
+}

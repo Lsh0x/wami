@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:12da1c4fa8bbef4cfe259265f7f12e5815af73163034400ccb70a0b15f679d39",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_forallvalues_string_like_type_mismatch_number",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7306,
+  "line_start": 7290,
+  "name": "test_forallvalues_string_like_type_mismatch_number",
+  "signature": "fn test_forallvalues_string_like_type_mismatch_number()"
+}

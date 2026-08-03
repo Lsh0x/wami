@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:role_builder::build_role"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e40c1171899ff281104d84ff4b5ec2e074e14ec6a8fba274b310880f1b056554",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_role_create_and_get",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 477,
+  "line_start": 453,
+  "name": "test_role_create_and_get",
+  "signature": "async fn test_role_create_and_get()"
+}

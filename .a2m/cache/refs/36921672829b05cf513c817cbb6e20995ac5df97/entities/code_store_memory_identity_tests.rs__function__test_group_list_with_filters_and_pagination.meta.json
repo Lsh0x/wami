@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:group_builder::build_group"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b41ca1c680775ff864a7d0820da4b2ee1c2f7be082472727fb1e97df8a8191d9",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_group_list_with_filters_and_pagination",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 351,
+  "line_start": 302,
+  "name": "test_group_list_with_filters_and_pagination",
+  "signature": "async fn test_group_list_with_filters_and_pagination()"
+}

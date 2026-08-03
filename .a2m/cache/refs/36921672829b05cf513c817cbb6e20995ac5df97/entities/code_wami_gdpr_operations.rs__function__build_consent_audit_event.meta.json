@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:wami/gdpr/operations.rs::function::generate_id",
+    "extern:Utc::now"
+  ],
+  "callers": [
+    "code:service/gdpr/mod.rs::function::GdprService<S>::grant_consent"
+  ],
+  "children": [],
+  "content_hash": "sha256:0c4b73a67f9710844499df4cead95b4895d225a97575b31effd1053e16d80ab3",
+  "doc": "Build an audit event for a consent change.",
+  "file": "wami/gdpr/operations.rs",
+  "id": "code:wami/gdpr/operations.rs::function::build_consent_audit_event",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 109,
+  "line_start": 88,
+  "name": "build_consent_audit_event",
+  "signature": "pub fn build_consent_audit_event("
+}

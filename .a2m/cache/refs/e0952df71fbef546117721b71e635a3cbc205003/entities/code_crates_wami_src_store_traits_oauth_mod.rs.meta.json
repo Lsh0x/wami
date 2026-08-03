@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/store/traits/oauth/mod.rs::trait::OAuthClientStore",
+    "code:crates/wami/src/store/traits/oauth/mod.rs::trait::OAuthTokenStore"
+  ],
+  "content_hash": "587eb831ad19f731790a5cd8917ab933751d61d486f0ca98d332568f6b25e78d",
+  "doc": "",
+  "file": "crates/wami/src/store/traits/oauth/mod.rs",
+  "id": "code:crates/wami/src/store/traits/oauth/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 62,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

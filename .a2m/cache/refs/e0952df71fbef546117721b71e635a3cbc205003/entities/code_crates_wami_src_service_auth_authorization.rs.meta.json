@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/auth/authorization.rs::struct::AuthorizationService",
+    "code:crates/wami/src/service/auth/authorization.rs::impl::AuthorizationService<S>"
+  ],
+  "content_hash": "17cb5ca2131c2da1639c63170298629ac0ce339ca96fc33df1608184131bddec",
+  "doc": "",
+  "file": "crates/wami/src/service/auth/authorization.rs",
+  "id": "code:crates/wami/src/service/auth/authorization.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 1923,
+  "line_start": 1,
+  "name": "authorization",
+  "signature": ""
+}

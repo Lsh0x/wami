@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:arn/types.rs::function::Deserialize<'de> for WamiArn::deserialize"
+  ],
+  "content_hash": "sha256:aa181349eaf6f7254f909c7db381ed5e390cb7b16a0c6e7ce64ab8481f341b96",
+  "doc": "",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::impl::Deserialize<'de> for WamiArn",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 428,
+  "line_start": 420,
+  "name": "Deserialize<'de> for WamiArn",
+  "signature": "impl<'de> Deserialize<'de> for WamiArn"
+}

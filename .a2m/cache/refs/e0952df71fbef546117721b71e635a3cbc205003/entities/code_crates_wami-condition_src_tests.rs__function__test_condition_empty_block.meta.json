@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::create_test_context"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7dfbec6832b18d759ded3c4d02c781e5572604e1863666c7bc2c9abe82ee91f4",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_empty_block",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 2403,
+  "line_start": 2397,
+  "name": "test_condition_empty_block",
+  "signature": "fn test_condition_empty_block()"
+}

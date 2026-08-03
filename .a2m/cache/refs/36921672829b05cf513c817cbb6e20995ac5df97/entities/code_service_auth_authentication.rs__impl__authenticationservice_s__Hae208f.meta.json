@@ -1,0 +1,24 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:service/auth/authentication.rs::function::AuthenticationService<S>::new",
+    "code:service/auth/authentication.rs::function::AuthenticationService<S>::authenticate",
+    "code:service/auth/authentication.rs::function::AuthenticationService<S>::validate_access_key",
+    "code:service/auth/authentication.rs::function::AuthenticationService<S>::create_context_from_user",
+    "code:service/auth/authentication.rs::function::AuthenticationService<S>::authenticate_root"
+  ],
+  "content_hash": "sha256:0af05ba982e7e2c05a882327848d795bd7e0a2b67ce8ea8eb2d287e1ab10eae3",
+  "doc": "",
+  "file": "service/auth/authentication.rs",
+  "id": "code:service/auth/authentication.rs::impl::AuthenticationService<S>",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 213,
+  "line_start": 53,
+  "name": "AuthenticationService<S>",
+  "signature": "impl<S> AuthenticationService<S>"
+}

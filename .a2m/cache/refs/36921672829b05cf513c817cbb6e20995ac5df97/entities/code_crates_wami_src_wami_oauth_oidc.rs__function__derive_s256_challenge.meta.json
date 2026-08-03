@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "extern:Sha256::digest"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7df8427ebcb18f378186376cb6d2aaee94f1355e99eed4b592d7fa6151f5fa72",
+  "doc": "Derive the S256 challenge for a verifier. Useful to clients and to tests.",
+  "file": "crates/wami/src/wami/oauth/oidc.rs",
+  "id": "code:crates/wami/src/wami/oauth/oidc.rs::function::derive_s256_challenge",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 63,
+  "line_start": 61,
+  "name": "derive_s256_challenge",
+  "signature": "pub fn derive_s256_challenge(verifier: &str) -> String"
+}

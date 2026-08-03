@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b2965155bb5a48dc1728c0438464718df8b5a8ff750a22be727ebf9da92eaf3d",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/matching.rs",
+  "id": "code:crates/wami-core/src/arn/matching.rs::struct::MatchContext",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 47,
+  "line_start": 40,
+  "name": "MatchContext",
+  "signature": "pub struct MatchContext"
+}

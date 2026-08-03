@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5703fa91c66925c4c330bb9a9f4e3237defcdceeac8474205305aa48e049eafe",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_foranyvalue_empty_actual_edge_cases",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 5442,
+  "line_start": 5400,
+  "name": "test_foranyvalue_empty_actual_edge_cases",
+  "signature": "fn test_foranyvalue_empty_actual_edge_cases()"
+}

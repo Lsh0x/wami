@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f2fd4e1bf8a7eb696aebb0b5ee1c47907636aa1753324b435e00a496e7d0c1e0",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_context_key_resolution_edge_cases",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 2350,
+  "line_start": 2324,
+  "name": "test_condition_context_key_resolution_edge_cases",
+  "signature": "fn test_condition_context_key_resolution_edge_cases()"
+}

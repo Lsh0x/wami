@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:17c0ec73a6222bd50023f5f7b151634dc818d05ae954d5e903fa444e599439d5",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_if_exists_with_missing_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 1860,
+  "line_start": 1846,
+  "name": "test_condition_if_exists_with_missing_key",
+  "signature": "fn test_condition_if_exists_with_missing_key()"
+}

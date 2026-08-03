@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:32919a04e216d0c91a83bc2543229c16efa8e7be40e0bba6b621bba589b1a3ad",
+  "doc": "",
+  "file": "store/memory/identity/user.rs",
+  "id": "code:store/memory/identity/user.rs::function::UserStore for InMemoryWamiStore::put_user_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 142,
+  "line_start": 129,
+  "name": "put_user_policy",
+  "signature": "async fn put_user_policy("
+}

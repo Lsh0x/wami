@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "extern:Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:575e559c00d44c96a501ce398648de043cec40d1c2459c4ea9c05306d062a089",
+  "doc": "",
+  "file": "store/memory/sts/tests.rs",
+  "id": "code:store/memory/sts/tests.rs::function::test_identity_with_providers",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 312,
+  "line_start": 288,
+  "name": "test_identity_with_providers",
+  "signature": "async fn test_identity_with_providers()"
+}

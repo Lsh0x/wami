@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:02ad6adc709e6ec28dd6d713f030bfec89f2795759340cee6dc50eb1a101dfd6",
+  "doc": "Manages Ed25519 keypair for JWT signing and verification.",
+  "file": "crates/wami/src/wami/sts/jwt.rs",
+  "id": "code:crates/wami/src/wami/sts/jwt.rs::struct::KeyManager",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 118,
+  "line_start": 113,
+  "name": "KeyManager",
+  "signature": "pub struct KeyManager"
+}

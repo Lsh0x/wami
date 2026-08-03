@@ -1,0 +1,29 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/examples/11_hybrid_cloud_setup.rs::function::CloudProvider for OnPremiseProvider::name",
+    "code:crates/wami/examples/11_hybrid_cloud_setup.rs::function::CloudProvider for OnPremiseProvider::generate_resource_identifier",
+    "code:crates/wami/examples/11_hybrid_cloud_setup.rs::function::CloudProvider for OnPremiseProvider::generate_resource_id",
+    "code:crates/wami/examples/11_hybrid_cloud_setup.rs::function::CloudProvider for OnPremiseProvider::resource_limits",
+    "code:crates/wami/examples/11_hybrid_cloud_setup.rs::function::CloudProvider for OnPremiseProvider::validate_service_name",
+    "code:crates/wami/examples/11_hybrid_cloud_setup.rs::function::CloudProvider for OnPremiseProvider::validate_path",
+    "code:crates/wami/examples/11_hybrid_cloud_setup.rs::function::CloudProvider for OnPremiseProvider::generate_service_linked_role_name",
+    "code:crates/wami/examples/11_hybrid_cloud_setup.rs::function::CloudProvider for OnPremiseProvider::generate_service_linked_role_path"
+  ],
+  "content_hash": "sha256:32d6c82d68985f7e349e20c484b9fba859e6c3c498f7712e7e59d579cb24ce77",
+  "doc": "",
+  "file": "crates/wami/examples/11_hybrid_cloud_setup.rs",
+  "id": "code:crates/wami/examples/11_hybrid_cloud_setup.rs::impl::CloudProvider for OnPremiseProvider",
+  "implemented_by": [],
+  "implements": [
+    "code:crates/wami-provider/src/lib.rs::trait::CloudProvider"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 117,
+  "line_start": 37,
+  "name": "CloudProvider for OnPremiseProvider",
+  "signature": "impl CloudProvider for OnPremiseProvider"
+}

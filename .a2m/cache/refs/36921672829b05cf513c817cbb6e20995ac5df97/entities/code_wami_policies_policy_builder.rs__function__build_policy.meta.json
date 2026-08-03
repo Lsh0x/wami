@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "extern:Uuid::new_v4",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder",
+    "extern:chrono::Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d57cbc9324ccc8979d1f94282391b55310f3d9619fb6f2c3522921fcd4e9581c",
+  "doc": "",
+  "file": "wami/policies/policy/builder.rs",
+  "id": "code:wami/policies/policy/builder.rs::function::build_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 58,
+  "line_start": 13,
+  "name": "build_policy",
+  "signature": "pub fn build_policy("
+}

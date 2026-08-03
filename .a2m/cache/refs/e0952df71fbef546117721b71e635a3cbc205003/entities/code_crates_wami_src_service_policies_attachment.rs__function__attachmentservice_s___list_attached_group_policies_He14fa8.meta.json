@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:be0400601c6c4e7a0c1c4a89fb411698dc7933bbef98e90ee111401b303bcd8d",
+  "doc": "List attached policies for a group",
+  "file": "crates/wami/src/service/policies/attachment.rs",
+  "id": "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::list_attached_group_policies",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 351,
+  "line_start": 311,
+  "name": "list_attached_group_policies",
+  "signature": "pub async fn list_attached_group_policies("
+}

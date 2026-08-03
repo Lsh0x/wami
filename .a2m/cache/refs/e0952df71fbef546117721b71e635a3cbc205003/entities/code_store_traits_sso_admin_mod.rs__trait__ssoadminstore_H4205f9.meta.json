@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5f732ce1cbdb3a725f7269687c68cd807895fb4427083c922fdbf3752a30eb3d",
+  "doc": "",
+  "file": "store/traits/sso_admin/mod.rs",
+  "id": "code:store/traits/sso_admin/mod.rs::trait::SsoAdminStore",
+  "implemented_by": [
+    "code:store/traits/sso_admin/mod.rs::impl::SsoAdminStore for T"
+  ],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "trait",
+  "line_end": 52,
+  "line_start": 42,
+  "name": "SsoAdminStore",
+  "signature": "pub trait SsoAdminStore:"
+}

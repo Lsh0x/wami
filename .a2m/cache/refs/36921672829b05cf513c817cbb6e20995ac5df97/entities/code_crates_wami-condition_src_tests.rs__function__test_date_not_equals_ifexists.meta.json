@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "extern:chrono::Utc::now",
+    "extern:chrono::Duration::hours",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5fd8d6d8cd7cd21343b60bb1fe9b339cb31cee67f4063c1756bdce1112b7a438",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_date_not_equals_ifexists",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 4665,
+  "line_start": 4625,
+  "name": "test_date_not_equals_ifexists",
+  "signature": "fn test_date_not_equals_ifexists()"
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/sso_admin/trusted_token_issuer.rs::impl::TrustedTokenIssuerStore for InMemorySsoAdminStore",
+    "code:store/memory/sso_admin/trusted_token_issuer.rs::impl::TrustedTokenIssuerStore for super::super::wami::InMemoryWamiStore"
+  ],
+  "content_hash": "18b2d08632a5534b77f5719816345db433d857a2cb675724c5d9edebae581c05",
+  "doc": "",
+  "file": "store/memory/sso_admin/trusted_token_issuer.rs",
+  "id": "code:store/memory/sso_admin/trusted_token_issuer.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 76,
+  "line_start": 1,
+  "name": "trusted_token_issuer",
+  "signature": ""
+}

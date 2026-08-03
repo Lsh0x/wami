@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c6f75b3b125bdb9fd612de97e4d3bc5dfa319b79ea6c5d7950738dde05f6c35c",
+  "doc": "",
+  "file": "crates/wami/src/store/memory/oauth/mod.rs",
+  "id": "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthClientStore for InMemoryOAuthStore::get_oauth_client",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 50,
+  "line_start": 48,
+  "name": "get_oauth_client",
+  "signature": "async fn get_oauth_client(&self, client_id: &str) -> Result<Option<OAuthClient>>"
+}

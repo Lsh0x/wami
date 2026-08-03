@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:2e7ce376ea241316622ea6fe6469376e12071da7005fab35f451ebd4879d3eed",
+  "doc": "",
+  "file": "store/memory/identity/user.rs",
+  "id": "code:store/memory/identity/user.rs::function::UserStore for InMemoryWamiStore::attach_user_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 111,
+  "line_start": 101,
+  "name": "attach_user_policy",
+  "signature": "async fn attach_user_policy(&mut self, user_name: &str, policy_arn: &str) -> Result<()>"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c460cc485453c1bfca7387c5f6753c3b7d2d10d899df2f43cd9b73d154d8669f",
+  "doc": "",
+  "file": "store/memory/tenant/mod.rs",
+  "id": "code:store/memory/tenant/mod.rs::function::TenantStore for InMemoryTenantStore::update_tenant",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 53,
+  "line_start": 44,
+  "name": "update_tenant",
+  "signature": "async fn update_tenant(&mut self, tenant: Tenant) -> Result<Tenant>"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/error/helpers.rs::function::AmiError::resource_not_found"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0c924d421f6660653c401c6cdb13abb8982da8d09b6d8c44ae5450e7eb8a5343",
+  "doc": "",
+  "file": "crates/wami-core/src/error/helpers.rs",
+  "id": "code:crates/wami-core/src/error/helpers.rs::function::OptionExt<T> for Option<T>::or_not_found",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 140,
+  "line_start": 138,
+  "name": "or_not_found",
+  "signature": "fn or_not_found(self, resource_type: &str, resource_id: &str) -> Result<T>"
+}

@@ -1,0 +1,15 @@
+%% id: code:crates/wami/examples/28_oidc_authorization_code.rs::function::main
+%% kind: function
+%% file: crates/wami/examples/28_oidc_authorization_code.rs:51-231
+%% content_hash: sha256:ac4b61690ebb21d2922e26eca2b9b9975f3d7adf534e5f5c74dca671bba25b1a
+%% signature: async fn main() -> std::result::Result<(), Box<dyn std::error::Error>>
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_crates_wami_examples_28_oidc_authorization_code_rs__function__main_H5b554765:::function[main]
+  code_crates_wami_examples_28_oidc_authorization_code_rs__function__main_H5b554765 -- calls --> code_crates_wami_src_wami_sts_jwt_rs__function__KeyManager__generate_Hcd519813:::function[generate]
+  code_crates_wami_examples_28_oidc_authorization_code_rs__function__main_H5b554765 -- calls --> extern_wami__wami__oauth__generate_client_secret_H2cdbb69c:::function[generate_client_secret]
+  code_crates_wami_examples_28_oidc_authorization_code_rs__function__main_H5b554765 -- calls --> extern_wami__wami__oauth__build_client_H06169022:::function[build_client]
+  code_crates_wami_examples_28_oidc_authorization_code_rs__function__main_H5b554765 -- calls --> code_crates_wami_src_wami_oauth_oidc_rs__function__CodeChallenge__s256_H1170d47d:::function[s256]
+  code_crates_wami_examples_28_oidc_authorization_code_rs__function__main_H5b554765 -- calls --> extern_wami__wami__oauth__derive_s256_challenge_Hda845ccb:::function[derive_s256_challenge]

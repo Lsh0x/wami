@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/arn/types.rs::function::CloudMapping::new",
+    "code:crates/wami-core/src/arn/types.rs::function::CloudMapping::with_region",
+    "code:crates/wami-core/src/arn/types.rs::function::CloudMapping::is_regional",
+    "code:crates/wami-core/src/arn/types.rs::function::CloudMapping::region_or_global"
+  ],
+  "content_hash": "sha256:e2afc2056eab516d373fa6784b0e6f0991a88f2c37aea6bf1348c752c51a5ffc",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::impl::CloudMapping",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 247,
+  "line_start": 215,
+  "name": "CloudMapping",
+  "signature": "impl CloudMapping"
+}

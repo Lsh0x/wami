@@ -1,0 +1,31 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/tenant/mod.rs::function::TenantStore for super::wami::InMemoryWamiStore::create_tenant",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for super::wami::InMemoryWamiStore::get_tenant",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for super::wami::InMemoryWamiStore::update_tenant",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for super::wami::InMemoryWamiStore::delete_tenant",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for super::wami::InMemoryWamiStore::list_tenants",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for super::wami::InMemoryWamiStore::list_child_tenants",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for super::wami::InMemoryWamiStore::get_ancestors",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for super::wami::InMemoryWamiStore::get_descendants",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for super::wami::InMemoryWamiStore::get_effective_quotas",
+    "code:store/memory/tenant/mod.rs::function::TenantStore for super::wami::InMemoryWamiStore::get_tenant_usage"
+  ],
+  "content_hash": "sha256:f1cdd5108101b9dd4866815d53cf1b78a894a86f70c4925ae8b0a6cd1aee0c75",
+  "doc": "",
+  "file": "store/memory/tenant/mod.rs",
+  "id": "code:store/memory/tenant/mod.rs::impl::TenantStore for super::wami::InMemoryWamiStore",
+  "implemented_by": [],
+  "implements": [
+    "code:store/traits/tenant/mod.rs::trait::TenantStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 249,
+  "line_start": 136,
+  "name": "TenantStore for super::wami::InMemoryWamiStore",
+  "signature": "impl TenantStore for super::wami::InMemoryWamiStore"
+}

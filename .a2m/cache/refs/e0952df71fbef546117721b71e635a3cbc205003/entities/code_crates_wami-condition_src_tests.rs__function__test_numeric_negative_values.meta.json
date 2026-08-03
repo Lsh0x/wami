@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::create_test_context",
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:142979d2ceb1397acc4c431e18387e31652ee4e1983a47bba665872b548f730a",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_numeric_negative_values",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 728,
+  "line_start": 716,
+  "name": "test_numeric_negative_values",
+  "signature": "fn test_numeric_negative_values()"
+}

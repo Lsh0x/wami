@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/arn/transformer/aws.rs::function::ArnTransformer for AwsArnTransformer::to_provider_arn",
+    "code:crates/wami-core/src/arn/transformer/aws.rs::function::ArnTransformer for AwsArnTransformer::from_provider_arn"
+  ],
+  "content_hash": "sha256:17d47d8b8e3fd5aa170208766e8e60add6bbf2e5d0a13617e2c75ce5444fa5ac",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/transformer/aws.rs",
+  "id": "code:crates/wami-core/src/arn/transformer/aws.rs::impl::ArnTransformer for AwsArnTransformer",
+  "implemented_by": [],
+  "implements": [
+    "code:crates/wami-core/src/arn/transformer/mod.rs::trait::ArnTransformer"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 124,
+  "line_start": 30,
+  "name": "ArnTransformer for AwsArnTransformer",
+  "signature": "impl ArnTransformer for AwsArnTransformer"
+}

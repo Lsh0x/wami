@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:181c433be8cb4e430ee42f171909b99731ed0f7aa670ecc55a0cd11610316605",
+  "doc": "Create a new AccountAssignmentService with default AWS provider",
+  "file": "service/sso_admin/account_assignment.rs",
+  "id": "code:service/sso_admin/account_assignment.rs::function::AccountAssignmentService<S>::new",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 30,
+  "line_start": 25,
+  "name": "new",
+  "signature": "pub fn new(store: Arc<RwLock<S>>) -> Self"
+}

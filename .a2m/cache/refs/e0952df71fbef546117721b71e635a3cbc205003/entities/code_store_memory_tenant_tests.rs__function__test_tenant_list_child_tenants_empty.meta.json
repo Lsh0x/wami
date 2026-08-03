@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:store/memory/tenant/tests.rs::function::build_test_tenant"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:eb240acdc2b4543fbaf1aee6b71c4bc3876b61981cf261f3dd37a51aaa2bea09",
+  "doc": "",
+  "file": "store/memory/tenant/tests.rs",
+  "id": "code:store/memory/tenant/tests.rs::function::test_tenant_list_child_tenants_empty",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 190,
+  "line_start": 181,
+  "name": "test_tenant_list_child_tenants_empty",
+  "signature": "async fn test_tenant_list_child_tenants_empty()"
+}

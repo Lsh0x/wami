@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/tenant/model.rs::function::Deserialize<'de> for TenantId::deserialize"
+  ],
+  "content_hash": "sha256:516308f5680845103d03f06e23a42d44c31cf337f2f36a68bf09643ae4aacfb0",
+  "doc": "",
+  "file": "wami/tenant/model.rs",
+  "id": "code:wami/tenant/model.rs::impl::Deserialize<'de> for TenantId",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 189,
+  "line_start": 181,
+  "name": "Deserialize<'de> for TenantId",
+  "signature": "impl<'de> Deserialize<'de> for TenantId"
+}

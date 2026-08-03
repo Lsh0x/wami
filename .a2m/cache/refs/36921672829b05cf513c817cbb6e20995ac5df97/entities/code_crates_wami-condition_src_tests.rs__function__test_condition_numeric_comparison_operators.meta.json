@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:92445aaf3748e3c9941a35a6ab1ba33287cc236810b585b6a710dd6c2e0057fb",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_numeric_comparison_operators",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 2585,
+  "line_start": 2525,
+  "name": "test_condition_numeric_comparison_operators",
+  "signature": "fn test_condition_numeric_comparison_operators()"
+}

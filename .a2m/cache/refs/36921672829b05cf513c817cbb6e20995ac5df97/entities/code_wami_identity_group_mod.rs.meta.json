@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "c4b159425cb714160221a7e1e007a62bc922c38243069894c16ef3088a900777",
+  "doc": "",
+  "file": "wami/identity/group/mod.rs",
+  "id": "code:wami/identity/group/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 14,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

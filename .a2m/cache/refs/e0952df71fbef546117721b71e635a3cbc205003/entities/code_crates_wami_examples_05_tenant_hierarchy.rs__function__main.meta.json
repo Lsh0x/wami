@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::builder",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:eef3b9e1498e2464448abee4f832b24984b58fa56eb08b15efd745e5fd0f2f77",
+  "doc": "",
+  "file": "crates/wami/examples/05_tenant_hierarchy.rs",
+  "id": "code:crates/wami/examples/05_tenant_hierarchy.rs::function::main",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 164,
+  "line_start": 20,
+  "name": "main",
+  "signature": "async fn main() -> Result<(), Box<dyn std::error::Error>>"
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/identity/user/model.rs::struct::User",
+    "code:wami/identity/user/model.rs::impl::User"
+  ],
+  "content_hash": "09aa0fac022309b1783a9578f9213f05d33bcf3488943b2ac15cbaaa049374ff",
+  "doc": "",
+  "file": "wami/identity/user/model.rs",
+  "id": "code:wami/identity/user/model.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 143,
+  "line_start": 1,
+  "name": "model",
+  "signature": ""
+}

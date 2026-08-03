@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b2cb7f2dab3f48f4962c194a879c1d561c5183bb243d7610f01bc17f3487011a",
+  "doc": "List all service prefixes.",
+  "file": "crates/wami-core/src/actions.rs",
+  "id": "code:crates/wami-core/src/actions.rs::function::ActionRegistry::list_prefixes",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 797,
+  "line_start": 795,
+  "name": "list_prefixes",
+  "signature": "pub fn list_prefixes() -> &'static [WamiServicePrefix]"
+}

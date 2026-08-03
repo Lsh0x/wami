@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:store/memory/tenant/tests.rs::function::build_test_tenant"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d801c01e047ecf984e5629eecc5a87b27509a6328670679f5621993cc057072a",
+  "doc": "",
+  "file": "store/memory/tenant/tests.rs",
+  "id": "code:store/memory/tenant/tests.rs::function::test_tenant_hierarchy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 178,
+  "line_start": 161,
+  "name": "test_tenant_hierarchy",
+  "signature": "async fn test_tenant_hierarchy()"
+}

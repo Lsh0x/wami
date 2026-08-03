@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:dfe88dccb0f1d0a0aaac69c455c47bec2851d7bc1f45dcb1e94f19b8505a8c7a",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::trace_id",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 553,
+  "line_start": 550,
+  "name": "trace_id",
+  "signature": "pub fn trace_id(mut self, id: impl Into<String>) -> Self"
+}

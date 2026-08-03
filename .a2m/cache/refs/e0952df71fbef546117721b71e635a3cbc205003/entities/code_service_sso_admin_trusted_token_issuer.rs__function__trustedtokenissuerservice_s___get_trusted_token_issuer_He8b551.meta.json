@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b9b3b4726c02bdade43e9f489e3075f66e9f531232e0d251245dc8239556bd89",
+  "doc": "Get a trusted token issuer by ARN",
+  "file": "service/sso_admin/trusted_token_issuer.rs",
+  "id": "code:service/sso_admin/trusted_token_issuer.rs::function::TrustedTokenIssuerService<S>::get_trusted_token_issuer",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 62,
+  "line_start": 53,
+  "name": "get_trusted_token_issuer",
+  "signature": "pub async fn get_trusted_token_issuer("
+}

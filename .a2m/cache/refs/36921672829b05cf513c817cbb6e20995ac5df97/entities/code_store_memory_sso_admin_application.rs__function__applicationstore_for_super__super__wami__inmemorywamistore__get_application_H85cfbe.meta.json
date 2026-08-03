@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:37d09dd16146bb6e37c2df49e9ae56e657d63a7333b0e6415e04699d72cb84cc",
+  "doc": "",
+  "file": "store/memory/sso_admin/application.rs",
+  "id": "code:store/memory/sso_admin/application.rs::function::ApplicationStore for super::super::wami::InMemoryWamiStore::get_application",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 37,
+  "line_start": 35,
+  "name": "get_application",
+  "signature": "async fn get_application(&self, application_arn: &str) -> Result<Option<Application>>"
+}

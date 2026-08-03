@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:51254b163319ca6fb72a5ad43c346fd051cdf4b7103398f23572a29fff9961b3",
+  "doc": "",
+  "file": "wami/identity/root_user.rs",
+  "id": "code:wami/identity/root_user.rs::const::ROOT_USER_ID",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "const",
+  "line_end": 51,
+  "line_start": 51,
+  "name": "ROOT_USER_ID",
+  "signature": "pub const ROOT_USER_ID: &str = \"root\";"
+}

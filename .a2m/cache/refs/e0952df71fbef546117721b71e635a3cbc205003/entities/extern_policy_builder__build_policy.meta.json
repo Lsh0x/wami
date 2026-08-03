@@ -1,0 +1,27 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::create_policy",
+    "code:store/memory/policies/tests.rs::function::test_policy_create_and_get",
+    "code:store/memory/policies/tests.rs::function::test_policy_update",
+    "code:store/memory/policies/tests.rs::function::test_policy_delete",
+    "code:store/memory/policies/tests.rs::function::test_policy_list_multiple",
+    "code:store/memory/policies/tests.rs::function::test_policy_list_with_path_prefix",
+    "code:store/memory/policies/tests.rs::function::test_policy_list_with_pagination",
+    "code:wami/instance/bootstrap.rs::function::InstanceBootstrap::create_platform_roles"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:policy_builder::build_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "build_policy",
+  "signature": "policy_builder::build_policy"
+}

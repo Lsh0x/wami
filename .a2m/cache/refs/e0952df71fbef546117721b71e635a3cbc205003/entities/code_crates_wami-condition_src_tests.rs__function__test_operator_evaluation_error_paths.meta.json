@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/operators.rs::function::evaluate_operator"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:62298580914671a1aa2c74522b30046a76cdcb380681d7436737d28f8af4ddf4",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_operator_evaluation_error_paths",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 3711,
+  "line_start": 3673,
+  "name": "test_operator_evaluation_error_paths",
+  "signature": "fn test_operator_evaluation_error_paths()"
+}

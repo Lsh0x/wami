@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0e1dea8084a5f30a852607681e95d6cd2fb89248b08909f544f7f1267680cec8",
+  "doc": "Set tenant ID for SAML provider (pure function)",
+  "file": "wami/identity/identity_provider/builder.rs",
+  "id": "code:wami/identity/identity_provider/builder.rs::function::set_saml_tenant",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 185,
+  "line_start": 179,
+  "name": "set_saml_tenant",
+  "signature": "pub fn set_saml_tenant("
+}

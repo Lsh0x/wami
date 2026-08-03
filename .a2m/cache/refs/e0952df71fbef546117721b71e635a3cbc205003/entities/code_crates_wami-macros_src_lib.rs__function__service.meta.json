@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-macros/src/service_attr.rs::function::expand"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b9583265bf13239a280f2fb1039bbbbd52039b53cc7bb26b7e055ea2000db9c7",
+  "doc": "",
+  "file": "crates/wami-macros/src/lib.rs",
+  "id": "code:crates/wami-macros/src/lib.rs::function::service",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 19,
+  "line_start": 17,
+  "name": "service",
+  "signature": "pub fn service(attr: TokenStream, item: TokenStream) -> TokenStream"
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::create_test_context",
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5418b2d9e5d167e7d490ea1c4f32c951c6f0f119eab938236ee2fb80810e3325",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_string_equals_exact_match",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 360,
+  "line_start": 348,
+  "name": "test_string_equals_exact_match",
+  "signature": "fn test_string_equals_exact_match()"
+}

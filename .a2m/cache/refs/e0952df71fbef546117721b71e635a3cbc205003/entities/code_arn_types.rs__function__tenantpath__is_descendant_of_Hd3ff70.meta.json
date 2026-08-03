@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:arn/types.rs::function::TenantPath::is_ancestor_of"
+  ],
+  "children": [],
+  "content_hash": "sha256:49ad2e454b9f6384da895b5556a3f1a7451a0ddab0f8c4d50f01b0b585a076a8",
+  "doc": "Returns true if this path is a descendant of the given path.",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::function::TenantPath::is_descendant_of",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 142,
+  "line_start": 134,
+  "name": "is_descendant_of",
+  "signature": "pub fn is_descendant_of(&self, other: &TenantPath) -> bool"
+}

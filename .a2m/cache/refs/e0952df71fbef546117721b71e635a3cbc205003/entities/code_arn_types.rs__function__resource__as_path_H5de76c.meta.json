@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d41cb7af4864cd743df25b9dbbb906d82fcd52a751e94da27f0f2f2b6517b101",
+  "doc": "Returns the resource path as \"type/id\".",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::function::Resource::as_path",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 265,
+  "line_start": 263,
+  "name": "as_path",
+  "signature": "pub fn as_path(&self) -> String"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7bca3b703d6f3edd24387a3b1e389626cea3e30024a8396cca3e8751cd6cb837",
+  "doc": "",
+  "file": "store/memory/identity/role.rs",
+  "id": "code:store/memory/identity/role.rs::function::RoleStore for InMemoryWamiStore::update_role",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 24,
+  "line_start": 21,
+  "name": "update_role",
+  "signature": "async fn update_role(&mut self, role: Role) -> Result<Role>"
+}

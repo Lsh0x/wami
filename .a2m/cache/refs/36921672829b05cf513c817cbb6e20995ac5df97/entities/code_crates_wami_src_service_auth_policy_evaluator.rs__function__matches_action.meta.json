@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/arn/matching.rs::function::glob_match"
+  ],
+  "callers": [
+    "code:crates/wami/src/service/auth/policy_evaluator.rs::function::evaluate_policy_document"
+  ],
+  "children": [],
+  "content_hash": "sha256:a8678b8aca3fe65c5625e5a0d2268f514328c4540423c848e1985b30dd86b8a4",
+  "doc": "Check if an action matches any of the policy action patterns.\n\nSupports wildcards via `glob_match`: `iam:*`, `*`, `iam:Get*`",
+  "file": "crates/wami/src/service/auth/policy_evaluator.rs",
+  "id": "code:crates/wami/src/service/auth/policy_evaluator.rs::function::matches_action",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 109,
+  "line_start": 102,
+  "name": "matches_action",
+  "signature": "pub fn matches_action(policy_actions: &[String], action: &str) -> bool"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "extern:Service::Custom"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:98a11faa25217072ff4a854ea77bba7904411e14ee6c6918fb2458c38c4352aa",
+  "doc": "",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::function::From<&str> for Service::from",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 318,
+  "line_start": 311,
+  "name": "from",
+  "signature": "fn from(s: &str) -> Self"
+}

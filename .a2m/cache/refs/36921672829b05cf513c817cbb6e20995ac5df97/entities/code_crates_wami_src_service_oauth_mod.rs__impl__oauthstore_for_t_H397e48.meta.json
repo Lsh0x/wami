@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a0ecd4098962726384afa4975c5e304747cbd4b1ae9f285fe5617ae9c3abfccd",
+  "doc": "",
+  "file": "crates/wami/src/service/oauth/mod.rs",
+  "id": "code:crates/wami/src/service/oauth/mod.rs::impl::OAuthStore for T",
+  "implemented_by": [],
+  "implements": [
+    "code:crates/wami/src/service/oauth/mod.rs::trait::OAuthStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 75,
+  "line_start": 75,
+  "name": "OAuthStore for T",
+  "signature": "impl<T: OAuthClientStore + OAuthTokenStore> OAuthStore for T {}"
+}

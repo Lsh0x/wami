@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:3a506df02cfbdedbfd8eac8c5d5f30299a44539f0a6e96759bbcb94071c3b7e2",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::principal_arn",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 211,
+  "line_start": 208,
+  "name": "principal_arn",
+  "signature": "pub fn principal_arn(mut self, arn: impl Into<String>) -> Self"
+}

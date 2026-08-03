@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami/examples/arn_architecture_demo.rs::function::main"
+  ],
+  "children": [],
+  "content_hash": "sha256:366dc50ffd5381ada1a2b73c77ef6282c929c4998bc4303baa3740ba60d325c6",
+  "doc": "",
+  "file": "crates/wami/examples/arn_architecture_demo.rs",
+  "id": "code:crates/wami/examples/arn_architecture_demo.rs::function::demo_arn_generation",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 53,
+  "line_start": 32,
+  "name": "demo_arn_generation",
+  "signature": "fn demo_arn_generation() -> Result<(), Box<dyn std::error::Error>>"
+}

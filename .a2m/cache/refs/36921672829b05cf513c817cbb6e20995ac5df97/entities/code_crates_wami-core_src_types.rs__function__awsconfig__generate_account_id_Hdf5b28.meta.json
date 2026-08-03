@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "extern:chrono::Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:74be52e46adbc12c99639ceecc4385e0e2b771851d8876755e0f01fc60895a88",
+  "doc": "Generate a random AWS account ID (12 digits)",
+  "file": "crates/wami-core/src/types.rs",
+  "id": "code:crates/wami-core/src/types.rs::function::AwsConfig::generate_account_id",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 63,
+  "line_start": 50,
+  "name": "generate_account_id",
+  "signature": "pub fn generate_account_id() -> String"
+}

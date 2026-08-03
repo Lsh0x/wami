@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-condition/src/evaluator.rs::function::std::fmt::Display for ConditionError::fmt"
+  ],
+  "content_hash": "sha256:4ed9e47797b55adde63d46590282469fd7d2b61b11362f899091dac452a4afa6",
+  "doc": "",
+  "file": "crates/wami-condition/src/evaluator.rs",
+  "id": "code:crates/wami-condition/src/evaluator.rs::impl::std::fmt::Display for ConditionError",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 48,
+  "line_start": 23,
+  "name": "std::fmt::Display for ConditionError",
+  "signature": "impl std::fmt::Display for ConditionError"
+}

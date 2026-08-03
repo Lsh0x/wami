@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:281fbb9485106201dc1dbf8c72dccc50485aef0453b74d4bde0c9cac2d11e15f",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::authentication_strength",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 476,
+  "line_start": 473,
+  "name": "authentication_strength",
+  "signature": "pub fn authentication_strength(mut self, strength: impl Into<String>) -> Self"
+}

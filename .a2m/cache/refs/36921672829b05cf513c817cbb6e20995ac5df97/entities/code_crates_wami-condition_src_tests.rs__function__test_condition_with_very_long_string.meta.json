@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ba0914f6fd02c6a62a9fcdd80ad2c0f15eabf39db95b46164ed181e9a181f3fc",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_with_very_long_string",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 1363,
+  "line_start": 1346,
+  "name": "test_condition_with_very_long_string",
+  "signature": "fn test_condition_with_very_long_string()"
+}

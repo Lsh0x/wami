@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:114cb2c6b2116319854e5ad1622277e3b91fcb26e041558074ca1557e6b47e6a",
+  "doc": "List attached policies for a user",
+  "file": "crates/wami/src/service/policies/attachment.rs",
+  "id": "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::list_attached_user_policies",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 205,
+  "line_start": 165,
+  "name": "list_attached_user_policies",
+  "signature": "pub async fn list_attached_user_policies("
+}

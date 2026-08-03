@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/wami/policies/evaluation/operations.rs::enum::EvaluationResult"
+  ],
+  "content_hash": "50cb3caec54cb64173c3fd0f7d4dfd9c63fe6cb7c6aadb5585a3e9edf4b1f7cf",
+  "doc": "",
+  "file": "crates/wami/src/wami/policies/evaluation/operations.rs",
+  "id": "code:crates/wami/src/wami/policies/evaluation/operations.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 218,
+  "line_start": 1,
+  "name": "operations",
+  "signature": ""
+}

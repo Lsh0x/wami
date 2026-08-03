@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::matches_pattern"
+  ],
+  "callers": [
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::simulate_custom_policy",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::simulate_principal_policy"
+  ],
+  "children": [],
+  "content_hash": "sha256:40294c257094c36df5529aee670246559c1a3767324da22029494ce21e49da03",
+  "doc": "Find all statements that match the action/resource",
+  "file": "service/policies/evaluation.rs",
+  "id": "code:service/policies/evaluation.rs::function::EvaluationService<S>::find_matching_statements",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 518,
+  "line_start": 486,
+  "name": "find_matching_statements",
+  "signature": "fn find_matching_statements("
+}

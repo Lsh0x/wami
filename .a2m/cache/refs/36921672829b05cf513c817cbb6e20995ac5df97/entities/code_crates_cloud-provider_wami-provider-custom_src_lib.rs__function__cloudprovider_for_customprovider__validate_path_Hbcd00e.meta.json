@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:90f0ce30899b7fdd9ce34051fa32129f3eed72e8d1720f51df591ea6af5a1bad",
+  "doc": "",
+  "file": "crates/cloud-provider/wami-provider-custom/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-custom/src/lib.rs::function::CloudProvider for CustomProvider::validate_path",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 96,
+  "line_start": 94,
+  "name": "validate_path",
+  "signature": "fn validate_path(&self, _path: &str) -> Result<()>"
+}

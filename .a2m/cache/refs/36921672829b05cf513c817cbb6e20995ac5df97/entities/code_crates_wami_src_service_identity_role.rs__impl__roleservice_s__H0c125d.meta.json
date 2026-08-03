@@ -1,0 +1,27 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::new",
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::with_authorizer",
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::guard",
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::create_role",
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::get_role",
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::update_role",
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::delete_role",
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::list_roles"
+  ],
+  "content_hash": "sha256:a01839f70dc4f0d3307f7ea25b5986aad7fb736104a6ac0e00f405cde52211d8",
+  "doc": "",
+  "file": "crates/wami/src/service/identity/role.rs",
+  "id": "code:crates/wami/src/service/identity/role.rs::impl::RoleService<S>",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 150,
+  "line_start": 25,
+  "name": "RoleService<S>",
+  "signature": "impl<S: RoleStore> RoleService<S>"
+}

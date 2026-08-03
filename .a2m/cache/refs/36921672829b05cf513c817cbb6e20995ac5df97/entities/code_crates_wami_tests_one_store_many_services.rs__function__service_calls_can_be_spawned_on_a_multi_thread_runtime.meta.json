@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami/tests/one_store_many_services.rs::function::bootstrapped",
+    "extern:tokio::spawn"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b902bd0ceb6ff5ef2fda78a64343dc17769fca1af3de1d53d7b9d7a67c6ecc08",
+  "doc": "",
+  "file": "crates/wami/tests/one_store_many_services.rs",
+  "id": "code:crates/wami/tests/one_store_many_services.rs::function::service_calls_can_be_spawned_on_a_multi_thread_runtime",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 121,
+  "line_start": 99,
+  "name": "service_calls_can_be_spawned_on_a_multi_thread_runtime",
+  "signature": "async fn service_calls_can_be_spawned_on_a_multi_thread_runtime()"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:40db21225b1d19638c7cb5e49ca51976d0c59cb9075516c5fe815d24d5b80df4",
+  "doc": "",
+  "file": "crates/cloud-provider/wami-provider-gcp/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-gcp/src/lib.rs::function::CloudProvider for GcpProvider::generate_service_linked_role_name",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 100,
+  "line_start": 90,
+  "name": "generate_service_linked_role_name",
+  "signature": "fn generate_service_linked_role_name("
+}

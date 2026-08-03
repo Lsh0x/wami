@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:51b1adc44371df753b548957f6254b6e098202109346cd281f79cbda4cf24bbc",
+  "doc": "",
+  "file": "store/memory/sts/session.rs",
+  "id": "code:store/memory/sts/session.rs::function::SessionStore for InMemoryStsStore::list_sessions",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 30,
+  "line_start": 27,
+  "name": "list_sessions",
+  "signature": "async fn list_sessions(&self, _user_id: Option<&str>) -> Result<Vec<StsSession>>"
+}

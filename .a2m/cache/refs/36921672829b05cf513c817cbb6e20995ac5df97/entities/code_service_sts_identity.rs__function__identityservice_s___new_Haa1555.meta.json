@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:9029c64e9994d8bcbec02f87e6678ae996ca442ac03570ef88e7d6ef8eb1591a",
+  "doc": "Create a new IdentityService with default AWS provider",
+  "file": "service/sts/identity.rs",
+  "id": "code:service/sts/identity.rs::function::IdentityService<S>::new",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 49,
+  "line_start": 43,
+  "name": "new",
+  "signature": "pub fn new(store: Arc<RwLock<S>>, account_id: String) -> Self"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/traits/sso_admin/account_assignment.rs::trait::AccountAssignmentStore"
+  ],
+  "content_hash": "14efbb1332e9f94ad1b99a6231e3d2deef2e78b057a71e9ca50f71f3d4098bfd",
+  "doc": "",
+  "file": "store/traits/sso_admin/account_assignment.rs",
+  "id": "code:store/traits/sso_admin/account_assignment.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 28,
+  "line_start": 1,
+  "name": "account_assignment",
+  "signature": ""
+}

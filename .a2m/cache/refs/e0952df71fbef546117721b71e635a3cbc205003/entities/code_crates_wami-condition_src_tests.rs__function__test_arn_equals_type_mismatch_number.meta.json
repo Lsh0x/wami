@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:235f3676efe04a8f9a76223f57fcfc7f3a5ea9221fe3c49835476615c90534e4",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_arn_equals_type_mismatch_number",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7230,
+  "line_start": 7214,
+  "name": "test_arn_equals_type_mismatch_number",
+  "signature": "fn test_arn_equals_type_mismatch_number()"
+}

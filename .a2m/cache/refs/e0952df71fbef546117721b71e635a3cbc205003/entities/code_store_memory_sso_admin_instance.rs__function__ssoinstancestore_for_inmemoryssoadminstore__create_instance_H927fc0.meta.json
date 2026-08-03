@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b860e48c0a4af27bb31445d55ef88b2becd73fbae83270fade99167a06486326",
+  "doc": "",
+  "file": "store/memory/sso_admin/instance.rs",
+  "id": "code:store/memory/sso_admin/instance.rs::function::SsoInstanceStore for InMemorySsoAdminStore::create_instance",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 15,
+  "line_start": 11,
+  "name": "create_instance",
+  "signature": "async fn create_instance(&mut self, instance: SsoInstance) -> Result<SsoInstance>"
+}

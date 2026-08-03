@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:wami/tenant/model.rs::function::TenantId::segments",
+    "code:wami/tenant/model.rs::function::generate_secure_u64"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e57be8403ffcb028e1a0e491fe23bab3b56e04a99666f4bdb58487438d2793ef",
+  "doc": "Create a child tenant ID by appending a new random numeric segment\n\n# Example\n\n```rust\nuse wami::tenant::TenantId;\n\nlet parent = TenantId::root();\nlet child = parent.child();\nassert_eq!(child.depth(), 1);\n```",
+  "file": "wami/tenant/model.rs",
+  "id": "code:wami/tenant/model.rs::function::TenantId::child",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 65,
+  "line_start": 61,
+  "name": "child",
+  "signature": "pub fn child(&self) -> Self"
+}

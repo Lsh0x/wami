@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:9459f28f424b9522e242831cca1eb865ed04f0dc3f3f2137350ae4a662c30aa1",
+  "doc": "How many times authority may pass hands within one context.\n\nReaching it refuses the transition rather than dropping the oldest step. A\ntruncated chain still satisfies any check made against it while no longer\ndescribing what happened — an audit trail that lies is worse than one that\nstops.",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::const::MAX_PROVENANCE_DEPTH",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "const",
+  "line_end": 59,
+  "line_start": 59,
+  "name": "MAX_PROVENANCE_DEPTH",
+  "signature": "pub const MAX_PROVENANCE_DEPTH: usize = 8;"
+}

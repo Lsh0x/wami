@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:324b5344dffbb57b5c85054e7a9b34953d16a19bb11a378a28a7a5b8beb46df2",
+  "doc": "",
+  "file": "crates/wami-traits/src/lib.rs",
+  "id": "code:crates/wami-traits/src/lib.rs::trait::Store",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "trait",
+  "line_end": 17,
+  "line_start": 8,
+  "name": "Store",
+  "signature": "pub trait Store<T>: Send + Sync"
+}

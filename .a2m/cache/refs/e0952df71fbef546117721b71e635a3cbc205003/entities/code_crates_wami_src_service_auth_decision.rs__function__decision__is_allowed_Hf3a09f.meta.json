@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:81dd8d9575ee58cf3075ec012079bea4576e422f2a1fc6384ccf8b21ba6ca7e7",
+  "doc": "Whether the action is permitted.",
+  "file": "crates/wami/src/service/auth/decision.rs",
+  "id": "code:crates/wami/src/service/auth/decision.rs::function::Decision::is_allowed",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 244,
+  "line_start": 242,
+  "name": "is_allowed",
+  "signature": "pub fn is_allowed(&self) -> bool"
+}

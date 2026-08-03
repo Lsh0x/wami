@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:store/memory/tenant/tests.rs::function::build_test_tenant"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e4b631246c16ac70fc2efe281fe220e96dfa5351750704390b23e399ef26207a",
+  "doc": "",
+  "file": "store/memory/tenant/tests.rs",
+  "id": "code:store/memory/tenant/tests.rs::function::test_tenant_create_and_get",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 46,
+  "line_start": 32,
+  "name": "test_tenant_create_and_get",
+  "signature": "async fn test_tenant_create_and_get()"
+}

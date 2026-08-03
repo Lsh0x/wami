@@ -1,0 +1,31 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::new",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::with_authorizer",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::guard",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::attach_user_policy",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::detach_user_policy",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::list_attached_user_policies",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::attach_group_policy",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::detach_group_policy",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::list_attached_group_policies",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::attach_role_policy",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::detach_role_policy",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::list_attached_role_policies"
+  ],
+  "content_hash": "sha256:850d70b470f5ce089fe4f26d0ef27818aef292f1ca3e142bfa762d5a0cfaedde",
+  "doc": "",
+  "file": "crates/wami/src/service/policies/attachment.rs",
+  "id": "code:crates/wami/src/service/policies/attachment.rs::impl::AttachmentService<S>",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 498,
+  "line_start": 29,
+  "name": "AttachmentService<S>",
+  "signature": "impl<S> AttachmentService<S>"
+}

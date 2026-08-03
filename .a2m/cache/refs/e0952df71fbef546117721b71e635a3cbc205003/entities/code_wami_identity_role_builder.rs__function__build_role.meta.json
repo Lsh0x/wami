@@ -1,0 +1,24 @@
+{
+  "callees": [
+    "extern:Uuid::new_v4",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder",
+    "extern:Utc::now"
+  ],
+  "callers": [
+    "code:crates/wami/examples/02_basic_crud_operations.rs::function::main"
+  ],
+  "children": [],
+  "content_hash": "sha256:d753f64e14e2242b743bf1046bb6dbe69fb8628ddb5eff12d18fb19c56511299",
+  "doc": "",
+  "file": "wami/identity/role/builder.rs",
+  "id": "code:wami/identity/role/builder.rs::function::build_role",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 55,
+  "line_start": 13,
+  "name": "build_role",
+  "signature": "pub fn build_role("
+}

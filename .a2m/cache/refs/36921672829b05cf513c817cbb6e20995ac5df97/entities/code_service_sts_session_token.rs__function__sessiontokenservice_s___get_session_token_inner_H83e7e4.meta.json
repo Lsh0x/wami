@@ -1,0 +1,25 @@
+{
+  "callees": [
+    "extern:Utc::now",
+    "extern:Duration::seconds",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder"
+  ],
+  "callers": [
+    "code:service/sts/session_token.rs::function::SessionTokenService<S>::get_session_token",
+    "code:service/sts/session_token.rs::function::SessionTokenService<S>::get_session_token_with_signing"
+  ],
+  "children": [],
+  "content_hash": "sha256:fef492a088a7f23eba8027ff9e4d4634ae3de03bc039aba16037771ff034bf01",
+  "doc": "Core session token logic (no JWT signing).",
+  "file": "service/sts/session_token.rs",
+  "id": "code:service/sts/session_token.rs::function::SessionTokenService<S>::get_session_token_inner",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 153,
+  "line_start": 77,
+  "name": "get_session_token_inner",
+  "signature": "async fn get_session_token_inner("
+}

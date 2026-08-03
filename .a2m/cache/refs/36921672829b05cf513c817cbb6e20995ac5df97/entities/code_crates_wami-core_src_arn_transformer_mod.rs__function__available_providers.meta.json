@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5ffcf9ca604c8626b1aafac1c767396fa41b7f29e6329245f1314473037254e6",
+  "doc": "The providers this build can translate for.\n\nWith no provider feature enabled — the default — this is empty and\n[`get_transformer`] returns `None` for everything. That is correct for a\ndeployment that syncs with no cloud, and indistinguishable from a typo\nwithout somewhere to ask. This is that place, so the answer does not\nrequire reading a Cargo.toml.",
+  "file": "crates/wami-core/src/arn/transformer/mod.rs",
+  "id": "code:crates/wami-core/src/arn/transformer/mod.rs::function::available_providers",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 123,
+  "line_start": 112,
+  "name": "available_providers",
+  "signature": "pub fn available_providers() -> &'static [&'static str]"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::create_oidc_provider"
+  ],
+  "children": [],
+  "content_hash": "sha256:ca239abf90cd8726d710891276f68073a7e4b6b6e714e6607a1712c6aeb1e264",
+  "doc": "Validate client ID list\n\nEnsures client IDs are valid and the list isn't too large.",
+  "file": "wami/identity/identity_provider/operations.rs",
+  "id": "code:wami/identity/identity_provider/operations.rs::function::validate_client_id_list",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 171,
+  "line_start": 143,
+  "name": "validate_client_id_list",
+  "signature": "pub fn validate_client_id_list(client_ids: &[String]) -> Result<()>"
+}

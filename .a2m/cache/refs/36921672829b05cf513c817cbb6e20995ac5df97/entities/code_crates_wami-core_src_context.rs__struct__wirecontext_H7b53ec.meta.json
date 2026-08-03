@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3d4c9d775589d72bedb9b46ad562e5963a6555d037796d8f72ae57ee992c0998",
+  "doc": "",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::struct::WireContext",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 223,
+  "line_start": 212,
+  "name": "WireContext",
+  "signature": "struct WireContext"
+}

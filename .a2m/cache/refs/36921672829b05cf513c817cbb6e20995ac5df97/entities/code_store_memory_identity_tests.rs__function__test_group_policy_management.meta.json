@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:group_builder::build_group"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:768c5b6bf564a1ae450f7134afe580b87f26bded54140eb0b0ac3956ed3a3b3b",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_group_policy_management",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 399,
+  "line_start": 354,
+  "name": "test_group_policy_management",
+  "signature": "async fn test_group_policy_management()"
+}

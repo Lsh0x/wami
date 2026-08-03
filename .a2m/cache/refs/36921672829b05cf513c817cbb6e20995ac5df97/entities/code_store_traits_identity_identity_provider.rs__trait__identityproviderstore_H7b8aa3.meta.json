@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f31e5bce6ee84d84314895fcacf2ed3596a267ab63ee467d380639bb2a7a3b63",
+  "doc": "",
+  "file": "store/traits/identity/identity_provider.rs",
+  "id": "code:store/traits/identity/identity_provider.rs::trait::IdentityProviderStore",
+  "implemented_by": [
+    "code:store/memory/identity/identity_provider.rs::impl::IdentityProviderStore for InMemoryWamiStore"
+  ],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "trait",
+  "line_end": 69,
+  "line_start": 12,
+  "name": "IdentityProviderStore",
+  "signature": "pub trait IdentityProviderStore: Send + Sync"
+}

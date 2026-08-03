@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [
+    "code:crates/wami/src/service/auth/policy_evaluator.rs::function::evaluate_policy_document"
+  ],
+  "children": [],
+  "content_hash": "sha256:a02d256bb4064a62dcbfe43425d581540892280a79eea8033a5b5ae85e9c6ae7",
+  "doc": "Build a [`ConditionContext`] from a [`WamiContext`] and the target resource ARN.",
+  "file": "crates/wami/src/service/auth/policy_evaluator.rs",
+  "id": "code:crates/wami/src/service/auth/policy_evaluator.rs::function::build_condition_context",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 159,
+  "line_start": 132,
+  "name": "build_condition_context",
+  "signature": "pub fn build_condition_context(context: &WamiContext, resource_arn: &WamiArn) -> ConditionContext"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a476d7b5e6306ef104fb29e764d2e33a5ed8185120ea8c0ba46dd6a466e6b8b2",
+  "doc": "",
+  "file": "store/memory/sso_admin/application.rs",
+  "id": "code:store/memory/sso_admin/application.rs::function::ApplicationStore for InMemorySsoAdminStore::list_applications",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 23,
+  "line_start": 21,
+  "name": "list_applications",
+  "signature": "async fn list_applications(&self, _instance_arn: &str) -> Result<Vec<Application>>"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:881a377895b324ed1ce9229ab04da6e921238919135a51a4761cad61cff2786a",
+  "doc": "Issues, introspects and revokes OAuth access tokens.",
+  "file": "crates/wami/src/service/oauth/mod.rs",
+  "id": "code:crates/wami/src/service/oauth/mod.rs::struct::OAuthService",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 85,
+  "line_start": 78,
+  "name": "OAuthService",
+  "signature": "pub struct OAuthService<S>"
+}

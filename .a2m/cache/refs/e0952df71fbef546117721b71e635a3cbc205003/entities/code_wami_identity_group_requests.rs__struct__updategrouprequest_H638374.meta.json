@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b3dbea87a5e41757f5060ba7a715ad15e3c17d338e997e72e6c74e92b8e0ffaf",
+  "doc": "",
+  "file": "wami/identity/group/requests.rs",
+  "id": "code:wami/identity/group/requests.rs::struct::UpdateGroupRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 22,
+  "line_start": 18,
+  "name": "UpdateGroupRequest",
+  "signature": "pub struct UpdateGroupRequest"
+}

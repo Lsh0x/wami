@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0bb2d3edf3236fe3450bbf9a73cdc25ae136436e673cb54dfb45258e3766136a",
+  "doc": "Get all descendant tenant IDs (excluding self)",
+  "file": "wami/tenant/hierarchy.rs",
+  "id": "code:wami/tenant/hierarchy.rs::function::TenantNode::all_descendants",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 38,
+  "line_start": 29,
+  "name": "all_descendants",
+  "signature": "pub fn all_descendants(&self) -> Vec<TenantId>"
+}

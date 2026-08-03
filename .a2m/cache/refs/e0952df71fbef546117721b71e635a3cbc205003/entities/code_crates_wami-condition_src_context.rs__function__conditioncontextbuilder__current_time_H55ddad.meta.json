@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:310a6b631d647d4cfa968dbeba55fa4a1ada91bb6c63cd0af699db4c94eaa5cf",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::current_time",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 271,
+  "line_start": 268,
+  "name": "current_time",
+  "signature": "pub fn current_time(mut self, time: DateTime<Utc>) -> Self"
+}

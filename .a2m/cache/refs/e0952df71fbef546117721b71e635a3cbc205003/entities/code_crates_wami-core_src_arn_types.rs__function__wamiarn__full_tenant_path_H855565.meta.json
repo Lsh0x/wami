@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ba6a797d8e40e04b5c7cf1a092062055641a40e4b7058aa35d08a929c101db96",
+  "doc": "Returns the full tenant path as a string.",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::function::WamiArn::full_tenant_path",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 393,
+  "line_start": 391,
+  "name": "full_tenant_path",
+  "signature": "pub fn full_tenant_path(&self) -> String"
+}

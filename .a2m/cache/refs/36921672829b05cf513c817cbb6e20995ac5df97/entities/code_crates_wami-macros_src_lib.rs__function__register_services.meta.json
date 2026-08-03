@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-macros/src/register.rs::function::expand"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:4b937db133dc2a2db8bbfdc0333615c4515503c8d1acc7c00e2d648c2ab9eda7",
+  "doc": "",
+  "file": "crates/wami-macros/src/lib.rs",
+  "id": "code:crates/wami-macros/src/lib.rs::function::register_services",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 24,
+  "line_start": 22,
+  "name": "register_services",
+  "signature": "pub fn register_services(input: TokenStream) -> TokenStream"
+}

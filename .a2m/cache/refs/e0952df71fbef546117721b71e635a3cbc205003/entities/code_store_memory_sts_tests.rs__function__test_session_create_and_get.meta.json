@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "extern:Utc::now",
+    "extern:Duration::hours"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:144ed2c838685f09b6c9bffc376be52437420d07443a12202aec44521c58cb0d",
+  "doc": "",
+  "file": "store/memory/sts/tests.rs",
+  "id": "code:store/memory/sts/tests.rs::function::test_session_create_and_get",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 61,
+  "line_start": 31,
+  "name": "test_session_create_and_get",
+  "signature": "async fn test_session_create_and_get()"
+}

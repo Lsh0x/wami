@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:9c19b5f8f4051a4c17404f1bc472000464f17022ab66565305d4c408c0b798a5",
+  "doc": "Unwraps to User (panics if not User)",
+  "file": "store/resource.rs",
+  "id": "code:store/resource.rs::function::Resource::into_user",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 198,
+  "line_start": 192,
+  "name": "into_user",
+  "signature": "pub fn into_user(self) -> User"
+}

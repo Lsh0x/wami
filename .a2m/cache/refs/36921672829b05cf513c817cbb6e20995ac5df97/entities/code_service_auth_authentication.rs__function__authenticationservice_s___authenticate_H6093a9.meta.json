@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:service/auth/authentication.rs::function::AuthenticationService<S>::create_context_from_user",
+    "code:service/auth/authentication.rs::function::AuthenticationService<S>::validate_access_key"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:45c660235b62c9f9363b65f4abc4b9f449424ff76e281b4af17f1891294e729e",
+  "doc": "Authenticate with access key credentials\n\nThis is the main authentication method. It validates the credentials\nand returns a `WamiContext` that can be used for subsequent operations.\n\n# Arguments\n\n* `access_key_id` - The public access key identifier\n* `secret_access_key` - The secret access key\n\n# Returns\n\nA `WamiContext` containing the authenticated user's information\n\n# Errors\n\nReturns an error if:\n- The access key doesn't exist\n- The secret doesn't match\n- The access key is inactive\n- The user doesn't exist",
+  "file": "service/auth/authentication.rs",
+  "id": "code:service/auth/authentication.rs::function::AuthenticationService<S>::authenticate",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 95,
+  "line_start": 83,
+  "name": "authenticate",
+  "signature": "pub async fn authenticate("
+}

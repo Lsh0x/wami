@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::introspect_token"
+  ],
+  "children": [],
+  "content_hash": "sha256:2b7f1c37d4455f5a82b680d9c1ffb8daaba12fbaff5c50c2a40e1e9cde9f8b62",
+  "doc": "The answer for a token that is expired, revoked, forged, or unknown.\n\nOne shape for all four on purpose: telling them apart would let an\nattacker probe for which token ids exist.",
+  "file": "crates/wami/src/wami/oauth/model.rs",
+  "id": "code:crates/wami/src/wami/oauth/model.rs::function::TokenIntrospection::inactive",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 217,
+  "line_start": 207,
+  "name": "inactive",
+  "signature": "pub fn inactive() -> Self"
+}

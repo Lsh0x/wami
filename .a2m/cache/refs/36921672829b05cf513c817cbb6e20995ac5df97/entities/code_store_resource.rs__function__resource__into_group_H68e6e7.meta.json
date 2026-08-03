@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0a5f5cd93628a4ae02f3c236a5353d9d7e6daa47ffef2172c79f036aa3fab43a",
+  "doc": "Unwraps to Group (panics if not Group)",
+  "file": "store/resource.rs",
+  "id": "code:store/resource.rs::function::Resource::into_group",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 225,
+  "line_start": 219,
+  "name": "into_group",
+  "signature": "pub fn into_group(self) -> Group"
+}

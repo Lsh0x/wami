@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7b5100fba9e7a90a69734c45017cf50e1cea6261a805315c911c533aa1c37282",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_all_numeric_ifexists_operators",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 3362,
+  "line_start": 3302,
+  "name": "test_all_numeric_ifexists_operators",
+  "signature": "fn test_all_numeric_ifexists_operators()"
+}

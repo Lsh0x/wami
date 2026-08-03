@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-provider/src/lib.rs::function::dyn CloudProvider::tenant_aware_path",
+    "code:crates/wami-provider/src/lib.rs::function::dyn CloudProvider::extract_tenant_from_path"
+  ],
+  "content_hash": "sha256:4433404e8fc31a1e1e3868336184a2ec442e6877000ea630bff40aa9037220ad",
+  "doc": "Helper functions for multi-tenant resource management",
+  "file": "crates/wami-provider/src/lib.rs",
+  "id": "code:crates/wami-provider/src/lib.rs::impl::dyn CloudProvider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 489,
+  "line_start": 422,
+  "name": "dyn CloudProvider",
+  "signature": "impl dyn CloudProvider"
+}

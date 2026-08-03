@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:647d7a31911080fba9cc4b0c34edc6212fbc38f92eb1745b59d5b2d1f48fe37c",
+  "doc": "Converts service name to PascalCase\n\n```rust\nuse wami_provider_aws::AwsProvider;\n\nlet pascal = AwsProvider::to_pascal_case(\"elastic-beanstalk\");\nassert_eq!(pascal, \"ElasticBeanstalk\");\n```",
+  "file": "crates/cloud-provider/wami-provider-aws/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-aws/src/lib.rs::function::AwsProvider::to_pascal_case",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 103,
+  "line_start": 93,
+  "name": "to_pascal_case",
+  "signature": "pub fn to_pascal_case(name: &str) -> String"
+}

@@ -1,0 +1,29 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/oauth/oidc.rs::trait::OidcStore",
+    "code:crates/wami/src/service/oauth/oidc.rs::impl::OidcStore for T",
+    "code:crates/wami/src/service/oauth/oidc.rs::trait::UserClaimsSource",
+    "code:crates/wami/src/service/oauth/oidc.rs::struct::AuthorizationRequest",
+    "code:crates/wami/src/service/oauth/oidc.rs::enum::Authorization",
+    "code:crates/wami/src/service/oauth/oidc.rs::struct::CodeExchange",
+    "code:crates/wami/src/service/oauth/oidc.rs::struct::OidcTokens",
+    "code:crates/wami/src/service/oauth/oidc.rs::impl::OAuthService<S>",
+    "code:crates/wami/src/service/oauth/oidc.rs::function::refused_code",
+    "code:crates/wami/src/service/oauth/oidc.rs::function::refused_refresh"
+  ],
+  "content_hash": "bf09880361257ee41cec53062fc02c33c7dd581530c9cb6603461c3f17110c08",
+  "doc": "",
+  "file": "crates/wami/src/service/oauth/oidc.rs",
+  "id": "code:crates/wami/src/service/oauth/oidc.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 1216,
+  "line_start": 1,
+  "name": "oidc",
+  "signature": ""
+}

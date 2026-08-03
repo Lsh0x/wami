@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/sts/session_token/requests.rs::struct::GetSessionTokenRequest",
+    "code:wami/sts/session_token/requests.rs::impl::GetSessionTokenRequest"
+  ],
+  "content_hash": "f625bb1ce20ea921c54aab99a239cb22b271fe249e7bf14afe523f13c722bf72",
+  "doc": "",
+  "file": "wami/sts/session_token/requests.rs",
+  "id": "code:wami/sts/session_token/requests.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 61,
+  "line_start": 1,
+  "name": "requests",
+  "signature": ""
+}

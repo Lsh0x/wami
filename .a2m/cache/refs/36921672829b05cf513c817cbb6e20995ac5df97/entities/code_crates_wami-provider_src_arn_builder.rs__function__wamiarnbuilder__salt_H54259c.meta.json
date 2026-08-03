@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-provider/src/arn_builder.rs::function::WamiArnBuilder::hash_account"
+  ],
+  "children": [],
+  "content_hash": "sha256:84127ad40049532b4efe0bf3a267869d02ed8f7f77cbd5605a4fce3f28fe5b62",
+  "doc": "Gets the configured salt (if any)",
+  "file": "crates/wami-provider/src/arn_builder.rs",
+  "id": "code:crates/wami-provider/src/arn_builder.rs::function::WamiArnBuilder::salt",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 110,
+  "line_start": 108,
+  "name": "salt",
+  "signature": "pub fn salt(&self) -> Option<&str>"
+}

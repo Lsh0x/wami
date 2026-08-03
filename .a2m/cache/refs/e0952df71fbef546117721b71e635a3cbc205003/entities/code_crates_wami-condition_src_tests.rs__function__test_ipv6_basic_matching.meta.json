@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:487aa69f6c1f338cc573380de5fddb2804a052a0759e5a657b14caaa0f3efc17",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_ipv6_basic_matching",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 6203,
+  "line_start": 6173,
+  "name": "test_ipv6_basic_matching",
+  "signature": "fn test_ipv6_basic_matching()"
+}

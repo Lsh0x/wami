@@ -1,0 +1,24 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/cloud-provider/wami-provider-aws/src/lib.rs::function::AwsProvider::new",
+    "code:crates/cloud-provider/wami-provider-aws/src/lib.rs::function::AwsProvider::with_limits",
+    "code:crates/cloud-provider/wami-provider-aws/src/lib.rs::function::AwsProvider::extract_service_name",
+    "code:crates/cloud-provider/wami-provider-aws/src/lib.rs::function::AwsProvider::to_pascal_case",
+    "code:crates/cloud-provider/wami-provider-aws/src/lib.rs::function::AwsProvider::random_alphanumeric"
+  ],
+  "content_hash": "sha256:9426d6d2964e9f083b0924346911a9ff504c0cd128dd8855646e03396c289f90",
+  "doc": "",
+  "file": "crates/cloud-provider/wami-provider-aws/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-aws/src/lib.rs::impl::AwsProvider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 126,
+  "line_start": 49,
+  "name": "AwsProvider",
+  "signature": "impl AwsProvider"
+}

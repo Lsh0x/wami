@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/wami/sts/jwt.rs::function::thumbprint"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ea38e23fafbc2f18cfaf38b7f3dea6a9de7fdf0d6c5d0cff409835556cc8b59b",
+  "doc": "",
+  "file": "crates/wami/src/wami/sts/jwt.rs",
+  "id": "code:crates/wami/src/wami/sts/jwt.rs::function::KeyPair::new",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 135,
+  "line_start": 128,
+  "name": "new",
+  "signature": "fn new(signing_key: SigningKey) -> Self"
+}

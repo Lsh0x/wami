@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:8b09a1978c8b7de6af4c23e9e91cfbd0b4e6fa810922e370a770774ea8af9d7a",
+  "doc": "",
+  "file": "crates/wami/src/service/auth/decision.rs",
+  "id": "code:crates/wami/src/service/auth/decision.rs::struct::StatementRef",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 174,
+  "line_start": 163,
+  "name": "StatementRef",
+  "signature": "pub struct StatementRef"
+}

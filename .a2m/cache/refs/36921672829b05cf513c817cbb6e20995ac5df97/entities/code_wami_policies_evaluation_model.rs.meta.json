@@ -1,0 +1,22 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/policies/evaluation/model.rs::struct::EvaluationResult",
+    "code:wami/policies/evaluation/model.rs::struct::StatementMatch",
+    "code:wami/policies/evaluation/model.rs::struct::ContextEntry"
+  ],
+  "content_hash": "0927a2441088d1f45948bdebd714ada587fa55463dcf37ca78e19a9593631c0d",
+  "doc": "",
+  "file": "wami/policies/evaluation/model.rs",
+  "id": "code:wami/policies/evaluation/model.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 43,
+  "line_start": 1,
+  "name": "model",
+  "signature": ""
+}

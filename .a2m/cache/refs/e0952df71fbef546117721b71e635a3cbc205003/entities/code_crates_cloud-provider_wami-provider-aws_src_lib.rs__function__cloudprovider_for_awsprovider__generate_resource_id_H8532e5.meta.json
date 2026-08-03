@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:06039f28cefdefc67cc7eab0006abafc852cab7bc01c1b3e03c7e1082aa3e4dc",
+  "doc": "",
+  "file": "crates/cloud-provider/wami-provider-aws/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-aws/src/lib.rs::function::CloudProvider for AwsProvider::generate_resource_id",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 186,
+  "line_start": 165,
+  "name": "generate_resource_id",
+  "signature": "fn generate_resource_id(&self, resource_type: ResourceType) -> String"
+}

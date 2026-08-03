@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/sso_admin/permission_set/model.rs::struct::PermissionSet"
+  ],
+  "content_hash": "dacca92f43eac13dd35a7eb81faae03809c64451816bef57cf5f4b2e4aeeadfd",
+  "doc": "",
+  "file": "wami/sso_admin/permission_set/model.rs",
+  "id": "code:wami/sso_admin/permission_set/model.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 30,
+  "line_start": 1,
+  "name": "model",
+  "signature": ""
+}

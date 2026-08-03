@@ -1,0 +1,25 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/sso_admin/account_assignment.rs::function::AccountAssignmentStore for InMemorySsoAdminStore::create_account_assignment",
+    "code:store/memory/sso_admin/account_assignment.rs::function::AccountAssignmentStore for InMemorySsoAdminStore::get_account_assignment",
+    "code:store/memory/sso_admin/account_assignment.rs::function::AccountAssignmentStore for InMemorySsoAdminStore::delete_account_assignment",
+    "code:store/memory/sso_admin/account_assignment.rs::function::AccountAssignmentStore for InMemorySsoAdminStore::list_account_assignments"
+  ],
+  "content_hash": "sha256:bea5b2370170ab62be3e99d6baebedb51ec2e12007f59f309818524c6d413d7b",
+  "doc": "",
+  "file": "store/memory/sso_admin/account_assignment.rs",
+  "id": "code:store/memory/sso_admin/account_assignment.rs::impl::AccountAssignmentStore for InMemorySsoAdminStore",
+  "implemented_by": [],
+  "implements": [
+    "code:store/traits/sso_admin/account_assignment.rs::trait::AccountAssignmentStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 52,
+  "line_start": 10,
+  "name": "AccountAssignmentStore for InMemorySsoAdminStore",
+  "signature": "impl AccountAssignmentStore for InMemorySsoAdminStore"
+}

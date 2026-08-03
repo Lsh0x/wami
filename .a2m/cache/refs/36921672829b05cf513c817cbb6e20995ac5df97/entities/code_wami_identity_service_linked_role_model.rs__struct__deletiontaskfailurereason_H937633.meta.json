@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c4ee0aa398817767a866116d311a018d45d0fb66d81fc5b3eb32be104333ebac",
+  "doc": "",
+  "file": "wami/identity/service_linked_role/model.rs",
+  "id": "code:wami/identity/service_linked_role/model.rs::struct::DeletionTaskFailureReason",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 30,
+  "line_start": 25,
+  "name": "DeletionTaskFailureReason",
+  "signature": "pub struct DeletionTaskFailureReason"
+}

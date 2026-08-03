@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder",
+    "extern:Utc::now"
+  ],
+  "callers": [
+    "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::create_saml_provider"
+  ],
+  "children": [],
+  "content_hash": "sha256:b7646e3cc962e3343a1de1538826e56fc004d54191a87af05e2c1dc08599b38e",
+  "doc": "",
+  "file": "wami/identity/identity_provider/builder.rs",
+  "id": "code:wami/identity/identity_provider/builder.rs::function::build_saml_provider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 48,
+  "line_start": 16,
+  "name": "build_saml_provider",
+  "signature": "pub fn build_saml_provider("
+}

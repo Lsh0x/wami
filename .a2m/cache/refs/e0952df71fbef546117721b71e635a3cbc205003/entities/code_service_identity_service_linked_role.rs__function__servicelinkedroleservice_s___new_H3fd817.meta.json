@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d2cadb464a4f3d0b92e5e007cf6700a4d4bdad2a2d747c3454c16ea8b742c5e0",
+  "doc": "",
+  "file": "service/identity/service_linked_role.rs",
+  "id": "code:service/identity/service_linked_role.rs::function::ServiceLinkedRoleService<S>::new",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 36,
+  "line_start": 34,
+  "name": "new",
+  "signature": "pub fn new(store: Arc<RwLock<S>>) -> Self"
+}

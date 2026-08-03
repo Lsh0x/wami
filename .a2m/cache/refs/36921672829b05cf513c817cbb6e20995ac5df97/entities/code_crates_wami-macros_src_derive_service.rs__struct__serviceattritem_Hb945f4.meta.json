@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:da0def4b66285ac7de73d0c49386d71d63d956efc7d151df47d3ee3d7653fb05",
+  "doc": "",
+  "file": "crates/wami-macros/src/derive_service.rs",
+  "id": "code:crates/wami-macros/src/derive_service.rs::struct::ServiceAttrItem",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 104,
+  "line_start": 101,
+  "name": "ServiceAttrItem",
+  "signature": "struct ServiceAttrItem"
+}

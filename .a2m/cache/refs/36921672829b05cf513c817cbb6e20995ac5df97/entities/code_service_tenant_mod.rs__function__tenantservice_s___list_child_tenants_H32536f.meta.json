@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/tenant/mod.rs::function::TenantService<S>::validate_name_uniqueness",
+    "code:service/tenant/mod.rs::function::TenantService<S>::find_tenant_by_name"
+  ],
+  "children": [],
+  "content_hash": "sha256:6c3728a42bac57e37c34448ad045f8c36d83be9624d5589084c1cdebe08a88c2",
+  "doc": "List child tenants of a parent",
+  "file": "service/tenant/mod.rs",
+  "id": "code:service/tenant/mod.rs::function::TenantService<S>::list_child_tenants",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 177,
+  "line_start": 175,
+  "name": "list_child_tenants",
+  "signature": "pub async fn list_child_tenants(&self, parent_id: &TenantId) -> Result<Vec<Tenant>>"
+}

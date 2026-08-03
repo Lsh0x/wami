@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7c435c3bdbd4e8d243346499f40bddc187722b25d1ca0eb5cf365f28829d6a92",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::function::fmt::Display for Service::fmt",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 313,
+  "line_start": 311,
+  "name": "fmt",
+  "signature": "fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result"
+}

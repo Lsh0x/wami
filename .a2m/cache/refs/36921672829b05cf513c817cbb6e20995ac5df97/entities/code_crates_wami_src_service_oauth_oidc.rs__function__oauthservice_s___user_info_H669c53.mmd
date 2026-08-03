@@ -1,0 +1,13 @@
+%% id: code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::user_info
+%% kind: function
+%% file: crates/wami/src/service/oauth/oidc.rs:403-435
+%% content_hash: sha256:9a82019182ca2cdf5db9d542e966e4c59b19a3db40b385adbdf084ecb513d4f0
+%% signature: pub async fn user_info(&self, access_token: &str, audience: &str) -> Result<UserInfo>
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___user_info_H669c5393:::function[user_info]
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___user_info_H669c5393 -- calls --> code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___profile_of_Hbe7885bb:::function[profile_of]
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___user_info_H669c5393 -- calls --> extern_Utc__now_H7825cf5c:::function[now]
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___user_info_H669c5393 -- calls --> code_crates_wami_src_wami_oauth_oidc_rs__function__build_user_info_H9e7c0cb0:::function[build_user_info]

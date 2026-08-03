@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ecdc7c04076cb252ed626e8ca5c52ef1eda457f529f5b78e333c0eb6095c3ce4",
+  "doc": "",
+  "file": "service/identity/service_linked_role.rs",
+  "id": "code:service/identity/service_linked_role.rs::struct::ServiceLinkedRoleService",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 31,
+  "line_start": 28,
+  "name": "ServiceLinkedRoleService",
+  "signature": "pub struct ServiceLinkedRoleService<S>"
+}

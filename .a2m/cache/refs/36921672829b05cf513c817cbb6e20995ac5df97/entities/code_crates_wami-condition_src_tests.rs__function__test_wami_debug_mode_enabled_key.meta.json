@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b5b8807796bc53d81d2553234de910325dbf073e06003df0ed94769b4827a491",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wami_debug_mode_enabled_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7680,
+  "line_start": 7676,
+  "name": "test_wami_debug_mode_enabled_key",
+  "signature": "fn test_wami_debug_mode_enabled_key()"
+}

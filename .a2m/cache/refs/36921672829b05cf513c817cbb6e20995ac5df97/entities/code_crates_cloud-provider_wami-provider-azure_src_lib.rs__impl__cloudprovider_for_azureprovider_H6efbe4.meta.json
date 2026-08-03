@@ -1,0 +1,29 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/cloud-provider/wami-provider-azure/src/lib.rs::function::CloudProvider for AzureProvider::name",
+    "code:crates/cloud-provider/wami-provider-azure/src/lib.rs::function::CloudProvider for AzureProvider::generate_resource_identifier",
+    "code:crates/cloud-provider/wami-provider-azure/src/lib.rs::function::CloudProvider for AzureProvider::generate_resource_id",
+    "code:crates/cloud-provider/wami-provider-azure/src/lib.rs::function::CloudProvider for AzureProvider::resource_limits",
+    "code:crates/cloud-provider/wami-provider-azure/src/lib.rs::function::CloudProvider for AzureProvider::validate_service_name",
+    "code:crates/cloud-provider/wami-provider-azure/src/lib.rs::function::CloudProvider for AzureProvider::validate_path",
+    "code:crates/cloud-provider/wami-provider-azure/src/lib.rs::function::CloudProvider for AzureProvider::generate_service_linked_role_name",
+    "code:crates/cloud-provider/wami-provider-azure/src/lib.rs::function::CloudProvider for AzureProvider::generate_service_linked_role_path"
+  ],
+  "content_hash": "sha256:dd09291e2e0d830a52f60c4675ced1337b207d64a7b0d149f66416d21c9f1356",
+  "doc": "",
+  "file": "crates/cloud-provider/wami-provider-azure/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-azure/src/lib.rs::impl::CloudProvider for AzureProvider",
+  "implemented_by": [],
+  "implements": [
+    "code:crates/wami-provider/src/lib.rs::trait::CloudProvider"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 111,
+  "line_start": 43,
+  "name": "CloudProvider for AzureProvider",
+  "signature": "impl CloudProvider for AzureProvider"
+}

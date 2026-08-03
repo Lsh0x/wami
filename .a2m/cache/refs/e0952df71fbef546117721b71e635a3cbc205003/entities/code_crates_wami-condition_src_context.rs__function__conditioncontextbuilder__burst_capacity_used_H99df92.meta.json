@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:4c689be1bf732bbf21883d200e18bb235c0f5ee193105a533de5963a6e0dcbbf",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::burst_capacity_used",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 537,
+  "line_start": 534,
+  "name": "burst_capacity_used",
+  "signature": "pub fn burst_capacity_used(mut self, used: f64) -> Self"
+}

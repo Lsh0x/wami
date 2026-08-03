@@ -1,0 +1,13 @@
+%% id: code:service/gdpr/mod.rs::function::GdprService<S>::revoke_consent
+%% kind: function
+%% file: service/gdpr/mod.rs:91-129
+%% content_hash: sha256:da1a4b12d9750d3af23d325f7b0e504270b6d665fa812e23ceab8940eb47c7e1
+%% signature: pub async fn revoke_consent(
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_service_gdpr_mod_rs__function__GdprService_S___revoke_consent_H55f80517:::function[revoke_consent]
+  code_service_gdpr_mod_rs__function__GdprService_S___revoke_consent_H55f80517 -- calls --> code_service_gdpr_mod_rs__function__generate_id_H7ed8ff97:::function[generate_id]
+  code_service_gdpr_mod_rs__function__GdprService_S___revoke_consent_H55f80517 -- calls --> extern_Utc__now_H7825cf5c:::function[now]
+  code_service_gdpr_mod_rs__function__GdprService_S___grant_consent_H709ee620:::function[grant_consent] -- calls --> code_service_gdpr_mod_rs__function__GdprService_S___revoke_consent_H55f80517

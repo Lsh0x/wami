@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:fcf929aaf5a85c53e93743f9b01633237f2b4b6035d2f827ef13b599eb31c7b7",
+  "doc": "",
+  "file": "store/memory/sts/session.rs",
+  "id": "code:store/memory/sts/session.rs::function::SessionStore for InMemoryWamiStore::create_session",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 39,
+  "line_start": 35,
+  "name": "create_session",
+  "signature": "async fn create_session(&mut self, session: StsSession) -> Result<StsSession>"
+}

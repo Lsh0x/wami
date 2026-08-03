@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:947cb8bb67125f7251707b5c372d11edbca792de13974d84c5b24e3ebab3b558",
+  "doc": "Add a provider configuration to a Policy",
+  "file": "wami/policies/policy/builder.rs",
+  "id": "code:wami/policies/policy/builder.rs::function::add_provider_to_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 80,
+  "line_start": 77,
+  "name": "add_provider_to_policy",
+  "signature": "pub fn add_provider_to_policy(mut policy: Policy, config: ProviderConfig) -> Policy"
+}

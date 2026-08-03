@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:77a6677d92daf5d10d7586a9e83fab7f985a5743fe8604a259c19e5b10503e4f",
+  "doc": "",
+  "file": "store/memory/identity/identity_provider.rs",
+  "id": "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::get_oidc_provider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 105,
+  "line_start": 103,
+  "name": "get_oidc_provider",
+  "signature": "async fn get_oidc_provider(&self, arn: &str) -> Result<Option<OidcProvider>>"
+}

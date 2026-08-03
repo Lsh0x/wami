@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:216cd375642eb2167c897da8aae3f64d258bf27aa7e239bd3e054bff78fb8870",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_all_arn_ifexists_operators",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 3471,
+  "line_start": 3425,
+  "name": "test_all_arn_ifexists_operators",
+  "signature": "fn test_all_arn_ifexists_operators()"
+}

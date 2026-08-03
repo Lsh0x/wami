@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/identity/group/model.rs::struct::Group"
+  ],
+  "content_hash": "e28e1fd637968f28d88188e7f7a471a63661745bfd55f502ca7d32e1a10cf62b",
+  "doc": "",
+  "file": "wami/identity/group/model.rs",
+  "id": "code:wami/identity/group/model.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 59,
+  "line_start": 1,
+  "name": "model",
+  "signature": ""
+}

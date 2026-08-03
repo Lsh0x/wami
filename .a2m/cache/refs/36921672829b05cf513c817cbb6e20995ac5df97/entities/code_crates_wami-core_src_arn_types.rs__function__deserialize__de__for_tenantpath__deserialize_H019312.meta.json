@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "extern:String::deserialize",
+    "extern:serde::de::Error::custom"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:28a8caeac44c62851fde75d86f3257f3ead24f5761e416ac53a7614aa190a451",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::function::Deserialize<'de> for TenantPath::deserialize",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 192,
+  "line_start": 168,
+  "name": "deserialize",
+  "signature": "fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>"
+}

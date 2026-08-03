@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7383b498920180997e25b53bfeb47fe502f7494fc3c48c81edf13d7453114797",
+  "doc": "",
+  "file": "wami/policies/attachment/responses.rs",
+  "id": "code:wami/policies/attachment/responses.rs::struct::DetachRolePolicyResponse",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 60,
+  "line_start": 57,
+  "name": "DetachRolePolicyResponse",
+  "signature": "pub struct DetachRolePolicyResponse"
+}

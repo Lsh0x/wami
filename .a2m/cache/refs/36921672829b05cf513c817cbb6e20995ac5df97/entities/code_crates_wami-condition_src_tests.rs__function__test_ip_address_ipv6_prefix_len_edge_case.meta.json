@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b4ee88f75fe1d3e19f259029ef137f9bc5b18521278bdc09589269b64aabf70a",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_ip_address_ipv6_prefix_len_edge_case",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 4335,
+  "line_start": 4321,
+  "name": "test_ip_address_ipv6_prefix_len_edge_case",
+  "signature": "fn test_ip_address_ipv6_prefix_len_edge_case()"
+}

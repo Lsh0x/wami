@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "extern:Utc::now",
+    "extern:Duration::hours"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3ca1f3a295cee231aa83a33e3a72c2794addadcc5900fc802fc363b51863d11f",
+  "doc": "",
+  "file": "store/memory/sts/tests.rs",
+  "id": "code:store/memory/sts/tests.rs::function::test_session_with_role",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 174,
+  "line_start": 144,
+  "name": "test_session_with_role",
+  "signature": "async fn test_session_with_role()"
+}

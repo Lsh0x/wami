@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0ad75e645f2762ed6a882692c0a3bb8b3abe33cb24f6251f5acfc7385985989c",
+  "doc": "Set user's tenant ID (pure transformation)",
+  "file": "wami/identity/user/builder.rs",
+  "id": "code:wami/identity/user/builder.rs::function::set_tenant_id",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 121,
+  "line_start": 118,
+  "name": "set_tenant_id",
+  "signature": "pub fn set_tenant_id(mut user: User, tenant_id: crate::wami::tenant::TenantId) -> User"
+}

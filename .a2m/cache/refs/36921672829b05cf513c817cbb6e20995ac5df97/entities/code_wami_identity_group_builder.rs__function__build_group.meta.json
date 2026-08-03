@@ -1,0 +1,24 @@
+{
+  "callees": [
+    "extern:Uuid::new_v4",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder",
+    "extern:Utc::now"
+  ],
+  "callers": [
+    "code:crates/wami/examples/02_basic_crud_operations.rs::function::main"
+  ],
+  "children": [],
+  "content_hash": "sha256:860ecaaa20975f6e43188078c93a624dda49550753fbc9bc403ee6ba6c4cdf3d",
+  "doc": "",
+  "file": "wami/identity/group/builder.rs",
+  "id": "code:wami/identity/group/builder.rs::function::build_group",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 48,
+  "line_start": 13,
+  "name": "build_group",
+  "signature": "pub fn build_group("
+}

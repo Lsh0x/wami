@@ -1,0 +1,12 @@
+%% id: code:crates/wami/src/service/auth/policy_evaluator.rs::function::matches_action
+%% kind: function
+%% file: crates/wami/src/service/auth/policy_evaluator.rs:102-109
+%% content_hash: sha256:a8678b8aca3fe65c5625e5a0d2268f514328c4540423c848e1985b30dd86b8a4
+%% signature: pub fn matches_action(policy_actions: &[String], action: &str) -> bool
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_crates_wami_src_service_auth_policy_evaluator_rs__function__matches_action_Hb34ca093:::function[matches_action]
+  code_crates_wami_src_service_auth_policy_evaluator_rs__function__matches_action_Hb34ca093 -- calls --> code_crates_wami_core_src_arn_matching_rs__function__glob_match_H6425874b:::function[glob_match]
+  code_crates_wami_src_service_auth_policy_evaluator_rs__function__evaluate_policy_document_Hac84d3b8:::function[evaluate_policy_document] -- calls --> code_crates_wami_src_service_auth_policy_evaluator_rs__function__matches_action_Hb34ca093

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "90cdb2d39c1705a4a50bb2c69aa4516220e95128991cfff0a9d095a2c2f26d97",
+  "doc": "",
+  "file": "wami/identity/role/operations.rs",
+  "id": "code:wami/identity/role/operations.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 76,
+  "line_start": 1,
+  "name": "operations",
+  "signature": ""
+}

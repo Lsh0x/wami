@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami-provider/src/arn_builder.rs::function::ParsedArn::parse_resource_path"
+  ],
+  "callers": [
+    "code:crates/wami/examples/arn_architecture_demo.rs::function::demo_arn_parsing"
+  ],
+  "children": [],
+  "content_hash": "sha256:a409159832fc565496dcbd6a290068cdaf3d741dbea647afd0fe56f9c75f756d",
+  "doc": "",
+  "file": "crates/wami-provider/src/arn_builder.rs",
+  "id": "code:crates/wami-provider/src/arn_builder.rs::function::ParsedArn::from_arn",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 187,
+  "line_start": 150,
+  "name": "from_arn",
+  "signature": "pub fn from_arn(arn: &str) -> Result<Self>"
+}

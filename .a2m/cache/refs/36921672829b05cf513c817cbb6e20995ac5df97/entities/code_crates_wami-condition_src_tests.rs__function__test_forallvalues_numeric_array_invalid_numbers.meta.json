@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:9f8f5505106694de7fbdb5509f242fbed28c5649553221a3f3f1b95e8ed83366",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_forallvalues_numeric_array_invalid_numbers",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 6836,
+  "line_start": 6813,
+  "name": "test_forallvalues_numeric_array_invalid_numbers",
+  "signature": "fn test_forallvalues_numeric_array_invalid_numbers()"
+}

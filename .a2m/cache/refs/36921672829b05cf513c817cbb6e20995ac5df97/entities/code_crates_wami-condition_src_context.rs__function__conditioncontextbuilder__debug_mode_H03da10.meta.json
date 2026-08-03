@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:31b4b9dd87d732964265cec26315be74ce8794bef54fa1bbf89be773048ab8e4",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::debug_mode",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 563,
+  "line_start": 560,
+  "name": "debug_mode",
+  "signature": "pub fn debug_mode(mut self, enabled: bool) -> Self"
+}

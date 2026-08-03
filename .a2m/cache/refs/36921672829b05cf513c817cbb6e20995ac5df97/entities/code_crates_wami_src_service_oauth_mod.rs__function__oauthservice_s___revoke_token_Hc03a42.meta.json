@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:37c76435c8097128cd40cb7d592d45f613065b83eaa0aeb1de23a2479360f3f7",
+  "doc": "Revoke a token — RFC 7009.\n\nSucceeds whether or not the token existed, as the RFC requires: the\ncaller learns only that the token is not usable, never whether it ever\nwas. The `jti` is read from the signature, so a forged token revokes\nnothing.\n\nNote the limit this cannot escape: a verifier checking the signature\noffline will keep accepting the token until it expires. Revocation binds\non anyone who introspects, which is why token lifetimes are short.",
+  "file": "crates/wami/src/service/oauth/mod.rs",
+  "id": "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::revoke_token",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 246,
+  "line_start": 237,
+  "name": "revoke_token",
+  "signature": "pub async fn revoke_token(&self, token: &str, audience: &str) -> Result<()>"
+}

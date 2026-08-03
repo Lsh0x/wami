@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:48e1cf644f42c0b3bfd99a60a3950bb17a429d0652031f0bf3708f1e06303228",
+  "doc": "",
+  "file": "store/memory/identity/group.rs",
+  "id": "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::get_group",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 19,
+  "line_start": 17,
+  "name": "get_group",
+  "signature": "async fn get_group(&self, group_name: &str) -> Result<Option<Group>>"
+}

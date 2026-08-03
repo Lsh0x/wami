@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/arn/matching.rs::function::MatchContext::new",
+    "code:crates/wami-core/src/arn/matching.rs::function::MatchContext::to_vars"
+  ],
+  "content_hash": "sha256:41414953410bd4605d96e0ebefab02302b248404fab87a398c859cd8109e4a8e",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/matching.rs",
+  "id": "code:crates/wami-core/src/arn/matching.rs::impl::MatchContext",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 69,
+  "line_start": 49,
+  "name": "MatchContext",
+  "signature": "impl MatchContext"
+}

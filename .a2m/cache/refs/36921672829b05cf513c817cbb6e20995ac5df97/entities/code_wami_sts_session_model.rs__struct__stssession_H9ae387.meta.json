@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:bd3189d193a1fcf8d2821ad9fa668484111312ff08f55d1116473a27e6c954eb",
+  "doc": "",
+  "file": "wami/sts/session/model.rs",
+  "id": "code:wami/sts/session/model.rs::struct::StsSession",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 61,
+  "line_start": 32,
+  "name": "StsSession",
+  "signature": "pub struct StsSession"
+}

@@ -1,0 +1,24 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthConsentStore for InMemoryOAuthStore::record_consent",
+    "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthConsentStore for InMemoryOAuthStore::get_consent",
+    "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthConsentStore for InMemoryOAuthStore::revoke_consent"
+  ],
+  "content_hash": "sha256:54f5a40a48a09cceddacf5b72ac816db3ba562438764f425ace341fc893fde60",
+  "doc": "",
+  "file": "crates/wami/src/store/memory/oauth/mod.rs",
+  "id": "code:crates/wami/src/store/memory/oauth/mod.rs::impl::OAuthConsentStore for InMemoryOAuthStore",
+  "implemented_by": [],
+  "implements": [
+    "code:crates/wami/src/store/traits/oauth/mod.rs::trait::OAuthConsentStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 210,
+  "line_start": 190,
+  "name": "OAuthConsentStore for InMemoryOAuthStore",
+  "signature": "impl OAuthConsentStore for InMemoryOAuthStore"
+}

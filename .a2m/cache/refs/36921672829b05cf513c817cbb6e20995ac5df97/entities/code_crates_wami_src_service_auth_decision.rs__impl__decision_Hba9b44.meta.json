@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/auth/decision.rs::function::Decision::is_allowed"
+  ],
+  "content_hash": "sha256:fc4763b1182cd61bb158d7b2d1f595ad6e802e0a3fe7a846f9e004edfe031dfa",
+  "doc": "",
+  "file": "crates/wami/src/service/auth/decision.rs",
+  "id": "code:crates/wami/src/service/auth/decision.rs::impl::Decision",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 245,
+  "line_start": 240,
+  "name": "Decision",
+  "signature": "impl Decision"
+}

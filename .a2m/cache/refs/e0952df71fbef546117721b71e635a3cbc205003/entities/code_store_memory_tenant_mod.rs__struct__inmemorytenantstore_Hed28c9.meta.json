@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0a22fd215fdd25350e1f58389522904c6873a92b4ab01ae14a59efa9049bd093",
+  "doc": "",
+  "file": "store/memory/tenant/mod.rs",
+  "id": "code:store/memory/tenant/mod.rs::struct::InMemoryTenantStore",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 16,
+  "line_start": 14,
+  "name": "InMemoryTenantStore",
+  "signature": "pub struct InMemoryTenantStore"
+}

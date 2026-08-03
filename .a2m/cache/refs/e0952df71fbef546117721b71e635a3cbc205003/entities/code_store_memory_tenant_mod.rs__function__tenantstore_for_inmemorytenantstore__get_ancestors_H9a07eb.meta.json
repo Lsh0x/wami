@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:db7893740efa71c66cf92df35e1c25dfd1167746a42589e321a3d9804e04fd0e",
+  "doc": "",
+  "file": "store/memory/tenant/mod.rs",
+  "id": "code:store/memory/tenant/mod.rs::function::TenantStore for InMemoryTenantStore::get_ancestors",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 94,
+  "line_start": 82,
+  "name": "get_ancestors",
+  "signature": "async fn get_ancestors(&self, tenant_id: &TenantId) -> Result<Vec<Tenant>>"
+}

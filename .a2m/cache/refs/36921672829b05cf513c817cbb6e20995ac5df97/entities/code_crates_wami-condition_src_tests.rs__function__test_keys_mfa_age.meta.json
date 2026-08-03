@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:efaeecca274e7ab0a5b98cfb07770fd7d45c0a942e57aa8f1c7b94f3f265f0c0",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_keys_mfa_age",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 5760,
+  "line_start": 5746,
+  "name": "test_keys_mfa_age",
+  "signature": "fn test_keys_mfa_age()"
+}

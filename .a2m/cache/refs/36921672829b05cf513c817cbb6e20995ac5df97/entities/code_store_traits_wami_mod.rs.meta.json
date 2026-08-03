@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/traits/wami/mod.rs::trait::WamiStore",
+    "code:store/traits/wami/mod.rs::impl::WamiStore for T"
+  ],
+  "content_hash": "ca8184e69bdeb24fb66e6d03698b5a02d4d18e817981566f91ae52dc1848d031",
+  "doc": "",
+  "file": "store/traits/wami/mod.rs",
+  "id": "code:store/traits/wami/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 105,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

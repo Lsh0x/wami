@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3f1143ea5e387cac69e0fb78fc7284abf137fc27da327c3182c88e2da7e01a67",
+  "doc": "",
+  "file": "crates/wami/src/store/traits/oauth/mod.rs",
+  "id": "code:crates/wami/src/store/traits/oauth/mod.rs::trait::OAuthClientStore",
+  "implemented_by": [
+    "code:crates/wami/src/store/memory/oauth/mod.rs::impl::OAuthClientStore for InMemoryOAuthStore"
+  ],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "trait",
+  "line_end": 32,
+  "line_start": 16,
+  "name": "OAuthClientStore",
+  "signature": "pub trait OAuthClientStore: Send + Sync"
+}

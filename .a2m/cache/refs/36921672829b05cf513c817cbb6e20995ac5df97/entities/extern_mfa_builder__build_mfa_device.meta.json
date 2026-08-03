@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami/src/service/credentials/mfa_device.rs::function::MfaDeviceService<S>::create_mfa_device",
+    "code:store/memory/credentials/tests.rs::function::test_mfa_device_create_and_get",
+    "code:store/memory/credentials/tests.rs::function::test_mfa_device_delete",
+    "code:store/memory/credentials/tests.rs::function::test_mfa_device_list_for_user"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:mfa_builder::build_mfa_device",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "build_mfa_device",
+  "signature": "mfa_builder::build_mfa_device"
+}

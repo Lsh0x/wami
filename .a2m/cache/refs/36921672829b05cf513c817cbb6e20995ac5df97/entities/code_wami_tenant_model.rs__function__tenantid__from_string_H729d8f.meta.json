@@ -1,0 +1,22 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami/examples/07_cross_tenant_role_assumption.rs::function::main",
+    "code:crates/wami/examples/08_tenant_migration.rs::function::main",
+    "code:wami/tenant/model.rs::function::Deserialize<'de> for TenantId::deserialize"
+  ],
+  "children": [],
+  "content_hash": "sha256:aa814087d5d6a323a2ee38ea6e0035a37cc495beea237f057248503ce34a032f",
+  "doc": "",
+  "file": "wami/tenant/model.rs",
+  "id": "code:wami/tenant/model.rs::function::TenantId::from_string",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 156,
+  "line_start": 136,
+  "name": "from_string",
+  "signature": "pub fn from_string(s: &str) -> Result<Self, crate::error::AmiError>"
+}

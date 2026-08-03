@@ -1,0 +1,26 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/gdpr/operations.rs::function::validate_consent",
+    "code:wami/gdpr/operations.rs::function::is_consent_active",
+    "code:wami/gdpr/operations.rs::function::is_processing_allowed",
+    "code:wami/gdpr/operations.rs::function::compute_erasure_scope",
+    "code:wami/gdpr/operations.rs::function::build_consent_audit_event",
+    "code:wami/gdpr/operations.rs::function::build_erasure_audit_event",
+    "code:wami/gdpr/operations.rs::function::generate_id"
+  ],
+  "content_hash": "c56d832f51fc6ea05d6f8dd845573048778e0f8f8043ad69637532e96ed46dc9",
+  "doc": "",
+  "file": "wami/gdpr/operations.rs",
+  "id": "code:wami/gdpr/operations.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 421,
+  "line_start": 1,
+  "name": "operations",
+  "signature": ""
+}

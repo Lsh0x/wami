@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/gdpr/mod.rs::function::GdprService<S>::request_erasure"
+  ],
+  "children": [],
+  "content_hash": "sha256:04c225c1dae8e791909769dcfcda70d6c211be4e9cddfc56e9eeae7706fc58d6",
+  "doc": "",
+  "file": "service/gdpr/mod.rs",
+  "id": "code:service/gdpr/mod.rs::function::compute_verification_hash",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 375,
+  "line_start": 369,
+  "name": "compute_verification_hash",
+  "signature": "fn compute_verification_hash(user_name: &str, timestamp: &chrono::DateTime<Utc>) -> String"
+}

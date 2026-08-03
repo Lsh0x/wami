@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/examples/06_tenant_quotas_and_limits.rs::function::main"
+  ],
+  "content_hash": "f564c498c510e3cf206ca5c831dd906c26abd5180fd0496b7f277d88001a5625",
+  "doc": "",
+  "file": "crates/wami/examples/06_tenant_quotas_and_limits.rs",
+  "id": "code:crates/wami/examples/06_tenant_quotas_and_limits.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 179,
+  "line_start": 1,
+  "name": "06_tenant_quotas_and_limits",
+  "signature": ""
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:23e34e1b51e7efa851c6fbcf5b4d8c319d308fce8aa2bef9a72cee697f9d7b6a",
+  "doc": "",
+  "file": "wami/policies/evaluation/model.rs",
+  "id": "code:wami/policies/evaluation/model.rs::struct::StatementMatch",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 31,
+  "line_start": 22,
+  "name": "StatementMatch",
+  "signature": "pub struct StatementMatch"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/operators.rs::function::evaluate_operator"
+  ],
+  "children": [],
+  "content_hash": "sha256:5f9c0c259d56bc64208fe39117f8a6fdd29f208697a56ce0af4f8ba7596d21ee",
+  "doc": "",
+  "file": "crates/wami-condition/src/operators.rs",
+  "id": "code:crates/wami-condition/src/operators.rs::function::evaluate_null",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 851,
+  "line_start": 844,
+  "name": "evaluate_null",
+  "signature": "fn evaluate_null("
+}

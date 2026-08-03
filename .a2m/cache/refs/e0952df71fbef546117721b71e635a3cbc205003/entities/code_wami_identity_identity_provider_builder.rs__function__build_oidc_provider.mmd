@@ -1,0 +1,13 @@
+%% id: code:wami/identity/identity_provider/builder.rs::function::build_oidc_provider
+%% kind: function
+%% file: wami/identity/identity_provider/builder.rs:54-91
+%% content_hash: sha256:63bc7e21311b3731bc79297e16fbc1426c25b93e802e0c5578bea44b29995b29
+%% signature: pub fn build_oidc_provider(
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_wami_identity_identity_provider_builder_rs__function__build_oidc_provider_H7984383b:::function[build_oidc_provider]
+  code_wami_identity_identity_provider_builder_rs__function__build_oidc_provider_H7984383b -- calls --> code_crates_wami_core_src_arn_builder_rs__function__WamiArn__builder_Hb7ab6e53:::function[builder]
+  code_wami_identity_identity_provider_builder_rs__function__build_oidc_provider_H7984383b -- calls --> extern_Utc__now_H7825cf5c:::function[now]
+  code_service_identity_identity_provider_rs__function__IdentityProviderService_S___create_oidc_provider_H90cea66e:::function[create_oidc_provider] -- calls --> code_wami_identity_identity_provider_builder_rs__function__build_oidc_provider_H7984383b

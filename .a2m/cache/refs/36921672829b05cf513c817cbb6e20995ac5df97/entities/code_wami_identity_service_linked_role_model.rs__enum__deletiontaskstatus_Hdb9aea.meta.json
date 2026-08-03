@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f4c59b6ab915f13c0d2435f3aa99a285d61ceb7fb2c1e7ed0d693a0c70a557d8",
+  "doc": "",
+  "file": "wami/identity/service_linked_role/model.rs",
+  "id": "code:wami/identity/service_linked_role/model.rs::enum::DeletionTaskStatus",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 21,
+  "line_start": 8,
+  "name": "DeletionTaskStatus",
+  "signature": "pub enum DeletionTaskStatus"
+}

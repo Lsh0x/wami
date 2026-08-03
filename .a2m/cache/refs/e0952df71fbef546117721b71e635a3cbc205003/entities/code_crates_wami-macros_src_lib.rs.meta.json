@@ -1,0 +1,22 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-macros/src/lib.rs::function::derive_service",
+    "code:crates/wami-macros/src/lib.rs::function::service",
+    "code:crates/wami-macros/src/lib.rs::function::register_services"
+  ],
+  "content_hash": "e5625770a25fef182583e3f13f4863affdcc52245674de0b9a2a06120ef4f183",
+  "doc": "",
+  "file": "crates/wami-macros/src/lib.rs",
+  "id": "code:crates/wami-macros/src/lib.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 25,
+  "line_start": 1,
+  "name": "lib",
+  "signature": ""
+}

@@ -1,0 +1,25 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/arn/parser.rs::enum::ArnParseError",
+    "code:crates/wami-core/src/arn/parser.rs::impl::std::fmt::Display for ArnParseError",
+    "code:crates/wami-core/src/arn/parser.rs::impl::std::error::Error for ArnParseError",
+    "code:crates/wami-core/src/arn/parser.rs::impl::From<ArnParseError> for AmiError",
+    "code:crates/wami-core/src/arn/parser.rs::impl::FromStr for WamiArn",
+    "code:crates/wami-core/src/arn/parser.rs::function::parse_arn"
+  ],
+  "content_hash": "34c0751d2e419b5f44e595a4c267bbc90c8bad9c6c6ca5a2113590b700e46f79",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/parser.rs",
+  "id": "code:crates/wami-core/src/arn/parser.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 488,
+  "line_start": 1,
+  "name": "parser",
+  "signature": ""
+}

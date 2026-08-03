@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::get_oidc_provider",
+    "code:wami/identity/identity_provider/operations.rs::function::validate_thumbprint_list",
+    "code:wami/identity/identity_provider/builder.rs::function::update_thumbprints"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:873747a27f5cdf52e1c3fa9e928564a6686138223cccd276331da59bf2014356",
+  "doc": "Update an OIDC provider's thumbprints",
+  "file": "service/identity/identity_provider.rs",
+  "id": "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::update_oidc_thumbprints",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 190,
+  "line_start": 167,
+  "name": "update_oidc_thumbprints",
+  "signature": "pub async fn update_oidc_thumbprints("
+}

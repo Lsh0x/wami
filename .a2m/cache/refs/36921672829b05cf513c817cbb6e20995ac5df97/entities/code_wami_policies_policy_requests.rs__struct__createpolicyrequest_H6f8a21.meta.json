@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:81ad24b5800b16e14328c932548a2b51891245017bac45bea094c0d44c844c5c",
+  "doc": "",
+  "file": "wami/policies/policy/requests.rs",
+  "id": "code:wami/policies/policy/requests.rs::struct::CreatePolicyRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 21,
+  "line_start": 10,
+  "name": "CreatePolicyRequest",
+  "signature": "pub struct CreatePolicyRequest"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:1a3917c253be1d870cdcdb474e2a57a8f0cdbed1ebabdcb7eb79ee987a4b6bfd",
+  "doc": "",
+  "file": "store/traits/sts/mod.rs",
+  "id": "code:store/traits/sts/mod.rs::impl::StsStore for T",
+  "implemented_by": [],
+  "implements": [
+    "code:store/traits/sts/mod.rs::trait::StsStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 36,
+  "line_start": 36,
+  "name": "StsStore for T",
+  "signature": "impl<T> StsStore for T where T: SessionStore + IdentityStore + Send + Sync {}"
+}

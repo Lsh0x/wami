@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:deec98c51fb5c14817b989c7a6a4363924eec57032338de69231aadcf2fe834f",
+  "doc": "Get all descendants of a tenant",
+  "file": "service/tenant/mod.rs",
+  "id": "code:service/tenant/mod.rs::function::TenantService<S>::get_descendants",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 187,
+  "line_start": 185,
+  "name": "get_descendants",
+  "signature": "pub async fn get_descendants(&self, tenant_id: &TenantId) -> Result<Vec<TenantId>>"
+}

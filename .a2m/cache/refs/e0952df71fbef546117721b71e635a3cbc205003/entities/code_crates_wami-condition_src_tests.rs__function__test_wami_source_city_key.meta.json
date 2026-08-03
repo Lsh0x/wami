@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:60b149258a929648a5d3e5a62c67d442165ad3b6c3ed19a5c0d4fc9adb3b3150",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wami_source_city_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7619,
+  "line_start": 7610,
+  "name": "test_wami_source_city_key",
+  "signature": "fn test_wami_source_city_key()"
+}

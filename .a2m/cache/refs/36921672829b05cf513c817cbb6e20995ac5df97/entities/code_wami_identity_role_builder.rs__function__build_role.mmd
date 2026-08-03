@@ -1,0 +1,14 @@
+%% id: code:wami/identity/role/builder.rs::function::build_role
+%% kind: function
+%% file: wami/identity/role/builder.rs:13-55
+%% content_hash: sha256:d753f64e14e2242b743bf1046bb6dbe69fb8628ddb5eff12d18fb19c56511299
+%% signature: pub fn build_role(
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_wami_identity_role_builder_rs__function__build_role_Hd042520b:::function[build_role]
+  code_wami_identity_role_builder_rs__function__build_role_Hd042520b -- calls --> extern_Uuid__new_v4_Hf2e90e55:::function[new_v4]
+  code_wami_identity_role_builder_rs__function__build_role_Hd042520b -- calls --> code_crates_wami_core_src_arn_builder_rs__function__WamiArn__builder_Hb7ab6e53:::function[builder]
+  code_wami_identity_role_builder_rs__function__build_role_Hd042520b -- calls --> extern_Utc__now_H7825cf5c:::function[now]
+  code_crates_wami_examples_02_basic_crud_operations_rs__function__main_H4e955c42:::function[main] -- calls --> code_wami_identity_role_builder_rs__function__build_role_Hd042520b

@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:group_builder::build_group"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f16be41abdd5f0a8edc5ed3b55b095e414ae548052f264ae2d3b97197a79ee02",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_group_delete",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 251,
+  "line_start": 239,
+  "name": "test_group_delete",
+  "signature": "async fn test_group_delete()"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/identity/user.rs::function::UserService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f3bf1b763ca91a01fc3ec4620cab856617dbe1791cc4aa7947d42b93c435c7e4",
+  "doc": "Tag a user",
+  "file": "crates/wami/src/service/identity/user.rs",
+  "id": "code:crates/wami/src/service/identity/user.rs::function::UserService<S>::tag_user",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 189,
+  "line_start": 180,
+  "name": "tag_user",
+  "signature": "pub async fn tag_user("
+}

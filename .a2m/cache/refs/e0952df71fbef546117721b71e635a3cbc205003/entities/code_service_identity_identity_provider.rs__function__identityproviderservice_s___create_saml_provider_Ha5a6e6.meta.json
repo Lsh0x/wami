@@ -1,0 +1,25 @@
+{
+  "callees": [
+    "code:wami/identity/identity_provider/model.rs::function::SamlProvider::validate_name",
+    "code:wami/identity/identity_provider/operations.rs::function::validate_saml_metadata",
+    "code:wami/identity/identity_provider/builder.rs::function::build_saml_provider",
+    "code:wami/identity/identity_provider/operations.rs::function::extract_saml_validity",
+    "code:wami/identity/identity_provider/builder.rs::function::set_saml_valid_until",
+    "code:wami/identity/identity_provider/builder.rs::function::add_saml_tags"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:90ec1e0f839066533d04f20a8e870ecbbda609e73c178304e274e0ff0983a1be",
+  "doc": "Create a new SAML provider",
+  "file": "service/identity/identity_provider.rs",
+  "id": "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::create_saml_provider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 66,
+  "line_start": 33,
+  "name": "create_saml_provider",
+  "signature": "pub async fn create_saml_provider("
+}

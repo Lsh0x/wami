@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/sso_admin/application/model.rs::struct::Application"
+  ],
+  "content_hash": "2ed008a9ec0566fe6a533c84110b974038d1345d706102d3fe6b3f4ea0ef5fdb",
+  "doc": "",
+  "file": "wami/sso_admin/application/model.rs",
+  "id": "code:wami/sso_admin/application/model.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 30,
+  "line_start": 1,
+  "name": "model",
+  "signature": ""
+}

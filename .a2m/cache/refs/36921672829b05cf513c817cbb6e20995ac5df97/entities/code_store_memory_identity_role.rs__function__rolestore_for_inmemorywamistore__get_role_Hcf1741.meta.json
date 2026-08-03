@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:991b383d25b9de7e07f540ae0f3c2f393c6142572e827074c37be1effc14d7a8",
+  "doc": "",
+  "file": "store/memory/identity/role.rs",
+  "id": "code:store/memory/identity/role.rs::function::RoleStore for InMemoryWamiStore::get_role",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 19,
+  "line_start": 17,
+  "name": "get_role",
+  "signature": "async fn get_role(&self, role_name: &str) -> Result<Option<Role>>"
+}

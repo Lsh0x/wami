@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:744cc8a6bd3db81392c19f7047ecd38384d597a9d553cbf265e523f39bccef14",
+  "doc": "Get the underlying User object",
+  "file": "wami/identity/root_user.rs",
+  "id": "code:wami/identity/root_user.rs::function::RootUser::as_user",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 143,
+  "line_start": 141,
+  "name": "as_user",
+  "signature": "pub fn as_user(&self) -> &User"
+}

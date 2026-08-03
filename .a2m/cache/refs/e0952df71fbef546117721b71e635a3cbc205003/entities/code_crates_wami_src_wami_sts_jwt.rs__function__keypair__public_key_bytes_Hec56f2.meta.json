@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:8de11e8ecf577104780c97cc2e1235e0e8ea57a55031a5ab98effb6aa5459fa9",
+  "doc": "The public key, as the `x` parameter of an OKP JWK.",
+  "file": "crates/wami/src/wami/sts/jwt.rs",
+  "id": "code:crates/wami/src/wami/sts/jwt.rs::function::KeyPair::public_key_bytes",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 145,
+  "line_start": 143,
+  "name": "public_key_bytes",
+  "signature": "pub fn public_key_bytes(&self) -> [u8; 32]"
+}

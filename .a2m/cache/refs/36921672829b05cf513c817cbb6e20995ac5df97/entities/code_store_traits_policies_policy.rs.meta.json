@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/traits/policies/policy.rs::trait::PolicyStore"
+  ],
+  "content_hash": "a01f922bd10183e9f89205ee9dae7ecbeaf5bbff63b38855bb329abc63071311",
+  "doc": "",
+  "file": "store/traits/policies/policy.rs",
+  "id": "code:store/traits/policies/policy.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 32,
+  "line_start": 1,
+  "name": "policy",
+  "signature": ""
+}

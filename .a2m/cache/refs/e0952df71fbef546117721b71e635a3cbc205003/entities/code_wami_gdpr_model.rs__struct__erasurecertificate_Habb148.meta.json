@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e70b392e7c5dcecb10bccd73f8007441cad1b975db22f423ad167a8f62e39938",
+  "doc": "",
+  "file": "wami/gdpr/model.rs",
+  "id": "code:wami/gdpr/model.rs::struct::ErasureCertificate",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 132,
+  "line_start": 111,
+  "name": "ErasureCertificate",
+  "signature": "pub struct ErasureCertificate"
+}

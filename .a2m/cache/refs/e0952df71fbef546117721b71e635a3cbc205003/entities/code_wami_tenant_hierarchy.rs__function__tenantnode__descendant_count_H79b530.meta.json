@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:84dd1b5192423f2df65b03d3db08fecb8cebe81e902d32ef1d1ef0638c00d75c",
+  "doc": "Get total number of descendants",
+  "file": "wami/tenant/hierarchy.rs",
+  "id": "code:wami/tenant/hierarchy.rs::function::TenantNode::descendant_count",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 49,
+  "line_start": 41,
+  "name": "descendant_count",
+  "signature": "pub fn descendant_count(&self) -> usize"
+}

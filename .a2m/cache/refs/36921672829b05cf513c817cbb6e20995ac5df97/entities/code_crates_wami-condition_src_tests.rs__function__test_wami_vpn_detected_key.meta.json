@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c818c8b844b77984bba50cc2a1dcea54d332cff61e813e1925661af9d8ec61db",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wami_vpn_detected_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7626,
+  "line_start": 7622,
+  "name": "test_wami_vpn_detected_key",
+  "signature": "fn test_wami_vpn_detected_key()"
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-service/src/lib.rs::function::Registry::new",
+    "code:crates/wami-service/src/lib.rs::function::Registry::with_capacity"
+  ],
+  "content_hash": "sha256:8eebf44809d3009c215390c487aff685ee9836846374822617503bcd2998d011",
+  "doc": "",
+  "file": "crates/wami-service/src/lib.rs",
+  "id": "code:crates/wami-service/src/lib.rs::impl::Registry",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 25,
+  "line_start": 13,
+  "name": "Registry",
+  "signature": "impl Registry"
+}

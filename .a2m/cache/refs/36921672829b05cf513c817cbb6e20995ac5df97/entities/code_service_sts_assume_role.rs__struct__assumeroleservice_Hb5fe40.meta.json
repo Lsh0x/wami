@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:9e084935801be3e0bb7dea01fb7e20c3dc5bd5f9e6e8340e95d1f8dd5338eb16",
+  "doc": "",
+  "file": "service/sts/assume_role.rs",
+  "id": "code:service/sts/assume_role.rs::struct::AssumeRoleService",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 30,
+  "line_start": 28,
+  "name": "AssumeRoleService",
+  "signature": "pub struct AssumeRoleService<S>"
+}

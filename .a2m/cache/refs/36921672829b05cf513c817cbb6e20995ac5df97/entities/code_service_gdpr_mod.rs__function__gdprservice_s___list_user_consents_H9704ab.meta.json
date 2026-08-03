@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/gdpr/mod.rs::function::GdprService<S>::is_processing_allowed"
+  ],
+  "children": [],
+  "content_hash": "sha256:9edd2f962f651ed2e734e8a97ee418a2597be5e1accb29ecdb1664f21673e2af",
+  "doc": "List all active consents for a user.",
+  "file": "service/gdpr/mod.rs",
+  "id": "code:service/gdpr/mod.rs::function::GdprService<S>::list_user_consents",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 165,
+  "line_start": 156,
+  "name": "list_user_consents",
+  "signature": "pub async fn list_user_consents("
+}

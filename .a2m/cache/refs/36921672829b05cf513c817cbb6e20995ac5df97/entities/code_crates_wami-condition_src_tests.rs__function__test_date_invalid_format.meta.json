@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::create_test_context",
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a5b6631d1801bfdc4f981ddcac4f5fbed5482414c18f7039f2f629597ce74a15",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_date_invalid_format",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 852,
+  "line_start": 838,
+  "name": "test_date_invalid_format",
+  "signature": "fn test_date_invalid_format()"
+}

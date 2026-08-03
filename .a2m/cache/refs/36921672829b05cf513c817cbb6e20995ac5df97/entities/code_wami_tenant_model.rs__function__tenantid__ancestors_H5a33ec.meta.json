@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:wami/tenant/model.rs::function::TenantId::segments"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ee00ae9cdad7b4699e5746361fd0c59072b7c59501e41273357b1ef8c4eb4720",
+  "doc": "Get all ancestor tenant IDs (including self)\n\n# Example\n\n```rust\nuse wami::tenant::TenantId;\n\nlet root = TenantId::root();\nlet child = root.child();\nlet grandchild = child.child();\nlet ancestors = grandchild.ancestors();\nassert_eq!(ancestors.len(), 3);\n```",
+  "file": "wami/tenant/model.rs",
+  "id": "code:wami/tenant/model.rs::function::TenantId::ancestors",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 106,
+  "line_start": 98,
+  "name": "ancestors",
+  "signature": "pub fn ancestors(&self) -> Vec<TenantId>"
+}

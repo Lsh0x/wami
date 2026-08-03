@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-provider/src/provider_info.rs::function::ProviderInfo::is_custom"
+  ],
+  "children": [],
+  "content_hash": "sha256:97fd330e23da38b02b8d09340c69d93e0fb5dbae0d3e2c102fd6639935de61d8",
+  "doc": "Checks if this provider is AWS",
+  "file": "crates/wami-provider/src/provider_info.rs",
+  "id": "code:crates/wami-provider/src/provider_info.rs::function::ProviderInfo::is_aws",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 77,
+  "line_start": 75,
+  "name": "is_aws",
+  "signature": "pub fn is_aws(&self) -> bool"
+}

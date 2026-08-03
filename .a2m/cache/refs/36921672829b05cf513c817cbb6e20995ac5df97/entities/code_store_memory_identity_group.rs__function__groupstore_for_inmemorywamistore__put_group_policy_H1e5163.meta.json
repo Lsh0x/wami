@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:40a33336c8fe42318e552bb707ff7568c442695ed9aeca3d3e1106f568bcf0a6",
+  "doc": "",
+  "file": "store/memory/identity/group.rs",
+  "id": "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::put_group_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 142,
+  "line_start": 129,
+  "name": "put_group_policy",
+  "signature": "async fn put_group_policy("
+}

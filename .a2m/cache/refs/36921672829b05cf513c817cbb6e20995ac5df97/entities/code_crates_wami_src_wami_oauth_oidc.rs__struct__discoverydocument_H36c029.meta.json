@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:74eb21a2982b9bae402630580fccc244ff9bc743e9e0fb3f81f96df3f2da7478",
+  "doc": "",
+  "file": "crates/wami/src/wami/oauth/oidc.rs",
+  "id": "code:crates/wami/src/wami/oauth/oidc.rs::struct::DiscoveryDocument",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 243,
+  "line_start": 219,
+  "name": "DiscoveryDocument",
+  "signature": "pub struct DiscoveryDocument"
+}

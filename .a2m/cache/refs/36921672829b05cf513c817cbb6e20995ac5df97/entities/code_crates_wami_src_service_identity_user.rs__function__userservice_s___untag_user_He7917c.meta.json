@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/identity/user.rs::function::UserService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c0f476c066cb8eb2701b66976370bfb1589400672fc065fdd443c589079d1664",
+  "doc": "Untag a user",
+  "file": "crates/wami/src/service/identity/user.rs",
+  "id": "code:crates/wami/src/service/identity/user.rs::function::UserService<S>::untag_user",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 211,
+  "line_start": 199,
+  "name": "untag_user",
+  "signature": "pub async fn untag_user("
+}

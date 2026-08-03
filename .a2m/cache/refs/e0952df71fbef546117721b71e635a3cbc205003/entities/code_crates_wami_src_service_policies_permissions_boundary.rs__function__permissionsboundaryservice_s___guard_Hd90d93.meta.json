@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/auth/authorizer.rs::function::iam_resource_arn"
+  ],
+  "callers": [
+    "code:crates/wami/src/service/policies/permissions_boundary.rs::function::PermissionsBoundaryService<S>::put_permissions_boundary",
+    "code:crates/wami/src/service/policies/permissions_boundary.rs::function::PermissionsBoundaryService<S>::delete_permissions_boundary"
+  ],
+  "children": [],
+  "content_hash": "sha256:1e034c2329cbd6cf3e4e3135f2606ce8ccd1123ee6b5ec5b862a94bd433be726",
+  "doc": "Internal: check authorization if an authorizer is set.",
+  "file": "crates/wami/src/service/policies/permissions_boundary.rs",
+  "id": "code:crates/wami/src/service/policies/permissions_boundary.rs::function::PermissionsBoundaryService<S>::guard",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 72,
+  "line_start": 60,
+  "name": "guard",
+  "signature": "async fn guard("
+}

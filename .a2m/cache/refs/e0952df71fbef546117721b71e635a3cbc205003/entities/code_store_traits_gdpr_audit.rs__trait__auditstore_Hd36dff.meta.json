@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b6458b4f1aee2ce926f3362f529e451e71b4adc3aa2f699c33fbb4073771c544",
+  "doc": "",
+  "file": "store/traits/gdpr/audit.rs",
+  "id": "code:store/traits/gdpr/audit.rs::trait::AuditStore",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "trait",
+  "line_end": 51,
+  "line_start": 31,
+  "name": "AuditStore",
+  "signature": "pub trait AuditStore: Send + Sync"
+}

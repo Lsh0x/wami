@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:663a2a04dd5334abe91ef2a5f455214599e353f567f48536143227383cc1cd82",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::resource_tag",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 306,
+  "line_start": 303,
+  "name": "resource_tag",
+  "signature": "pub fn resource_tag(mut self, key: impl Into<String>, value: impl Into<String>) -> Self"
+}

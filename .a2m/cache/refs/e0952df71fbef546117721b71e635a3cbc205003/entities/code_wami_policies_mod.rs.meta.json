@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "7d3de3a972929a68c1968d238a7ad9a1194062043a1cd8f6e2b615f30d73c9aa",
+  "doc": "",
+  "file": "wami/policies/mod.rs",
+  "id": "code:wami/policies/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 19,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

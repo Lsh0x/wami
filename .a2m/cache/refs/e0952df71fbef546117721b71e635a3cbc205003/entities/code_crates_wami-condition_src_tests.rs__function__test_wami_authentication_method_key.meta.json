@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:bbfa008c962de4d3c226003a1633b16eab6a98a384f35008b58665759e577792",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wami_authentication_method_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7582,
+  "line_start": 7576,
+  "name": "test_wami_authentication_method_key",
+  "signature": "fn test_wami_authentication_method_key()"
+}

@@ -1,0 +1,22 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/sts/federation/requests.rs::struct::GetFederationTokenRequest",
+    "code:wami/sts/federation/requests.rs::impl::GetFederationTokenRequest",
+    "code:wami/sts/federation/requests.rs::struct::GetFederationTokenResponse"
+  ],
+  "content_hash": "7fc17a1029234a90c95b9e0aefeaca3e2b71085391f615b0e2e013d89f642451",
+  "doc": "",
+  "file": "wami/sts/federation/requests.rs",
+  "id": "code:wami/sts/federation/requests.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 74,
+  "line_start": 1,
+  "name": "requests",
+  "signature": ""
+}

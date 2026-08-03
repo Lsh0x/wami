@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:dd146969a17b5a65f111a037922b73fa618bbcba05e9f7ebd1c88bd8737420c8",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_cidr_partial_byte_matching",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 6283,
+  "line_start": 6247,
+  "name": "test_cidr_partial_byte_matching",
+  "signature": "fn test_cidr_partial_byte_matching()"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b0802862535d84f71223cc882496e804913a041c1dca7e5edefbfb625d636ab7",
+  "doc": "",
+  "file": "wami/gdpr/model.rs",
+  "id": "code:wami/gdpr/model.rs::struct::ConsentRecord",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 71,
+  "line_start": 48,
+  "name": "ConsentRecord",
+  "signature": "pub struct ConsentRecord"
+}

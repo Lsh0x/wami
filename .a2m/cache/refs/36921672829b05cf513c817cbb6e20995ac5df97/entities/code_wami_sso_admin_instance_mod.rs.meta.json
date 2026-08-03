@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "7c17f5c953fe70b8ccf4648057054245ee3e097e101aed9eb199d773e258049d",
+  "doc": "",
+  "file": "wami/sso_admin/instance/mod.rs",
+  "id": "code:wami/sso_admin/instance/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 6,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

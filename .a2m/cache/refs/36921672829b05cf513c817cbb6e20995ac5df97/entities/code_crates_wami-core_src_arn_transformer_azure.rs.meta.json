@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/arn/transformer/azure.rs::struct::AzureArnTransformer",
+    "code:crates/wami-core/src/arn/transformer/azure.rs::impl::ArnTransformer for AzureArnTransformer"
+  ],
+  "content_hash": "90c5357414d1e55cee1bb15befb15210cb434636288e126179e90a3066778bef",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/transformer/azure.rs",
+  "id": "code:crates/wami-core/src/arn/transformer/azure.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 119,
+  "line_start": 1,
+  "name": "azure",
+  "signature": ""
+}

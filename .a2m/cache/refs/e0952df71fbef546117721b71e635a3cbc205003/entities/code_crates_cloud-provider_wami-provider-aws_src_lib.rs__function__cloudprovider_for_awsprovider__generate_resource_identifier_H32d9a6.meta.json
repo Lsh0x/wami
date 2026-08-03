@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e6985fc219caaf3b34f82d1f5f29992aa22120c893d9faae509f6e174835e317",
+  "doc": "",
+  "file": "crates/cloud-provider/wami-provider-aws/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-aws/src/lib.rs::function::CloudProvider for AwsProvider::generate_resource_identifier",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 163,
+  "line_start": 133,
+  "name": "generate_resource_identifier",
+  "signature": "fn generate_resource_identifier("
+}

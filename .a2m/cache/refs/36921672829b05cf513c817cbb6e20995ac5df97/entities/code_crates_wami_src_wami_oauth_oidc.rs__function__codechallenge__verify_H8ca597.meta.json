@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "extern:Sha256::digest"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5430e90f58f252b6d5686e92b4533988dc55ccdedf4e1ef865fc7c2aa48134bd",
+  "doc": "Whether `verifier` is the secret behind this challenge.\n\n`plain` is deliberately not supported. It offers no protection at all\nagainst the attack PKCE exists to stop — an attacker who intercepts the\nauthorization request sees the challenge, and under `plain` the\nchallenge *is* the verifier.",
+  "file": "crates/wami/src/wami/oauth/oidc.rs",
+  "id": "code:crates/wami/src/wami/oauth/oidc.rs::function::CodeChallenge::verify",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 57,
+  "line_start": 48,
+  "name": "verify",
+  "signature": "pub fn verify(&self, verifier: &str) -> bool"
+}

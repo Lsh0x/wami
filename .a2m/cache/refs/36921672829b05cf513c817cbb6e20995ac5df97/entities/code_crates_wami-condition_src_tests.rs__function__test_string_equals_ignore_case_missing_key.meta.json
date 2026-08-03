@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:79f897b17981e99697b761f695550e2bc9ba1aae1b3226a3f1f33796084ad358",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_string_equals_ignore_case_missing_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 6659,
+  "line_start": 6645,
+  "name": "test_string_equals_ignore_case_missing_key",
+  "signature": "fn test_string_equals_ignore_case_missing_key()"
+}

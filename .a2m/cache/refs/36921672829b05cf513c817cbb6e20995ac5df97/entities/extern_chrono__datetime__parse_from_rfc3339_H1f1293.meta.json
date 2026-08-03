@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/operators.rs::function::parse_rfc3339",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::build_condition_context"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:chrono::DateTime::parse_from_rfc3339",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "parse_from_rfc3339",
+  "signature": "chrono::DateTime::parse_from_rfc3339"
+}

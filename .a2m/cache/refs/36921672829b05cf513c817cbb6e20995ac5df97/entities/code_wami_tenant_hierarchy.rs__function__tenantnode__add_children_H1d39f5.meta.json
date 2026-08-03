@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:wami/tenant/hierarchy.rs::function::TenantNode::add_child",
+    "code:wami/tenant/hierarchy.rs::function::TenantNode::new"
+  ],
+  "callers": [
+    "code:wami/tenant/hierarchy.rs::function::TenantNode::build_tree"
+  ],
+  "children": [],
+  "content_hash": "sha256:dfd05b187571abc4e202ad8609f78e2d65d92656ce793f26bdb254c1b3940648",
+  "doc": "",
+  "file": "wami/tenant/hierarchy.rs",
+  "id": "code:wami/tenant/hierarchy.rs::function::TenantNode::add_children",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 78,
+  "line_start": 61,
+  "name": "add_children",
+  "signature": "fn add_children(node: &mut TenantNode, all_tenants: &[Tenant])"
+}

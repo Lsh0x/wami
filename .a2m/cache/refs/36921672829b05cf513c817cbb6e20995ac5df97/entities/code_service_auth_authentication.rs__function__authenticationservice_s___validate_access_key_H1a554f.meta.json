@@ -1,0 +1,24 @@
+{
+  "callees": [
+    "code:service/auth/authentication.rs::function::constant_time_compare",
+    "extern:bcrypt::verify"
+  ],
+  "callers": [
+    "code:service/auth/authentication.rs::function::AuthenticationService<S>::authenticate",
+    "code:service/auth/authentication.rs::function::AuthenticationService<S>::authenticate_root"
+  ],
+  "children": [],
+  "content_hash": "sha256:b301d91c39b8d595c698a1950dab7b1b94979f3402fe5417526566a0ff8348ef",
+  "doc": "Validate access key credentials\n\nChecks that:\n- The access key exists\n- The secret matches (constant-time comparison)\n- The access key is active\n- The owning user exists\n\n# Returns\n\nThe `User` who owns the access key",
+  "file": "service/auth/authentication.rs",
+  "id": "code:service/auth/authentication.rs::function::AuthenticationService<S>::validate_access_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 160,
+  "line_start": 108,
+  "name": "validate_access_key",
+  "signature": "async fn validate_access_key("
+}

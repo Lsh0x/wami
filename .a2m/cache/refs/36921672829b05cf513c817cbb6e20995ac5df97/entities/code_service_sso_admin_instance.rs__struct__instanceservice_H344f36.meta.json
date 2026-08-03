@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:18f23a72ae085457700da58911c473d83bddab44ed138b6596419cedbd18118f",
+  "doc": "",
+  "file": "service/sso_admin/instance.rs",
+  "id": "code:service/sso_admin/instance.rs::struct::InstanceService",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 21,
+  "line_start": 17,
+  "name": "InstanceService",
+  "signature": "pub struct InstanceService<S>"
+}

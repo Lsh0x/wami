@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0d042639630d803cd4b341d7692d4c1bc9f45d9f31e0cafa3957598bbd489d86",
+  "doc": "",
+  "file": "wami/identity/user/requests.rs",
+  "id": "code:wami/identity/user/requests.rs::struct::ListUsersResponse",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 38,
+  "line_start": 34,
+  "name": "ListUsersResponse",
+  "signature": "pub struct ListUsersResponse"
+}

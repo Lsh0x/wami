@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:4ae74ad103cc4ac45c3e6c192428f3f14583e8e881dbef2c0f0375c6e2492ec7",
+  "doc": "",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::function::fmt::Display for TenantPath::fmt",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 192,
+  "line_start": 190,
+  "name": "fmt",
+  "signature": "fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result"
+}

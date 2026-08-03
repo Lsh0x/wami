@@ -1,0 +1,26 @@
+{
+  "callees": [
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::key_for",
+    "extern:jsonwebtoken::decode_header",
+    "extern:JwtError::UnknownKeyId",
+    "extern:DecodingKey::from_ed_der",
+    "extern:JwtError::Decode"
+  ],
+  "callers": [
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::verify_token"
+  ],
+  "children": [],
+  "content_hash": "sha256:993bb30ba6f7f36c35c227d9eae710c33be8ff243769818301e1f44e15bac1b0",
+  "doc": "Verify a token and deserialise it into any claim set.\n\n[`KeyManager::verify_token`] is this with `StsClaims` filled in; the two\nshare every check, so key rotation and audience validation cannot drift\napart between issuers.",
+  "file": "crates/wami/src/wami/sts/jwt.rs",
+  "id": "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::verify_claims",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 317,
+  "line_start": 277,
+  "name": "verify_claims",
+  "signature": "pub fn verify_claims<C: DeserializeOwned>("
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3f12575ae520ceb5c72344661dd43be5cd15bdb3e2d8ab3dd8c276b92d896a10",
+  "doc": "",
+  "file": "wami/sts/assume_role/requests.rs",
+  "id": "code:wami/sts/assume_role/requests.rs::function::AssumeRoleRequest::validate",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 75,
+  "line_start": 41,
+  "name": "validate",
+  "signature": "pub fn validate(&self) -> Result<()>"
+}

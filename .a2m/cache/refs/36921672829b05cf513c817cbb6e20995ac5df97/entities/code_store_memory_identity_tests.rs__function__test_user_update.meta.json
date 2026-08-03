@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:user_builder::build_user",
+    "extern:user_builder::update_user_path"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:1bf1e5665d21fb03522479007ce887cdc9e40b061020a6332db62765b8259d41",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_user_update",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 77,
+  "line_start": 59,
+  "name": "test_user_update",
+  "signature": "async fn test_user_update()"
+}

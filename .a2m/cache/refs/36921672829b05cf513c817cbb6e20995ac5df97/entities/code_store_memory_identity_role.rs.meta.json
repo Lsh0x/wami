@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/identity/role.rs::impl::RoleStore for InMemoryWamiStore"
+  ],
+  "content_hash": "ba32b5e66c9f2af8fde7a600a4e5a32b1bedd511a99cecf72840350df80e368f",
+  "doc": "",
+  "file": "store/memory/identity/role.rs",
+  "id": "code:store/memory/identity/role.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 138,
+  "line_start": 1,
+  "name": "role",
+  "signature": ""
+}

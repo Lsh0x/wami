@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:6c0361ab2e1d4643676fe000e00cdfd07cdd73bbf953909fb06ae63037ecf4b0",
+  "doc": "",
+  "file": "wami/policies/inline/responses.rs",
+  "id": "code:wami/policies/inline/responses.rs::struct::DeleteRolePolicyResponse",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 98,
+  "line_start": 95,
+  "name": "DeleteRolePolicyResponse",
+  "signature": "pub struct DeleteRolePolicyResponse"
+}

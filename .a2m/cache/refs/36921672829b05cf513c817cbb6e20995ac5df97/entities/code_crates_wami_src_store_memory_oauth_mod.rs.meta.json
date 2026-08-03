@@ -1,0 +1,26 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/store/memory/oauth/mod.rs::struct::InMemoryOAuthStore",
+    "code:crates/wami/src/store/memory/oauth/mod.rs::impl::InMemoryOAuthStore",
+    "code:crates/wami/src/store/memory/oauth/mod.rs::impl::OAuthClientStore for InMemoryOAuthStore",
+    "code:crates/wami/src/store/memory/oauth/mod.rs::impl::OAuthTokenStore for InMemoryOAuthStore",
+    "code:crates/wami/src/store/memory/oauth/mod.rs::impl::OAuthAuthorizationStore for InMemoryOAuthStore",
+    "code:crates/wami/src/store/memory/oauth/mod.rs::impl::OAuthRefreshStore for InMemoryOAuthStore",
+    "code:crates/wami/src/store/memory/oauth/mod.rs::impl::OAuthConsentStore for InMemoryOAuthStore"
+  ],
+  "content_hash": "86071d5bc2b87580edd6959c34da41380276b53fd10d7988cf9207a1e37f4c41",
+  "doc": "",
+  "file": "crates/wami/src/store/memory/oauth/mod.rs",
+  "id": "code:crates/wami/src/store/memory/oauth/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 477,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

@@ -1,0 +1,12 @@
+%% id: code:wami/tenant/authorization.rs::function::TenantAuthorizer::matches_action
+%% kind: function
+%% file: wami/tenant/authorization.rs:274-281
+%% content_hash: sha256:6b99697b6f121eb18a17d9dd997accc56c3f7d403688f20135eff7b2604bbd82
+%% signature: fn matches_action(&self, statement: &PolicyStatement, action: &str) -> bool
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_wami_tenant_authorization_rs__function__TenantAuthorizer__matches_action_H0ed68227:::function[matches_action]
+  code_wami_tenant_authorization_rs__function__TenantAuthorizer__matches_action_H0ed68227 -- calls --> code_wami_tenant_authorization_rs__function__TenantAuthorizer__wildcard_match_H473c1e1c:::function[wildcard_match]
+  code_wami_tenant_authorization_rs__function__TenantAuthorizer__check_permission_H89d3baf0:::function[check_permission] -- calls --> code_wami_tenant_authorization_rs__function__TenantAuthorizer__matches_action_H0ed68227

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/wami/mod.rs::function::InMemoryWamiStore::new"
+  ],
+  "content_hash": "sha256:7bf6957263402f41ab0b68020baf992536c7cea07278336ccd58858c1cca4bd8",
+  "doc": "",
+  "file": "store/memory/wami/mod.rs",
+  "id": "code:store/memory/wami/mod.rs::impl::InMemoryWamiStore",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 88,
+  "line_start": 83,
+  "name": "InMemoryWamiStore",
+  "signature": "impl InMemoryWamiStore"
+}

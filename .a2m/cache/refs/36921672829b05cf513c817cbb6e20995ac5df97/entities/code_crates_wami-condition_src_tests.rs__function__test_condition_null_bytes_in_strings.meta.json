@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder",
+    "code:crates/wami-condition/src/evaluator.rs::function::parse_condition_block"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:80e65155b9a5445c2847f2fea1e062ad4f8a1e14e7fdc20a8601188298b43465",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_null_bytes_in_strings",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 1724,
+  "line_start": 1706,
+  "name": "test_condition_null_bytes_in_strings",
+  "signature": "fn test_condition_null_bytes_in_strings()"
+}

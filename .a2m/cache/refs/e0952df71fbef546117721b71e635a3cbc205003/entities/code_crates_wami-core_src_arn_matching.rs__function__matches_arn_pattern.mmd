@@ -1,0 +1,13 @@
+%% id: code:crates/wami-core/src/arn/matching.rs::function::matches_arn_pattern
+%% kind: function
+%% file: crates/wami-core/src/arn/matching.rs:130-137
+%% content_hash: sha256:996dcb4317dfab7fc3ac3743c44da22ccbcc658e6417d4c70d253e5e9ea70b73
+%% signature: pub fn matches_arn_pattern(pattern: &str, text: &str, ctx: &MatchContext) -> bool
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_crates_wami_core_src_arn_matching_rs__function__matches_arn_pattern_H3de2f267:::function[matches_arn_pattern]
+  code_crates_wami_core_src_arn_matching_rs__function__matches_arn_pattern_H3de2f267 -- calls --> code_crates_wami_core_src_arn_matching_rs__function__glob_match_H6425874b:::function[glob_match]
+  code_crates_wami_core_src_arn_matching_rs__function__matches_arn_pattern_H3de2f267 -- calls --> code_crates_wami_core_src_arn_matching_rs__function__substitute_variables_Hfa47eb45:::function[substitute_variables]
+  code_crates_wami_src_service_auth_policy_evaluator_rs__function__matches_resource_H4f7ff103:::function[matches_resource] -- calls --> code_crates_wami_core_src_arn_matching_rs__function__matches_arn_pattern_H3de2f267

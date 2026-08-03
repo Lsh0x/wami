@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:90305b21c6c761fac0ff0a080ebe45379c144d778bb496a1733ba2f2f80ce80f",
+  "doc": "",
+  "file": "store/memory/identity/role.rs",
+  "id": "code:store/memory/identity/role.rs::function::RoleStore for InMemoryWamiStore::list_attached_role_policies",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 98,
+  "line_start": 92,
+  "name": "list_attached_role_policies",
+  "signature": "async fn list_attached_role_policies(&self, role_name: &str) -> Result<Vec<String>>"
+}

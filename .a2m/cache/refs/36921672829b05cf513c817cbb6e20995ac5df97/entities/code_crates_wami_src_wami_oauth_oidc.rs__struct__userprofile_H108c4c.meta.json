@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a22374e51a242e930f2e1b7e228bf2d1528e10ae6b3be3a087c089f74e90cc8b",
+  "doc": "",
+  "file": "crates/wami/src/wami/oauth/oidc.rs",
+  "id": "code:crates/wami/src/wami/oauth/oidc.rs::struct::UserProfile",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 199,
+  "line_start": 194,
+  "name": "UserProfile",
+  "signature": "pub struct UserProfile"
+}

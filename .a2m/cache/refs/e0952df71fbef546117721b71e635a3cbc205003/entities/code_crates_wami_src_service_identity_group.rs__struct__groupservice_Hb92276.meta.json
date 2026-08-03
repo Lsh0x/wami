@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e67bc4bff1ee5215b9c052c557b6765ae8d14e6c1df8446491c7ea880c943e5e",
+  "doc": "",
+  "file": "crates/wami/src/service/identity/group.rs",
+  "id": "code:crates/wami/src/service/identity/group.rs::struct::GroupService",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 23,
+  "line_start": 20,
+  "name": "GroupService",
+  "signature": "pub struct GroupService<S>"
+}

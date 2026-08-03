@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder",
+    "extern:chrono::Utc::now",
+    "extern:chrono::Duration::hours"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:1fbe2c0e13328ec7d43eefe0ab4a796ed1d9e5275ea5cc3c19fc42a2949f5009",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_foranyvalue_date_greater_than_array_with_invalid_dates",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 4231,
+  "line_start": 4208,
+  "name": "test_foranyvalue_date_greater_than_array_with_invalid_dates",
+  "signature": "fn test_foranyvalue_date_greater_than_array_with_invalid_dates()"
+}

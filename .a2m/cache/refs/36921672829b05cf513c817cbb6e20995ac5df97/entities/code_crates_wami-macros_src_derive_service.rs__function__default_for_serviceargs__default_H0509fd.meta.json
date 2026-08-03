@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:13ee98c4102fad08c6de9f5955249ef4c102621a1d2d6705352fc0c3bd2e3e9f",
+  "doc": "",
+  "file": "crates/wami-macros/src/derive_service.rs",
+  "id": "code:crates/wami-macros/src/derive_service.rs::function::Default for ServiceArgs::default",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 66,
+  "line_start": 59,
+  "name": "default",
+  "signature": "fn default() -> Self"
+}

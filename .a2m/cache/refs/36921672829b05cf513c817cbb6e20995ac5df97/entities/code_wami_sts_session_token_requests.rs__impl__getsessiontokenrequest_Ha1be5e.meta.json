@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/sts/session_token/requests.rs::function::GetSessionTokenRequest::validate"
+  ],
+  "content_hash": "sha256:e841b25bd1236098d3eb5004b8ed0aa86cc2c7fac5fc05e13b484bfc557a8aa2",
+  "doc": "",
+  "file": "wami/sts/session_token/requests.rs",
+  "id": "code:wami/sts/session_token/requests.rs::impl::GetSessionTokenRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 60,
+  "line_start": 29,
+  "name": "GetSessionTokenRequest",
+  "signature": "impl GetSessionTokenRequest"
+}

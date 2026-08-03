@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "extern:Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:45d7b57b0b0d904e4cf2db7bcb50c6270ad65c4ce9da59d431e40eb4b835d9e4",
+  "doc": "Register a client, hashing the supplied secret.\n\nThe caller keeps the plaintext secret: this is the only moment it exists\noutside the client's own configuration, exactly as with access keys.",
+  "file": "crates/wami/src/wami/oauth/builder.rs",
+  "id": "code:crates/wami/src/wami/oauth/builder.rs::function::build_client",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 57,
+  "line_start": 23,
+  "name": "build_client",
+  "signature": "pub fn build_client("
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ee0ae400167684a66d9c942edeb7ba895db2e315a32491bea9c1d31f1e3d49c9",
+  "doc": "List all identities",
+  "file": "service/sts/identity.rs",
+  "id": "code:service/sts/identity.rs::function::IdentityService<S>::list_identities",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 121,
+  "line_start": 119,
+  "name": "list_identities",
+  "signature": "pub async fn list_identities(&self) -> Result<Vec<CallerIdentity>>"
+}

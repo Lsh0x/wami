@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f3db65e74773360cb8d83e1fd1511027fa1e192393ae705ce7ae3afca31b3d8e",
+  "doc": "",
+  "file": "wami/tenant/model.rs",
+  "id": "code:wami/tenant/model.rs::function::Default for TenantQuotas::default",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 346,
+  "line_start": 336,
+  "name": "default",
+  "signature": "fn default() -> Self"
+}

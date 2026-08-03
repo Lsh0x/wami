@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a1918febbd1867cc1a39824d9988d31699e33f01898c1282cce30ee734a91193",
+  "doc": "",
+  "file": "wami/identity/root_user.rs",
+  "id": "code:wami/identity/root_user.rs::function::AsRef<User> for RootUser::as_ref",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 196,
+  "line_start": 194,
+  "name": "as_ref",
+  "signature": "fn as_ref(&self) -> &User"
+}

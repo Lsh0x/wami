@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ce6226711f081fa75d4b5b02896686cf6c7d522c0f5106542f4a1e536c5f4042",
+  "doc": "",
+  "file": "store/memory/sso_admin/permission_set.rs",
+  "id": "code:store/memory/sso_admin/permission_set.rs::function::PermissionSetStore for InMemorySsoAdminStore::list_permission_sets",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 44,
+  "line_start": 42,
+  "name": "list_permission_sets",
+  "signature": "async fn list_permission_sets(&self, _instance_arn: &str) -> Result<Vec<PermissionSet>>"
+}

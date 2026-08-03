@@ -1,0 +1,25 @@
+{
+  "callees": [
+    "extern:Value::String",
+    "extern:Value::Number",
+    "extern:serde_json::Number::from_f64",
+    "extern:Value::Bool",
+    "extern:Value::Array",
+    "extern:Value::Object"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:677426d4e87bcc4d03ec61e6c32779dea982f3432ecb6771fd036f0813a02910",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_value_from_json_value",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 3171,
+  "line_start": 3135,
+  "name": "test_condition_value_from_json_value",
+  "signature": "fn test_condition_value_from_json_value()"
+}

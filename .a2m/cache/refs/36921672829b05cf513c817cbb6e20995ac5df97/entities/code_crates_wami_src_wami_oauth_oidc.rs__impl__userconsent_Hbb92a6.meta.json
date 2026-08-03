@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/wami/oauth/oidc.rs::function::UserConsent::covers"
+  ],
+  "content_hash": "sha256:406bffdf1b0ee71647ce989d7e9db609b4d00f89a2fab10f1d88d1937c4d148e",
+  "doc": "",
+  "file": "crates/wami/src/wami/oauth/oidc.rs",
+  "id": "code:crates/wami/src/wami/oauth/oidc.rs::impl::UserConsent",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 155,
+  "line_start": 150,
+  "name": "UserConsent",
+  "signature": "impl UserConsent"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/tenant/model.rs::function::Serialize for TenantId::serialize"
+  ],
+  "content_hash": "sha256:fb1c37f03a3f5251329fadf2413a7553a9a7344efc89da423b83832a0051617b",
+  "doc": "",
+  "file": "wami/tenant/model.rs",
+  "id": "code:wami/tenant/model.rs::impl::Serialize for TenantId",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 178,
+  "line_start": 171,
+  "name": "Serialize for TenantId",
+  "signature": "impl Serialize for TenantId"
+}

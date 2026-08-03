@@ -1,0 +1,25 @@
+{
+  "callees": [
+    "code:service/gdpr/mod.rs::function::GdprService<S>::list_retention_policies",
+    "code:service/gdpr/mod.rs::function::compute_verification_hash",
+    "code:service/gdpr/mod.rs::function::generate_id",
+    "code:wami/gdpr/operations.rs::function::compute_erasure_scope",
+    "extern:Utc::now",
+    "code:wami/gdpr/operations.rs::function::build_erasure_audit_event"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:cba9dccf2778daca7e5f0f378e5f567c7f6f58c8726cf4df4cac3de176d2f088",
+  "doc": "Request erasure of a user's data.\n\nComputes the scope (what can be erased vs. retained due to legal obligations),\nperforms the erasure, and returns a certificate.",
+  "file": "service/gdpr/mod.rs",
+  "id": "code:service/gdpr/mod.rs::function::GdprService<S>::request_erasure",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 247,
+  "line_start": 188,
+  "name": "request_erasure",
+  "signature": "pub async fn request_erasure("
+}

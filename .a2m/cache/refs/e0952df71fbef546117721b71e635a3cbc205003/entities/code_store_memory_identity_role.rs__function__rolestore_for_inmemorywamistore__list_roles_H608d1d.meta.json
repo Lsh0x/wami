@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:97750a7c7e02200a2109350b2aa5cfa26911a841e488bfc11f47386c07fb35c2",
+  "doc": "",
+  "file": "store/memory/identity/role.rs",
+  "id": "code:store/memory/identity/role.rs::function::RoleStore for InMemoryWamiStore::list_roles",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 70,
+  "line_start": 31,
+  "name": "list_roles",
+  "signature": "async fn list_roles("
+}

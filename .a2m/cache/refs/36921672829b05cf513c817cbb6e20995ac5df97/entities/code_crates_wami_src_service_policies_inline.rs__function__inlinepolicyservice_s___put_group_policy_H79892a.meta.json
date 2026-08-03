@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:56bf70734f75b57b8593a2781cb7c9b8f0b235707f80b97c286a3bc6e1ffd3fb",
+  "doc": "Put an inline policy on a group",
+  "file": "crates/wami/src/service/policies/inline.rs",
+  "id": "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::put_group_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 279,
+  "line_start": 229,
+  "name": "put_group_policy",
+  "signature": "pub async fn put_group_policy("
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d52be06557f010d21c9e93140445f70f0c8bc9ec439859fde3ef749f32146634",
+  "doc": "List sessions, optionally filtered by user ID",
+  "file": "service/sts/session.rs",
+  "id": "code:service/sts/session.rs::function::SessionService<S>::list_sessions",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 63,
+  "line_start": 61,
+  "name": "list_sessions",
+  "signature": "pub async fn list_sessions(&self, user_id: Option<&str>) -> Result<Vec<StsSession>>"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:1bc1e27ce2bfdd5f29ea445c834fe65ad27c42baf49af448add1360e500033ad",
+  "doc": "",
+  "file": "crates/cloud-provider/wami-provider-custom/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-custom/src/lib.rs::struct::CustomProviderBuilder",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 122,
+  "line_start": 117,
+  "name": "CustomProviderBuilder",
+  "signature": "pub struct CustomProviderBuilder"
+}

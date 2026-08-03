@@ -1,0 +1,14 @@
+%% id: code:crates/wami/src/wami/oauth/oidc.rs::function::generate_opaque_value
+%% kind: function
+%% file: crates/wami/src/wami/oauth/oidc.rs:246-248
+%% content_hash: sha256:dfae48c8e524c1fd3478d92d9116deb525067f7bb8c2c5fea3d12dfa500f1192
+%% signature: pub fn generate_opaque_value() -> String
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_crates_wami_src_wami_oauth_oidc_rs__function__generate_opaque_value_H0994d68f:::function[generate_opaque_value]
+  code_crates_wami_src_wami_oauth_oidc_rs__function__generate_opaque_value_H0994d68f -- calls --> extern_Uuid__new_v4_Hf2e90e55:::function[new_v4]
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___authorize_H31c93dff:::function[authorize] -- calls --> code_crates_wami_src_wami_oauth_oidc_rs__function__generate_opaque_value_H0994d68f
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___refresh_tokens_H7fb52574:::function[refresh_tokens] -- calls --> code_crates_wami_src_wami_oauth_oidc_rs__function__generate_opaque_value_H0994d68f
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___mint_Hccdca714:::function[mint] -- calls --> code_crates_wami_src_wami_oauth_oidc_rs__function__generate_opaque_value_H0994d68f

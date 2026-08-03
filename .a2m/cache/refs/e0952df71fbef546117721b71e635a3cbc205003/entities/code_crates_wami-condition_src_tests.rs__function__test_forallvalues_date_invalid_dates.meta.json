@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder",
+    "extern:chrono::Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0a787c16215a5e50cee7af11889f470aea7587bb2822a07765ee16eea3f73def",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_forallvalues_date_invalid_dates",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 6009,
+  "line_start": 5985,
+  "name": "test_forallvalues_date_invalid_dates",
+  "signature": "fn test_forallvalues_date_invalid_dates()"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:8ddc473246ce0bc7b717c14912bce39eea0b420b3ded1ea91424828dcf57e6ec",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::correlation_id",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 548,
+  "line_start": 545,
+  "name": "correlation_id",
+  "signature": "pub fn correlation_id(mut self, id: impl Into<String>) -> Self"
+}

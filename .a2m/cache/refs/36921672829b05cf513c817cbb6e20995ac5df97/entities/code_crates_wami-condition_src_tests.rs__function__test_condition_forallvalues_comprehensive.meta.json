@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d96b953eff6d26ad9f7f9aa976636d6e8d922c0276ba51c49fd6fe9704abab40",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_forallvalues_comprehensive",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 2767,
+  "line_start": 2733,
+  "name": "test_condition_forallvalues_comprehensive",
+  "signature": "fn test_condition_forallvalues_comprehensive()"
+}

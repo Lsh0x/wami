@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/actions.rs::function::FromStr for WamiServicePrefix::from_str"
+  ],
+  "content_hash": "sha256:672068b2afa60078ca9ea7fc57b2f1e53f5afcdfc794338bfe6bdf57d056bd22",
+  "doc": "",
+  "file": "crates/wami-core/src/actions.rs",
+  "id": "code:crates/wami-core/src/actions.rs::impl::FromStr for WamiServicePrefix",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 319,
+  "line_start": 298,
+  "name": "FromStr for WamiServicePrefix",
+  "signature": "impl FromStr for WamiServicePrefix"
+}

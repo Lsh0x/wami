@@ -1,0 +1,24 @@
+{
+  "callees": [],
+  "callers": [
+    "code:store/memory/credentials/tests.rs::function::test_login_profile_create_and_get",
+    "code:store/memory/credentials/tests.rs::function::test_login_profile_update",
+    "code:store/memory/credentials/tests.rs::function::test_login_profile_delete",
+    "code:store/memory/credentials/tests.rs::function::test_login_profile_password_reset_required",
+    "code:store/memory/credentials/tests.rs::function::test_login_profile_one_per_user"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:login_profile_builder::build_login_profile",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "build_login_profile",
+  "signature": "login_profile_builder::build_login_profile"
+}

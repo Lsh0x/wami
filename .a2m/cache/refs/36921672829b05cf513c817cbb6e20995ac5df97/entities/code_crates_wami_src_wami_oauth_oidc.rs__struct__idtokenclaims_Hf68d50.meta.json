@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:6299b1cdb5d3d2b930291e30d33e3f06924a1af43a8cd51448c97f118fb0960a",
+  "doc": "",
+  "file": "crates/wami/src/wami/oauth/oidc.rs",
+  "id": "code:crates/wami/src/wami/oauth/oidc.rs::struct::IdTokenClaims",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 187,
+  "line_start": 163,
+  "name": "IdTokenClaims",
+  "signature": "pub struct IdTokenClaims"
+}

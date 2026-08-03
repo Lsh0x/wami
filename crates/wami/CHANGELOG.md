@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.16.0](https://github.com/Lsh0x/wami/compare/v0.15.0...v0.16.0) (2026-08-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **oauth:** `build_client` takes a seventh argument, `redirect_uris`. Pass `vec![]` for a client that only uses `client_credentials`.
+* **oauth:** `AuthorizationCode`, `RefreshToken`, `AuthorizationRequest` and `IdTokenRequest` each gain an `event` field. Store implementers constructing them literally need `event: None`; both persisted structs carry `#[serde(default)]`, so records already in a database deserialise unchanged.
+* **oauth:** `KeyManager::verify_claims_as` takes a fourth argument, `TypePolicy`. `KeyManager::verify_claims` is unchanged and still examines no `typ` — that contract predates RFC 9068 typing and was not narrowed.
+* **oauth:** `build_client` refuses a client whose `audience` equals its `client_id`. An access token and an ID token would then be addressed identically, and `aud` would stop separating them.
+
+### Features
+
+* **oauth:** OpenID Connect user flows — code + PKCE, consent, rotation ([#124](https://github.com/Lsh0x/wami/issues/124)) ([fc119cc](https://github.com/Lsh0x/wami/commit/fc119cc74b5781eae7a0885a3998d4854784aab7)), closes [#119](https://github.com/Lsh0x/wami/issues/119)
+* **oauth:** explicit token typing (RFC 9068) and authentication-event claims ([#126](https://github.com/Lsh0x/wami/issues/126)) ([2a75c98](https://github.com/Lsh0x/wami/commit/2a75c987be0cdda7fab240218c313820761672e7)), closes [#125](https://github.com/Lsh0x/wami/issues/125)
+
+
+### Documentation
+
+* **oauth:** guide for the authorization server and the OpenID Provider, with an end-to-end sequence diagram ([#126](https://github.com/Lsh0x/wami/issues/126))
+
 ## [0.15.0](https://github.com/Lsh0x/wami/compare/v0.14.0...v0.15.0) (2026-08-02)
 
 

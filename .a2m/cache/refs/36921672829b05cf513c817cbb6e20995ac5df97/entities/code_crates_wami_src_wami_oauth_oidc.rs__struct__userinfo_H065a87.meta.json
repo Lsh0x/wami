@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:20091abdd4e839223191d3446af2131319fae824aae456746c9c66393e7c5270",
+  "doc": "",
+  "file": "crates/wami/src/wami/oauth/oidc.rs",
+  "id": "code:crates/wami/src/wami/oauth/oidc.rs::struct::UserInfo",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 212,
+  "line_start": 203,
+  "name": "UserInfo",
+  "signature": "pub struct UserInfo"
+}

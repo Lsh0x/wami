@@ -1,0 +1,26 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/identity/identity_provider/operations.rs::function::validate_saml_metadata",
+    "code:wami/identity/identity_provider/operations.rs::function::extract_saml_validity",
+    "code:wami/identity/identity_provider/operations.rs::function::validate_oidc_url",
+    "code:wami/identity/identity_provider/operations.rs::function::validate_thumbprint",
+    "code:wami/identity/identity_provider/operations.rs::function::validate_thumbprint_list",
+    "code:wami/identity/identity_provider/operations.rs::function::validate_client_id_list",
+    "code:wami/identity/identity_provider/operations.rs::function::parse_oidc_discovery"
+  ],
+  "content_hash": "77ee5c45fdd4b02b917145132b391aefb0646ae02ebc2f556489170c71b4bb39",
+  "doc": "",
+  "file": "wami/identity/identity_provider/operations.rs",
+  "id": "code:wami/identity/identity_provider/operations.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 302,
+  "line_start": 1,
+  "name": "operations",
+  "signature": ""
+}

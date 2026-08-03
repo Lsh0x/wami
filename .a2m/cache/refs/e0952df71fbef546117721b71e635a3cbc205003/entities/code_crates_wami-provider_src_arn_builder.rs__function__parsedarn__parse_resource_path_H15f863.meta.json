@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-provider/src/arn_builder.rs::function::ParsedArn::from_arn"
+  ],
+  "children": [],
+  "content_hash": "sha256:469f86e4f4bab63b0db06477010805626c65895f917f52affc7b96cd491d967d",
+  "doc": "",
+  "file": "crates/wami-provider/src/arn_builder.rs",
+  "id": "code:crates/wami-provider/src/arn_builder.rs::function::ParsedArn::parse_resource_path",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 224,
+  "line_start": 196,
+  "name": "parse_resource_path",
+  "signature": "fn parse_resource_path(resource_path: &str) -> Result<(String, String, String)>"
+}

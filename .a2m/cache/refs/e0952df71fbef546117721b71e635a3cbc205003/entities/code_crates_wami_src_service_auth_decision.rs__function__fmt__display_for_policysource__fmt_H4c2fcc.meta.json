@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:511e08ed3464741581f8fc1db10fd955f9335c26a3fee2eb7d58135345025cc4",
+  "doc": "",
+  "file": "crates/wami/src/service/auth/decision.rs",
+  "id": "code:crates/wami/src/service/auth/decision.rs::function::fmt::Display for PolicySource::fmt",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 154,
+  "line_start": 140,
+  "name": "fmt",
+  "signature": "fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/auth/decision.rs::function::fmt::Display for StatementRef::fmt"
+  ],
+  "content_hash": "sha256:0e7fffa505eb01dce47728f85c6ee6b53878c326d670fcbb16cafffba0890685",
+  "doc": "",
+  "file": "crates/wami/src/service/auth/decision.rs",
+  "id": "code:crates/wami/src/service/auth/decision.rs::impl::fmt::Display for StatementRef",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 183,
+  "line_start": 176,
+  "name": "fmt::Display for StatementRef",
+  "signature": "impl fmt::Display for StatementRef"
+}

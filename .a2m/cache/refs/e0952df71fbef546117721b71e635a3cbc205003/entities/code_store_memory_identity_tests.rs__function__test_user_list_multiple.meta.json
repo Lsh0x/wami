@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:user_builder::build_user"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:1fd761d16551e3a6c560d799b099e3a06efcf9c45e42f6c1c36f1b002001d065",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_user_list_multiple",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 127,
+  "line_start": 109,
+  "name": "test_user_list_multiple",
+  "signature": "async fn test_user_list_multiple()"
+}

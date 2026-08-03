@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/identity/group.rs::struct::GroupService",
+    "code:crates/wami/src/service/identity/group.rs::impl::GroupService<S>"
+  ],
+  "content_hash": "fb21d3136a320bd761591fc3c5647b1ecb26f2fdb3b879e3d2a1cccc7c271788",
+  "doc": "",
+  "file": "crates/wami/src/service/identity/group.rs",
+  "id": "code:crates/wami/src/service/identity/group.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 432,
+  "line_start": 1,
+  "name": "group",
+  "signature": ""
+}

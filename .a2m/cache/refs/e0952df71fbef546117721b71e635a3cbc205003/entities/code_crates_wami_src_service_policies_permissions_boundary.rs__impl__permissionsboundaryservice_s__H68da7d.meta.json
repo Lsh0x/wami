@@ -1,0 +1,24 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/policies/permissions_boundary.rs::function::PermissionsBoundaryService<S>::new",
+    "code:crates/wami/src/service/policies/permissions_boundary.rs::function::PermissionsBoundaryService<S>::with_authorizer",
+    "code:crates/wami/src/service/policies/permissions_boundary.rs::function::PermissionsBoundaryService<S>::guard",
+    "code:crates/wami/src/service/policies/permissions_boundary.rs::function::PermissionsBoundaryService<S>::put_permissions_boundary",
+    "code:crates/wami/src/service/policies/permissions_boundary.rs::function::PermissionsBoundaryService<S>::delete_permissions_boundary"
+  ],
+  "content_hash": "sha256:a8e33938ce5490489771934e239c045a674d47d82a190c122eeec6e321bddcf5",
+  "doc": "",
+  "file": "crates/wami/src/service/policies/permissions_boundary.rs",
+  "id": "code:crates/wami/src/service/policies/permissions_boundary.rs::impl::PermissionsBoundaryService<S>",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 222,
+  "line_start": 33,
+  "name": "PermissionsBoundaryService<S>",
+  "signature": "impl<S> PermissionsBoundaryService<S>"
+}

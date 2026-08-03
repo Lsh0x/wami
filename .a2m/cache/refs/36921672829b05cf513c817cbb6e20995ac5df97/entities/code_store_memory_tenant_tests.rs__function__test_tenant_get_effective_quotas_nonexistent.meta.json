@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:wami/tenant/model.rs::function::TenantId::root"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5485e023e599403eb6bc3d92143fc4df331d7434705adc1adc2efe35354417ad",
+  "doc": "",
+  "file": "store/memory/tenant/tests.rs",
+  "id": "code:store/memory/tenant/tests.rs::function::test_tenant_get_effective_quotas_nonexistent",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 310,
+  "line_start": 299,
+  "name": "test_tenant_get_effective_quotas_nonexistent",
+  "signature": "async fn test_tenant_get_effective_quotas_nonexistent()"
+}

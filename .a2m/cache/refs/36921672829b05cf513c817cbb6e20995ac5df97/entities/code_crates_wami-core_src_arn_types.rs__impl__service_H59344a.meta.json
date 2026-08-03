@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/arn/types.rs::function::Service::as_str"
+  ],
+  "content_hash": "sha256:0ac8eb428e438696fa97263825292d7d6a9f231b556061f52b4cb035acc97b18",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::impl::Service",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 308,
+  "line_start": 298,
+  "name": "Service",
+  "signature": "impl Service"
+}

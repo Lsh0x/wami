@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:37888679094a4510dd7ac1b8709c94e7257efc2784fd666a59a368733a7a1edc",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_forallvalues_numeric_less_than_string_actual_error",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 4373,
+  "line_start": 4355,
+  "name": "test_forallvalues_numeric_less_than_string_actual_error",
+  "signature": "fn test_forallvalues_numeric_less_than_string_actual_error()"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f9d46ebb0ae21786412342f8e08710989dc41b14c430d8f126e0d85102194dba",
+  "doc": "Sets the WAMI instance ID.\n\n# Examples\n\n```\nuse wami_core::arn::WamiArn;\n\nlet builder = WamiArn::builder().wami_instance(\"999888777\");\n```",
+  "file": "crates/wami-core/src/arn/builder.rs",
+  "id": "code:crates/wami-core/src/arn/builder.rs::function::ArnBuilder::wami_instance",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 147,
+  "line_start": 144,
+  "name": "wami_instance",
+  "signature": "pub fn wami_instance(mut self, instance_id: impl Into<String>) -> Self"
+}

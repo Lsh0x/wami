@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:service/sts/federation.rs::struct::FederationService",
+    "code:service/sts/federation.rs::impl::FederationService<S>"
+  ],
+  "content_hash": "b0048fc274f8b6304e5d6e6be4f7938027d5bd670e09b8227ef830f60d79d168",
+  "doc": "",
+  "file": "service/sts/federation.rs",
+  "id": "code:service/sts/federation.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 349,
+  "line_start": 1,
+  "name": "federation",
+  "signature": ""
+}

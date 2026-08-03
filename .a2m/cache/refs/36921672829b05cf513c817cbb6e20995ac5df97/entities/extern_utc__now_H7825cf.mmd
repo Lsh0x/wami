@@ -1,0 +1,57 @@
+%% id: extern:Utc::now
+%% kind: extern
+%% file: :0-0
+%% content_hash: 
+%% signature: Utc::now
+graph LR
+  classDef extern fill:#f5f5f5,stroke:#424242
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  extern_Utc__now_H7825cf5c:::extern[now]
+  code_crates_wami_condition_src_tests_rs__function__test_context_builder_all_methods_H7e422254:::function[test_context_builder_all_methods] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_credentials_src_server_certificate_builder_rs__function__build_server_certificate_Hef91ae30:::function[build_server_certificate] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_credentials_src_service_credential_builder_rs__function__build_service_credential_He33333fd:::function[build_service_credential] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_credentials_src_signing_certificate_builder_rs__function__build_signing_certificate_H9f5ecad6:::function[build_signing_certificate] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_provider_src_provider_info_rs__function__ProviderInfo__new_H12194b56:::function[new] -- calls --> extern_Utc__now_H7825cf5c
+  code_service_gdpr_mod_rs__function__GdprService_S___grant_consent_H709ee620:::function[grant_consent] -- calls --> extern_Utc__now_H7825cf5c
+  code_service_gdpr_mod_rs__function__GdprService_S___revoke_consent_H55f80517:::function[revoke_consent] -- calls --> extern_Utc__now_H7825cf5c
+  code_service_gdpr_mod_rs__function__GdprService_S___revoke_all_consents_Hcc7835d4:::function[revoke_all_consents] -- calls --> extern_Utc__now_H7825cf5c
+  code_service_gdpr_mod_rs__function__GdprService_S___request_erasure_H50b471da:::function[request_erasure] -- calls --> extern_Utc__now_H7825cf5c
+  code_service_gdpr_mod_rs__function__GdprService_S___export_user_data_H106efb65:::function[export_user_data] -- calls --> extern_Utc__now_H7825cf5c
+  code_service_gdpr_mod_rs__function__GdprService_S___enforce_retention_H9ec47d91:::function[enforce_retention] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_src_service_oauth_mod_rs__function__OAuthService_S___issue_token_H8e6f9457:::function[issue_token] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_src_service_oauth_mod_rs__function__OAuthService_S___introspect_token_H1941ea23:::function[introspect_token] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___authorize_H31c93dff:::function[authorize] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___grant_consent_He32b4ef2:::function[grant_consent] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___exchange_code_H9a967b6e:::function[exchange_code] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___refresh_tokens_H7fb52574:::function[refresh_tokens] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___user_info_H669c5393:::function[user_info] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___mint_Hccdca714:::function[mint] -- calls --> extern_Utc__now_H7825cf5c
+  code_service_sts_assume_role_rs__function__AssumeRoleService_S___assume_role_inner_Hc9e298a7:::function[assume_role_inner] -- calls --> extern_Utc__now_H7825cf5c
+  code_service_sts_federation_rs__function__FederationService_S___get_federation_token_inner_H8e80e87a:::function[get_federation_token_inner] -- calls --> extern_Utc__now_H7825cf5c
+  code_service_sts_session_token_rs__function__SessionTokenService_S___get_session_token_inner_H83e7e4ab:::function[get_session_token_inner] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_src_store_memory_oauth_mod_rs__function__OAuthTokenStore_for_InMemoryOAuthStore__revoke_oauth_token_H99762ee2:::function[revoke_oauth_token] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_src_store_memory_oauth_mod_rs__function__OAuthTokenStore_for_InMemoryOAuthStore__revoke_oauth_tokens_for_client_H469df61c:::function[revoke_oauth_tokens_for_client] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_src_store_memory_oauth_mod_rs__function__OAuthRefreshStore_for_InMemoryOAuthStore__rotate_refresh_token_Hfe05b605:::function[rotate_refresh_token] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_src_store_memory_oauth_mod_rs__function__OAuthRefreshStore_for_InMemoryOAuthStore__revoke_refresh_chain_H31d1ff6f:::function[revoke_refresh_chain] -- calls --> extern_Utc__now_H7825cf5c
+  code_store_memory_sts_tests_rs__function__test_session_create_and_get_H90f007e1:::function[test_session_create_and_get] -- calls --> extern_Utc__now_H7825cf5c
+  code_store_memory_sts_tests_rs__function__test_session_delete_H12da9b1b:::function[test_session_delete] -- calls --> extern_Utc__now_H7825cf5c
+  code_store_memory_sts_tests_rs__function__test_session_list_multiple_H86424c5a:::function[test_session_list_multiple] -- calls --> extern_Utc__now_H7825cf5c
+  code_store_memory_sts_tests_rs__function__test_session_with_role_H720285d6:::function[test_session_with_role] -- calls --> extern_Utc__now_H7825cf5c
+  code_store_memory_sts_tests_rs__function__test_session_with_providers_H9e952396:::function[test_session_with_providers] -- calls --> extern_Utc__now_H7825cf5c
+  code_store_memory_sts_tests_rs__function__test_identity_with_providers_H11c4e1eb:::function[test_identity_with_providers] -- calls --> extern_Utc__now_H7825cf5c
+  code_wami_gdpr_operations_rs__function__is_consent_active_Hb4e4dd91:::function[is_consent_active] -- calls --> extern_Utc__now_H7825cf5c
+  code_wami_gdpr_operations_rs__function__build_consent_audit_event_H41a9e22f:::function[build_consent_audit_event] -- calls --> extern_Utc__now_H7825cf5c
+  code_wami_gdpr_operations_rs__function__build_erasure_audit_event_H6e3ea72d:::function[build_erasure_audit_event] -- calls --> extern_Utc__now_H7825cf5c
+  code_wami_identity_group_builder_rs__function__build_group_H0791f49c:::function[build_group] -- calls --> extern_Utc__now_H7825cf5c
+  code_wami_identity_group_builder_rs__function__build_group_legacy_Hdeea21c2:::function[build_group_legacy] -- calls --> extern_Utc__now_H7825cf5c
+  code_wami_identity_identity_provider_builder_rs__function__build_saml_provider_H95840005:::function[build_saml_provider] -- calls --> extern_Utc__now_H7825cf5c
+  code_wami_identity_identity_provider_builder_rs__function__build_oidc_provider_H7984383b:::function[build_oidc_provider] -- calls --> extern_Utc__now_H7825cf5c
+  code_wami_identity_role_builder_rs__function__build_role_Hd042520b:::function[build_role] -- calls --> extern_Utc__now_H7825cf5c
+  code_wami_identity_role_builder_rs__function__build_role_legacy_H2bed4e68:::function[build_role_legacy] -- calls --> extern_Utc__now_H7825cf5c
+  code_wami_identity_root_user_rs__function__RootUser__for_instance_H86b8f5b3:::function[for_instance] -- calls --> extern_Utc__now_H7825cf5c
+  code_wami_identity_user_builder_rs__function__build_user_H5f66a74f:::function[build_user] -- calls --> extern_Utc__now_H7825cf5c
+  code_wami_identity_user_builder_rs__function__build_user_legacy_H6d96a92d:::function[build_user_legacy] -- calls --> extern_Utc__now_H7825cf5c
+  code_wami_instance_bootstrap_rs__function__InstanceBootstrap__initialize_instance_H58b33c19:::function[initialize_instance] -- calls --> extern_Utc__now_H7825cf5c
+  code_crates_wami_src_wami_oauth_builder_rs__function__build_client_H67137ee3:::function[build_client] -- calls --> extern_Utc__now_H7825cf5c
+  code_wami_reports_credential_report_model_rs__function__CredentialReport__new_Hf14414e6:::function[new] -- calls --> extern_Utc__now_H7825cf5c

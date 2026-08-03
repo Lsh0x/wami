@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:12f9365705000650feb0630a4dd2aaca0390014b7a96f06f82a3b5224f2f796b",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::struct::ConditionContextBuilder",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 205,
+  "line_start": 128,
+  "name": "ConditionContextBuilder",
+  "signature": "pub struct ConditionContextBuilder"
+}

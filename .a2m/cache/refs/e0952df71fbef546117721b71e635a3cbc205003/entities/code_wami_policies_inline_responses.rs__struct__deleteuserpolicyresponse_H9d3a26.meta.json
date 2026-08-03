@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e1c35d5c23904b91fd31de9024cb0d7ea8115d366404c2a1b6762c157d2e7a9c",
+  "doc": "",
+  "file": "wami/policies/inline/responses.rs",
+  "id": "code:wami/policies/inline/responses.rs::struct::DeleteUserPolicyResponse",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 30,
+  "line_start": 27,
+  "name": "DeleteUserPolicyResponse",
+  "signature": "pub struct DeleteUserPolicyResponse"
+}

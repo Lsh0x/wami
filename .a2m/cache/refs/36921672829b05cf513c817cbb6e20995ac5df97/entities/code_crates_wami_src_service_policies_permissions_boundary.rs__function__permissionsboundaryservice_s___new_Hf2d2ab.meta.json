@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ed53da0f6a378428ca2020de01a3363d716f845fe8f3e15bfe13257acbe26f88",
+  "doc": "Create a new permissions boundary service without authorization guards (backward compatible).",
+  "file": "crates/wami/src/service/policies/permissions_boundary.rs",
+  "id": "code:crates/wami/src/service/policies/permissions_boundary.rs::function::PermissionsBoundaryService<S>::new",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 44,
+  "line_start": 38,
+  "name": "new",
+  "signature": "pub fn new(store: Arc<RwLock<S>>, account_id: String) -> Self"
+}

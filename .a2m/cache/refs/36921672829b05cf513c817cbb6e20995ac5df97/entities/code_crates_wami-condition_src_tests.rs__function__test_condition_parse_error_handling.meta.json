@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/evaluator.rs::function::parse_condition_block"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d00bfe6a58c33892ff10ace8dcdf3259e1676012467e599aa208cbb10fcbe941",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_parse_error_handling",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 3027,
+  "line_start": 3012,
+  "name": "test_condition_parse_error_handling",
+  "signature": "fn test_condition_parse_error_handling()"
+}

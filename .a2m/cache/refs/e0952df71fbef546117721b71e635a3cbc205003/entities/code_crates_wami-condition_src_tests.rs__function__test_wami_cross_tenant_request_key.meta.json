@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ba1b846456b05239a2f809d0b3b2b46db39c3f1f8d829125fc751ddde16110ab",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wami_cross_tenant_request_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7724,
+  "line_start": 7718,
+  "name": "test_wami_cross_tenant_request_key",
+  "signature": "fn test_wami_cross_tenant_request_key()"
+}

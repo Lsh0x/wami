@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/wami/oauth/oidc.rs::function::build_discovery_document"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:69be5d47e3ba05e5b4bd6b40a7debc32c888b3573709d506801438ea04de64ae",
+  "doc": "The provider metadata for this service, served from `base_url`.",
+  "file": "crates/wami/src/service/oauth/oidc.rs",
+  "id": "code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::discovery",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 440,
+  "line_start": 438,
+  "name": "discovery",
+  "signature": "pub fn discovery(&self, base_url: &str) -> DiscoveryDocument"
+}

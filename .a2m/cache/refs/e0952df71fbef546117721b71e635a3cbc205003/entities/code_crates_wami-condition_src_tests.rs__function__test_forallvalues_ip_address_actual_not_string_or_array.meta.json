@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:2c65021ce148a1a07481cfa13e14ff851491454253ddb08c116a5f5e796b43b9",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_forallvalues_ip_address_actual_not_string_or_array",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 3915,
+  "line_start": 3901,
+  "name": "test_forallvalues_ip_address_actual_not_string_or_array",
+  "signature": "fn test_forallvalues_ip_address_actual_not_string_or_array()"
+}

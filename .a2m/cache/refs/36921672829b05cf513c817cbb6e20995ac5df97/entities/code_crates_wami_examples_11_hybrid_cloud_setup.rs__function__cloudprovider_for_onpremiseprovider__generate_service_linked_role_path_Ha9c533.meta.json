@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:6aafe3df9f0fd891e5c184a6abe7e4908f45565ccbae90d2ac6db48782d4903d",
+  "doc": "",
+  "file": "crates/wami/examples/11_hybrid_cloud_setup.rs",
+  "id": "code:crates/wami/examples/11_hybrid_cloud_setup.rs::function::CloudProvider for OnPremiseProvider::generate_service_linked_role_path",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 116,
+  "line_start": 114,
+  "name": "generate_service_linked_role_path",
+  "signature": "fn generate_service_linked_role_path(&self, service_name: &str) -> String"
+}

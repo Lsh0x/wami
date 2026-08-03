@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "extern:env_logger::init",
+    "code:crates/wami-core/src/context.rs::function::WamiContext::builder",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f4818503f8e13e7e90c69e293c6af2ea4b1d590e039b2bd4767618b52283a100",
+  "doc": "",
+  "file": "crates/wami/examples/22_identity_providers_federation.rs",
+  "id": "code:crates/wami/examples/22_identity_providers_federation.rs::function::main",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 398,
+  "line_start": 30,
+  "name": "main",
+  "signature": "async fn main() -> Result<(), Box<dyn std::error::Error>>"
+}

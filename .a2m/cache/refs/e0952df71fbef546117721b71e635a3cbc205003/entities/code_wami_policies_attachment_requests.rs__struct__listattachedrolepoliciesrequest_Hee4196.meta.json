@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:671e348da626650f569dc4053db3ff623267851fd80bfddabc788f9ce205ac0a",
+  "doc": "",
+  "file": "wami/policies/attachment/requests.rs",
+  "id": "code:wami/policies/attachment/requests.rs::struct::ListAttachedRolePoliciesRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 78,
+  "line_start": 75,
+  "name": "ListAttachedRolePoliciesRequest",
+  "signature": "pub struct ListAttachedRolePoliciesRequest"
+}

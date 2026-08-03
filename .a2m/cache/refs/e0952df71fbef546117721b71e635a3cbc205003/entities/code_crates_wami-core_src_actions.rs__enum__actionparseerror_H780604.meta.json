@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:646649de40a537d106b247bbed39189eff8b4a0e0eb021ed9522052f54736997",
+  "doc": "",
+  "file": "crates/wami-core/src/actions.rs",
+  "id": "code:crates/wami-core/src/actions.rs::enum::ActionParseError",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 565,
+  "line_start": 558,
+  "name": "ActionParseError",
+  "signature": "pub enum ActionParseError"
+}

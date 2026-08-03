@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:055a34d43c5ae91cdccd619e1850969a8d01b0a871513f36ed4ef809f69a5b42",
+  "doc": "",
+  "file": "crates/wami-core/src/actions.rs",
+  "id": "code:crates/wami-core/src/actions.rs::function::WamiServicePrefix::as_str",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 277,
+  "line_start": 261,
+  "name": "as_str",
+  "signature": "pub fn as_str(&self) -> &'static str"
+}

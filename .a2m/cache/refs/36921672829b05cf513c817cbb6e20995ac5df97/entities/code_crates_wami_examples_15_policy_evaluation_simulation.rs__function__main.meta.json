@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::builder",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5169e91c2ec31e61c7a33ffefb78ba6a140584c58d15161baf256272efb5eda4",
+  "doc": "",
+  "file": "crates/wami/examples/15_policy_evaluation_simulation.rs",
+  "id": "code:crates/wami/examples/15_policy_evaluation_simulation.rs::function::main",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 103,
+  "line_start": 22,
+  "name": "main",
+  "signature": "async fn main() -> Result<(), Box<dyn std::error::Error>>"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-core/src/context.rs::function::WamiContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:dabea8452680767d13515179c5bec87ddae72e87b458a60d36c94a3083f7e6fc",
+  "doc": "Set the tenant path",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::function::WamiContextBuilder::tenant_path",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 474,
+  "line_start": 471,
+  "name": "tenant_path",
+  "signature": "pub fn tenant_path(mut self, tenant_path: TenantPath) -> Self"
+}
