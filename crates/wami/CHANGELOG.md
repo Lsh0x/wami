@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.0](https://github.com/Lsh0x/wami/compare/v0.16.0...v0.17.0) (2026-08-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* fold the provider crates and wami-credentials into wami ([#131](https://github.com/Lsh0x/wami/issues/131))
+* **core:** fold wami-traits in, and stop the macros naming it relatively ([#130](https://github.com/Lsh0x/wami/issues/130))
+
+### Refactoring
+
+* **core:** fold wami-traits in, and stop the macros naming it relatively ([#130](https://github.com/Lsh0x/wami/issues/130)) ([6147ea4](https://github.com/Lsh0x/wami/commit/6147ea4a8bb91732d28b884fc61437be6d554450))
+* fold the provider crates and wami-credentials into wami ([#131](https://github.com/Lsh0x/wami/issues/131)) ([0f11cf5](https://github.com/Lsh0x/wami/commit/0f11cf5140ed93334e258be690d4942c3b662e4f))
+
 ## [0.16.0](https://github.com/Lsh0x/wami/compare/v0.15.0...v0.16.0) (2026-08-02)
 
 
