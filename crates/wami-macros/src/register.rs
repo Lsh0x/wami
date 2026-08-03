@@ -31,7 +31,7 @@ fn generate(idents: &[Ident]) -> Result<proc_macro2::TokenStream> {
 
     Ok(quote! {
         pub fn register_all_services(
-            registry: &mut dyn wami_traits::ServiceRegistry,
+            registry: &mut dyn ::wami_core::traits::ServiceRegistry,
         ) {
             #( #registrations )*
         }

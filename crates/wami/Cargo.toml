@@ -34,7 +34,6 @@ getrandom = "0.2"
 ed25519-dalek = { version = "2", features = ["rand_core", "pkcs8"], optional = true }
 jsonwebtoken = { version = "9", optional = true }
 roxmltree = "0.21"
-wami-traits = { path = "../wami-traits" }
 wami-provider = { path = "../wami-provider" }
 wami-provider-aws = { path = "../cloud-provider/wami-provider-aws" }
 wami-provider-gcp = { path = "../cloud-provider/wami-provider-gcp" }

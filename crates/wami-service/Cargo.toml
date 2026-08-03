@@ -6,8 +6,8 @@ license = "MIT"
 description = "Service registry and orchestration utilities for the WAMI workspace"
 
 [dependencies]
-wami-traits = { path = "../wami-traits" }
+wami-core = { path = "../wami-core" }
 
 [dev-dependencies]
-wami-core = { path = "../wami-core" }
+wami-macros = { path = "../wami-macros" }
 

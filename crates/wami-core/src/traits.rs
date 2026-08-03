@@ -1,7 +1,15 @@
-//! Domain-agnostic trait definitions shared across WAMI crates.
+//! Domain-agnostic traits shared across the workspace.
+//!
+//! These live in `wami-core` rather than a crate of their own because they are
+//! 37 lines with no dependencies of their own, and a separate crate for them
+//! would have to be published for anyone to depend on `wami` at all. See #129.
+//!
+//! [`Service`] and [`ServiceRegistry`] are what `wami_macros::Service` and
+//! `wami_macros::register_services!` expand to, so a crate using those macros
+//! needs `wami-core` in scope — the macros name it absolutely, as `::wami_core`.
 
+use crate::error::Result;
 use std::sync::Arc;
-use wami_core::error::Result;
 
 /// Generic CRUD trait for backing stores.
 #[allow(clippy::result_large_err)]

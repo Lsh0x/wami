@@ -33,10 +33,10 @@ fn expand_inner(input: DeriveInput) -> Result<proc_macro2::TokenStream> {
     })?;
     let error_ty = args
         .error
-        .unwrap_or_else(|| parse_quote!(wami_core::error::AmiError));
+        .unwrap_or_else(|| parse_quote!(::wami_core::error::AmiError));
 
     Ok(quote! {
-        impl wami_traits::Service for #ident {
+        impl ::wami_core::traits::Service for #ident {
             type Request = #request_ty;
             type Response = #response_ty;
             type Error = #error_ty;
