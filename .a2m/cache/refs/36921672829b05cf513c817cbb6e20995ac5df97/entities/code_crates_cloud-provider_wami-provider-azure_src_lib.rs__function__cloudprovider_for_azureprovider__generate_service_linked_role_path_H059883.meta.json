@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ba644d40a6385a2a87b5dc83468cb28f47b8b4f657c5f16d6a39f826200e5762",
+  "doc": "",
+  "file": "crates/cloud-provider/wami-provider-azure/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-azure/src/lib.rs::function::CloudProvider for AzureProvider::generate_service_linked_role_path",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 110,
+  "line_start": 108,
+  "name": "generate_service_linked_role_path",
+  "signature": "fn generate_service_linked_role_path(&self, _service_name: &str) -> String"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a55f000cd921b7e5d7cf5dbd5647960a63cb2ae6429d7e2ceb2e9aadda1ba304",
+  "doc": "",
+  "file": "store/memory/identity/group.rs",
+  "id": "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::list_attached_group_policies",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 126,
+  "line_start": 120,
+  "name": "list_attached_group_policies",
+  "signature": "async fn list_attached_group_policies(&self, group_name: &str) -> Result<Vec<String>>"
+}

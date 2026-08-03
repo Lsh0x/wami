@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder"
+  ],
+  "callers": [
+    "code:crates/wami/examples/25_arn_usage.rs::function::main"
+  ],
+  "children": [],
+  "content_hash": "sha256:3dfb14c5e8c96713035da1838d01315672b8c729408de8ff541819a0e0405c72",
+  "doc": "",
+  "file": "crates/wami/examples/25_arn_usage.rs",
+  "id": "code:crates/wami/examples/25_arn_usage.rs::function::hierarchical_tenants",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 439,
+  "line_start": 362,
+  "name": "hierarchical_tenants",
+  "signature": "fn hierarchical_tenants() -> Result<()>"
+}

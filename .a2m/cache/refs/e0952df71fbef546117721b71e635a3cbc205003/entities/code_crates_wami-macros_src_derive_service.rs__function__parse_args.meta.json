@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "extern:syn::Error::new_spanned"
+  ],
+  "callers": [
+    "code:crates/wami-macros/src/derive_service.rs::function::expand_inner"
+  ],
+  "children": [],
+  "content_hash": "sha256:1c7e052da6b1fc7ae9418c3cdfa653aa32809ab37cc7693185af99aaeb673b20",
+  "doc": "",
+  "file": "crates/wami-macros/src/derive_service.rs",
+  "id": "code:crates/wami-macros/src/derive_service.rs::function::parse_args",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 95,
+  "line_start": 69,
+  "name": "parse_args",
+  "signature": "fn parse_args(attrs: &[Attribute]) -> Result<ServiceArgs>"
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:service/sso_admin/instance.rs::struct::InstanceService",
+    "code:service/sso_admin/instance.rs::impl::InstanceService<S>"
+  ],
+  "content_hash": "d01e8dafaf5cc197556b780adb53fd6a58f23f7dbdadb8865d5603fb24a62026",
+  "doc": "",
+  "file": "service/sso_admin/instance.rs",
+  "id": "code:service/sso_admin/instance.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 111,
+  "line_start": 1,
+  "name": "instance",
+  "signature": ""
+}

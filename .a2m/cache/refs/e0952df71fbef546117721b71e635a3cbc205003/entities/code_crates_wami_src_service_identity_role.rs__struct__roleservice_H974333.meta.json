@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c7dc670bd5314ab9ae53648c7fc1391b89f45fd955734332f1626a2ce9987ba3",
+  "doc": "",
+  "file": "crates/wami/src/service/identity/role.rs",
+  "id": "code:crates/wami/src/service/identity/role.rs::struct::RoleService",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 23,
+  "line_start": 20,
+  "name": "RoleService",
+  "signature": "pub struct RoleService<S>"
+}

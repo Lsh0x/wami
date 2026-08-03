@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/policies/tests.rs::function::test_context",
+    "extern:policy_builder::build_policy"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b2135fce862b366af0672dca2c037aa541181328a725935ae82b4c41af7fc41e",
+  "doc": "",
+  "file": "store/memory/policies/tests.rs",
+  "id": "code:store/memory/policies/tests.rs::function::test_policy_update",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 92,
+  "line_start": 63,
+  "name": "test_policy_update",
+  "signature": "async fn test_policy_update()"
+}

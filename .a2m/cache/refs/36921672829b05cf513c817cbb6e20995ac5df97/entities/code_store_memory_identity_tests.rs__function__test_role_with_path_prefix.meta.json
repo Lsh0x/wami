@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:role_builder::build_role"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a42fc05a27b5332bc04749853b53e8dc3002e20c19a321b2f08dfab976b6cf8c",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_role_with_path_prefix",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 587,
+  "line_start": 556,
+  "name": "test_role_with_path_prefix",
+  "signature": "async fn test_role_with_path_prefix()"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:633b5952a7afcda5fbbb5dc09e92431677bad53d5c0a53304b09c2ee09d589ad",
+  "doc": "Create a new config with a specific account ID",
+  "file": "crates/wami-core/src/types.rs",
+  "id": "code:crates/wami-core/src/types.rs::function::AwsConfig::with_account_id",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 72,
+  "line_start": 66,
+  "name": "with_account_id",
+  "signature": "pub fn with_account_id(account_id: String) -> Self"
+}

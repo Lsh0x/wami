@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0b2a222f4e03d20fad76705d447e5d71827b6ed5ae987d6f761805143c92d1c4",
+  "doc": "Detach a managed policy from a user",
+  "file": "crates/wami/src/service/policies/attachment.rs",
+  "id": "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::detach_user_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 162,
+  "line_start": 121,
+  "name": "detach_user_policy",
+  "signature": "pub async fn detach_user_policy("
+}

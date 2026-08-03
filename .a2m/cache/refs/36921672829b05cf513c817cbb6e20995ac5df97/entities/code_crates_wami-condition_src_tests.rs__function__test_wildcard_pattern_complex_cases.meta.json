@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b521c039cb6d6bed383fd635abfe277b1ec4db37f2774db803e724523057256d",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wildcard_pattern_complex_cases",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 6330,
+  "line_start": 6286,
+  "name": "test_wildcard_pattern_complex_cases",
+  "signature": "fn test_wildcard_pattern_complex_cases()"
+}

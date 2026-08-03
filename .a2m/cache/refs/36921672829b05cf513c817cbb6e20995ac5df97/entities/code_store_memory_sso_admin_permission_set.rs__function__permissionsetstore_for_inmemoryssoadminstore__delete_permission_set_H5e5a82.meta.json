@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:2d63fea1ee685578851aae009ce66f0af13336106280ca96e2d5eb8927c6f8f1",
+  "doc": "",
+  "file": "store/memory/sso_admin/permission_set.rs",
+  "id": "code:store/memory/sso_admin/permission_set.rs::function::PermissionSetStore for InMemorySsoAdminStore::delete_permission_set",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 40,
+  "line_start": 37,
+  "name": "delete_permission_set",
+  "signature": "async fn delete_permission_set(&mut self, permission_set_arn: &str) -> Result<()>"
+}

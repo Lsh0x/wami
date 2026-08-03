@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:6bf6f79c0e3951d65d19ce3b0a718f9bd72ebf7a29ca8aaa99a1c941b29bb0d0",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_policy_without_condition",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 1458,
+  "line_start": 1456,
+  "name": "test_policy_without_condition",
+  "signature": "fn test_policy_without_condition()"
+}

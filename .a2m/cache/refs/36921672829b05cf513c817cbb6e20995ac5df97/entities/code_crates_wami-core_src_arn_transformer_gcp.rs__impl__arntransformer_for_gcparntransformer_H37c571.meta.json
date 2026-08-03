@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/arn/transformer/gcp.rs::function::ArnTransformer for GcpArnTransformer::to_provider_arn",
+    "code:crates/wami-core/src/arn/transformer/gcp.rs::function::ArnTransformer for GcpArnTransformer::from_provider_arn"
+  ],
+  "content_hash": "sha256:bb511705bdc8cf1cd4c3c0bad70f50d3b009d81b15b5db4090ec5a4f072a9bbc",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/transformer/gcp.rs",
+  "id": "code:crates/wami-core/src/arn/transformer/gcp.rs::impl::ArnTransformer for GcpArnTransformer",
+  "implemented_by": [],
+  "implements": [
+    "code:crates/wami-core/src/arn/transformer/mod.rs::trait::ArnTransformer"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 105,
+  "line_start": 14,
+  "name": "ArnTransformer for GcpArnTransformer",
+  "signature": "impl ArnTransformer for GcpArnTransformer"
+}

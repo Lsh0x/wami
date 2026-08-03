@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5d93c874e1959728a871e05b2c5791c443fd8730874363bd54379143777f6c99",
+  "doc": "Update role's description (pure transformation)",
+  "file": "wami/identity/role/builder.rs",
+  "id": "code:wami/identity/role/builder.rs::function::update_description",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 114,
+  "line_start": 111,
+  "name": "update_description",
+  "signature": "pub fn update_description(mut role: Role, description: Option<String>) -> Role"
+}

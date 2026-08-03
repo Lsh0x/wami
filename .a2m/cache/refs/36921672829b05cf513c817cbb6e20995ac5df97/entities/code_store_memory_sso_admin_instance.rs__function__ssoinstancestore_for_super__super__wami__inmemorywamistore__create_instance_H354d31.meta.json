@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3fe9887142a3eee1ed8cd88eb3a027ec2e71126fb1dae38da47acbab1902f64e",
+  "doc": "",
+  "file": "store/memory/sso_admin/instance.rs",
+  "id": "code:store/memory/sso_admin/instance.rs::function::SsoInstanceStore for super::super::wami::InMemoryWamiStore::create_instance",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 33,
+  "line_start": 29,
+  "name": "create_instance",
+  "signature": "async fn create_instance(&mut self, instance: SsoInstance) -> Result<SsoInstance>"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:46ae8f00e73c5c61ca1aa005d3cb8b98adf377dc1bd4669bb8835ddccc83b640",
+  "doc": "",
+  "file": "wami/identity/identity_provider/requests.rs",
+  "id": "code:wami/identity/identity_provider/requests.rs::struct::UpdateOpenIDConnectProviderThumbprintRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 77,
+  "line_start": 72,
+  "name": "UpdateOpenIDConnectProviderThumbprintRequest",
+  "signature": "pub struct UpdateOpenIDConnectProviderThumbprintRequest"
+}

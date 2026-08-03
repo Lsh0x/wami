@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/operators.rs::function::evaluate_operator"
+  ],
+  "children": [],
+  "content_hash": "sha256:29e22e38af1f47fa9e58a6c9610ba7801bcc212fb6f1f1090d0a5408678fcbf7",
+  "doc": "",
+  "file": "crates/wami-condition/src/operators.rs",
+  "id": "code:crates/wami-condition/src/operators.rs::function::evaluate_string_equals",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 440,
+  "line_start": 428,
+  "name": "evaluate_string_equals",
+  "signature": "fn evaluate_string_equals("
+}

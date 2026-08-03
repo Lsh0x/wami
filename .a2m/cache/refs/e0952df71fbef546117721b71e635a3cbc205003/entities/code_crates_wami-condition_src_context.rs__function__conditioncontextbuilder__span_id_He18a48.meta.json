@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:a1b136875d850f19641ea4fb8e77797d319a53c1c262757bfd8e5e60c68ef5fc",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::span_id",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 558,
+  "line_start": 555,
+  "name": "span_id",
+  "signature": "pub fn span_id(mut self, id: impl Into<String>) -> Self"
+}

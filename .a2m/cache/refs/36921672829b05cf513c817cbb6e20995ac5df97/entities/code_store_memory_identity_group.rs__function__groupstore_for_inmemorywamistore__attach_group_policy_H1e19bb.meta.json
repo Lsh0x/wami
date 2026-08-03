@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3b33424d77b853673f3856c5d2b6c05e367537b662d1c5d9feb22e0435a717f0",
+  "doc": "",
+  "file": "store/memory/identity/group.rs",
+  "id": "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::attach_group_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 111,
+  "line_start": 101,
+  "name": "attach_group_policy",
+  "signature": "async fn attach_group_policy(&mut self, group_name: &str, policy_arn: &str) -> Result<()>"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c30e8134b0198f6422f1b09a620f3b60210783f6ee7bb29b0af6954adbcad28a",
+  "doc": "",
+  "file": "wami/policies/inline/model.rs",
+  "id": "code:wami/policies/inline/model.rs::struct::InlinePolicy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 12,
+  "line_start": 7,
+  "name": "InlinePolicy",
+  "signature": "pub struct InlinePolicy"
+}

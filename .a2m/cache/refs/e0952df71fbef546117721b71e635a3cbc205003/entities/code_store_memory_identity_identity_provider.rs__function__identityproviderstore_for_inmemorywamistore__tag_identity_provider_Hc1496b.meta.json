@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c0ad099a749ed852efa666e786732b4fdf752092c06717d16454787baf8254e8",
+  "doc": "",
+  "file": "store/memory/identity/identity_provider.rs",
+  "id": "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::tag_identity_provider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 190,
+  "line_start": 166,
+  "name": "tag_identity_provider",
+  "signature": "async fn tag_identity_provider(&mut self, arn: &str, tags: Vec<Tag>) -> Result<()>"
+}

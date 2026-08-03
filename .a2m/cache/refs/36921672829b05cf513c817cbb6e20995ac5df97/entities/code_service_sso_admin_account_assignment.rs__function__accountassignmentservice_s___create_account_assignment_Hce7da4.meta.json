@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:102d166f53255f3c11d5851e57d7673502d486731370a2795d32b6b8e6ec72cf",
+  "doc": "Create a new account assignment",
+  "file": "service/sso_admin/account_assignment.rs",
+  "id": "code:service/sso_admin/account_assignment.rs::function::AccountAssignmentService<S>::create_account_assignment",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 50,
+  "line_start": 41,
+  "name": "create_account_assignment",
+  "signature": "pub async fn create_account_assignment("
+}

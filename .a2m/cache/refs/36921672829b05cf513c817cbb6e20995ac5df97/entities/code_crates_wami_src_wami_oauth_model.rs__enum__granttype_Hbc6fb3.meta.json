@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:14b5e16960474503c29c7b9e8e552054adcdb4611631f10c339a7f22d0664be4",
+  "doc": "",
+  "file": "crates/wami/src/wami/oauth/model.rs",
+  "id": "code:crates/wami/src/wami/oauth/model.rs::enum::GrantType",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 24,
+  "line_start": 17,
+  "name": "GrantType",
+  "signature": "pub enum GrantType"
+}

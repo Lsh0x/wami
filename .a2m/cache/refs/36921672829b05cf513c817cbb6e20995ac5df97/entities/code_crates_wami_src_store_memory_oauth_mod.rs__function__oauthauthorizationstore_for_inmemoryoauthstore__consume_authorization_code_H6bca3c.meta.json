@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c64f14c636af7c82d948767e4e41c6a3399c1b2014b9618c19383b37ef5a8faa",
+  "doc": "",
+  "file": "crates/wami/src/store/memory/oauth/mod.rs",
+  "id": "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthAuthorizationStore for InMemoryOAuthStore::consume_authorization_code",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 137,
+  "line_start": 129,
+  "name": "consume_authorization_code",
+  "signature": "async fn consume_authorization_code("
+}

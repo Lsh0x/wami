@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:fadfe0b368caac40a002fc89d07c8bd4c927ff88301d1b773ffe0d145583446b",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_boolean_coercion_security",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 1933,
+  "line_start": 1918,
+  "name": "test_condition_boolean_coercion_security",
+  "signature": "fn test_condition_boolean_coercion_security()"
+}

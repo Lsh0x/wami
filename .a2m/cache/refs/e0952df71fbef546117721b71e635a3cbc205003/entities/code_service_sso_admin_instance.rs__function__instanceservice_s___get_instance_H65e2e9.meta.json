@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c05fb37d07a826c806960afdb6647f6ade641025a03f03d0d878737fa5c99b3f",
+  "doc": "Get an SSO instance by ARN",
+  "file": "service/sso_admin/instance.rs",
+  "id": "code:service/sso_admin/instance.rs::function::InstanceService<S>::get_instance",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 48,
+  "line_start": 46,
+  "name": "get_instance",
+  "signature": "pub async fn get_instance(&self, instance_arn: &str) -> Result<Option<SsoInstance>>"
+}

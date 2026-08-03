@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:9ff0644eb305f83fb3b4514a7815ef783b4e5dc697cb26eb0eb28b5117d9c107",
+  "doc": "",
+  "file": "store/traits/sso_admin/instance.rs",
+  "id": "code:store/traits/sso_admin/instance.rs::trait::SsoInstanceStore",
+  "implemented_by": [
+    "code:store/memory/sso_admin/instance.rs::impl::SsoInstanceStore for InMemorySsoAdminStore",
+    "code:store/memory/sso_admin/instance.rs::impl::SsoInstanceStore for super::super::wami::InMemoryWamiStore"
+  ],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "trait",
+  "line_end": 15,
+  "line_start": 9,
+  "name": "SsoInstanceStore",
+  "signature": "pub trait SsoInstanceStore: Send + Sync"
+}

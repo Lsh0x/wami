@@ -1,0 +1,24 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/auth/authorization.rs::function::AuthorizationService<S>::evaluate_user_policies",
+    "code:crates/wami/src/service/auth/authorization.rs::function::AuthorizationService<S>::extract_user_name_from_arn",
+    "extern:Decision::Allow"
+  ],
+  "callers": [
+    "code:crates/wami/src/service/auth/authorization.rs::function::AuthorizationService<S>::check_or_deny"
+  ],
+  "children": [],
+  "content_hash": "sha256:71d42ef463ee468f6fbc93a6fff54049aac83f5e3060e0c284f19b82c786fcc0",
+  "doc": "Authorize an action on a resource\n\nThis is the main authorization method. It checks if the caller\n(from the context) is allowed to perform the specified action\non the target resource.\n\n# Arguments\n\n* `context` - The authenticated context (contains caller info)\n* `action` - The action to perform (e.g., \"iam:GetUser\")\n* `resource_arn` - The target resource ARN\n\n# Returns\n\n`true` if the action is allowed, `false` otherwise\n\n# Errors\n\nReturns an error if there's a problem accessing the store or\nevaluating policies.",
+  "file": "crates/wami/src/service/auth/authorization.rs",
+  "id": "code:crates/wami/src/service/auth/authorization.rs::function::AuthorizationService<S>::authorize",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 106,
+  "line_start": 90,
+  "name": "authorize",
+  "signature": "pub async fn authorize("
+}

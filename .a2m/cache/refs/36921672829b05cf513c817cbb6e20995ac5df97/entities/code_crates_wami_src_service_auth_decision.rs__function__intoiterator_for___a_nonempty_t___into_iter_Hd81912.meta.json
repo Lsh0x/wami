@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b46494b949a7ae1cdb481308a994d6eeb9d12fbc2f2ec13dcd816914918accd1",
+  "doc": "",
+  "file": "crates/wami/src/service/auth/decision.rs",
+  "id": "code:crates/wami/src/service/auth/decision.rs::function::IntoIterator for &'a NonEmpty<T>::into_iter",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 75,
+  "line_start": 73,
+  "name": "into_iter",
+  "signature": "fn into_iter(self) -> Self::IntoIter"
+}

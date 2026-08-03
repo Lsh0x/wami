@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/operators.rs::function::evaluate_arn_like",
+    "code:crates/wami-condition/src/operators.rs::function::evaluate_for_all_values_string_like",
+    "code:crates/wami-condition/src/operators.rs::function::evaluate_for_any_value_string_like",
+    "code:crates/wami-condition/src/operators.rs::function::evaluate_string_like"
+  ],
+  "children": [],
+  "content_hash": "sha256:fbcb180f5be5bf639f8561bc0b215822487b8ae451ef1a3113ee312565c17499",
+  "doc": "",
+  "file": "crates/wami-condition/src/operators.rs",
+  "id": "code:crates/wami-condition/src/operators.rs::function::matches_wildcard_pattern",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 522,
+  "line_start": 471,
+  "name": "matches_wildcard_pattern",
+  "signature": "fn matches_wildcard_pattern(value: &str, pattern: &str) -> bool"
+}

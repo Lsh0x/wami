@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0088561943a1ec93e4c5bee9e0a342ac07738697e66d3c934d944bf960d29cd9",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_user_get_nonexistent",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 56,
+  "line_start": 51,
+  "name": "test_user_get_nonexistent",
+  "signature": "async fn test_user_get_nonexistent()"
+}

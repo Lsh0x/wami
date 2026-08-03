@@ -1,0 +1,22 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/unified.rs::struct::InMemoryStore",
+    "code:store/memory/unified.rs::impl::InMemoryStore",
+    "code:store/memory/unified.rs::impl::Store for InMemoryStore"
+  ],
+  "content_hash": "74f6d0b227e91fa6a8e89dda35b4ba33abf0f9ed8bdfb056b601e56521a5ef95",
+  "doc": "",
+  "file": "store/memory/unified.rs",
+  "id": "code:store/memory/unified.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 86,
+  "line_start": 1,
+  "name": "unified",
+  "signature": ""
+}

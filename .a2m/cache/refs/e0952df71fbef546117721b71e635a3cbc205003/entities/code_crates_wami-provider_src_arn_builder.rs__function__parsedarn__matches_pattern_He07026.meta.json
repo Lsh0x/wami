@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-provider/src/arn_builder.rs::function::ParsedArn::to_arn",
+    "code:crates/wami-provider/src/arn_builder.rs::function::arn_pattern_match"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f9cff17b08814490026762d3a5164b0f4ad13b116e282123a639df96b6b89ae8",
+  "doc": "Checks if this ARN matches a wildcard pattern\n\n# Example\n\n```rust\nuse wami_provider::arn_builder::ParsedArn;\n\nlet arn = ParsedArn::from_arn(\"arn:wami:iam:tenant-abc:user/alice\").unwrap();\nassert!(arn.matches_pattern(\"arn:wami:iam:tenant-abc:user/*\"));\nassert!(arn.matches_pattern(\"arn:wami:iam:tenant-abc:*\"));\nassert!(!arn.matches_pattern(\"arn:wami:sts:*:*\"));\n```",
+  "file": "crates/wami-provider/src/arn_builder.rs",
+  "id": "code:crates/wami-provider/src/arn_builder.rs::function::ParsedArn::matches_pattern",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 260,
+  "line_start": 258,
+  "name": "matches_pattern",
+  "signature": "pub fn matches_pattern(&self, pattern: &str) -> bool"
+}

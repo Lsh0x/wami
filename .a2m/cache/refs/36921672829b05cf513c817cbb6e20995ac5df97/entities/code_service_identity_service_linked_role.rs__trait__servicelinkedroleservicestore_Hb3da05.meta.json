@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:6b676c81d34b8ee8b6c40a99a613d30176ad41e6da4ed0acc4478e3a220aad4d",
+  "doc": "",
+  "file": "service/identity/service_linked_role.rs",
+  "id": "code:service/identity/service_linked_role.rs::trait::ServiceLinkedRoleServiceStore",
+  "implemented_by": [
+    "code:service/identity/service_linked_role.rs::impl::ServiceLinkedRoleServiceStore for T"
+  ],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "trait",
+  "line_end": 18,
+  "line_start": 18,
+  "name": "ServiceLinkedRoleServiceStore",
+  "signature": "pub trait ServiceLinkedRoleServiceStore: RoleStore + ServiceLinkedRoleStore {}"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:cdeb3ac513ed1b4ad77dbff4adaa1a14b1962088b92d5d7b9b631f6adc0ac3b1",
+  "doc": "",
+  "file": "store/memory/tenant/mod.rs",
+  "id": "code:store/memory/tenant/mod.rs::function::TenantStore for InMemoryTenantStore::get_effective_quotas",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 117,
+  "line_start": 108,
+  "name": "get_effective_quotas",
+  "signature": "async fn get_effective_quotas(&self, tenant_id: &TenantId) -> Result<TenantQuotas>"
+}

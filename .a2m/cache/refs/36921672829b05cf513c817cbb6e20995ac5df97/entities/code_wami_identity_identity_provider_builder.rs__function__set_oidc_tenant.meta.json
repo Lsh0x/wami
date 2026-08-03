@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f5cd5514c031d421a54a301a15f37b3c72b4556fb6054cc6ab6f1824f9cd090e",
+  "doc": "Set tenant ID for OIDC provider (pure function)",
+  "file": "wami/identity/identity_provider/builder.rs",
+  "id": "code:wami/identity/identity_provider/builder.rs::function::set_oidc_tenant",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 194,
+  "line_start": 188,
+  "name": "set_oidc_tenant",
+  "signature": "pub fn set_oidc_tenant("
+}

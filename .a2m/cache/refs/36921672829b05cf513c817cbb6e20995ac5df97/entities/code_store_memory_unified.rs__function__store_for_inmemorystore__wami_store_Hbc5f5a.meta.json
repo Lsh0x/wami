@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:653290399658abbf72d81a9c4516c0e0baf1e49b2f0e8f61b687caf7d1f0a685",
+  "doc": "",
+  "file": "store/memory/unified.rs",
+  "id": "code:store/memory/unified.rs::function::Store for InMemoryStore::wami_store",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 41,
+  "line_start": 39,
+  "name": "wami_store",
+  "signature": "async fn wami_store(&mut self) -> Result<&mut Self::WamiStore>"
+}

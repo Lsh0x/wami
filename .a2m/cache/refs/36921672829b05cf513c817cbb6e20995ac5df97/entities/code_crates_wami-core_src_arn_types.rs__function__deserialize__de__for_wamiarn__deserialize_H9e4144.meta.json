@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "extern:String::deserialize",
+    "code:crates/wami-core/src/arn/parser.rs::function::FromStr for WamiArn::from_str"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:87eb51f1e49805e8512ed64c10613ac6d943a9c3d1284bbb0bbedcc6309cba92",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::function::Deserialize<'de> for WamiArn::deserialize",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 449,
+  "line_start": 443,
+  "name": "deserialize",
+  "signature": "fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>"
+}

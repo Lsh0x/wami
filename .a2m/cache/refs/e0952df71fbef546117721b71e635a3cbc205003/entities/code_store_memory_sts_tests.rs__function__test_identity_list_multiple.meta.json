@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e43bfed066adac53fb95458153425e44256e407f4ebb5307bfd77b01119d6c82",
+  "doc": "",
+  "file": "store/memory/sts/tests.rs",
+  "id": "code:store/memory/sts/tests.rs::function::test_identity_list_multiple",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 285,
+  "line_start": 266,
+  "name": "test_identity_list_multiple",
+  "signature": "async fn test_identity_list_multiple()"
+}

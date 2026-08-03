@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/actions.rs::function::fmt::Display for WamiServicePrefix::fmt"
+  ],
+  "content_hash": "sha256:3be712499838e171d56b25c340d09b8936bd2c2dabedd1b5898c7a8d84620430",
+  "doc": "",
+  "file": "crates/wami-core/src/actions.rs",
+  "id": "code:crates/wami-core/src/actions.rs::impl::fmt::Display for WamiServicePrefix",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 325,
+  "line_start": 321,
+  "name": "fmt::Display for WamiServicePrefix",
+  "signature": "impl fmt::Display for WamiServicePrefix"
+}

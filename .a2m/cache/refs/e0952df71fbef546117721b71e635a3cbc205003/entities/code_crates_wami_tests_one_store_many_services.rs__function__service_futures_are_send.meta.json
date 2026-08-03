@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami/tests/one_store_many_services.rs::function::assert_send",
+    "code:crates/wami/tests/one_store_many_services.rs::function::bootstrapped"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ec263490c713ca54a26d9a75cdc8695dd4489fee0ce79f5e594acf5dfe85e628",
+  "doc": "",
+  "file": "crates/wami/tests/one_store_many_services.rs",
+  "id": "code:crates/wami/tests/one_store_many_services.rs::function::service_futures_are_send",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 94,
+  "line_start": 76,
+  "name": "service_futures_are_send",
+  "signature": "async fn service_futures_are_send()"
+}

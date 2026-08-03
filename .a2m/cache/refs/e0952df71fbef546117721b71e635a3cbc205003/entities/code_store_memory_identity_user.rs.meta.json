@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/identity/user.rs::impl::UserStore for InMemoryWamiStore"
+  ],
+  "content_hash": "7005c18987ed5d0acde078deecc0aaafebca1515441e6b4a945a8651f6ae1fc6",
+  "doc": "",
+  "file": "store/memory/identity/user.rs",
+  "id": "code:store/memory/identity/user.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 166,
+  "line_start": 1,
+  "name": "user",
+  "signature": ""
+}

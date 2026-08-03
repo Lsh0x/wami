@@ -1,0 +1,13 @@
+%% id: code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::get_oidc_provider
+%% kind: function
+%% file: service/identity/identity_provider.rs:161-164
+%% content_hash: sha256:f1dd0a01b0ca4e21839d750ef9b049aac4b960249eb8e7835d1d90caf250836d
+%% signature: pub async fn get_oidc_provider(&self, arn: &str) -> Result<Option<OidcProvider>>
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_service_identity_identity_provider_rs__function__IdentityProviderService_S___get_oidc_provider_Hd9177afc:::function[get_oidc_provider]
+  code_service_identity_identity_provider_rs__function__IdentityProviderService_S___update_oidc_thumbprints_Hd2530372:::function[update_oidc_thumbprints] -- calls --> code_service_identity_identity_provider_rs__function__IdentityProviderService_S___get_oidc_provider_Hd9177afc
+  code_service_identity_identity_provider_rs__function__IdentityProviderService_S___add_client_id_Hcedfa539:::function[add_client_id] -- calls --> code_service_identity_identity_provider_rs__function__IdentityProviderService_S___get_oidc_provider_Hd9177afc
+  code_service_identity_identity_provider_rs__function__IdentityProviderService_S___remove_client_id_H86c37776:::function[remove_client_id] -- calls --> code_service_identity_identity_provider_rs__function__IdentityProviderService_S___get_oidc_provider_Hd9177afc

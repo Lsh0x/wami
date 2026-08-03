@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "ec362b85e4c0a827ecfc966c3fbf29b1709f6d7bc2e4f03e9d8b9deaf62f807f",
+  "doc": "",
+  "file": "wami/sts/federation/operations.rs",
+  "id": "code:wami/sts/federation/operations.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 91,
+  "line_start": 1,
+  "name": "operations",
+  "signature": ""
+}

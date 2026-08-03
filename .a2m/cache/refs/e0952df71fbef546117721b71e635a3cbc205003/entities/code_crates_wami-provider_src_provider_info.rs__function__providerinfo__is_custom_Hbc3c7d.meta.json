@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami-provider/src/provider_info.rs::function::ProviderInfo::is_aws",
+    "code:crates/wami-provider/src/provider_info.rs::function::ProviderInfo::is_azure",
+    "code:crates/wami-provider/src/provider_info.rs::function::ProviderInfo::is_gcp"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:27e13edb8594bf6141741f1104a2f46b887febe0503e92f3060f0f4b964c85b6",
+  "doc": "Checks if this is a custom provider",
+  "file": "crates/wami-provider/src/provider_info.rs",
+  "id": "code:crates/wami-provider/src/provider_info.rs::function::ProviderInfo::is_custom",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 92,
+  "line_start": 90,
+  "name": "is_custom",
+  "signature": "pub fn is_custom(&self) -> bool"
+}

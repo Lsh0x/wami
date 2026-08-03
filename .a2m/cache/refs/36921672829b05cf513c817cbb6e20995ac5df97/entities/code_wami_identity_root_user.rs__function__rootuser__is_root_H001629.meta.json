@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:wami/identity/root_user.rs::function::RootUser::create_context_internal",
+    "code:wami/identity/root_user.rs::function::RootUser::create_context_with_region_internal"
+  ],
+  "children": [],
+  "content_hash": "sha256:28af2a6e70e0cd5cd5b0faf2758ba3afde9ef19f65ab3db0c9c85523afd95ec7",
+  "doc": "Check if this is the root user\n\nAlways returns `true` for `RootUser` instances.",
+  "file": "wami/identity/root_user.rs",
+  "id": "code:wami/identity/root_user.rs::function::RootUser::is_root",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 113,
+  "line_start": 111,
+  "name": "is_root",
+  "signature": "pub fn is_root(&self) -> bool"
+}

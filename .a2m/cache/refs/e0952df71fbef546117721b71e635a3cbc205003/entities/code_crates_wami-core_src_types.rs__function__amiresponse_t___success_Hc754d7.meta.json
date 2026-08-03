@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e2542a8740cc85821d8f99f6a5a1e323fe7790a182999ad8e5ab2bd802457f2e",
+  "doc": "",
+  "file": "crates/wami-core/src/types.rs",
+  "id": "code:crates/wami-core/src/types.rs::function::AmiResponse<T>::success",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 19,
+  "line_start": 13,
+  "name": "success",
+  "signature": "pub fn success(data: T) -> Self"
+}

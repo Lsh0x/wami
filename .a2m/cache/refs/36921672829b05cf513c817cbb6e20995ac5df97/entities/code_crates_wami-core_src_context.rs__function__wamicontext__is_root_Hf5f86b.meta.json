@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::through",
+    "code:crates/wami-core/src/context.rs::function::WamiContext::can_access_tenant"
+  ],
+  "children": [],
+  "content_hash": "sha256:39fb60b85798c41787ec35d4506c9f9cdb9d6c0dc8369b9d3157dc6a3693fb5c",
+  "doc": "Check if the caller is a root user\n\nRoot users have full access and bypass all authorization checks.",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::function::WamiContext::is_root",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 283,
+  "line_start": 281,
+  "name": "is_root",
+  "signature": "pub fn is_root(&self) -> bool"
+}

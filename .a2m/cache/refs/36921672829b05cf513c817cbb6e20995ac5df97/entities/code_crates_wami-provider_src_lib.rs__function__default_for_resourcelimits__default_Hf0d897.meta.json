@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7bda05a38bf5ff9385a03bd2d85f5ad176b1c54e6f98da0940443ed29ed17280",
+  "doc": "",
+  "file": "crates/wami-provider/src/lib.rs",
+  "id": "code:crates/wami-provider/src/lib.rs::function::Default for ResourceLimits::default",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 144,
+  "line_start": 133,
+  "name": "default",
+  "signature": "fn default() -> Self"
+}

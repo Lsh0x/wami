@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5fd33c68c31419e8199e1f572f48dcc91ae5c1c95699f28bddee66265fa0218c",
+  "doc": "",
+  "file": "store/memory/identity/service_linked_role.rs",
+  "id": "code:store/memory/identity/service_linked_role.rs::function::ServiceLinkedRoleStore for InMemoryWamiStore::create_service_linked_role_deletion_task",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 18,
+  "line_start": 11,
+  "name": "create_service_linked_role_deletion_task",
+  "signature": "async fn create_service_linked_role_deletion_task("
+}

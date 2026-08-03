@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::get_role",
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::guard",
+    "extern:role_builder::update_description",
+    "extern:role_builder::update_max_session_duration"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:58860f7b8a5e1e22f78ca3442a83ea70890d7f978b728e855062de29e43da3d1",
+  "doc": "Update a role",
+  "file": "crates/wami/src/service/identity/role.rs",
+  "id": "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::update_role",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 127,
+  "line_start": 95,
+  "name": "update_role",
+  "signature": "pub async fn update_role("
+}

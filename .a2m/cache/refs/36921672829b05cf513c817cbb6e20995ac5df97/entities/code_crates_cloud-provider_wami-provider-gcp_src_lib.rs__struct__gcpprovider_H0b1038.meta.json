@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:cb60af2ad087e5fb6e4b2fe4c7e11daccecd8ae577dee0b743dae56aaa8e64b4",
+  "doc": "",
+  "file": "crates/cloud-provider/wami-provider-gcp/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-gcp/src/lib.rs::struct::GcpProvider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 26,
+  "line_start": 23,
+  "name": "GcpProvider",
+  "signature": "pub struct GcpProvider"
+}

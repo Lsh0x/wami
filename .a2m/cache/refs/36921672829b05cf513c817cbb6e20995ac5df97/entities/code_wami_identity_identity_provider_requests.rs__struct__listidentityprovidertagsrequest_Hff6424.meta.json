@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:1c7d86d7257ad3d432e0b8ffc7235ce1f444f185d9c42c3144132e1eeb491772",
+  "doc": "",
+  "file": "wami/identity/identity_provider/requests.rs",
+  "id": "code:wami/identity/identity_provider/requests.rs::struct::ListIdentityProviderTagsRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 136,
+  "line_start": 133,
+  "name": "ListIdentityProviderTagsRequest",
+  "signature": "pub struct ListIdentityProviderTagsRequest"
+}

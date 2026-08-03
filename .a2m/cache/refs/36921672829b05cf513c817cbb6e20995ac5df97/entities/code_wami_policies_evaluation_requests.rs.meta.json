@@ -1,0 +1,22 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/policies/evaluation/requests.rs::struct::SimulateCustomPolicyRequest",
+    "code:wami/policies/evaluation/requests.rs::struct::SimulatePrincipalPolicyRequest",
+    "code:wami/policies/evaluation/requests.rs::struct::SimulatePolicyResponse"
+  ],
+  "content_hash": "c4d37a134e6bc3fd44f3e09367704b3d57b32a8172ca48a9141e3ba73c7accc5",
+  "doc": "",
+  "file": "wami/policies/evaluation/requests.rs",
+  "id": "code:wami/policies/evaluation/requests.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 43,
+  "line_start": 1,
+  "name": "requests",
+  "signature": ""
+}

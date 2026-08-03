@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:bb35ea7000edfbd54c05022dfbcbc17b402a463804d59c9b2610be6035b7b2db",
+  "doc": "",
+  "file": "wami/gdpr/model.rs",
+  "id": "code:wami/gdpr/model.rs::enum::DataCategory",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 44,
+  "line_start": 29,
+  "name": "DataCategory",
+  "signature": "pub enum DataCategory"
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::create_test_context",
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0f5c18584e0cfcd31b845c7fe801052845cd2693d6e7b7c14d20846c762c4372",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_string_like_wildcard_middle",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 510,
+  "line_start": 498,
+  "name": "test_string_like_wildcard_middle",
+  "signature": "fn test_string_like_wildcard_middle()"
+}

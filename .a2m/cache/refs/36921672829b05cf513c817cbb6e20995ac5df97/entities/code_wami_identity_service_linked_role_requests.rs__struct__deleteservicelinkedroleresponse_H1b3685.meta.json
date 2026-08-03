@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:89a2a27b6a1da96f4fad8745e1a3a96aa9f209d6e4d6ca6ad6d1ad4a19654ce2",
+  "doc": "",
+  "file": "wami/identity/service_linked_role/requests.rs",
+  "id": "code:wami/identity/service_linked_role/requests.rs::struct::DeleteServiceLinkedRoleResponse",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 38,
+  "line_start": 35,
+  "name": "DeleteServiceLinkedRoleResponse",
+  "signature": "pub struct DeleteServiceLinkedRoleResponse"
+}

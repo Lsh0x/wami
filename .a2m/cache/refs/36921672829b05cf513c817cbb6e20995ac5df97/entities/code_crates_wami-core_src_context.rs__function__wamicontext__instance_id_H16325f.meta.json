@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::through"
+  ],
+  "children": [],
+  "content_hash": "sha256:094c6b0485be0ff9cbc594eccd5d73138e7991b87395cb3c157edf61fc4995d2",
+  "doc": "Get the instance ID",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::function::WamiContext::instance_id",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 401,
+  "line_start": 399,
+  "name": "instance_id",
+  "signature": "pub fn instance_id(&self) -> &str"
+}

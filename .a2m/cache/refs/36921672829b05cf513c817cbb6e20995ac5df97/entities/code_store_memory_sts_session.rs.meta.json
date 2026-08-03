@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/sts/session.rs::impl::SessionStore for InMemoryStsStore",
+    "code:store/memory/sts/session.rs::impl::SessionStore for InMemoryWamiStore"
+  ],
+  "content_hash": "e197c9d9118b137f2275416986c2cba161a0e4924499ccae208eba9b21bab231",
+  "doc": "",
+  "file": "store/memory/sts/session.rs",
+  "id": "code:store/memory/sts/session.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 55,
+  "line_start": 1,
+  "name": "session",
+  "signature": ""
+}

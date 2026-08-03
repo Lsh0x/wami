@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e5294e09ed31669607f9e5110674935024a5204d797522180b124b3b19f15afc",
+  "doc": "Registry of all known actions with their metadata.",
+  "file": "crates/wami-core/src/actions.rs",
+  "id": "code:crates/wami-core/src/actions.rs::struct::ActionRegistry",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 777,
+  "line_start": 777,
+  "name": "ActionRegistry",
+  "signature": "pub struct ActionRegistry;"
+}

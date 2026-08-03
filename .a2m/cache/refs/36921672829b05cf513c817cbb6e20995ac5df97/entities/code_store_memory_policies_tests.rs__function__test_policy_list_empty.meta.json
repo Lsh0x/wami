@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:83bdf6a13a009bf4073baed43302e784f1e948923cdca61759f313af44900216",
+  "doc": "",
+  "file": "store/memory/policies/tests.rs",
+  "id": "code:store/memory/policies/tests.rs::function::test_policy_list_empty",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 130,
+  "line_start": 122,
+  "name": "test_policy_list_empty",
+  "signature": "async fn test_policy_list_empty()"
+}

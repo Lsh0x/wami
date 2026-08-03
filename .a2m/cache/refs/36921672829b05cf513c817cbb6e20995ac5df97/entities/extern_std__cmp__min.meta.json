@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::list_saml_providers",
+    "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::list_oidc_providers"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:std::cmp::min",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "min",
+  "signature": "std::cmp::min"
+}

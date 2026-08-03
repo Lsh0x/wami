@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::is_root",
+    "code:crates/wami-core/src/context.rs::function::WamiContext::tenant_path"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ce3d2ad13d306aeb6e1e8dfec59d9afc143d6511106d7801bafb75a605b1302c",
+  "doc": "Check if this context can access a specific tenant path\n\nA context can access:\n- Its own tenant\n- Any child tenant below it in the hierarchy\n- If root user: any tenant in the instance",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::function::WamiContext::can_access_tenant",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 442,
+  "line_start": 434,
+  "name": "can_access_tenant",
+  "signature": "pub fn can_access_tenant(&self, target_tenant: &TenantPath) -> bool"
+}

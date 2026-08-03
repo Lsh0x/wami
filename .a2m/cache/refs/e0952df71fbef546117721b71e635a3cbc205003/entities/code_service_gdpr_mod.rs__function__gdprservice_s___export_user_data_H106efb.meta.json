@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:service/gdpr/mod.rs::function::generate_id",
+    "extern:Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:4b71e25c97fdb257dcd42388f4eb48fc67e92ec5f249729081e4219d48b9eb4f",
+  "doc": "Export a user's personal data.",
+  "file": "service/gdpr/mod.rs",
+  "id": "code:service/gdpr/mod.rs::function::GdprService<S>::export_user_data",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 293,
+  "line_start": 263,
+  "name": "export_user_data",
+  "signature": "pub async fn export_user_data("
+}

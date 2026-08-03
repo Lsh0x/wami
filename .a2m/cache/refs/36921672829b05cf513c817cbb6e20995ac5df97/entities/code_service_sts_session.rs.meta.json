@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:service/sts/session.rs::struct::SessionService",
+    "code:service/sts/session.rs::impl::SessionService<S>"
+  ],
+  "content_hash": "b9e6ba614ed9734485f2ebfc6e9ccdb758f5a9d0073fabc0d9f1005673450cea",
+  "doc": "",
+  "file": "service/sts/session.rs",
+  "id": "code:service/sts/session.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 139,
+  "line_start": 1,
+  "name": "session",
+  "signature": ""
+}

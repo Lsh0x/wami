@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:fc1b7e175e635cdb9a2307519528df94879faab8a998d38442e1bdf679fac5c0",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wildcard_pattern_edge_cases",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 4830,
+  "line_start": 4789,
+  "name": "test_wildcard_pattern_edge_cases",
+  "signature": "fn test_wildcard_pattern_edge_cases()"
+}

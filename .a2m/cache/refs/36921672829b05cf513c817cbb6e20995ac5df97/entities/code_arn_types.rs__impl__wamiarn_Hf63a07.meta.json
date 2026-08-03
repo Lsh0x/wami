@@ -1,0 +1,29 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:arn/types.rs::function::WamiArn::prefix",
+    "code:arn/types.rs::function::WamiArn::is_cloud_synced",
+    "code:arn/types.rs::function::WamiArn::provider",
+    "code:arn/types.rs::function::WamiArn::primary_tenant",
+    "code:arn/types.rs::function::WamiArn::leaf_tenant",
+    "code:arn/types.rs::function::WamiArn::full_tenant_path",
+    "code:arn/types.rs::function::WamiArn::matches_prefix",
+    "code:arn/types.rs::function::WamiArn::belongs_to_tenant",
+    "code:arn/types.rs::function::WamiArn::resource_type",
+    "code:arn/types.rs::function::WamiArn::resource_id"
+  ],
+  "content_hash": "sha256:0502feb4ee2fafca9480f2016e92f938fbc2e3c60174b518d58159434a75b9ab",
+  "doc": "",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::impl::WamiArn",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 401,
+  "line_start": 321,
+  "name": "WamiArn",
+  "signature": "impl WamiArn"
+}

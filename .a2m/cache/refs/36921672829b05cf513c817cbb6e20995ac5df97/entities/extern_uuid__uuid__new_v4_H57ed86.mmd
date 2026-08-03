@@ -1,0 +1,16 @@
+%% id: extern:uuid::Uuid::new_v4
+%% kind: extern
+%% file: :0-0
+%% content_hash: 
+%% signature: uuid::Uuid::new_v4
+graph LR
+  classDef extern fill:#f5f5f5,stroke:#424242
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  extern_uuid__Uuid__new_v4_H57ed86db:::extern[new_v4]
+  code_crates_cloud_provider_wami_provider_aws_src_lib_rs__function__AwsProvider__random_alphanumeric_H067e1ddf:::function[random_alphanumeric] -- calls --> extern_uuid__Uuid__new_v4_H57ed86db
+  code_crates_cloud_provider_wami_provider_azure_src_lib_rs__function__CloudProvider_for_AzureProvider__generate_resource_id_Hfda24a23:::function[generate_resource_id] -- calls --> extern_uuid__Uuid__new_v4_H57ed86db
+  code_crates_wami_credentials_src_access_key_builder_rs__function__build_access_key_Ha74fbec0:::function[build_access_key] -- calls --> extern_uuid__Uuid__new_v4_H57ed86db
+  code_crates_wami_credentials_src_service_credential_builder_rs__function__build_service_credential_He33333fd:::function[build_service_credential] -- calls --> extern_uuid__Uuid__new_v4_H57ed86db
+  code_crates_wami_examples_11_hybrid_cloud_setup_rs__function__CloudProvider_for_OnPremiseProvider__generate_resource_id_H3e90d031:::function[generate_resource_id] -- calls --> extern_uuid__Uuid__new_v4_H57ed86db
+  code_wami_identity_service_linked_role_builder_rs__function__build_deletion_task_H19b2f846:::function[build_deletion_task] -- calls --> extern_uuid__Uuid__new_v4_H57ed86db

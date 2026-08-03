@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/actions.rs::function::fmt::Display for WamiAction::fmt"
+  ],
+  "content_hash": "sha256:65011a81090092772e4f5f193a61b34cce34c7edc491efc2f31b0e97858b41fd",
+  "doc": "",
+  "file": "crates/wami-core/src/actions.rs",
+  "id": "code:crates/wami-core/src/actions.rs::impl::fmt::Display for WamiAction",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 335,
+  "line_start": 331,
+  "name": "fmt::Display for WamiAction",
+  "signature": "impl fmt::Display for WamiAction"
+}

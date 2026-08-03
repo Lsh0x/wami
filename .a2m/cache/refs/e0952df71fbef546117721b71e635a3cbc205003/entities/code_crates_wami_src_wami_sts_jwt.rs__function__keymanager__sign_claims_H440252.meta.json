@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::active",
+    "extern:JwtError::KeyEncoding",
+    "extern:EncodingKey::from_ed_der",
+    "extern:jsonwebtoken::encode"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:874e6440753c8c5dcef59217d06cf8d67794a67903a601eb0d6ca8c8e339499c",
+  "doc": "Sign claims and produce a JWT string.\n\nThe header carries the `kid` of the signing key. Without it a verifier\nholding several keys cannot tell which one to try, so rotation would\ninvalidate every token still in flight.\n\nUses standard PKCS#8 DER encoding for the Ed25519 signing key.\nGeneric over the claim set so other issuers — OAuth, for one — can sign\nwith the same keys and the same rotation, instead of each growing its own\nsigner. Existing callers infer `StsClaims` from the argument.",
+  "file": "crates/wami/src/wami/sts/jwt.rs",
+  "id": "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::sign_claims",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 257,
+  "line_start": 247,
+  "name": "sign_claims",
+  "signature": "pub fn sign_claims<C: Serialize>(&self, claims: &C) -> Result<String, JwtError>"
+}

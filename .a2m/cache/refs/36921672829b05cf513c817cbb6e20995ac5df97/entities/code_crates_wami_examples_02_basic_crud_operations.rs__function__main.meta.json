@@ -1,0 +1,24 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::builder",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder",
+    "code:wami/identity/user/builder.rs::function::build_user",
+    "code:wami/identity/group/builder.rs::function::build_group",
+    "code:wami/identity/role/builder.rs::function::build_role"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a101bd9d19192efe3b1283c2f9fe28bb4c8cd877faf67b3eae58ca7343db5025",
+  "doc": "",
+  "file": "crates/wami/examples/02_basic_crud_operations.rs",
+  "id": "code:crates/wami/examples/02_basic_crud_operations.rs::function::main",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 154,
+  "line_start": 22,
+  "name": "main",
+  "signature": "async fn main() -> Result<(), Box<dyn std::error::Error>>"
+}

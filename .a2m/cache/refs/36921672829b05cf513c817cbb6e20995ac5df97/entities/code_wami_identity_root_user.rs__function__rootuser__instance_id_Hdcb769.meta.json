@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:wami/identity/root_user.rs::function::RootUser::create_context_internal",
+    "code:wami/identity/root_user.rs::function::RootUser::create_context_with_region_internal"
+  ],
+  "children": [],
+  "content_hash": "sha256:3c5a58bdd4c051a48c7b3234d73d74993bdee34d848101828938ac1423f16411",
+  "doc": "Get the instance ID from the ARN",
+  "file": "wami/identity/root_user.rs",
+  "id": "code:wami/identity/root_user.rs::function::RootUser::instance_id",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 138,
+  "line_start": 136,
+  "name": "instance_id",
+  "signature": "pub fn instance_id(&self) -> &str"
+}

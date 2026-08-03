@@ -1,0 +1,25 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/examples/28_oidc_authorization_code.rs::const::AUDIENCE",
+    "code:crates/wami/examples/28_oidc_authorization_code.rs::const::REDIRECT",
+    "code:crates/wami/examples/28_oidc_authorization_code.rs::struct::Directory",
+    "code:crates/wami/examples/28_oidc_authorization_code.rs::impl::UserClaimsSource for Directory",
+    "code:crates/wami/examples/28_oidc_authorization_code.rs::function::main",
+    "code:crates/wami/examples/28_oidc_authorization_code.rs::function::refused"
+  ],
+  "content_hash": "7ca3c70d48b40c22c6abc2f77c8367780643a5478733de7417f5f2a4117e545c",
+  "doc": "",
+  "file": "crates/wami/examples/28_oidc_authorization_code.rs",
+  "id": "code:crates/wami/examples/28_oidc_authorization_code.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 240,
+  "line_start": 1,
+  "name": "28_oidc_authorization_code",
+  "signature": ""
+}

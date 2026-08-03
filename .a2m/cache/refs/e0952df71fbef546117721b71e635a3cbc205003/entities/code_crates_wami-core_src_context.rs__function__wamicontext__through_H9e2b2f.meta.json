@@ -1,0 +1,26 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::caller_arn",
+    "code:crates/wami-core/src/context.rs::function::WamiContext::instance_id",
+    "code:crates/wami-core/src/context.rs::function::WamiContext::is_root",
+    "code:crates/wami-core/src/context.rs::function::WamiContext::mfa_present",
+    "code:crates/wami-core/src/context.rs::function::WamiContext::provenance",
+    "code:crates/wami-core/src/context.rs::function::WamiContext::session_info",
+    "code:crates/wami-core/src/context.rs::function::WamiContext::tenant_path"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:2789b23517b8063f517e06839e5f9e7e03fa5be38559366a011b6ee04971908c",
+  "doc": "",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::function::WamiContext::through",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 391,
+  "line_start": 351,
+  "name": "through",
+  "signature": "pub fn through(&self, principal: WamiArn, via: Transition) -> Result<WamiContext>"
+}

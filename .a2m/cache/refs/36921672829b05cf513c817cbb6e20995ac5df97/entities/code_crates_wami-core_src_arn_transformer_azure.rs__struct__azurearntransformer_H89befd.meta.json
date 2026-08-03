@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:1c33b7f5423bd3f9f34085cda8490b67c37b13f7238fab4770c6ea989e0bc566",
+  "doc": "Azure ARN transformer.\n\nConverts between WAMI ARNs and Azure resource ID format:\n`/subscriptions/{subscription_id}/resourceGroups/{resource_group}/providers/Microsoft.{service}/{resource_type}/{resource_id}`",
+  "file": "crates/wami-core/src/arn/transformer/azure.rs",
+  "id": "code:crates/wami-core/src/arn/transformer/azure.rs::struct::AzureArnTransformer",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 9,
+  "line_start": 9,
+  "name": "AzureArnTransformer",
+  "signature": "pub struct AzureArnTransformer;"
+}

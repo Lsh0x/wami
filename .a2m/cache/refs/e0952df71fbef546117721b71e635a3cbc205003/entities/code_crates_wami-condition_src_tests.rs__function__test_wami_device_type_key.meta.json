@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e18132977141bd7dc1d8540270d579522a2d0b39b9e7df7a8d0e3ae7048e46df",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wami_device_type_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7566,
+  "line_start": 7562,
+  "name": "test_wami_device_type_key",
+  "signature": "fn test_wami_device_type_key()"
+}

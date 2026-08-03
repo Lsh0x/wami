@@ -1,0 +1,24 @@
+{
+  "callees": [
+    "code:service/tenant/mod.rs::function::TenantService<S>::generate_unique_tenant_id",
+    "code:service/tenant/mod.rs::function::TenantService<S>::validate_name_uniqueness",
+    "extern:tenant_operations::validate_name",
+    "extern:tenant_operations::build_tenant",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:897a7a597f5c8be1e9c34f37654e44b4f07a8942ddd292f664230fa64284178b",
+  "doc": "Create a new tenant",
+  "file": "service/tenant/mod.rs",
+  "id": "code:service/tenant/mod.rs::function::TenantService<S>::create_tenant",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 152,
+  "line_start": 121,
+  "name": "create_tenant",
+  "signature": "pub async fn create_tenant("
+}

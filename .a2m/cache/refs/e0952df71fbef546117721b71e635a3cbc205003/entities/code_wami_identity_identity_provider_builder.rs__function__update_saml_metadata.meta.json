@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::update_saml_provider"
+  ],
+  "children": [],
+  "content_hash": "sha256:113a9246bcd7e8e7bf518a3b13acca90032f8aa34aed625e2c4f4aee23079c6c",
+  "doc": "Update SAML metadata document (pure function)",
+  "file": "wami/identity/identity_provider/builder.rs",
+  "id": "code:wami/identity/identity_provider/builder.rs::function::update_saml_metadata",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 100,
+  "line_start": 94,
+  "name": "update_saml_metadata",
+  "signature": "pub fn update_saml_metadata("
+}

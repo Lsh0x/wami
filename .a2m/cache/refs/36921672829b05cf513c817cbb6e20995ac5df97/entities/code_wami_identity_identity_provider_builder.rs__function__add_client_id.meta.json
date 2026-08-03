@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::add_client_id"
+  ],
+  "children": [],
+  "content_hash": "sha256:0fce090702a8ef9ee789821c1c196e3393f838d604d0bbe7403384d9a1d6a2e8",
+  "doc": "Add a client ID to an OIDC provider (pure function)",
+  "file": "wami/identity/identity_provider/builder.rs",
+  "id": "code:wami/identity/identity_provider/builder.rs::function::add_client_id",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 117,
+  "line_start": 112,
+  "name": "add_client_id",
+  "signature": "pub fn add_client_id(mut provider: OidcProvider, client_id: String) -> OidcProvider"
+}

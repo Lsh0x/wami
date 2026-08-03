@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:4decfff65048a081e58dad0523a1f837875c984e812380a0309c73589ae0c741",
+  "doc": "Revoke the session",
+  "file": "wami/sts/session/model.rs",
+  "id": "code:wami/sts/session/model.rs::function::StsSession::revoke",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 88,
+  "line_start": 86,
+  "name": "revoke",
+  "signature": "pub fn revoke(&mut self)"
+}

@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder",
+    "extern:chrono::Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:db1403c2d3d8e8a7f267354abbb72f804556fd6610a0237d91eb40abfe88a029",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_date_operator_error_paths",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 4859,
+  "line_start": 4833,
+  "name": "test_date_operator_error_paths",
+  "signature": "fn test_date_operator_error_paths()"
+}

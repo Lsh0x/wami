@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7af0903ea347e956ce2636c4ca06d437330ef5e646c8e05a17737986c5177e48",
+  "doc": "The first element. Total, by construction.",
+  "file": "crates/wami/src/service/auth/decision.rs",
+  "id": "code:crates/wami/src/service/auth/decision.rs::function::NonEmpty<T>::first",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 44,
+  "line_start": 42,
+  "name": "first",
+  "signature": "pub fn first(&self) -> &T"
+}

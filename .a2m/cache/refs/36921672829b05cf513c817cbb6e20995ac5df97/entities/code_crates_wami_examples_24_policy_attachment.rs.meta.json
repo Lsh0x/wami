@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/examples/24_policy_attachment.rs::function::main"
+  ],
+  "content_hash": "c1876f5837f8de651914cf5bdfcbd333c4485dab48e1043a1cf7f3876b4804b9",
+  "doc": "",
+  "file": "crates/wami/examples/24_policy_attachment.rs",
+  "id": "code:crates/wami/examples/24_policy_attachment.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 176,
+  "line_start": 1,
+  "name": "24_policy_attachment",
+  "signature": ""
+}

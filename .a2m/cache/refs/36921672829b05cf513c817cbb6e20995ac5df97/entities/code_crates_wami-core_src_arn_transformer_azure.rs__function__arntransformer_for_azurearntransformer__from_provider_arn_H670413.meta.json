@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7f0fa37576c90493507707cf2c992588b6d3fa6babe8cd4a0f67ddcff44672f0",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/transformer/azure.rs",
+  "id": "code:crates/wami-core/src/arn/transformer/azure.rs::function::ArnTransformer for AzureArnTransformer::from_provider_arn",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 80,
+  "line_start": 48,
+  "name": "from_provider_arn",
+  "signature": "fn from_provider_arn(&self, provider_arn: &str) -> Result<ProviderArnInfo>"
+}

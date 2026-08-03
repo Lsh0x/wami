@@ -1,0 +1,25 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder",
+    "code:crates/wami-core/src/context.rs::function::WamiContext::builder",
+    "extern:policy_builder::build_policy",
+    "extern:role_builder::build_role"
+  ],
+  "callers": [
+    "code:wami/instance/bootstrap.rs::function::InstanceBootstrap::initialize_instance"
+  ],
+  "children": [],
+  "content_hash": "sha256:0be9e972bbfc6dfdbedf33fd459d82759c27330c2728a66d5d7356bb608447e6",
+  "doc": "Create platform bootstrap roles with their policies\n\nCreates 3 default roles:\n- `platform-admin`: Full access to all actions (*)\n- `platform-space-creator`: Can create spaces + manage IAM within own spaces\n- `platform-user`: Minimal read-only access",
+  "file": "wami/instance/bootstrap.rs",
+  "id": "code:wami/instance/bootstrap.rs::function::InstanceBootstrap::create_platform_roles",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 367,
+  "line_start": 261,
+  "name": "create_platform_roles",
+  "signature": "async fn create_platform_roles<S>(store: &mut S, instance_id: &str) -> Result<()>"
+}

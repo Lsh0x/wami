@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a695e05b0032b1d63b17938c3c1d56e0c15c8b557420b8778451bdf29550dd60",
+  "doc": "",
+  "file": "crates/wami/src/service/identity/user.rs",
+  "id": "code:crates/wami/src/service/identity/user.rs::struct::UserService",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 26,
+  "line_start": 23,
+  "name": "UserService",
+  "signature": "pub struct UserService<S>"
+}

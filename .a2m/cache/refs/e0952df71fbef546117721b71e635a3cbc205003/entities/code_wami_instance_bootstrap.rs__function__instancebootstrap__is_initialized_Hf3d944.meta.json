@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami/examples/26_secure_instance_bootstrap.rs::function::main"
+  ],
+  "children": [],
+  "content_hash": "sha256:ac6f7dded97d9ec143d40429a3c55cfdd7406bc702c235c194672b8d3ecfc8a6",
+  "doc": "Check if an instance is already initialized (has a root user)",
+  "file": "wami/instance/bootstrap.rs",
+  "id": "code:wami/instance/bootstrap.rs::function::InstanceBootstrap::is_initialized",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 381,
+  "line_start": 370,
+  "name": "is_initialized",
+  "signature": "pub async fn is_initialized<S>(store: Arc<RwLock<S>>, instance_id: &str) -> Result<bool>"
+}

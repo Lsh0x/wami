@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:26f05a105a57a2f6ae31cc9a81bc9af33808fe4ba786d320b50ebd661b6d61f6",
+  "doc": "",
+  "file": "store/memory/sso_admin/account_assignment.rs",
+  "id": "code:store/memory/sso_admin/account_assignment.rs::function::AccountAssignmentStore for InMemorySsoAdminStore::create_account_assignment",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 22,
+  "line_start": 11,
+  "name": "create_account_assignment",
+  "signature": "async fn create_account_assignment("
+}

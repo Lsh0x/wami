@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:6817c8b0213c94c55b4226cedb56ae58b466763b87981fee406683bf595b41f4",
+  "doc": "Creates a new cloud mapping with a specific region.",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::function::CloudMapping::with_region",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 230,
+  "line_start": 220,
+  "name": "with_region",
+  "signature": "pub fn with_region("
+}

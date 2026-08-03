@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "extern:serde_json::from_str"
+  ],
+  "callers": [
+    "code:crates/wami/src/service/auth/authorization.rs::function::AuthorizationService<S>::evaluate_user_policies"
+  ],
+  "children": [],
+  "content_hash": "sha256:0ba6b45f35568efefd292ea1c7034e8066dd547aa72dcda3bd9244c2857822af",
+  "doc": "Parse a policy document, refusing to guess when it cannot be read.\n\nThis used to swallow the error and hand back an empty document. For an\n`Allow` that was merely useless; for a `Deny` it was a fail-open — the\nstatement meant to block the action stopped existing, and any `Allow` from\nanother source won. One typo was enough:\n\n```text\n{\"Effect\":\"Deny\",\"Actions\":[\"iam:*\"],\"Resource\":[\"*\"]}\n^ plural — valid JSON, not a PolicyStatement\n```\n\nRefusing to decide is the only safe answer: a document that cannot be read\nmight have contained a deny, and there is no way to know.",
+  "file": "crates/wami/src/service/auth/policy_evaluator.rs",
+  "id": "code:crates/wami/src/service/auth/policy_evaluator.rs::function::parse_policy_doc",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 201,
+  "line_start": 196,
+  "name": "parse_policy_doc",
+  "signature": "pub fn parse_policy_doc(json: &str, policy: &PolicySource) -> Result<PolicyDocument>"
+}

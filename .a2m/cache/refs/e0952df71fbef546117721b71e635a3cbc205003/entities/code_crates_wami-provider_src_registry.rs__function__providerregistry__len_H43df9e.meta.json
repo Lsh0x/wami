@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b899686d38d9310627c4eb52b003daf40369251be719d1bd4684245495393337",
+  "doc": "Returns the number of registered providers.",
+  "file": "crates/wami-provider/src/registry.rs",
+  "id": "code:crates/wami-provider/src/registry.rs::function::ProviderRegistry::len",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 62,
+  "line_start": 60,
+  "name": "len",
+  "signature": "pub fn len(&self) -> usize"
+}

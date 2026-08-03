@@ -1,0 +1,413 @@
+---
+description: LLM agent workflows (discussion, issue creation, implementation, PR)
+alwaysApply: true
+---
+
+## Workflow State Machine
+
+**Complete state machine documentation**: See `docs/workflow_state_machine.md` for the complete state machine diagram, all states, transitions, validation rules, and recovery paths.
+
+The workflow includes:
+- **Pre-Implementation**: Explore → Proposal → Todo → PreCheck → Ready
+- **Implementation**: Work → QualityGate → (Commit | Fix → Work)
+- **Pre-PR**: Done → CrossIssueScan → CrossIssueSync → (SyncCommit → PR | PR)
+- **PR & Merge**: PR → Review → MergeCommand → Merge
+- **Post-Merge**: Merge → ScanAnalysis → AnalyzeMerge → CreateProposals → Explore
+- **Terminal**: Closed, Reject
+
+All states, transitions, and validation rules are documented in the state machine documentation.
+
+## Proposal System
+
+**Agents can automatically create proposals** in `issues/<project>/proposal/{type}-{slug}.md` without user approval. Proposals are agent-generated ideas that document potential improvements.
+
+**Proposal Workflow:**
+1. **Agent identifies improvement/issue**: During work, agent notices potential improvements
+2. **Agent creates proposal automatically**: Create `issues/<project>/proposal/{type}-{slug}.md` using proposal template (no approval needed)
+3. **User discusses proposal**: When user asks about proposal or agent presents it:
+   - Agent explains the proposal, benefits, risks, implementation approach
+   - Agent asks for user confirmation
+4. **Promote to todo**: If user approves, move proposal to `todo/` (using `mv`, not `cp`):
+   - `mv issues/<project>/proposal/{type}-{slug}.md issues/<project>/todo/{type}-{yyyy-mm-dd}-{slug}.md`
+   - Add date prefix (YYYY-MM-DD format) when moving from proposal to todo
+   - Update issue status from `proposal` to `todo`
+   - Proposal becomes validated issue ready for implementation
+
+**Proposal vs Todo Distinction:**
+- **Proposal (`proposal/`)**: Agent-generated ideas, not yet validated, can be created automatically
+- **Todo (`todo/`)**: User-validated issues, ready for implementation, requires user approval before creation
+
+## Exploration Workflow (MANDATORY FIRST STEP)
+
+**Before ANY implementation work, the exploration workflow MUST be completed.**
+
+**⚠️ Rule R₀ Enforcement**: Before starting exploration workflow:
+1. **Load workflow rules**: Ensure `workflow-enforcement.mdc`, `core-standards.mdc`, `workflows.mdc` are loaded (`Load(A,t)`)
+2. **Verify workflow presence**: Confirm `HasWF(A,t)` holds
+3. **Validate pre-state**: Verify `WF(Pre(A,act,t))` for exploration action
+
+**Required steps:**
+1. **Load and verify workflow rules** (Rule R₀ check):
+   - Load `workflow-enforcement.mdc` if not present
+   - Load `core-standards.mdc` if not present
+   - Load `workflows.mdc` if not present
+   - Verify workflow predicates are available (`HasWF(A,t)`)
+2. Discuss goals with the user.
+3. Critically analyze and refine requirements.
+4. Propose alternatives and clarify unknowns.
+5. Summarize consensus → update `docs/roadmap.md` (if needed).
+6. **Present proposal to user**: Provide a clear summary of what will be implemented, including scope, approach, and any risks.
+7. **WAIT for explicit user approval**: Agent MUST detect approval language before proceeding:
+   - Positive approval: "yes", "approve", "go ahead", "create issue", "sounds good", "proceed", "that works"
+   - If no clear approval detected: STOP and ask for explicit confirmation
+   - Agent MUST NOT proceed without unambiguous approval
+8. **ONLY AFTER approval**: For each approved actionable item, create `issues/<project>/todo/{type}-{yyyy-mm-dd}-{slug}.md` using template (project detected from context or defaults to `flowmates`).
+   - **File naming**: Use flat structure `{type}-{yyyy-mm-dd}-{slug}.md` (e.g., `enhancement-2025-11-07-restructure-issues.md`, `bug-2025-11-07-fix-api-error.md`)
+   - **Date format**: Use current date in YYYY-MM-DD format (e.g., `2025-11-07`)
+   - **Post-state validation**: After creation, verify `WF(Post(A,act,t))` - issue exists and is valid
+9. Confirm issue creation with user.
+10. **ONLY THEN**: Proceed to implementation workflow (if user requests implementation).
+11. **Context refresh**: If context changes during exploration, refresh workflow rules (`Refresh(A,t)`) and verify `HasWF(A,t)` still holds.
+
+**CRITICAL RULES:**
+- **Agent CAN create proposals automatically** in `proposal/` without approval
+- **Agent MUST get approval before creating issues in `todo/`**
+- **Agent MUST get confirmation before promoting proposal to `todo/`**
+- **Agent MUST NOT proceed to implementation without user-approved issue in `todo/`**
+- **Agent MUST NOT skip this workflow or proceed to implementation without an issue file**
+- **Agent MUST NOT make ANY file modifications without an issue in `todo/` or `in_progress/`**
+- **Agent MUST NOT interpret "looks good" or "go ahead" as approval to make changes** - these are approval to CREATE ISSUE
+- If user asks to implement without prior discussion/approval: STOP, explain, require exploration workflow first
+- If user says "option X looks good": STOP, explain this means create an issue for option X, then wait for approval
+
+## Implementation Workflow
+
+**Prerequisites**: Issue file MUST exist in `issues/<project>/todo/` before starting implementation (project detected from context or defaults to `flowmates`). Issue files use naming format: `{type}-{yyyy-mm-dd}-{slug}.md` (e.g., `enhancement-2025-11-07-restructure-issues.md`).
+
+**⚠️ Rule R₀ Enforcement - BEFORE ANY FILE MODIFICATIONS:**
+
+**MANDATORY WORKFLOW CHECK** (Rule R₀):
+1. **Load Check**: Verify workflow rules loaded (`Load(A,t)`)
+   - Check: `workflow-enforcement.mdc`, `core-standards.mdc`, `workflows.mdc` in context?
+   - If no: Load immediately, then proceed
+2. **Presence Check**: Verify workflow present (`HasWF(A,t)`)
+   - Check: Can access Rule R₀ and predicates?
+   - If no: Reload rules, then proceed
+3. **Pre-State Validation**: Verify workflow formula holds (`WF(Pre(A,act,t))`)
+   - Issue exists in `issues/<project>/todo/` or `issues/<project>/in_progress/`?
+   - Issue is approved (not in `proposal/`)?
+   - Branch matches issue?
+   - If no: **HARD STOP** - Transition to **Reject** state, explain violation, restart workflow
+   - If yes: Transition to **Ready** state
+
+**NEVER make code changes without an issue. NO EXCEPTIONS.**
+- **ALL code modifications require an issue first** - This includes:
+  - Source code files (`.ts`, `.js`, `.py`, `.rs`, `.go`, etc.)
+  - Configuration files (`.yml`, `.json`, `.toml`, `.ini`, etc.)
+  - CI/CD files (`.github/workflows/*`, `.gitlab-ci.yml`, etc.)
+  - Build files (`Makefile`, `CMakeLists.txt`, `Dockerfile`, etc.)
+  - Documentation files (`*.md`) - if modifying project docs
+  - Any file that changes project behavior or structure
+- **User saying "looks good", "go ahead", or "option X" is NOT approval to make changes**
+  - These phrases are approval to CREATE AN ISSUE, not to make changes
+  - You MUST create an issue first, then wait for explicit implementation approval
+- **"Quick fixes" and "simple changes" still require issues**
+  - There are NO exceptions for "small" changes
+  - Even one-line changes require an issue
+
+**⚠️ CRITICAL CHECKPOINT - Discovering Bugs/Enhancements/Refactors During Work:**
+
+**If you discover a bug, enhancement opportunity, or refactoring need that is NOT related to the current issue:**
+
+1. **STOP** the current work immediately
+2. **DO NOT** fix the bug or make the change in the current commit
+3. **CREATE** a new proposal issue automatically in `issues/<project>/proposal/{type}-{slug}.md`:
+   - Use appropriate type: `bug-` for bugs, `enhancement-` for improvements, `refactor-` for refactoring
+   - Document what was discovered, where it was found, and why it needs to be addressed
+   - Include location (file path, line numbers if applicable)
+   - Explain the impact and proposed fix/change
+4. **CONTINUE** with the original work after creating the proposal
+5. **OPTIONALLY**: If user approves, you can fix the bug/enhancement in the same session, but:
+   - It MUST be tracked as a separate issue (promote proposal to `todo/` if user approves)
+   - It MUST be in a separate commit (or separate PR if significant)
+   - The commit message MUST reference the separate issue
+   - Both issues must be properly tracked
+
+**Why this matters:**
+- Improves code review clarity (each commit addresses one concern)
+- Better commit message quality (each commit has clear purpose)
+- Accurate CHANGELOG entries (bug fixes tracked separately)
+- Better project history (can see what bugs were fixed when)
+- Even "small" bug fixes should be tracked as separate issues
+
+**Example Scenario:**
+- Working on issue: "Add feature X"
+- Discover bug: Method Y has incorrect parameter usage
+- **Action**: Create `issues/<project>/proposal/bug-fix-method-y-parameter.md`
+- Continue with feature X work
+- If user approves bug fix: Promote proposal to `todo/`, fix in separate commit
+
+**Workflow States:**
+
+- **PreCheck**: Validate workflow rules and context before implementation
+  - Load and verify workflow rules
+  - Validate pre-conditions
+  - **Transition**: `PreCheck → Ready` (if WF(Pre) holds) or `PreCheck → Reject` (if WF(Pre) fails)
+
+- **Ready**: All pre-work validations passed, ready to begin implementation
+  - All pre-work checks complete
+  - Issue validated, branch ready
+  - **Transition**: `Ready → Work` (begin implementation)
+
+- **Reject**: Hard stop when workflow rule fails, explain violation, restart workflow
+  - Workflow violation detected (WF(Pre) fails)
+  - Clear error message explaining violation
+  - Suggest remediation steps
+  - **Recovery**: `Reject → Explore` (restart workflow from beginning)
+
+- **Work**: Active implementation of feature/fix/documentation
+  - Issue in `in_progress/`
+  - Branch matches issue specification
+  - **Transition**: `Work → QualityGate` (implementation complete)
+
+- **QualityGate**: Run quality checks (format, lint, test, docs)
+  - Implementation complete, ready for quality checks
+  - **Transitions**: 
+    - `QualityGate → Commit` (all checks passed)
+    - `QualityGate → Fix` (failed checks)
+    - `QualityGate → Reject` (workflow violation)
+
+- **Fix**: Quality gates failed, return to Work after corrections
+  - Quality gate failures identified
+  - Document what needs to be fixed
+  - **Loop**: `QualityGate → Fix → Work → QualityGate` (until all checks pass)
+
+- **Done**: Issue implementation completed
+  - Issue file in `done/`
+  - Commit references issue
+  - **Transition**: `Done → CrossIssueScan` (begin cross-issue scanning)
+
+- **CrossIssueScan**: Agent automatically reads all issue files to infer related issues
+  - Scan all issues in `todo/`, `in_progress/`, `done/` directories
+  - Detect related issues by keywords, file paths, dependencies
+  - **Automatic behavior** - not a command
+  - **Transition**: `CrossIssueScan → CrossIssueSync`
+
+- **CrossIssueSync**: Agent automatically updates related issues if needed, detects dependencies
+  - Update issue files if relationships found
+  - Document dependencies and relationships
+  - **Automatic behavior** - not a command
+  - **Transitions**:
+    - `CrossIssueSync → SyncCommit` (if related issues updated)
+    - `CrossIssueSync → PR` (if no related issues found)
+
+- **SyncCommit**: Atomic commit of updated issues if changes made
+  - Create commit with message referencing updated issues
+  - **Automatic behavior** - not a command
+  - **Transition**: `SyncCommit → PR`
+
+- **PR**: Pull request created and ready for review
+  - PR exists and is reviewable
+  - All documentation committed
+  - Issue in `done/`
+  - **Transition**: `PR → Review` (PR ready for review)
+
+- **Review**: PR under review
+  - PR exists and is reviewable
+  - **Transition**: `Review → MergeCommand` (PR approved, ready to merge)
+
+- **MergeCommand**: Cursor command to merge PR, triggers introspection sequence
+  - PR approved, ready to merge
+  - Execute controlled PR merge
+  - Trigger post-merge introspection sequence
+  - **Transition**: `MergeCommand → Merge` (execute merge)
+
+- **Merge**: PR approved and merged, issue archived
+  - PR merged successfully
+  - Issue archived in `done/`
+  - `agent-state.json` updated with merge status
+  - **Issue Archiving Logic**:
+    - Verify issue is in `done/` directory
+    - Update `agent-state.json` with merge status
+    - Archive issue properly
+  - **Post-Merge Validation**:
+    - Verify issue is in `done/`
+    - Verify `agent-state.json` updated
+    - Verify PR merged successfully
+  - **Transitions**:
+    - `Merge → ScanAnalysis` (always triggers introspection)
+    - `Merge → Closed` (if no proposals found - alternative path)
+
+- **ScanAnalysis**: Agent automatically reads merged code and diff, uses AI analysis or lint feedback
+  - After merge completes
+  - Agent automatically scans merged code and diff
+  - Uses AI analysis or lint feedback to identify anomalies
+  - **Automatic behavior** - not a command
+  - **Transition**: `ScanAnalysis → AnalyzeMerge`
+
+- **AnalyzeMerge**: Agent automatically detects bugs (🐞), enhancements (✨), refactors (🔧), classifies findings
+  - After scan analysis completes
+  - Agent automatically classifies findings into categories
+  - Generates structured summaries
+  - **Automatic behavior** - not a command
+  - **Transitions**:
+    - `AnalyzeMerge → CreateProposals` (findings identified)
+    - `AnalyzeMerge → Explore` (no findings - alternative path)
+
+- **CreateProposals**: Agent automatically creates proposal files under `issues/<project>/proposal/{type}-{slug}.md`
+  - After analysis completes with findings
+  - Agent automatically creates proposal files with structured summaries
+  - Each proposal describes finding, location, context
+  - **Automatic behavior** - not a command
+  - **Transition**: `CreateProposals → Explore`
+
+- **Closed**: Issue archived, state updated, ready for next task
+  - Issue archived
+  - No proposals found from introspection
+  - State updated
+  - **Transition**: `Merge → Closed → Explore` (if no proposals found)
+  - **Alternative**: `Merge → ScanAnalysis → AnalyzeMerge → CreateProposals → Explore` (if proposals found)
+
+**Implementation Steps:**
+1. **Evaluate Rule R₀** (see above) - **MANDATORY FIRST STEP**
+2. **VERIFY ISSUE EXISTS**: Check that linked issue file is in `issues/<project>/todo/` or `issues/<project>/in_progress/` (project detected from context or defaults to `flowmates`). Files use naming format: `{type}-{yyyy-mm-dd}-{slug}.md` (e.g., `enhancement-2025-11-07-restructure-issues.md`).
+3. **STOP IMMEDIATELY IF MISSING**: If no issue exists:
+   - **REFUSE** to make any file modifications
+   - **EXPLAIN** that an issue is required first
+   - **REQUIRE** exploration workflow to create issue
+   - **DO NOT PROCEED** until issue is created and approved
+   - **Transition to Reject state**: Explain violation, suggest remediation, restart workflow
+4. **PreCheck State**: Load workflow rules, validate pre-conditions
+   - If validation fails: **Transition to Reject state**
+   - If validation passes: **Transition to Ready state**
+5. **Ready State**: All pre-work validations passed
+   - Clear transition point before implementation begins
+   - **Transition to Work state**
+6. Load linked issue file and verify it describes the work to be done.
+7. Checkout or create branch specified inside issue.
+8. Move issue file → `in_progress/`.
+9. **Context refresh**: If context changes, refresh workflow rules (`Refresh(A,t)`) and verify `HasWF(A,t)` still holds.
+10. **Work State**: Begin implementation
+    - Prototype → tests → implementation → documentation
+    - Mark progress checkboxes inside issue
+    - **Transition to QualityGate state** when implementation complete
+11. **QualityGate State**: Run quality checks
+    - Format → lint → test → docs
+    - **If all pass**: Transition to Commit
+    - **If failures**: Transition to Fix state
+    - **If workflow violation**: Transition to Reject state
+12. **Fix State**: Correct issues found in quality gates
+    - Identify specific failures
+    - Fix issues
+    - **Return to Work state** to retry
+    - **Loop until all checks pass**
+13. After format+lint+tests+docs pass → commit + push.
+    - **Pre-commit validation**: Verify `WF(Pre(A,commit,t))` - quality gates passed?
+    - **Documentation check**: Ensure all documentation updates are included in commit
+    - **Post-commit validation**: Verify `WF(Post(A,commit,t))` - commit references issue?
+    - **Ensure commit only addresses current issue** - unrelated fixes belong in separate commits
+14. **MANDATORY**: Move issue → `done/` (use `mv`, not `cp` - ensure no duplicates).
+15. **VALIDATE**: Verify issue is in `done/` before proceeding.
+16. **CrossIssueScan State** (Automatic Agent Behavior):
+    - Agent automatically reads all issue files to infer related issues
+    - Scan all issues in `todo/`, `in_progress/`, `done/` directories
+    - Detect related issues by:
+      - **Keywords**: Scan issue titles and descriptions for related terms, detect references (e.g., "related to #123", "depends on enhancement-X")
+      - **File Paths**: Compare file paths modified in different issues, detect overlapping file changes
+      - **Dependencies**: Detect explicit dependencies (e.g., "blocks", "depends on"), infer dependencies from implementation order
+    - **Transition to CrossIssueSync state**
+17. **CrossIssueSync State** (Automatic Agent Behavior):
+    - Agent automatically updates related issues if needed, detects dependencies
+    - Update issue files if relationships found
+    - Document dependencies and relationships
+    - **Transitions**:
+      - `CrossIssueSync → SyncCommit` (if related issues updated)
+      - `CrossIssueSync → PR` (if no related issues found or no updates needed)
+18. **SyncCommit State** (Automatic Agent Behavior):
+    - Atomic commit of updated issues if changes made
+    - Create commit with message referencing updated issues
+    - **Transition to PR state**
+19. **⚠️ CRITICAL CHECKPOINT - Documentation Validation Before PR:**
+    - **Check for uncommitted documentation**: Verify no modified `.md` files remain uncommitted
+    - Check `docs/` directory: All modified `.md` files must be committed
+    - Check `README.md`: If modified, must be committed
+    - Check `CHANGELOG.md`: If user-facing changes, must be updated and committed
+    - **If uncommitted docs found**: **STOP** - Require commit before proceeding
+    - **Error message**: "Documentation files modified but not committed. Please commit all documentation updates before creating PR."
+    - **Only proceed to PR creation** after all documentation is committed
+20. Create PR using `gh pr create` referencing issue path and summary.
+21. **Post-action validation**: Verify `WF(Post(A,pr,t))` - PR created successfully?
+
+## PR Workflow
+- PR title = lead commit.
+- Body includes: summary, risks, tests, screenshots, docs updated.
+- Always link roadmap + issue path.
+
+## Merge & Post-Merge Workflow
+
+**After PR is created and reviewed:**
+
+- **PR State**: Pull request created and ready for review
+  - PR exists and is reviewable
+  - **Transition**: `PR → Review` (PR ready for review)
+
+- **Review State**: PR under review
+  - PR exists and is reviewable
+  - **Transition**: `Review → MergeCommand` (PR approved, ready to merge)
+
+- **MergeCommand State**: Cursor command to merge PR, triggers introspection sequence
+  - PR approved, ready to merge
+  - Execute controlled PR merge
+  - Trigger post-merge introspection sequence
+  - **Transition**: `MergeCommand → Merge` (execute merge)
+
+- **Merge State**: PR approved and merged, issue archived
+  - PR merged successfully
+  - Issue archived in `done/`
+  - `agent-state.json` updated with merge status
+  - **Issue Archiving Logic**:
+    - Verify issue is in `done/` directory
+    - Update `agent-state.json` with merge status
+    - Archive issue properly
+  - **Post-Merge Validation**:
+    - Verify issue is in `done/`
+    - Verify `agent-state.json` updated
+    - Verify PR merged successfully
+  - **Transitions**:
+    - `Merge → ScanAnalysis` (always triggers introspection)
+    - `Merge → Closed` (if no proposals found - alternative path)
+
+- **ScanAnalysis State** (Automatic Agent Behavior): Agent automatically reads merged code and diff, uses AI analysis or lint feedback
+  - After merge completes
+  - Agent automatically scans merged code and diff
+  - Uses AI analysis or lint feedback to identify anomalies
+  - Identifies: Anomalies, potential issues, improvement opportunities
+  - **Automatic behavior** - not a command
+  - **Transition**: `ScanAnalysis → AnalyzeMerge` (scan complete)
+
+- **AnalyzeMerge State** (Automatic Agent Behavior): Agent automatically detects bugs (🐞), enhancements (✨), refactors (🔧), classifies findings
+  - After scan analysis completes
+  - Agent automatically classifies findings into categories:
+    - 🐞 **Bug**: Issues that need fixing
+    - ✨ **Enhancement**: Improvements that could be made
+    - 🔧 **Refactor**: Code quality improvements
+  - Generates structured summaries
+  - **Automatic behavior** - not a command
+  - **Transitions**:
+    - `AnalyzeMerge → CreateProposals` (findings identified)
+    - `AnalyzeMerge → Explore` (no findings - alternative path)
+
+- **CreateProposals State** (Automatic Agent Behavior): Agent automatically creates proposal files under `issues/<project>/proposal/{type}-{slug}.md`
+  - After analysis completes with findings
+  - Agent automatically creates proposal files with structured summaries
+  - Each proposal describes finding, location, context, proposed fix/change
+  - Location: `issues/<project>/proposal/{type}-{slug}.md`
+  - **Automatic behavior** - not a command
+  - **Transition**: `CreateProposals → Explore` (proposals created, return to discovery)
+
+- **Closed State**: Issue archived, state updated, ready for next task
+  - Issue archived
+  - No proposals found from introspection
+  - State updated
+  - **Transition**: `Merge → Closed → Explore` (if no proposals found)
+  - **Alternative**: `Merge → ScanAnalysis → AnalyzeMerge → CreateProposals → Explore` (if proposals found)

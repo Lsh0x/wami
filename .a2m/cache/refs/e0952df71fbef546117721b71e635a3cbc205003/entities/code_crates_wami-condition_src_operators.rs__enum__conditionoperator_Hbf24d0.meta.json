@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ffd297c31325ab962894a9f705564260d4d01e41fade8da2ce22d860f7c285a6",
+  "doc": "",
+  "file": "crates/wami-condition/src/operators.rs",
+  "id": "code:crates/wami-condition/src/operators.rs::enum::ConditionOperator",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 104,
+  "line_start": 10,
+  "name": "ConditionOperator",
+  "signature": "pub enum ConditionOperator"
+}

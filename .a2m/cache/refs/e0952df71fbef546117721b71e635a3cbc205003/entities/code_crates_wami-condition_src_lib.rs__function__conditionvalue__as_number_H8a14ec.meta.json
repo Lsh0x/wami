@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:4a3c0fe8ea0532bf373805073b0cf67e657c5be3b7f391410a55277ae36fdb3f",
+  "doc": "",
+  "file": "crates/wami-condition/src/lib.rs",
+  "id": "code:crates/wami-condition/src/lib.rs::function::ConditionValue::as_number",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 62,
+  "line_start": 50,
+  "name": "as_number",
+  "signature": "pub fn as_number(&self) -> Result<f64, ConditionError>"
+}

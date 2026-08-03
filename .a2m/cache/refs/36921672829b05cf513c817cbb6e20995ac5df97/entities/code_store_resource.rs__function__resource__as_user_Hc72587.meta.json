@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f80d3ffa969aaaeb4fb656b6339ec9788a4bbf04cd5c16cfdad1404fc0a57a7e",
+  "doc": "Tries to downcast to User",
+  "file": "store/resource.rs",
+  "id": "code:store/resource.rs::function::Resource::as_user",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 135,
+  "line_start": 129,
+  "name": "as_user",
+  "signature": "pub fn as_user(&self) -> Option<&User>"
+}

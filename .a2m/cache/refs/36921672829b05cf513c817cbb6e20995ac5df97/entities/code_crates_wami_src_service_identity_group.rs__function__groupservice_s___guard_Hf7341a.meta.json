@@ -1,0 +1,29 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/auth/authorizer.rs::function::iam_resource_arn"
+  ],
+  "callers": [
+    "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::create_group",
+    "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::get_group",
+    "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::update_group",
+    "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::delete_group",
+    "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::list_groups",
+    "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::add_user_to_group",
+    "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::remove_user_from_group",
+    "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::list_groups_for_user"
+  ],
+  "children": [],
+  "content_hash": "sha256:1e034c2329cbd6cf3e4e3135f2606ce8ccd1123ee6b5ec5b862a94bd433be726",
+  "doc": "",
+  "file": "crates/wami/src/service/identity/group.rs",
+  "id": "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::guard",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 51,
+  "line_start": 39,
+  "name": "guard",
+  "signature": "async fn guard("
+}

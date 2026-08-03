@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::create_saml_provider"
+  ],
+  "children": [],
+  "content_hash": "sha256:253056e3f28c4e0dbb76074271986758fd632fe6d90c5eb7222956ae76413b33",
+  "doc": "",
+  "file": "wami/identity/identity_provider/model.rs",
+  "id": "code:wami/identity/identity_provider/model.rs::function::SamlProvider::validate_name",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 123,
+  "line_start": 107,
+  "name": "validate_name",
+  "signature": "pub fn validate_name(name: &str) -> crate::error::Result<()>"
+}

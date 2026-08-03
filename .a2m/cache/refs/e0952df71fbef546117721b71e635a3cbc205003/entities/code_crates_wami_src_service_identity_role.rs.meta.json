@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/identity/role.rs::struct::RoleService",
+    "code:crates/wami/src/service/identity/role.rs::impl::RoleService<S>"
+  ],
+  "content_hash": "1771b5d8fbc7f42668e58d9181ef269381a049b1d6e711ddfa7f439ba71d4c8f",
+  "doc": "",
+  "file": "crates/wami/src/service/identity/role.rs",
+  "id": "code:crates/wami/src/service/identity/role.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 409,
+  "line_start": 1,
+  "name": "role",
+  "signature": ""
+}

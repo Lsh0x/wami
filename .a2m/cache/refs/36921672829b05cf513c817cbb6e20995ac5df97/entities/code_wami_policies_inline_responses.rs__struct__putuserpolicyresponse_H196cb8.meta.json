@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:83286bc463306dac9ae7360392f14d7867661d33aef09d292c39e07f9888a366",
+  "doc": "",
+  "file": "wami/policies/inline/responses.rs",
+  "id": "code:wami/policies/inline/responses.rs::struct::PutUserPolicyResponse",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 12,
+  "line_start": 9,
+  "name": "PutUserPolicyResponse",
+  "signature": "pub struct PutUserPolicyResponse"
+}

@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami-provider/src/arn_builder.rs::function::arn_pattern_match"
+  ],
+  "callers": [
+    "code:crates/wami/examples/arn_architecture_demo.rs::function::main"
+  ],
+  "children": [],
+  "content_hash": "sha256:e0a38e06e7f6665a4d1b9df27e8ee693da817be894d5007f465bad3887a6e7a0",
+  "doc": "",
+  "file": "crates/wami/examples/arn_architecture_demo.rs",
+  "id": "code:crates/wami/examples/arn_architecture_demo.rs::function::demo_pattern_matching",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 115,
+  "line_start": 81,
+  "name": "demo_pattern_matching",
+  "signature": "fn demo_pattern_matching() -> Result<(), Box<dyn std::error::Error>>"
+}

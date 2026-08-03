@@ -1,0 +1,24 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:service/sso_admin/instance.rs::function::InstanceService<S>::new",
+    "code:service/sso_admin/instance.rs::function::InstanceService<S>::with_provider",
+    "code:service/sso_admin/instance.rs::function::InstanceService<S>::create_instance",
+    "code:service/sso_admin/instance.rs::function::InstanceService<S>::get_instance",
+    "code:service/sso_admin/instance.rs::function::InstanceService<S>::list_instances"
+  ],
+  "content_hash": "sha256:d695b53d5e2c545f81dfb694b7b88c087c07b8f6c59dc142bf853c8f41c90f57",
+  "doc": "",
+  "file": "service/sso_admin/instance.rs",
+  "id": "code:service/sso_admin/instance.rs::impl::InstanceService<S>",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 54,
+  "line_start": 23,
+  "name": "InstanceService<S>",
+  "signature": "impl<S: SsoInstanceStore> InstanceService<S>"
+}

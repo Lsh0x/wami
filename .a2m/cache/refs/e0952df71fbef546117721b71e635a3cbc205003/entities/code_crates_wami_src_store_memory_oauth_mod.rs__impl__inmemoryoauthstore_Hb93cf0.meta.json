@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/store/memory/oauth/mod.rs::function::InMemoryOAuthStore::new"
+  ],
+  "content_hash": "sha256:908e5d6863c6f7c5a5907bf5dcc37cf9db61c73ed7b8824484882e6bb0f0151c",
+  "doc": "",
+  "file": "crates/wami/src/store/memory/oauth/mod.rs",
+  "id": "code:crates/wami/src/store/memory/oauth/mod.rs::impl::InMemoryOAuthStore",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 26,
+  "line_start": 21,
+  "name": "InMemoryOAuthStore",
+  "signature": "impl InMemoryOAuthStore"
+}

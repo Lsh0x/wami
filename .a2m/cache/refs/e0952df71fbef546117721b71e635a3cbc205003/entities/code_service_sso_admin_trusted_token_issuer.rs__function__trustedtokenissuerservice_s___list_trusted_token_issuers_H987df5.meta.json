@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a940db4ea6901475b58bf5cdb70e078708a41b559f34c84860365c6aa0030d6a",
+  "doc": "List trusted token issuers for an instance",
+  "file": "service/sso_admin/trusted_token_issuer.rs",
+  "id": "code:service/sso_admin/trusted_token_issuer.rs::function::TrustedTokenIssuerService<S>::list_trusted_token_issuers",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 83,
+  "line_start": 74,
+  "name": "list_trusted_token_issuers",
+  "signature": "pub async fn list_trusted_token_issuers("
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/arn/types.rs::function::WamiArn::resource_id",
+    "code:crates/wami-core/src/arn/types.rs::function::WamiArn::resource_type"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:245a1248a96195290087c4b265706f077b14d6faf92a55d0de96520da4315d53",
+  "doc": "Returns true if this ARN identifies the platform root user.\n\nBoth conditions must hold: the resource is the user named\n[`ROOT_USER_NAME`], **and** it sits in the root tenant\n([`ROOT_TENANT_ID`]).\n\nThe tenant check is not redundant. A root context bypasses every\nauthorization check, so deriving it from a name alone would make the\nprivilege reachable by anything able to influence a resource id — and\nnothing forbids naming a user `root` inside an ordinary tenant.",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::function::WamiArn::is_root_user",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 373,
+  "line_start": 369,
+  "name": "is_root_user",
+  "signature": "pub fn is_root_user(&self) -> bool"
+}

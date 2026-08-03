@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:wami/tenant/authorization.rs::function::TenantAuthorizer::matches_action",
+    "code:wami/tenant/authorization.rs::function::TenantAuthorizer::matches_resource"
+  ],
+  "children": [],
+  "content_hash": "sha256:2a86475f5eda30b3856df07e45b951287667e3b77cdd97b1e06e33f89ad53f03",
+  "doc": "Simple wildcard matching for actions and resources",
+  "file": "wami/tenant/authorization.rs",
+  "id": "code:wami/tenant/authorization.rs::function::TenantAuthorizer::wildcard_match",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 304,
+  "line_start": 294,
+  "name": "wildcard_match",
+  "signature": "fn wildcard_match(&self, pattern: &str, value: &str) -> bool"
+}

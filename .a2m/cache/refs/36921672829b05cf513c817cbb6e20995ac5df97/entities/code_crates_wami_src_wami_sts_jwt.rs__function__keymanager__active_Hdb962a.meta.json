@@ -1,0 +1,27 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::rotate",
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::jwks",
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::sign_claims",
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::public_key_pem",
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::public_key_spki_der",
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::public_key_bytes",
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::secret_bytes",
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::key_for"
+  ],
+  "children": [],
+  "content_hash": "sha256:c9735914be9eb2d72b4db15c72353441a482185e2884245e27daf4e2e2b9d33f",
+  "doc": "The key currently signing.",
+  "file": "crates/wami/src/wami/sts/jwt.rs",
+  "id": "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::active",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 188,
+  "line_start": 186,
+  "name": "active",
+  "signature": "pub fn active(&self) -> &KeyPair"
+}

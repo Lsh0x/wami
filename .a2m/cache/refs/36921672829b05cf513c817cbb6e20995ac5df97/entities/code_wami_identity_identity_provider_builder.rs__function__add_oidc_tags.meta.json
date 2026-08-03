@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::create_oidc_provider"
+  ],
+  "children": [],
+  "content_hash": "sha256:92285da1f541eda891868a986e0ced3309ba84d3e64d5009f489decda16b4c09",
+  "doc": "Add tags to an OIDC provider (pure function)",
+  "file": "wami/identity/identity_provider/builder.rs",
+  "id": "code:wami/identity/identity_provider/builder.rs::function::add_oidc_tags",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 152,
+  "line_start": 145,
+  "name": "add_oidc_tags",
+  "signature": "pub fn add_oidc_tags(mut provider: OidcProvider, tags: Vec<Tag>) -> OidcProvider"
+}

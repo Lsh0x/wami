@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:85464dcaa88bf4100a3a5d8fd07872e9a58687a08f07b3850ae38d26e5dcecb8",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::resource_arn",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 291,
+  "line_start": 288,
+  "name": "resource_arn",
+  "signature": "pub fn resource_arn(mut self, arn: impl Into<String>) -> Self"
+}

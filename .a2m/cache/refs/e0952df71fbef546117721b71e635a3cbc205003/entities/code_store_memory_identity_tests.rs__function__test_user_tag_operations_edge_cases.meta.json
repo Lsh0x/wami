@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:user_builder::build_user"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:291b47455a44c260423db0210f617fdbebcd136e73de6182d970dbcfb16788c5",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_user_tag_operations_edge_cases",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 878,
+  "line_start": 856,
+  "name": "test_user_tag_operations_edge_cases",
+  "signature": "async fn test_user_tag_operations_edge_cases()"
+}

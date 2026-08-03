@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:23853b6d74780b5c508db522e4c092b05d1841220080d4acf01b76c6e0e96bd6",
+  "doc": "",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::function::TryFrom<WireContext> for WamiContext::try_from",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 269,
+  "line_start": 228,
+  "name": "try_from",
+  "signature": "fn try_from(wire: WireContext) -> Result<Self>"
+}

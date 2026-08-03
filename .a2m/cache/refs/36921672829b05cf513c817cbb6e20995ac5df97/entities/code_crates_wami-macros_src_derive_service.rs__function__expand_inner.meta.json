@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:crates/wami-macros/src/derive_service.rs::function::parse_args",
+    "extern:syn::Error::new_spanned"
+  ],
+  "callers": [
+    "code:crates/wami-macros/src/derive_service.rs::function::expand"
+  ],
+  "children": [],
+  "content_hash": "sha256:852497c0a69b73085c40f52886529db50afdb3466a29a4800d47f2b28322a165",
+  "doc": "",
+  "file": "crates/wami-macros/src/derive_service.rs",
+  "id": "code:crates/wami-macros/src/derive_service.rs::function::expand_inner",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 49,
+  "line_start": 15,
+  "name": "expand_inner",
+  "signature": "fn expand_inner(input: DeriveInput) -> Result<proc_macro2::TokenStream>"
+}

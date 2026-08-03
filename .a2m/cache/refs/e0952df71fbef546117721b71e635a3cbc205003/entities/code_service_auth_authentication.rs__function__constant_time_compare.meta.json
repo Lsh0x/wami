@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/auth/authentication.rs::function::AuthenticationService<S>::validate_access_key"
+  ],
+  "children": [],
+  "content_hash": "sha256:614c21f6805f7755c588dab24691604cdc0636215ce6d3d318e59cbfe4417cd9",
+  "doc": "Constant-time string comparison to prevent timing attacks\n\nThis is important for security-sensitive comparisons like secrets.",
+  "file": "service/auth/authentication.rs",
+  "id": "code:service/auth/authentication.rs::function::constant_time_compare",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 229,
+  "line_start": 218,
+  "name": "constant_time_compare",
+  "signature": "fn constant_time_compare(a: &[u8], b: &[u8]) -> bool"
+}

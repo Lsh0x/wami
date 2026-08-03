@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:41cf40d2d1ca8acbd8361fff460f1fad1bf2a1d535ec2e7a532b52218a2950a1",
+  "doc": "Creates a builder with explicit salt",
+  "file": "crates/wami-provider/src/arn_builder.rs",
+  "id": "code:crates/wami-provider/src/arn_builder.rs::function::WamiArnBuilder::with_salt",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 60,
+  "line_start": 56,
+  "name": "with_salt",
+  "signature": "pub fn with_salt(salt: impl Into<String>) -> Self"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/cloud-provider/wami-provider-custom/src/lib.rs::function::CustomProvider::builder"
+  ],
+  "content_hash": "sha256:fe3b89bff5ea8c21ea26f37b83f15368d550a4494557e85033a7c32515416445",
+  "doc": "",
+  "file": "crates/cloud-provider/wami-provider-custom/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-custom/src/lib.rs::impl::CustomProvider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 49,
+  "line_start": 44,
+  "name": "CustomProvider",
+  "signature": "impl CustomProvider"
+}

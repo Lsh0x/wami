@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c66c8691e455a6d1133968bb994bd68019e115eeef41e9ee7851d3c9b3e99da6",
+  "doc": "List SAML providers",
+  "file": "service/identity/identity_provider.rs",
+  "id": "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::list_saml_providers",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 121,
+  "line_start": 115,
+  "name": "list_saml_providers",
+  "signature": "pub async fn list_saml_providers("
+}

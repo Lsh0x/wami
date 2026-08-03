@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:service/tenant/mod.rs::function::TenantService<S>::list_child_tenants",
+    "code:service/tenant/mod.rs::function::TenantService<S>::list_tenants"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:42787099a40f8ef4c9013b5142f9947b501e15e4e0a57a8955a8e6f5417c1368",
+  "doc": "Find a tenant by name within a parent\n\nThis enables name-to-ID mapping for UI display purposes.\nNames are unique within a parent, so this lookup is deterministic.\n\n# Arguments\n\n* `name` - The tenant name to search for\n* `parent_id` - The parent tenant ID (None for root-level tenants)\n\n# Returns\n\nThe tenant if found, None otherwise",
+  "file": "service/tenant/mod.rs",
+  "id": "code:service/tenant/mod.rs::function::TenantService<S>::find_tenant_by_name",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 118,
+  "line_start": 101,
+  "name": "find_tenant_by_name",
+  "signature": "pub async fn find_tenant_by_name("
+}

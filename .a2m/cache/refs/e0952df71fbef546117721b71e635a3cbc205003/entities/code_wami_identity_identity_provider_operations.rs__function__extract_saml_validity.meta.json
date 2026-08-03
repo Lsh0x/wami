@@ -1,0 +1,24 @@
+{
+  "callees": [
+    "extern:roxmltree::Document::parse",
+    "extern:DateTime::parse_from_rfc3339"
+  ],
+  "callers": [
+    "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::create_saml_provider",
+    "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::update_saml_provider"
+  ],
+  "children": [],
+  "content_hash": "sha256:bdea66f06984f1cf2d72b4f87b7914e13b2f5adbb8e01d583e4ccfdf2248156c",
+  "doc": "Extract validity period from SAML metadata\n\nAttempts to find and parse the validUntil attribute from SAML metadata.",
+  "file": "wami/identity/identity_provider/operations.rs",
+  "id": "code:wami/identity/identity_provider/operations.rs::function::extract_saml_validity",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 59,
+  "line_start": 39,
+  "name": "extract_saml_validity",
+  "signature": "pub fn extract_saml_validity(metadata: &str) -> Result<Option<DateTime<Utc>>>"
+}

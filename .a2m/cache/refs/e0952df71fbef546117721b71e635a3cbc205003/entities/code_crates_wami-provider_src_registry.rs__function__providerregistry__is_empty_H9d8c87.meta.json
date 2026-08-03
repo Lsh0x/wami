@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:4ec5af4049d4b36b0f4d8a6c941abee8134d5e9b3f9c2e8878da432efa1af928",
+  "doc": "Returns `true` if the registry currently has no providers.",
+  "file": "crates/wami-provider/src/registry.rs",
+  "id": "code:crates/wami-provider/src/registry.rs::function::ProviderRegistry::is_empty",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 57,
+  "line_start": 55,
+  "name": "is_empty",
+  "signature": "pub fn is_empty(&self) -> bool"
+}

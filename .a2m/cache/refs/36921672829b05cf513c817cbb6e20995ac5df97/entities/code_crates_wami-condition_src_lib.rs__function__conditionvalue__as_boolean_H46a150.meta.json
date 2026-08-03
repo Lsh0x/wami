@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "extern:ConditionError::InvalidBooleanValue"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:39b8ad22c43d0d9b209c9c378add1bbbcd14ad631ac22bfa7535fb6634504196",
+  "doc": "",
+  "file": "crates/wami-condition/src/lib.rs",
+  "id": "code:crates/wami-condition/src/lib.rs::function::ConditionValue::as_boolean",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 77,
+  "line_start": 64,
+  "name": "as_boolean",
+  "signature": "pub fn as_boolean(&self) -> Result<bool, ConditionError>"
+}

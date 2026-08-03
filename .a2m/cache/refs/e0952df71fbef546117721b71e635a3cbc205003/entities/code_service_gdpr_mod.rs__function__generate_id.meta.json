@@ -1,0 +1,28 @@
+{
+  "callees": [
+    "extern:SystemTime::now",
+    "extern:rand::random"
+  ],
+  "callers": [
+    "code:service/gdpr/mod.rs::function::GdprService<S>::enforce_retention",
+    "code:service/gdpr/mod.rs::function::GdprService<S>::export_user_data",
+    "code:service/gdpr/mod.rs::function::GdprService<S>::grant_consent",
+    "code:service/gdpr/mod.rs::function::GdprService<S>::request_erasure",
+    "code:service/gdpr/mod.rs::function::GdprService<S>::revoke_all_consents",
+    "code:service/gdpr/mod.rs::function::GdprService<S>::revoke_consent"
+  ],
+  "children": [],
+  "content_hash": "sha256:314c9e8fa5dd786690c8024e12e620a32a6d9d43fec92f06839b8592c62acae6",
+  "doc": "",
+  "file": "service/gdpr/mod.rs",
+  "id": "code:service/gdpr/mod.rs::function::generate_id",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 367,
+  "line_start": 359,
+  "name": "generate_id",
+  "signature": "fn generate_id() -> String"
+}

@@ -1,0 +1,25 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/tenant/hierarchy.rs::function::TenantNode::new",
+    "code:wami/tenant/hierarchy.rs::function::TenantNode::add_child",
+    "code:wami/tenant/hierarchy.rs::function::TenantNode::all_descendants",
+    "code:wami/tenant/hierarchy.rs::function::TenantNode::descendant_count",
+    "code:wami/tenant/hierarchy.rs::function::TenantNode::build_tree",
+    "code:wami/tenant/hierarchy.rs::function::TenantNode::add_children"
+  ],
+  "content_hash": "sha256:6223373a533b78b44097f73b1a43c52bd5887df54d0ee9349fb55da6e0e438f4",
+  "doc": "",
+  "file": "wami/tenant/hierarchy.rs",
+  "id": "code:wami/tenant/hierarchy.rs::impl::TenantNode",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 79,
+  "line_start": 14,
+  "name": "TenantNode",
+  "signature": "impl TenantNode"
+}

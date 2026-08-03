@@ -1,0 +1,14 @@
+%% id: extern:mfa_builder::build_mfa_device
+%% kind: extern
+%% file: :0-0
+%% content_hash: 
+%% signature: mfa_builder::build_mfa_device
+graph LR
+  classDef extern fill:#f5f5f5,stroke:#424242
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  extern_mfa_builder__build_mfa_device_H03d33b45:::extern[build_mfa_device]
+  code_crates_wami_src_service_credentials_mfa_device_rs__function__MfaDeviceService_S___create_mfa_device_Hbce81d09:::function[create_mfa_device] -- calls --> extern_mfa_builder__build_mfa_device_H03d33b45
+  code_store_memory_credentials_tests_rs__function__test_mfa_device_create_and_get_Haf40bcd6:::function[test_mfa_device_create_and_get] -- calls --> extern_mfa_builder__build_mfa_device_H03d33b45
+  code_store_memory_credentials_tests_rs__function__test_mfa_device_delete_Hdf037bac:::function[test_mfa_device_delete] -- calls --> extern_mfa_builder__build_mfa_device_H03d33b45
+  code_store_memory_credentials_tests_rs__function__test_mfa_device_list_for_user_H939bf269:::function[test_mfa_device_list_for_user] -- calls --> extern_mfa_builder__build_mfa_device_H03d33b45

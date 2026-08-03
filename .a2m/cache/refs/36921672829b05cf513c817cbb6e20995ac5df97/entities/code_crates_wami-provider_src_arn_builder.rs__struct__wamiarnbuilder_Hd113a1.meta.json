@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:4c7086257cb4a370607ab0177f2b0e136a0a2ea96b56ddb6d0a4e8e87b05334b",
+  "doc": "",
+  "file": "crates/wami-provider/src/arn_builder.rs",
+  "id": "code:crates/wami-provider/src/arn_builder.rs::struct::WamiArnBuilder",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 43,
+  "line_start": 39,
+  "name": "WamiArnBuilder",
+  "signature": "pub struct WamiArnBuilder"
+}

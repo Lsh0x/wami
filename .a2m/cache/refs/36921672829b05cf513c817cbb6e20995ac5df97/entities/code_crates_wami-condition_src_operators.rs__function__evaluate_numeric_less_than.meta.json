@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/operators.rs::function::evaluate_operator"
+  ],
+  "children": [],
+  "content_hash": "sha256:d58f06d04f900dbdbec2a575f4d706d2b044015df70991cf78977016ad40c330",
+  "doc": "",
+  "file": "crates/wami-condition/src/operators.rs",
+  "id": "code:crates/wami-condition/src/operators.rs::function::evaluate_numeric_less_than",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 551,
+  "line_start": 539,
+  "name": "evaluate_numeric_less_than",
+  "signature": "fn evaluate_numeric_less_than("
+}

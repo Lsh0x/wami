@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:2bda7e5986d3e36d5b0cdb246f5f815673e206ed98e564008141e436262c136b",
+  "doc": "",
+  "file": "store/memory/identity/group.rs",
+  "id": "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::list_groups_for_user",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 83,
+  "line_start": 76,
+  "name": "list_groups_for_user",
+  "signature": "async fn list_groups_for_user(&self, user_name: &str) -> Result<Vec<Group>>"
+}

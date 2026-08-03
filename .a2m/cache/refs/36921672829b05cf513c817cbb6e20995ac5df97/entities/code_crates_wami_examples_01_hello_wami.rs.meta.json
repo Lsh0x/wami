@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/examples/01_hello_wami.rs::function::main"
+  ],
+  "content_hash": "7b043620cf39fa6cb66c16d0ab73e1d43e6aeb9ea662a1481f4ad1e7f3513aea",
+  "doc": "",
+  "file": "crates/wami/examples/01_hello_wami.rs",
+  "id": "code:crates/wami/examples/01_hello_wami.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 77,
+  "line_start": 1,
+  "name": "01_hello_wami",
+  "signature": ""
+}

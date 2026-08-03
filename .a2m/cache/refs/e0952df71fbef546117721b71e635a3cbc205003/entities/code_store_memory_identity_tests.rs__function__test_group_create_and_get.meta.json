@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:group_builder::build_group"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:25b083b55c0a52e230087aa0f9ed3e616231bc9c4296c52e1e83e70f2d22f4a0",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_group_create_and_get",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 236,
+  "line_start": 223,
+  "name": "test_group_create_and_get",
+  "signature": "async fn test_group_create_and_get()"
+}

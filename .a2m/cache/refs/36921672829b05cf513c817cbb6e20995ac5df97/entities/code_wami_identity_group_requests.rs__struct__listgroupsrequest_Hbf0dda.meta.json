@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:622544f40cc4a34bda43ab2e637084d6bde4b7728c7685a67c080bdd4f18d86d",
+  "doc": "",
+  "file": "wami/identity/group/requests.rs",
+  "id": "code:wami/identity/group/requests.rs::struct::ListGroupsRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 29,
+  "line_start": 26,
+  "name": "ListGroupsRequest",
+  "signature": "pub struct ListGroupsRequest"
+}

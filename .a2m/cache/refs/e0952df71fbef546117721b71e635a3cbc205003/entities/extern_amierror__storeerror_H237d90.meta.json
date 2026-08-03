@@ -1,0 +1,22 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/auth/authentication.rs::function::hash_secret",
+    "code:service/auth/authentication.rs::function::verify_secret",
+    "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::issue_token"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:AmiError::StoreError",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "StoreError",
+  "signature": "AmiError::StoreError"
+}

@@ -1,0 +1,20 @@
+%% id: code:service/policies/evaluation.rs::function::EvaluationService<S>::build_condition_context
+%% kind: function
+%% file: service/policies/evaluation.rs:534-661
+%% content_hash: sha256:258a3eb9054d83dadf8601a5c94f26d7f00aa8ab4b67784bce0486fcb0897a91
+%% signature: fn build_condition_context(
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_service_policies_evaluation_rs__function__EvaluationService_S___build_condition_context_Hf0eccb18:::function[build_condition_context]
+  code_service_policies_evaluation_rs__function__EvaluationService_S___build_condition_context_Hf0eccb18 -- calls --> code_service_policies_evaluation_rs__function__EvaluationService_S___extract_account_id_from_arn_H34f84391:::function[extract_account_id_from_arn]
+  code_service_policies_evaluation_rs__function__EvaluationService_S___build_condition_context_Hf0eccb18 -- calls --> code_crates_wami_condition_src_context_rs__function__ConditionContext__builder_H71387f82:::function[builder]
+  code_service_policies_evaluation_rs__function__EvaluationService_S___build_condition_context_Hf0eccb18 -- calls --> extern_chrono__Utc__now_H71e4ffc2:::function[now]
+  code_service_policies_evaluation_rs__function__EvaluationService_S___build_condition_context_Hf0eccb18 -- calls --> extern_ConditionValue__String_Ha63c4fca:::function[String]
+  code_service_policies_evaluation_rs__function__EvaluationService_S___build_condition_context_Hf0eccb18 -- calls --> extern_ConditionValue__Array_Hf2cc9ebd:::function[Array]
+  code_service_policies_evaluation_rs__function__EvaluationService_S___build_condition_context_Hf0eccb18 -- calls --> extern_ConditionValue__Number_H902d013d:::function[Number]
+  code_service_policies_evaluation_rs__function__EvaluationService_S___build_condition_context_Hf0eccb18 -- calls --> extern_ConditionValue__Boolean_H4f454487:::function[Boolean]
+  code_service_policies_evaluation_rs__function__EvaluationService_S___build_condition_context_Hf0eccb18 -- calls --> extern_chrono__DateTime__parse_from_rfc3339_H1f12937a:::function[parse_from_rfc3339]
+  code_service_policies_evaluation_rs__function__EvaluationService_S___simulate_custom_policy_Ha39c57aa:::function[simulate_custom_policy] -- calls --> code_service_policies_evaluation_rs__function__EvaluationService_S___build_condition_context_Hf0eccb18
+  code_service_policies_evaluation_rs__function__EvaluationService_S___simulate_principal_policy_H9811d502:::function[simulate_principal_policy] -- calls --> code_service_policies_evaluation_rs__function__EvaluationService_S___build_condition_context_Hf0eccb18

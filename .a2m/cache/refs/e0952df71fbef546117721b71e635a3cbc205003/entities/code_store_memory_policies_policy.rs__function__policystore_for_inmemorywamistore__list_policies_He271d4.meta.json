@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:1a8ea6a7146486a51cb023c4807a08e7b9f4141cfd4923afbdab7aae2948288d",
+  "doc": "",
+  "file": "store/memory/policies/policy.rs",
+  "id": "code:store/memory/policies/policy.rs::function::PolicyStore for InMemoryWamiStore::list_policies",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 74,
+  "line_start": 31,
+  "name": "list_policies",
+  "signature": "async fn list_policies("
+}

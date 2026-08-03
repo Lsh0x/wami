@@ -1,0 +1,13 @@
+%% id: code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::exchange_code
+%% kind: function
+%% file: crates/wami/src/service/oauth/oidc.rs:286-319
+%% content_hash: sha256:3f84b6b744446dd518394bc1759cc40b4913501d712d0b6f6c9339fa4cb25417
+%% signature: pub async fn exchange_code(&self, exchange: CodeExchange) -> Result<OidcTokens>
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___exchange_code_H9a967b6e:::function[exchange_code]
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___exchange_code_H9a967b6e -- calls --> code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___mint_Hccdca714:::function[mint]
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___exchange_code_H9a967b6e -- calls --> code_crates_wami_src_service_oauth_oidc_rs__function__refused_code_He020196d:::function[refused_code]
+  code_crates_wami_src_service_oauth_oidc_rs__function__OAuthService_S___exchange_code_H9a967b6e -- calls --> extern_Utc__now_H7825cf5c:::function[now]

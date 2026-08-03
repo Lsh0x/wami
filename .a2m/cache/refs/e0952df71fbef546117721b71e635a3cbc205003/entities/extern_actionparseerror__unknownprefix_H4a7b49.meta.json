@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-core/src/actions.rs::function::FromStr for WamiServicePrefix::from_str"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:ActionParseError::UnknownPrefix",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "UnknownPrefix",
+  "signature": "ActionParseError::UnknownPrefix"
+}

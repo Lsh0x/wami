@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3107558e74c97cf943a852524868152984d9525416bb30dd18324b79e9c5db8d",
+  "doc": "Tries to downcast to StsSession",
+  "file": "store/resource.rs",
+  "id": "code:store/resource.rs::function::Resource::as_sts_session",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 171,
+  "line_start": 165,
+  "name": "as_sts_session",
+  "signature": "pub fn as_sts_session(&self) -> Option<&StsSession>"
+}

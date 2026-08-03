@@ -1,0 +1,33 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::new",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::with_provider",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::simulate_custom_policy",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::simulate_principal_policy",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::parse_principal_arn",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::fetch_principal_policies",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::fetch_permissions_boundary",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::evaluate_action",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::evaluate_action_with_boundary",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::find_matching_statements",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::matches_pattern",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::build_condition_context",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::extract_account_id_from_arn",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::evaluate_statement_condition"
+  ],
+  "content_hash": "sha256:376c96653e3dbb639117c10f16e852b593c74bccecc6e2de05cf9ed5fc860d2c",
+  "doc": "",
+  "file": "service/policies/evaluation.rs",
+  "id": "code:service/policies/evaluation.rs::impl::EvaluationService<S>",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 685,
+  "line_start": 36,
+  "name": "EvaluationService<S>",
+  "signature": "impl<S: EvaluationServiceStore> EvaluationService<S>"
+}

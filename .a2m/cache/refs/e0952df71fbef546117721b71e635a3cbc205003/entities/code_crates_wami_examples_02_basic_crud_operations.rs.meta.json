@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/examples/02_basic_crud_operations.rs::function::main"
+  ],
+  "content_hash": "928153f92c71c8b062a9a3f2be00466aa67ea4adf1b6f7dbe9126b47f5142d25",
+  "doc": "",
+  "file": "crates/wami/examples/02_basic_crud_operations.rs",
+  "id": "code:crates/wami/examples/02_basic_crud_operations.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 155,
+  "line_start": 1,
+  "name": "02_basic_crud_operations",
+  "signature": ""
+}

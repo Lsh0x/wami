@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-core/src/arn/types.rs::function::From<&str> for Service::from",
+    "code:arn/types.rs::function::From<&str> for Service::from"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:Service::Custom",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "Custom",
+  "signature": "Service::Custom"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:6a328f632fc4b0266e6000cd6c00491c710ee356cf87a42dd60b3cd424d4a7b7",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wami_requests_per_minute_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7640,
+  "line_start": 7636,
+  "name": "test_wami_requests_per_minute_key",
+  "signature": "fn test_wami_requests_per_minute_key()"
+}

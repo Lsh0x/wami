@@ -1,0 +1,12 @@
+%% id: code:service/tenant/mod.rs::function::TenantService<S>::list_child_tenants
+%% kind: function
+%% file: service/tenant/mod.rs:175-177
+%% content_hash: sha256:6c3728a42bac57e37c34448ad045f8c36d83be9624d5589084c1cdebe08a88c2
+%% signature: pub async fn list_child_tenants(&self, parent_id: &TenantId) -> Result<Vec<Tenant>>
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_service_tenant_mod_rs__function__TenantService_S___list_child_tenants_H32536fea:::function[list_child_tenants]
+  code_service_tenant_mod_rs__function__TenantService_S___validate_name_uniqueness_H3103a771:::function[validate_name_uniqueness] -- calls --> code_service_tenant_mod_rs__function__TenantService_S___list_child_tenants_H32536fea
+  code_service_tenant_mod_rs__function__TenantService_S___find_tenant_by_name_H02e68caa:::function[find_tenant_by_name] -- calls --> code_service_tenant_mod_rs__function__TenantService_S___list_child_tenants_H32536fea

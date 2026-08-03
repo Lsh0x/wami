@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/examples/12_provider_specific_features.rs::function::main"
+  ],
+  "content_hash": "75d62d63538aeb27fcd9bd2826d645176ee3de952a5eeeed5dd46844bce3300e",
+  "doc": "",
+  "file": "crates/wami/examples/12_provider_specific_features.rs",
+  "id": "code:crates/wami/examples/12_provider_specific_features.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 213,
+  "line_start": 1,
+  "name": "12_provider_specific_features",
+  "signature": ""
+}

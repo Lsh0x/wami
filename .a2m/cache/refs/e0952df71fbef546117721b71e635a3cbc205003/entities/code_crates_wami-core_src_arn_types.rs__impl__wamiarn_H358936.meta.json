@@ -1,0 +1,30 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/arn/types.rs::function::WamiArn::prefix",
+    "code:crates/wami-core/src/arn/types.rs::function::WamiArn::is_cloud_synced",
+    "code:crates/wami-core/src/arn/types.rs::function::WamiArn::is_root_user",
+    "code:crates/wami-core/src/arn/types.rs::function::WamiArn::provider",
+    "code:crates/wami-core/src/arn/types.rs::function::WamiArn::primary_tenant",
+    "code:crates/wami-core/src/arn/types.rs::function::WamiArn::leaf_tenant",
+    "code:crates/wami-core/src/arn/types.rs::function::WamiArn::full_tenant_path",
+    "code:crates/wami-core/src/arn/types.rs::function::WamiArn::matches_prefix",
+    "code:crates/wami-core/src/arn/types.rs::function::WamiArn::belongs_to_tenant",
+    "code:crates/wami-core/src/arn/types.rs::function::WamiArn::resource_type",
+    "code:crates/wami-core/src/arn/types.rs::function::WamiArn::resource_id"
+  ],
+  "content_hash": "sha256:5f0c5b76cfbc10c175f934e39246ed57a7340a41c275ca7effe89abbefcb29b5",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::impl::WamiArn",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 423,
+  "line_start": 327,
+  "name": "WamiArn",
+  "signature": "impl WamiArn"
+}

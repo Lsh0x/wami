@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "249369c6b2eaa05c01c6af4a6d7e4f536e47b6c15521b3c997bb1c572ae11216",
+  "doc": "",
+  "file": "wami/tenant/mod.rs",
+  "id": "code:wami/tenant/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 17,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

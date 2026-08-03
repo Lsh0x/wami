@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "extern:ConditionValue::Boolean",
+    "extern:ConditionValue::String",
+    "extern:ConditionValue::Number",
+    "extern:ConditionValue::Array"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:645a065b250ee50f15528dcadee5777574f334e6ab367de490794bb9523d85eb",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_value_as_boolean",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 3110,
+  "line_start": 3082,
+  "name": "test_condition_value_as_boolean",
+  "signature": "fn test_condition_value_as_boolean()"
+}

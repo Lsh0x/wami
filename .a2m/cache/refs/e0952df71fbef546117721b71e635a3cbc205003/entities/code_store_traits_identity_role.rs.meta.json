@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/traits/identity/role.rs::trait::RoleStore"
+  ],
+  "content_hash": "9a17b328c974aa676abed101ae040ffcf94ff92ef0e4e19f1b3890a4253bf3b0",
+  "doc": "",
+  "file": "store/traits/identity/role.rs",
+  "id": "code:store/traits/identity/role.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 60,
+  "line_start": 1,
+  "name": "role",
+  "signature": ""
+}

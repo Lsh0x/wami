@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:17f956d13dcd22ebeaa86e88bc29f0f9a768ad63dc7ec111c2e784cdd5d88b2b",
+  "doc": "A condition block is a map of operator names to key-value pairs",
+  "file": "crates/wami-condition/src/lib.rs",
+  "id": "code:crates/wami-condition/src/lib.rs::type_alias::ConditionBlock",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "type_alias",
+  "line_end": 26,
+  "line_start": 26,
+  "name": "ConditionBlock",
+  "signature": "pub type ConditionBlock = HashMap<String, HashMap<String, ConditionValue>>;"
+}

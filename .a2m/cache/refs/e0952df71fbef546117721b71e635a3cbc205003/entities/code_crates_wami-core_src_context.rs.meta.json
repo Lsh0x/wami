@@ -1,0 +1,31 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/context.rs::const::MAX_PROVENANCE_DEPTH",
+    "code:crates/wami-core/src/context.rs::enum::Transition",
+    "code:crates/wami-core/src/context.rs::struct::Step",
+    "code:crates/wami-core/src/context.rs::impl::Step",
+    "code:crates/wami-core/src/context.rs::function::escape",
+    "code:crates/wami-core/src/context.rs::struct::SessionInfo",
+    "code:crates/wami-core/src/context.rs::struct::WamiContext",
+    "code:crates/wami-core/src/context.rs::struct::WireContext",
+    "code:crates/wami-core/src/context.rs::impl::TryFrom<WireContext> for WamiContext",
+    "code:crates/wami-core/src/context.rs::impl::WamiContext",
+    "code:crates/wami-core/src/context.rs::struct::WamiContextBuilder",
+    "code:crates/wami-core/src/context.rs::impl::WamiContextBuilder"
+  ],
+  "content_hash": "50e9ecbd296d235dc2188cd353639a469ade1c3d3d0b1c52ff26aaffd70681ca",
+  "doc": "",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 1379,
+  "line_start": 1,
+  "name": "context",
+  "signature": ""
+}

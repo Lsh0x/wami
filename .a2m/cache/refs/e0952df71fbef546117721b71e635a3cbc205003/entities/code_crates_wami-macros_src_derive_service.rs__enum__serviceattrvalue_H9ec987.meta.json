@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5041117ec6a45b66d9a64aab5f19b6b324c7c5c80796527888d9e242d687affb",
+  "doc": "",
+  "file": "crates/wami-macros/src/derive_service.rs",
+  "id": "code:crates/wami-macros/src/derive_service.rs::enum::ServiceAttrValue",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 109,
+  "line_start": 106,
+  "name": "ServiceAttrValue",
+  "signature": "enum ServiceAttrValue"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0d0c37788aefed89131f6c0fe40ff753ae1c7bbf030191081d0e88f8edfa2815",
+  "doc": "",
+  "file": "crates/wami/src/service/auth/decision.rs",
+  "id": "code:crates/wami/src/service/auth/decision.rs::enum::Decision",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 238,
+  "line_start": 233,
+  "name": "Decision",
+  "signature": "pub enum Decision"
+}

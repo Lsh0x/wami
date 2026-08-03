@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:67199bacf20a19c886ff293b179ce162fd51f2f444c618213ff23161e584b277",
+  "doc": "",
+  "file": "wami/policies/inline/responses.rs",
+  "id": "code:wami/policies/inline/responses.rs::struct::GetRolePolicyResponse",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 91,
+  "line_start": 84,
+  "name": "GetRolePolicyResponse",
+  "signature": "pub struct GetRolePolicyResponse"
+}

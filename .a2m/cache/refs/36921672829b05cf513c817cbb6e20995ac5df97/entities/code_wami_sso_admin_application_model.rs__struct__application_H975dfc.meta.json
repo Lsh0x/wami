@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:724911ce9d67ddcbdbfc7fa0c45f33ec2b210f5da29aa0907a72372a0eb0ec16",
+  "doc": "",
+  "file": "wami/sso_admin/application/model.rs",
+  "id": "code:wami/sso_admin/application/model.rs::struct::Application",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 29,
+  "line_start": 8,
+  "name": "Application",
+  "signature": "pub struct Application"
+}

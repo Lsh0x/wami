@@ -1,0 +1,14 @@
+%% id: code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::public_key_pem
+%% kind: function
+%% file: crates/wami/src/wami/sts/jwt.rs:323-343
+%% content_hash: sha256:0c82a8157feeaace77d077e195ff6055cb8d601012355cbfaa1a081b574d3bd8
+%% signature: pub fn public_key_pem(&self) -> Result<String, JwtError>
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_crates_wami_src_wami_sts_jwt_rs__function__KeyManager__public_key_pem_H5b6d032c:::function[public_key_pem]
+  code_crates_wami_src_wami_sts_jwt_rs__function__KeyManager__public_key_pem_H5b6d032c -- calls --> code_crates_wami_src_wami_sts_jwt_rs__function__KeyManager__active_Hdb962ad3:::function[active]
+  code_crates_wami_src_wami_sts_jwt_rs__function__KeyManager__public_key_pem_H5b6d032c -- calls --> extern_JwtError__KeyEncoding_H16933ad5:::function[KeyEncoding]
+  code_crates_wami_src_wami_sts_jwt_rs__function__KeyManager__public_key_pem_H5b6d032c -- calls --> extern_base64__Engine__encode_H367941ed:::function[encode]
+  code_crates_wami_src_wami_sts_jwt_rs__function__KeyManager__public_key_pem_H5b6d032c -- calls --> extern_std__str__from_utf8_H63a6c4d8:::function[from_utf8]

@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::guard"
+  ],
+  "callers": [
+    "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::update_group"
+  ],
+  "children": [],
+  "content_hash": "sha256:b22bcb0a9f31376e2e0a5d1d6e407b88a37dbb3edaaba683fa7cd78523320cc5",
+  "doc": "Get a group by name",
+  "file": "crates/wami/src/service/identity/group.rs",
+  "id": "code:crates/wami/src/service/identity/group.rs::function::GroupService<S>::get_group",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 80,
+  "line_start": 72,
+  "name": "get_group",
+  "signature": "pub async fn get_group("
+}

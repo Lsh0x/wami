@@ -1,0 +1,28 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/policies/attachment/responses.rs::struct::AttachUserPolicyResponse",
+    "code:wami/policies/attachment/responses.rs::struct::DetachUserPolicyResponse",
+    "code:wami/policies/attachment/responses.rs::struct::ListAttachedUserPoliciesResponse",
+    "code:wami/policies/attachment/responses.rs::struct::AttachGroupPolicyResponse",
+    "code:wami/policies/attachment/responses.rs::struct::DetachGroupPolicyResponse",
+    "code:wami/policies/attachment/responses.rs::struct::ListAttachedGroupPoliciesResponse",
+    "code:wami/policies/attachment/responses.rs::struct::AttachRolePolicyResponse",
+    "code:wami/policies/attachment/responses.rs::struct::DetachRolePolicyResponse",
+    "code:wami/policies/attachment/responses.rs::struct::ListAttachedRolePoliciesResponse"
+  ],
+  "content_hash": "bc91d107dede4f42d912aa0520c0852fb93d4ecabb7ffd1866c3285feb4e7c3d",
+  "doc": "",
+  "file": "wami/policies/attachment/responses.rs",
+  "id": "code:wami/policies/attachment/responses.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 68,
+  "line_start": 1,
+  "name": "responses",
+  "signature": ""
+}

@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "extern:chrono::Utc::now",
+    "extern:chrono::Duration::hours",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:2644d1e48d0a4a14a8be636976b171baa9acbbd5de6d9a4f8484577213021a41",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_date_greater_than",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 835,
+  "line_start": 818,
+  "name": "test_date_greater_than",
+  "signature": "fn test_date_greater_than()"
+}

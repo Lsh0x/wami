@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:398a453dd77b0fa30eebf43586c3d7c40c190a4fce47d6c3287aaf7127f9464b",
+  "doc": "",
+  "file": "crates/wami/src/store/memory/oauth/mod.rs",
+  "id": "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthConsentStore for InMemoryOAuthStore::record_consent",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 195,
+  "line_start": 191,
+  "name": "record_consent",
+  "signature": "async fn record_consent(&mut self, consent: UserConsent) -> Result<UserConsent>"
+}

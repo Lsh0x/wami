@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:835b9cd5e4ce8654b8889371d3670c41e960e3b1c2f80f3dffa64b367c005dd8",
+  "doc": "",
+  "file": "store/traits/gdpr/audit.rs",
+  "id": "code:store/traits/gdpr/audit.rs::struct::AuditFilter",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 27,
+  "line_start": 12,
+  "name": "AuditFilter",
+  "signature": "pub struct AuditFilter"
+}

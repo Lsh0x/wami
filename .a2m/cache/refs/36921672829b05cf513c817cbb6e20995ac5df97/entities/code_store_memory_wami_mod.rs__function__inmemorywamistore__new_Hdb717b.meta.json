@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5d6e6c7e760ec31df1d001ea20838872028026c3215084a2173b5937b041dbb9",
+  "doc": "Create a new empty WAMI store",
+  "file": "store/memory/wami/mod.rs",
+  "id": "code:store/memory/wami/mod.rs::function::InMemoryWamiStore::new",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 87,
+  "line_start": 85,
+  "name": "new",
+  "signature": "pub fn new() -> Self"
+}

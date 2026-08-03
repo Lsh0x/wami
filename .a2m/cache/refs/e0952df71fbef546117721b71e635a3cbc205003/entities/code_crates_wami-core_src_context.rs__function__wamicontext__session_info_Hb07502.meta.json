@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::through",
+    "code:crates/wami-core/src/context.rs::function::WamiContext::is_expired"
+  ],
+  "children": [],
+  "content_hash": "sha256:0b2fb18ab078dc80ab92a2237ae6d73d900836bdfcd1933218954f666a55e560",
+  "doc": "Get session information (if temporary credentials)",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::function::WamiContext::session_info",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 411,
+  "line_start": 409,
+  "name": "session_info",
+  "signature": "pub fn session_info(&self) -> Option<&SessionInfo>"
+}

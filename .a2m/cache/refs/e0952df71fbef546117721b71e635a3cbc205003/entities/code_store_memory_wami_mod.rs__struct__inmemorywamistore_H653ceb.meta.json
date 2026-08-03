@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a93747ee2aa3b8321a94fcdbb8beab9c681d89a3ab396a2812049f42e023b360",
+  "doc": "",
+  "file": "store/memory/wami/mod.rs",
+  "id": "code:store/memory/wami/mod.rs::struct::InMemoryWamiStore",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 81,
+  "line_start": 38,
+  "name": "InMemoryWamiStore",
+  "signature": "pub struct InMemoryWamiStore"
+}

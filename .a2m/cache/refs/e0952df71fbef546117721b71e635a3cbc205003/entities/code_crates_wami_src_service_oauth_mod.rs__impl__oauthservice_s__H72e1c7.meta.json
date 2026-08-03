@@ -1,0 +1,29 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::new",
+    "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::with_token_lifetime",
+    "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::jwks",
+    "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::register_client",
+    "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::validate_client",
+    "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::issue_token",
+    "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::introspect_token",
+    "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::revoke_token",
+    "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::revoke_all_for_client",
+    "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::disable_client"
+  ],
+  "content_hash": "sha256:ac2503ab089306a3ede93280c5881ee4f7f358e961ffe7038d24c1feb310e097",
+  "doc": "",
+  "file": "crates/wami/src/service/oauth/mod.rs",
+  "id": "code:crates/wami/src/service/oauth/mod.rs::impl::OAuthService<S>",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 261,
+  "line_start": 76,
+  "name": "OAuthService<S>",
+  "signature": "impl<S: OAuthStore> OAuthService<S>"
+}

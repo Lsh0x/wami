@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d18b917d2936e83d28af7f82def7725f0915f964a0e9a46bed892ce332bc5342",
+  "doc": "",
+  "file": "wami/identity/user/model.rs",
+  "id": "code:wami/identity/user/model.rs::function::User::validate_username",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 92,
+  "line_start": 71,
+  "name": "validate_username",
+  "signature": "pub fn validate_username(name: &str) -> crate::error::Result<()>"
+}

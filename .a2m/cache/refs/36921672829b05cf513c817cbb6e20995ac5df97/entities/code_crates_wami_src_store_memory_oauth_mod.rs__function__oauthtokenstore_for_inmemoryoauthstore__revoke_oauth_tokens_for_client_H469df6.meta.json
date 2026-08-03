@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "extern:Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d98b4f16dcd6d02ba7bc593df2733d70e0de53a6b775dcdc50568045e87da616",
+  "doc": "",
+  "file": "crates/wami/src/store/memory/oauth/mod.rs",
+  "id": "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthTokenStore for InMemoryOAuthStore::revoke_oauth_tokens_for_client",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 108,
+  "line_start": 98,
+  "name": "revoke_oauth_tokens_for_client",
+  "signature": "async fn revoke_oauth_tokens_for_client(&mut self, client_id: &str) -> Result<u64>"
+}

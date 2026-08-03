@@ -1,0 +1,30 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/auth/authorizer.rs::function::iam_resource_arn"
+  ],
+  "callers": [
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::attach_user_policy",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::detach_user_policy",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::list_attached_user_policies",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::attach_group_policy",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::detach_group_policy",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::list_attached_group_policies",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::attach_role_policy",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::detach_role_policy",
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::list_attached_role_policies"
+  ],
+  "children": [],
+  "content_hash": "sha256:1e034c2329cbd6cf3e4e3135f2606ce8ccd1123ee6b5ec5b862a94bd433be726",
+  "doc": "Internal: check authorization if an authorizer is set.",
+  "file": "crates/wami/src/service/policies/attachment.rs",
+  "id": "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::guard",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 59,
+  "line_start": 47,
+  "name": "guard",
+  "signature": "async fn guard("
+}

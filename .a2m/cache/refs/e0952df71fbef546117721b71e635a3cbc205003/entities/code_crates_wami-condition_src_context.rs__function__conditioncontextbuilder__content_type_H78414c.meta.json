@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:992e4ffe4163b9a52aba55c62dc9f42af5039dddef48b71faeedec8a9d764c63",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::content_type",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 404,
+  "line_start": 401,
+  "name": "content_type",
+  "signature": "pub fn content_type(mut self, content_type: impl Into<String>) -> Self"
+}

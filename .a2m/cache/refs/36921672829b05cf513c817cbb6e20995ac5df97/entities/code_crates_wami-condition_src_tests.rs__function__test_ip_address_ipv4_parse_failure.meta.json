@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a9a1bafb7d9af4155b3260eb7f1f2c03c497bfec79e9d072fda676ddfabdec04",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_ip_address_ipv4_parse_failure",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 4265,
+  "line_start": 4252,
+  "name": "test_ip_address_ipv4_parse_failure",
+  "signature": "fn test_ip_address_ipv4_parse_failure()"
+}

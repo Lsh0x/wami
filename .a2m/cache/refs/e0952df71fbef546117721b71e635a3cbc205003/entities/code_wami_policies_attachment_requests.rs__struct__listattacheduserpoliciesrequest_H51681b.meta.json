@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:bdd05899fb8c6b9a280afdc8b62b676d4aa8ba42c794e398a1534e3fb7ab7025",
+  "doc": "",
+  "file": "wami/policies/attachment/requests.rs",
+  "id": "code:wami/policies/attachment/requests.rs::struct::ListAttachedUserPoliciesRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 28,
+  "line_start": 25,
+  "name": "ListAttachedUserPoliciesRequest",
+  "signature": "pub struct ListAttachedUserPoliciesRequest"
+}

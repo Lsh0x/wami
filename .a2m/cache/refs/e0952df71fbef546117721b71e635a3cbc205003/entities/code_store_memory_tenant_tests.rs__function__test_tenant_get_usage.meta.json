@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:store/memory/tenant/tests.rs::function::build_test_tenant"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:2b4be1c887c45207dd297da50c94dfc9e89e21648fefb32b68446b34eff660b0",
+  "doc": "",
+  "file": "store/memory/tenant/tests.rs",
+  "id": "code:store/memory/tenant/tests.rs::function::test_tenant_get_usage",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 329,
+  "line_start": 313,
+  "name": "test_tenant_get_usage",
+  "signature": "async fn test_tenant_get_usage()"
+}

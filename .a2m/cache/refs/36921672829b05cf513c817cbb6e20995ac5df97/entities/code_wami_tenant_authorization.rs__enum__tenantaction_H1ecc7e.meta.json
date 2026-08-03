@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:596e1d81cbc7d826969131f800fe09ab729e3f5b44e007f32455eb4c721959bf",
+  "doc": "",
+  "file": "wami/tenant/authorization.rs",
+  "id": "code:wami/tenant/authorization.rs::enum::TenantAction",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 130,
+  "line_start": 113,
+  "name": "TenantAction",
+  "signature": "pub enum TenantAction"
+}

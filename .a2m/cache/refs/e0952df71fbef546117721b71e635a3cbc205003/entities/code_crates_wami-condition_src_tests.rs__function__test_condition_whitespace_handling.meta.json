@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c6a88278cc9eac7090c0e626ad5f4e005242ab84c5760f99fffc90cc530b0f8f",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_whitespace_handling",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 2222,
+  "line_start": 2208,
+  "name": "test_condition_whitespace_handling",
+  "signature": "fn test_condition_whitespace_handling()"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::refresh_tokens"
+  ],
+  "children": [],
+  "content_hash": "sha256:908c22ac56f80efecefbdd8caa187e8bb9f0d90f0d7e1a6a95939e9056f11c06",
+  "doc": "One answer for every way a refresh can fail, reuse aside.",
+  "file": "crates/wami/src/service/oauth/oidc.rs",
+  "id": "code:crates/wami/src/service/oauth/oidc.rs::function::refused_refresh",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 549,
+  "line_start": 545,
+  "name": "refused_refresh",
+  "signature": "fn refused_refresh() -> AmiError"
+}

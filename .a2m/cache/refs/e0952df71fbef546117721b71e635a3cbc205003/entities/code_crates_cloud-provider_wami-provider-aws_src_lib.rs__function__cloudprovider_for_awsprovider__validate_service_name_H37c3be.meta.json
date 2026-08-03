@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e5e9b976f80e8d4691d0b8c2b00fd223bc18d370dfbf18ae0a5c0400c79c7937",
+  "doc": "",
+  "file": "crates/cloud-provider/wami-provider-aws/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-aws/src/lib.rs::function::CloudProvider for AwsProvider::validate_service_name",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 202,
+  "line_start": 192,
+  "name": "validate_service_name",
+  "signature": "fn validate_service_name(&self, service: &str) -> Result<()>"
+}

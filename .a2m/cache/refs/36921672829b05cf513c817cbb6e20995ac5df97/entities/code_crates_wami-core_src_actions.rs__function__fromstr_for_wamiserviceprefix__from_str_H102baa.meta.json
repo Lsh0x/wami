@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "extern:ActionParseError::UnknownPrefix"
+  ],
+  "callers": [
+    "code:crates/wami-core/src/actions.rs::function::FromStr for WamiAction::from_str"
+  ],
+  "children": [],
+  "content_hash": "sha256:94ea93a53049d0d2990ac72f713f4331f36e70df335c857caf71330750cfed27",
+  "doc": "",
+  "file": "crates/wami-core/src/actions.rs",
+  "id": "code:crates/wami-core/src/actions.rs::function::FromStr for WamiServicePrefix::from_str",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 318,
+  "line_start": 301,
+  "name": "from_str",
+  "signature": "fn from_str(s: &str) -> Result<Self, Self::Err>"
+}

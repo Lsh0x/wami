@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "extern:chrono::Utc::now",
+    "extern:chrono::Duration::hours",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:6a4da2d3d20027495e114862dadad3f2157bef81048f34912d73873eecaf9a13",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_date_not_equals",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 4622,
+  "line_start": 4594,
+  "name": "test_date_not_equals",
+  "signature": "fn test_date_not_equals()"
+}

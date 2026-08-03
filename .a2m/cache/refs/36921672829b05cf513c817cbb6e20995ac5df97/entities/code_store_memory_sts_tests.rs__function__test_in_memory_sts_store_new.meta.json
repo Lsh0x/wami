@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c89184c3181f3b984f20f1d659173ff16a38e73c970f5bed8e15838b59ad0d77",
+  "doc": "",
+  "file": "store/memory/sts/tests.rs",
+  "id": "code:store/memory/sts/tests.rs::function::test_in_memory_sts_store_new",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 17,
+  "line_start": 13,
+  "name": "test_in_memory_sts_store_new",
+  "signature": "fn test_in_memory_sts_store_new()"
+}

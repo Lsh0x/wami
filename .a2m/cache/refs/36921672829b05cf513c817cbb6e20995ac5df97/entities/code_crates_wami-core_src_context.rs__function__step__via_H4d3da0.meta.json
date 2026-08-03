@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-core/src/context.rs::function::Step::service",
+    "code:crates/wami-core/src/context.rs::function::Step::segment"
+  ],
+  "children": [],
+  "content_hash": "sha256:0afff8f32309d8d2bdb4feea704a99e780e2da43ca540e866266a1273f295b72",
+  "doc": "How they came to hold it.",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::function::Step::via",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 103,
+  "line_start": 101,
+  "name": "via",
+  "signature": "pub fn via(&self) -> &Transition"
+}

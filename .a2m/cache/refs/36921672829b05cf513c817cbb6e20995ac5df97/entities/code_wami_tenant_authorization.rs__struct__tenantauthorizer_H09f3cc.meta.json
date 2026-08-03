@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:619c1fa8c9606407a7ef702125e9d3884361d6d78165612431f1730bb057dfc6",
+  "doc": "Tenant Authorizer using IAM policies\n\nThis authorizer evaluates tenant permissions using standard IAM policy documents.\nIt can work standalone (without a store) by accepting policies directly.",
+  "file": "wami/tenant/authorization.rs",
+  "id": "code:wami/tenant/authorization.rs::struct::TenantAuthorizer",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 155,
+  "line_start": 152,
+  "name": "TenantAuthorizer",
+  "signature": "pub struct TenantAuthorizer"
+}

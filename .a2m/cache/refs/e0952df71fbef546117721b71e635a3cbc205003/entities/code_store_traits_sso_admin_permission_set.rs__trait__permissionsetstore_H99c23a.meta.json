@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:68f7ff4548343f71146d7aafb31aad2040168a1e7d6c98d50bb40ed3515001ea",
+  "doc": "",
+  "file": "store/traits/sso_admin/permission_set.rs",
+  "id": "code:store/traits/sso_admin/permission_set.rs::trait::PermissionSetStore",
+  "implemented_by": [
+    "code:store/memory/sso_admin/permission_set.rs::impl::PermissionSetStore for InMemorySsoAdminStore",
+    "code:store/memory/sso_admin/permission_set.rs::impl::PermissionSetStore for super::super::wami::InMemoryWamiStore"
+  ],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "trait",
+  "line_end": 25,
+  "line_start": 9,
+  "name": "PermissionSetStore",
+  "signature": "pub trait PermissionSetStore: Send + Sync"
+}

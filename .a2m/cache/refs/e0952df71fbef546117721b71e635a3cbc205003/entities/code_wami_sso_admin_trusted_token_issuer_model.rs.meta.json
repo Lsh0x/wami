@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/sso_admin/trusted_token_issuer/model.rs::struct::TrustedTokenIssuer"
+  ],
+  "content_hash": "c2429b9cc25c9313216dd9034dde10101e2b3f293c7328a1554f8db99920cec9",
+  "doc": "",
+  "file": "wami/sso_admin/trusted_token_issuer/model.rs",
+  "id": "code:wami/sso_admin/trusted_token_issuer/model.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 26,
+  "line_start": 1,
+  "name": "model",
+  "signature": ""
+}

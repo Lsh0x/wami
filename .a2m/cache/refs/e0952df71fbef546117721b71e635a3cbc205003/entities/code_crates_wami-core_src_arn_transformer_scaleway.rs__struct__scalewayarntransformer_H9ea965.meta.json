@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:aa275082614a17c3a391c15e5aa228746fc705f89d25d79ffdcc4cd14d1e71f5",
+  "doc": "Scaleway ARN transformer.\n\nConverts between WAMI ARNs and Scaleway resource format:\n`scw:{organization_id}:{service}:{resource_type}/{resource_id}`",
+  "file": "crates/wami-core/src/arn/transformer/scaleway.rs",
+  "id": "code:crates/wami-core/src/arn/transformer/scaleway.rs::struct::ScalewayArnTransformer",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 9,
+  "line_start": 9,
+  "name": "ScalewayArnTransformer",
+  "signature": "pub struct ScalewayArnTransformer;"
+}

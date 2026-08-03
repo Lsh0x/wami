@@ -1,0 +1,24 @@
+{
+  "callees": [
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::evaluate_statement_condition",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::matches_pattern",
+    "code:wami/policies/permissions_boundary/operations.rs::function::is_allowed_by_boundary"
+  ],
+  "callers": [
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::simulate_principal_policy"
+  ],
+  "children": [],
+  "content_hash": "sha256:f0aab79f03aab2d5a720eedb57affe4856634b0499297baa8118f3e9ed2da4ae",
+  "doc": "Evaluate action with permissions boundary\n\nThe effective permissions are the intersection of:\n1. Identity-based policies (must allow)\n2. Permissions boundary (must allow)\n\nIf either denies, the final result is deny.",
+  "file": "service/policies/evaluation.rs",
+  "id": "code:service/policies/evaluation.rs::function::EvaluationService<S>::evaluate_action_with_boundary",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 483,
+  "line_start": 387,
+  "name": "evaluate_action_with_boundary",
+  "signature": "fn evaluate_action_with_boundary("
+}

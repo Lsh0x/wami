@@ -1,0 +1,15 @@
+%% id: code:service/tenant/mod.rs::function::TenantService<S>::create_tenant
+%% kind: function
+%% file: service/tenant/mod.rs:121-152
+%% content_hash: sha256:897a7a597f5c8be1e9c34f37654e44b4f07a8942ddd292f664230fa64284178b
+%% signature: pub async fn create_tenant(
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_service_tenant_mod_rs__function__TenantService_S___create_tenant_H1e163809:::function[create_tenant]
+  code_service_tenant_mod_rs__function__TenantService_S___create_tenant_H1e163809 -- calls --> code_service_tenant_mod_rs__function__TenantService_S___generate_unique_tenant_id_H46935a2c:::function[generate_unique_tenant_id]
+  code_service_tenant_mod_rs__function__TenantService_S___create_tenant_H1e163809 -- calls --> code_service_tenant_mod_rs__function__TenantService_S___validate_name_uniqueness_H3103a771:::function[validate_name_uniqueness]
+  code_service_tenant_mod_rs__function__TenantService_S___create_tenant_H1e163809 -- calls --> extern_tenant_operations__validate_name_H1636f10c:::function[validate_name]
+  code_service_tenant_mod_rs__function__TenantService_S___create_tenant_H1e163809 -- calls --> extern_tenant_operations__build_tenant_H408ead64:::function[build_tenant]
+  code_service_tenant_mod_rs__function__TenantService_S___create_tenant_H1e163809 -- calls --> code_crates_wami_core_src_arn_builder_rs__function__WamiArn__builder_Hb7ab6e53:::function[builder]

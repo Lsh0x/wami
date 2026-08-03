@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a7bd08ca6aa000dc2b85742712900ed306575d5eb4b1e12c120f2c19737fbe04",
+  "doc": "Attach a source of profile claims for ID tokens and `/userinfo`.",
+  "file": "crates/wami/src/service/oauth/oidc.rs",
+  "id": "code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::with_user_claims",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 157,
+  "line_start": 154,
+  "name": "with_user_claims",
+  "signature": "pub fn with_user_claims(mut self, claims: Arc<dyn UserClaimsSource>) -> Self"
+}

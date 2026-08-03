@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/types.rs::function::Default for AwsConfig::default"
+  ],
+  "content_hash": "sha256:2f26ffee81e51927356d545887f4273c4f7c9ae7422c6975e9c97f283e4b1e27",
+  "doc": "",
+  "file": "crates/wami-core/src/types.rs",
+  "id": "code:crates/wami-core/src/types.rs::impl::Default for AwsConfig",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 46,
+  "line_start": 38,
+  "name": "Default for AwsConfig",
+  "signature": "impl Default for AwsConfig"
+}

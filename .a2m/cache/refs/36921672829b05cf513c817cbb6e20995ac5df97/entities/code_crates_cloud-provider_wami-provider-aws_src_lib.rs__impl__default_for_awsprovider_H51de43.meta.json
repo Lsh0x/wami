@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/cloud-provider/wami-provider-aws/src/lib.rs::function::Default for AwsProvider::default"
+  ],
+  "content_hash": "sha256:f3ae58ff8c03f89590c94a4c73da53228cb543cb82010bc687fd53948389ed9b",
+  "doc": "",
+  "file": "crates/cloud-provider/wami-provider-aws/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-aws/src/lib.rs::impl::Default for AwsProvider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 47,
+  "line_start": 43,
+  "name": "Default for AwsProvider",
+  "signature": "impl Default for AwsProvider"
+}

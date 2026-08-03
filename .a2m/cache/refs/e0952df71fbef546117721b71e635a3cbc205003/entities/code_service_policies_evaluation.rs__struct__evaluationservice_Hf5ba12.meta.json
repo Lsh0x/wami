@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:65b2a203b746368d751879822d412947a44ce8c23811980d0a4502490d5b5f14",
+  "doc": "",
+  "file": "service/policies/evaluation.rs",
+  "id": "code:service/policies/evaluation.rs::struct::EvaluationService",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 34,
+  "line_start": 29,
+  "name": "EvaluationService",
+  "signature": "pub struct EvaluationService<S>"
+}

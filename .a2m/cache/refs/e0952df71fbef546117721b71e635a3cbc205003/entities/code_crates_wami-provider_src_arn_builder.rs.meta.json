@@ -1,0 +1,26 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-provider/src/arn_builder.rs::struct::WamiArnBuilder",
+    "code:crates/wami-provider/src/arn_builder.rs::impl::WamiArnBuilder",
+    "code:crates/wami-provider/src/arn_builder.rs::impl::Default for WamiArnBuilder",
+    "code:crates/wami-provider/src/arn_builder.rs::struct::ParsedArn",
+    "code:crates/wami-provider/src/arn_builder.rs::impl::ParsedArn",
+    "code:crates/wami-provider/src/arn_builder.rs::impl::fmt::Display for ParsedArn",
+    "code:crates/wami-provider/src/arn_builder.rs::function::arn_pattern_match"
+  ],
+  "content_hash": "c53164b4e52242c148aed87b46aad30109771926f61104435d0278ffa4a48f6a",
+  "doc": "",
+  "file": "crates/wami-provider/src/arn_builder.rs",
+  "id": "code:crates/wami-provider/src/arn_builder.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 410,
+  "line_start": 1,
+  "name": "arn_builder",
+  "signature": ""
+}

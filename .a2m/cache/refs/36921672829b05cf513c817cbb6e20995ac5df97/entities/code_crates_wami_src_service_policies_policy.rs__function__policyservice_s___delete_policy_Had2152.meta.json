@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d8c984d87ae1735493687c0f206bc23c747f49c1595f4345581eba12698a58b3",
+  "doc": "Delete a policy",
+  "file": "crates/wami/src/service/policies/policy.rs",
+  "id": "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::delete_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 137,
+  "line_start": 133,
+  "name": "delete_policy",
+  "signature": "pub async fn delete_policy(&self, context: &WamiContext, policy_arn: &str) -> Result<()>"
+}

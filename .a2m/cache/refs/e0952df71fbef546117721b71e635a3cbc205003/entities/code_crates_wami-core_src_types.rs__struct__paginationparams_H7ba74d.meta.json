@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:609157024d91af96c07296d0ed242ec58c55defd2848bb9ed80a9f0799d1e41c",
+  "doc": "",
+  "file": "crates/wami-core/src/types.rs",
+  "id": "code:crates/wami-core/src/types.rs::struct::PaginationParams",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 80,
+  "line_start": 77,
+  "name": "PaginationParams",
+  "signature": "pub struct PaginationParams"
+}

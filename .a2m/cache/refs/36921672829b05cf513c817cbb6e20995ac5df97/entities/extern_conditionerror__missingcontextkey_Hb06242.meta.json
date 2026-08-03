@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/evaluator.rs::function::evaluate_operator_block",
+    "code:crates/wami-condition/src/tests.rs::function::test_condition_error_display"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:ConditionError::MissingContextKey",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "MissingContextKey",
+  "signature": "ConditionError::MissingContextKey"
+}

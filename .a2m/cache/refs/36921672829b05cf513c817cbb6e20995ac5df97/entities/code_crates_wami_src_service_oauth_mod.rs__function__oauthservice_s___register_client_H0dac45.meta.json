@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:de511049aa255203eee6b13d181544a6b3900c5ada38fd0bc3d5c8977061e4ee",
+  "doc": "Register a client.",
+  "file": "crates/wami/src/service/oauth/mod.rs",
+  "id": "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::register_client",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 119,
+  "line_start": 117,
+  "name": "register_client",
+  "signature": "pub async fn register_client(&self, client: OAuthClient) -> Result<OAuthClient>"
+}

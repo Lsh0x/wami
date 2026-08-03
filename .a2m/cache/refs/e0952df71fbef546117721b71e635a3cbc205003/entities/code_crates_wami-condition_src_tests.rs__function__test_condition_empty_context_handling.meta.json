@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:1fe6fdc34ef5b3ddb0767fa58c4b92d12361bca9404f94d4a1655faa94e5bf8d",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_empty_context_handling",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 1824,
+  "line_start": 1810,
+  "name": "test_condition_empty_context_handling",
+  "signature": "fn test_condition_empty_context_handling()"
+}

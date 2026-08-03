@@ -1,0 +1,22 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::update_oidc_thumbprints",
+    "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::add_client_id",
+    "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::remove_client_id"
+  ],
+  "children": [],
+  "content_hash": "sha256:f1dd0a01b0ca4e21839d750ef9b049aac4b960249eb8e7835d1d90caf250836d",
+  "doc": "Get an OIDC provider by ARN",
+  "file": "service/identity/identity_provider.rs",
+  "id": "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::get_oidc_provider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 164,
+  "line_start": 161,
+  "name": "get_oidc_provider",
+  "signature": "pub async fn get_oidc_provider(&self, arn: &str) -> Result<Option<OidcProvider>>"
+}

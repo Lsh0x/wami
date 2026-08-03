@@ -1,0 +1,26 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/tenant/authorization.rs::enum::TenantAction",
+    "code:wami/tenant/authorization.rs::impl::TenantAction",
+    "code:wami/tenant/authorization.rs::struct::TenantAuthorizer",
+    "code:wami/tenant/authorization.rs::impl::TenantAuthorizer",
+    "code:wami/tenant/authorization.rs::function::build_tenant_admin_policy",
+    "code:wami/tenant/authorization.rs::function::build_tenant_readonly_policy",
+    "code:wami/tenant/authorization.rs::function::check_tenant_permission"
+  ],
+  "content_hash": "6bebc5e953f36da54c451d3cead8ad714d9bb6f5dca31d28699400f72e1bba22",
+  "doc": "",
+  "file": "wami/tenant/authorization.rs",
+  "id": "code:wami/tenant/authorization.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 525,
+  "line_start": 1,
+  "name": "authorization",
+  "signature": ""
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a3d5886fe15eead5aa7ecd78b27efc98e4d59d7c200503560b8170e00fe42269",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::custom_value",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 594,
+  "line_start": 591,
+  "name": "custom_value",
+  "signature": "pub fn custom_value(mut self, key: impl Into<String>, value: ConditionValue) -> Self"
+}

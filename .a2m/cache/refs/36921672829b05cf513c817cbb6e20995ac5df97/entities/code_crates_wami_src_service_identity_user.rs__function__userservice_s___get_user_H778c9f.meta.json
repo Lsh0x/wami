@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/identity/user.rs::function::UserService<S>::guard"
+  ],
+  "callers": [
+    "code:crates/wami/src/service/identity/user.rs::function::UserService<S>::update_user"
+  ],
+  "children": [],
+  "content_hash": "sha256:3512e18beee7bccb26485d514d794bd9a89f931670c2a3e505d61a01128c037d",
+  "doc": "Get a user by name",
+  "file": "crates/wami/src/service/identity/user.rs",
+  "id": "code:crates/wami/src/service/identity/user.rs::function::UserService<S>::get_user",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 96,
+  "line_start": 92,
+  "name": "get_user",
+  "signature": "pub async fn get_user(&self, context: &WamiContext, user_name: &str) -> Result<Option<User>>"
+}

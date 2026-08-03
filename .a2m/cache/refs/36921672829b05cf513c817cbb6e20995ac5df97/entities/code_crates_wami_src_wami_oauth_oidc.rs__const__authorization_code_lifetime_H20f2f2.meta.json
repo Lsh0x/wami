@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0c0369615f3d9d95ae9d65f9239b1c170edc450875a670886cbb528d2b0f4c68",
+  "doc": "How long an authorization code stays redeemable.\n\nSeconds, not minutes: it only has to survive one redirect. RFC 6749 §4.1.2\nrecommends a maximum of ten minutes; this is deliberately far below.",
+  "file": "crates/wami/src/wami/oauth/oidc.rs",
+  "id": "code:crates/wami/src/wami/oauth/oidc.rs::const::AUTHORIZATION_CODE_LIFETIME",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "const",
+  "line_end": 98,
+  "line_start": 98,
+  "name": "AUTHORIZATION_CODE_LIFETIME",
+  "signature": "pub const AUTHORIZATION_CODE_LIFETIME: Duration = Duration::seconds(60);"
+}

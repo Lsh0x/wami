@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/policies/tests.rs::function::test_context",
+    "extern:policy_builder::build_policy"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:6a4519798c54f2f3efa13a18236a0897afd2d62dead3b79b1e6ab19b2d64af6b",
+  "doc": "",
+  "file": "store/memory/policies/tests.rs",
+  "id": "code:store/memory/policies/tests.rs::function::test_policy_list_with_pagination",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 222,
+  "line_start": 192,
+  "name": "test_policy_list_with_pagination",
+  "signature": "async fn test_policy_list_with_pagination()"
+}

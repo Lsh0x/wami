@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:bfe05f0d45cb0c19c81aadf23ffd19feea30faf9bcbc78755f8a9d22509e075b",
+  "doc": "Returns a new service instance with different provider",
+  "file": "service/sts/session.rs",
+  "id": "code:service/sts/session.rs::function::SessionService<S>::with_provider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 43,
+  "line_start": 37,
+  "name": "with_provider",
+  "signature": "pub fn with_provider(&self, provider: Arc<dyn CloudProvider>) -> Self"
+}

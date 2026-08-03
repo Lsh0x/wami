@@ -1,0 +1,25 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/sts/session.rs::function::SessionStore for InMemoryStsStore::create_session",
+    "code:store/memory/sts/session.rs::function::SessionStore for InMemoryStsStore::get_session",
+    "code:store/memory/sts/session.rs::function::SessionStore for InMemoryStsStore::delete_session",
+    "code:store/memory/sts/session.rs::function::SessionStore for InMemoryStsStore::list_sessions"
+  ],
+  "content_hash": "sha256:d24deefc3955cebc64100b79f2310bc3b110eec20154f0ba2a2c85b786b4466d",
+  "doc": "",
+  "file": "store/memory/sts/session.rs",
+  "id": "code:store/memory/sts/session.rs::impl::SessionStore for InMemoryStsStore",
+  "implemented_by": [],
+  "implements": [
+    "code:store/traits/sts/session.rs::trait::SessionStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 31,
+  "line_start": 11,
+  "name": "SessionStore for InMemoryStsStore",
+  "signature": "impl SessionStore for InMemoryStsStore"
+}

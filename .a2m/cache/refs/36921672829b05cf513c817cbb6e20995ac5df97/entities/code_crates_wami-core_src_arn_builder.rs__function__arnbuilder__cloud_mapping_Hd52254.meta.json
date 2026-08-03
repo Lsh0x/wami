@@ -1,0 +1,24 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-core/src/arn/builder.rs::function::ArnBuilder::cloud_provider",
+    "code:crates/wami-core/src/arn/builder.rs::function::ArnBuilder::cloud_provider_with_region",
+    "code:crates/wami-core/src/arn/builder.rs::function::ArnBuilder::region",
+    "code:crates/wami-core/src/arn/builder.rs::function::ArnBuilder::no_cloud_mapping",
+    "code:crates/wami-core/src/arn/builder.rs::function::ArnBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:3de468ab9df07cb1f123171c0d239ce839f25d406e0e009ebce6469042d756c3",
+  "doc": "Sets the cloud mapping directly.\n\n# Examples\n\n```\nuse wami_core::arn::{WamiArn, CloudMapping};\n\nlet mapping = CloudMapping::new(\"gcp\", \"554433221\");\nlet builder = WamiArn::builder().cloud_mapping(mapping);\n```",
+  "file": "crates/wami-core/src/arn/builder.rs",
+  "id": "code:crates/wami-core/src/arn/builder.rs::function::ArnBuilder::cloud_mapping",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 220,
+  "line_start": 217,
+  "name": "cloud_mapping",
+  "signature": "pub fn cloud_mapping(mut self, mapping: CloudMapping) -> Self"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/identity/user/model.rs::function::User::validate_username"
+  ],
+  "content_hash": "sha256:00f7f5a80754a235e05b335ca32af7a6d908f6f7afd009e1dec0ec0101d72a25",
+  "doc": "",
+  "file": "wami/identity/user/model.rs",
+  "id": "code:wami/identity/user/model.rs::impl::User",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 93,
+  "line_start": 68,
+  "name": "User",
+  "signature": "impl User"
+}

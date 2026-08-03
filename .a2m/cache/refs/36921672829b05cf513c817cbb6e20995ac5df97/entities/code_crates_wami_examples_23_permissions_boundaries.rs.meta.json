@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/examples/23_permissions_boundaries.rs::function::main"
+  ],
+  "content_hash": "629c34ee2943699ee4898858201c53a078457355bf69fef0b9b5c72c702ef79f",
+  "doc": "",
+  "file": "crates/wami/examples/23_permissions_boundaries.rs",
+  "id": "code:crates/wami/examples/23_permissions_boundaries.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 378,
+  "line_start": 1,
+  "name": "23_permissions_boundaries",
+  "signature": ""
+}

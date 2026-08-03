@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:bf41780c384f7bd9808b8d93bfd0381837320bfd646aa2467fb361e9d679b92a",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_foranyvalue_numeric_greater_than_non_numeric_member",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 4010,
+  "line_start": 3993,
+  "name": "test_foranyvalue_numeric_greater_than_non_numeric_member",
+  "signature": "fn test_foranyvalue_numeric_greater_than_non_numeric_member()"
+}

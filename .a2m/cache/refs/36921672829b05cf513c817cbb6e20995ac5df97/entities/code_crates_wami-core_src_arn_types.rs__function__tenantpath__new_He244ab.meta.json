@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:2d2023e9aa247127cb324ff511b665793950c605704e3352b59df61d7d102197",
+  "doc": "Creates a new tenant path from numeric segments.",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::function::TenantPath::new",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 71,
+  "line_start": 69,
+  "name": "new",
+  "signature": "pub fn new(segments: Vec<u64>) -> Self"
+}

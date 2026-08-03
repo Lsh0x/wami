@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:77dd9ff1367a0ef94f0321da0e157314218f4495d36590d1cad0d7f374fadae0",
+  "doc": "",
+  "file": "store/memory/sts/identity.rs",
+  "id": "code:store/memory/sts/identity.rs::function::IdentityStore for InMemoryStsStore::create_identity",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 16,
+  "line_start": 12,
+  "name": "create_identity",
+  "signature": "async fn create_identity(&mut self, identity: CallerIdentity) -> Result<CallerIdentity>"
+}

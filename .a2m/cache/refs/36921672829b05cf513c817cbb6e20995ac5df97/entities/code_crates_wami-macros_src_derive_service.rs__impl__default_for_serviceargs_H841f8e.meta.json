@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-macros/src/derive_service.rs::function::Default for ServiceArgs::default"
+  ],
+  "content_hash": "sha256:2638e7aa47db3a113102ae7a50552ecefc55251ae490c34ad7511ffba65cd0db",
+  "doc": "",
+  "file": "crates/wami-macros/src/derive_service.rs",
+  "id": "code:crates/wami-macros/src/derive_service.rs::impl::Default for ServiceArgs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 67,
+  "line_start": 58,
+  "name": "Default for ServiceArgs",
+  "signature": "impl Default for ServiceArgs"
+}

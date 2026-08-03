@@ -1,0 +1,24 @@
+{
+  "callees": [
+    "code:crates/wami/src/wami/sts/jwt.rs::function::KeyManager::generate",
+    "extern:wami::wami::oauth::generate_client_secret",
+    "extern:wami::wami::oauth::build_client",
+    "code:crates/wami/src/wami/oauth/oidc.rs::function::CodeChallenge::s256",
+    "extern:wami::wami::oauth::derive_s256_challenge"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ac4b61690ebb21d2922e26eca2b9b9975f3d7adf534e5f5c74dca671bba25b1a",
+  "doc": "",
+  "file": "crates/wami/examples/28_oidc_authorization_code.rs",
+  "id": "code:crates/wami/examples/28_oidc_authorization_code.rs::function::main",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 231,
+  "line_start": 51,
+  "name": "main",
+  "signature": "async fn main() -> std::result::Result<(), Box<dyn std::error::Error>>"
+}

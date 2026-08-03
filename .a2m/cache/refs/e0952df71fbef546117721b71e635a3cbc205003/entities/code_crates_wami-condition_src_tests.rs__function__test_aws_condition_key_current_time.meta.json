@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d97349bb427667ca9306dc481489e1349c9a02da8c9f9bf20165fb3807451eab",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_aws_condition_key_current_time",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 1492,
+  "line_start": 1490,
+  "name": "test_aws_condition_key_current_time",
+  "signature": "fn test_aws_condition_key_current_time()"
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/tenant/mod.rs::function::TenantService<S>::validate_name_uniqueness",
+    "code:service/tenant/mod.rs::function::TenantService<S>::find_tenant_by_name"
+  ],
+  "children": [],
+  "content_hash": "sha256:0c435234a425a03ca3a551bc3009aa681c201660376e0e229eb35d04c5d9e3b0",
+  "doc": "List all tenants",
+  "file": "service/tenant/mod.rs",
+  "id": "code:service/tenant/mod.rs::function::TenantService<S>::list_tenants",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 172,
+  "line_start": 170,
+  "name": "list_tenants",
+  "signature": "pub async fn list_tenants(&self) -> Result<Vec<Tenant>>"
+}

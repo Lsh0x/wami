@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:60e1541cbae2205e24bdce5c3057efde8b5de736cf2c9e2ad5ce7a57cd6f1054",
+  "doc": "",
+  "file": "wami/policies/evaluation/model.rs",
+  "id": "code:wami/policies/evaluation/model.rs::struct::EvaluationResult",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 18,
+  "line_start": 7,
+  "name": "EvaluationResult",
+  "signature": "pub struct EvaluationResult"
+}

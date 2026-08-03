@@ -1,0 +1,13 @@
+%% id: code:wami/tenant/model.rs::function::generate_secure_u64
+%% kind: function
+%% file: wami/tenant/model.rs:27-31
+%% content_hash: sha256:81776954654a59573cce4746df36e81d3a1c33e18c883deb70032b57709692f2
+%% signature: fn generate_secure_u64() -> u64
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_wami_tenant_model_rs__function__generate_secure_u64_H61a66cfe:::function[generate_secure_u64]
+  code_wami_tenant_model_rs__function__generate_secure_u64_H61a66cfe -- calls --> extern_getrandom__getrandom_Hd5baeafc:::function[getrandom]
+  code_wami_tenant_model_rs__function__generate_secure_u64_H61a66cfe -- calls --> extern_u64__from_be_bytes_H6957f66d:::function[from_be_bytes]
+  code_wami_tenant_model_rs__function__TenantId__child_Hdff644b3:::function[child] -- calls --> code_wami_tenant_model_rs__function__generate_secure_u64_H61a66cfe

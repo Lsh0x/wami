@@ -1,0 +1,22 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/tags/requests.rs::struct::TagResourceRequest",
+    "code:wami/tags/requests.rs::struct::UntagResourceRequest",
+    "code:wami/tags/requests.rs::struct::ListResourceTagsRequest"
+  ],
+  "content_hash": "9cea4413f0070beb6fdc017fce63a49190cfdfe7f4592af90f7dd76c27dcdfac",
+  "doc": "",
+  "file": "wami/tags/requests.rs",
+  "id": "code:wami/tags/requests.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 36,
+  "line_start": 1,
+  "name": "requests",
+  "signature": ""
+}

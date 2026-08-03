@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/policies/permissions_boundary.rs::function::PermissionsBoundaryService<S>::guard",
+    "code:wami/policies/permissions_boundary/model.rs::function::PermissionsBoundary::validate_arn",
+    "code:wami/policies/permissions_boundary/operations.rs::function::validate_boundary_policy"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a4b11fd9050e4d7a66c371dbfbc3558e958dfe3fb7f8a89bd70b2598020bd590",
+  "doc": "Attach a permissions boundary to a user or role\n\n# Arguments\n\n* `context` - The WAMI context for authorization\n* `request` - Request containing principal type, name, and boundary ARN\n\n# Returns\n\nReturns `Ok(())` if the boundary was successfully attached.\n\n# Errors\n\nReturns an error if:\n- The boundary policy ARN is invalid\n- The boundary policy doesn't exist\n- The principal (user/role) doesn't exist\n- The policy is not suitable as a boundary",
+  "file": "crates/wami/src/service/policies/permissions_boundary.rs",
+  "id": "code:crates/wami/src/service/policies/permissions_boundary.rs::function::PermissionsBoundaryService<S>::put_permissions_boundary",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 158,
+  "line_start": 92,
+  "name": "put_permissions_boundary",
+  "signature": "pub async fn put_permissions_boundary("
+}

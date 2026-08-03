@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/gdpr/mod.rs::function::generate_id",
+    "code:wami/gdpr/operations.rs::function::generate_id"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:rand::random",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "random",
+  "signature": "rand::random"
+}

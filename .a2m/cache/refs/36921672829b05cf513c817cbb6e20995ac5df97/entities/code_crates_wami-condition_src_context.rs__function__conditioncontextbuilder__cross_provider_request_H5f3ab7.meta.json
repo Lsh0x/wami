@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:e12bbd55e5bd17bc31344efc078cf2258c3b0c754660fae5366f294d0c856159",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::cross_provider_request",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 373,
+  "line_start": 370,
+  "name": "cross_provider_request",
+  "signature": "pub fn cross_provider_request(mut self, cross: bool) -> Self"
+}

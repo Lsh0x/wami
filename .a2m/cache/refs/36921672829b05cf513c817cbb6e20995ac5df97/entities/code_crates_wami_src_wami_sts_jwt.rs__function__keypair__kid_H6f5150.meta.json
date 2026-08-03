@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5101809e4972c948a3c9d90363e2a00564252527e417664e7de633333fe29845",
+  "doc": "The key id: an RFC 7638 JWK thumbprint of the public key.",
+  "file": "crates/wami/src/wami/sts/jwt.rs",
+  "id": "code:crates/wami/src/wami/sts/jwt.rs::function::KeyPair::kid",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 140,
+  "line_start": 138,
+  "name": "kid",
+  "signature": "pub fn kid(&self) -> &str"
+}

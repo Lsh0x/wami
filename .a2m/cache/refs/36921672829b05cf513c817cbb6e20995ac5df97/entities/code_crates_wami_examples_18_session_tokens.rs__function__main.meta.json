@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::builder",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:432b1d0bffb8f9d77cf047fb18a451b81caeedff11f59101c0d4dca502e06dab",
+  "doc": "",
+  "file": "crates/wami/examples/18_session_tokens.rs",
+  "id": "code:crates/wami/examples/18_session_tokens.rs::function::main",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 86,
+  "line_start": 22,
+  "name": "main",
+  "signature": "async fn main() -> Result<(), Box<dyn std::error::Error>>"
+}

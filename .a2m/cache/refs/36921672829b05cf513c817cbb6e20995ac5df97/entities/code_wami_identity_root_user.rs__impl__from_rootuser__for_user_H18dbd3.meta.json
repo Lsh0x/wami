@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/identity/root_user.rs::function::From<RootUser> for User::from"
+  ],
+  "content_hash": "sha256:a8af191808377d21fd07cefbf6ea8f3d31f607fe0509ae00c64f8987fe2e6da2",
+  "doc": "",
+  "file": "wami/identity/root_user.rs",
+  "id": "code:wami/identity/root_user.rs::impl::From<RootUser> for User",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 191,
+  "line_start": 187,
+  "name": "From<RootUser> for User",
+  "signature": "impl From<RootUser> for User"
+}

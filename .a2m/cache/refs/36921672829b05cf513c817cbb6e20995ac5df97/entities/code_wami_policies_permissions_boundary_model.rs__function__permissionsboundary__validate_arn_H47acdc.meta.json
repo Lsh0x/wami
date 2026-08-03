@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami/src/service/policies/permissions_boundary.rs::function::PermissionsBoundaryService<S>::put_permissions_boundary"
+  ],
+  "children": [],
+  "content_hash": "sha256:742ce2efc1da72077f9f00936f77d3290d8f1904ad0486095ff73d0d526e1365",
+  "doc": "",
+  "file": "wami/policies/permissions_boundary/model.rs",
+  "id": "code:wami/policies/permissions_boundary/model.rs::function::PermissionsBoundary::validate_arn",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 61,
+  "line_start": 41,
+  "name": "validate_arn",
+  "signature": "pub fn validate_arn(arn: &str) -> crate::error::Result<()>"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7bbe20302dbe0473aa3e296daaca22300afe976351d50bca1b542fa48182bd08",
+  "doc": "Creates a new GCP provider for a specific project",
+  "file": "crates/cloud-provider/wami-provider-gcp/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-gcp/src/lib.rs::function::GcpProvider::new",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 41,
+  "line_start": 30,
+  "name": "new",
+  "signature": "pub fn new(project_id: impl Into<String>) -> Self"
+}

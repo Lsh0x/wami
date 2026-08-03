@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f9e9e02119bdeb4288f36fb21145fba6ce57576905744712f468bb2384838254",
+  "doc": "",
+  "file": "crates/wami/examples/28_oidc_authorization_code.rs",
+  "id": "code:crates/wami/examples/28_oidc_authorization_code.rs::const::AUDIENCE",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "const",
+  "line_end": 34,
+  "line_start": 34,
+  "name": "AUDIENCE",
+  "signature": "const AUDIENCE: &str = \"photos-api\";"
+}

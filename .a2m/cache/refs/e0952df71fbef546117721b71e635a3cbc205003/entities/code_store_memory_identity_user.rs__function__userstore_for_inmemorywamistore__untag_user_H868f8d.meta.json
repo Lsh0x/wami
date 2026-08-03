@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:2b994d4f2b398b2b9db4cf5b7a6aebfc3a5b67a438495db01d9f84d1234b9dad",
+  "doc": "",
+  "file": "store/memory/identity/user.rs",
+  "id": "code:store/memory/identity/user.rs::function::UserStore for InMemoryWamiStore::untag_user",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 98,
+  "line_start": 93,
+  "name": "untag_user",
+  "signature": "async fn untag_user(&mut self, user_name: &str, tag_keys: Vec<String>) -> Result<()>"
+}

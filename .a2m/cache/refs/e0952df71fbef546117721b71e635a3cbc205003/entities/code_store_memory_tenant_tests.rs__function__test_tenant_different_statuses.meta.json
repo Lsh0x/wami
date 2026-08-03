@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:store/memory/tenant/tests.rs::function::build_test_tenant"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:9090fe1530ffc41d68bdbf9e6da213c228b7d904d63689226dfd0b9808bd47a9",
+  "doc": "",
+  "file": "store/memory/tenant/tests.rs",
+  "id": "code:store/memory/tenant/tests.rs::function::test_tenant_different_statuses",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 354,
+  "line_start": 332,
+  "name": "test_tenant_different_statuses",
+  "signature": "async fn test_tenant_different_statuses()"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a4987452cc45160be27b8e87bd9f9b770d5a830169379440d8e7288006abfbaa",
+  "doc": "Untag an identity provider",
+  "file": "service/identity/identity_provider.rs",
+  "id": "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::untag_identity_provider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 273,
+  "line_start": 270,
+  "name": "untag_identity_provider",
+  "signature": "pub async fn untag_identity_provider(&self, arn: &str, tag_keys: Vec<String>) -> Result<()>"
+}

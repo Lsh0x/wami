@@ -1,0 +1,13 @@
+%% id: code:service/policies/evaluation.rs::function::EvaluationService<S>::matches_pattern
+%% kind: function
+%% file: service/policies/evaluation.rs:521-531
+%% content_hash: sha256:0796feb8e8bbd9f90738c0c69b3a40e4a25cabef20a9287b353eaf7f164652cc
+%% signature: fn matches_pattern(value: &str, pattern: &str) -> bool
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_service_policies_evaluation_rs__function__EvaluationService_S___matches_pattern_Hc460fc95:::function[matches_pattern]
+  code_service_policies_evaluation_rs__function__EvaluationService_S___evaluate_action_Hc8bc0039:::function[evaluate_action] -- calls --> code_service_policies_evaluation_rs__function__EvaluationService_S___matches_pattern_Hc460fc95
+  code_service_policies_evaluation_rs__function__EvaluationService_S___evaluate_action_with_boundary_Hbf9494b2:::function[evaluate_action_with_boundary] -- calls --> code_service_policies_evaluation_rs__function__EvaluationService_S___matches_pattern_Hc460fc95
+  code_service_policies_evaluation_rs__function__EvaluationService_S___find_matching_statements_H2526f55c:::function[find_matching_statements] -- calls --> code_service_policies_evaluation_rs__function__EvaluationService_S___matches_pattern_Hc460fc95

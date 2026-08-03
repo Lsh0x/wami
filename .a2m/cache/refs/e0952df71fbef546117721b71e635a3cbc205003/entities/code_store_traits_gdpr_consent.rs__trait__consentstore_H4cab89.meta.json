@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ed6ffe6f72eeeebc7f7e90be6a4d89cabfe5162cb6d5df3a512164e17ae6dcfd",
+  "doc": "",
+  "file": "store/traits/gdpr/consent.rs",
+  "id": "code:store/traits/gdpr/consent.rs::trait::ConsentStore",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "trait",
+  "line_end": 98,
+  "line_start": 14,
+  "name": "ConsentStore",
+  "signature": "pub trait ConsentStore: Send + Sync"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::update_saml_provider"
+  ],
+  "children": [],
+  "content_hash": "sha256:0d29e876fb2fc8cce5c750c472bf28e6532c706c905dd415f87c300583674ca0",
+  "doc": "Get a SAML provider by ARN",
+  "file": "service/identity/identity_provider.rs",
+  "id": "code:service/identity/identity_provider.rs::function::IdentityProviderService<S>::get_saml_provider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 72,
+  "line_start": 69,
+  "name": "get_saml_provider",
+  "signature": "pub async fn get_saml_provider(&self, arn: &str) -> Result<Option<SamlProvider>>"
+}

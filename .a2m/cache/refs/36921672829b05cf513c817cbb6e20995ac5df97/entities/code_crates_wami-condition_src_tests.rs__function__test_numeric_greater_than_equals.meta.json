@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::create_test_context",
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:9e6dbfbda3698177275a4c509d2e3971d6fdf5db8d83ae8a77c1aeb39cdc0397",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_numeric_greater_than_equals",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 713,
+  "line_start": 701,
+  "name": "test_numeric_greater_than_equals",
+  "signature": "fn test_numeric_greater_than_equals()"
+}

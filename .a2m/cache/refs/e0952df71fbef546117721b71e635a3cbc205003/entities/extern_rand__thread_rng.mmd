@@ -1,0 +1,12 @@
+%% id: extern:rand::thread_rng
+%% kind: extern
+%% file: :0-0
+%% content_hash: 
+%% signature: rand::thread_rng
+graph LR
+  classDef extern fill:#f5f5f5,stroke:#424242
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  extern_rand__thread_rng_H8607c02f:::extern[thread_rng]
+  code_wami_instance_bootstrap_rs__function__InstanceBootstrap__generate_access_key_id_H5dcc9ccf:::function[generate_access_key_id] -- calls --> extern_rand__thread_rng_H8607c02f
+  code_wami_instance_bootstrap_rs__function__InstanceBootstrap__generate_secret_access_key_Hc48ea46a:::function[generate_secret_access_key] -- calls --> extern_rand__thread_rng_H8607c02f

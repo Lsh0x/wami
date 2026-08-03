@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:43b65748fed3ed6a0795a274ecbc65ce09ec5dc8490e83ef1fb8dd80c7543c54",
+  "doc": "",
+  "file": "crates/cloud-provider/wami-provider-custom/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-custom/src/lib.rs::function::CloudProvider for CustomProvider::name",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 54,
+  "line_start": 52,
+  "name": "name",
+  "signature": "fn name(&self) -> &str"
+}

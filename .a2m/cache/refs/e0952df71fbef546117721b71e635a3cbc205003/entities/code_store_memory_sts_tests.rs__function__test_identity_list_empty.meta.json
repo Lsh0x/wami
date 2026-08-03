@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3de5445b48826ad447320e02922a6b15bca0a277e58c12cdc9eabad73e5f0994",
+  "doc": "",
+  "file": "store/memory/sts/tests.rs",
+  "id": "code:store/memory/sts/tests.rs::function::test_identity_list_empty",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 263,
+  "line_start": 258,
+  "name": "test_identity_list_empty",
+  "signature": "async fn test_identity_list_empty()"
+}

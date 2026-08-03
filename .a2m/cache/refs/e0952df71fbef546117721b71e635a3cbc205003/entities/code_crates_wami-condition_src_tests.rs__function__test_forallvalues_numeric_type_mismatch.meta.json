@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:dc670ead3697ce0560ffa7f48e97d5432c839234fedbffc2026477df7f1f11a4",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_forallvalues_numeric_type_mismatch",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 6810,
+  "line_start": 6793,
+  "name": "test_forallvalues_numeric_type_mismatch",
+  "signature": "fn test_forallvalues_numeric_type_mismatch()"
+}

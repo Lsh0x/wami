@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:store/memory/tenant/tests.rs::function::build_test_tenant"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:6842792c2c42f607ef1cf09b3bf919f47c94559d2a8c5d2e5ec8b6646ed3761a",
+  "doc": "",
+  "file": "store/memory/tenant/tests.rs",
+  "id": "code:store/memory/tenant/tests.rs::function::test_tenant_update_nonexistent_fails",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 107,
+  "line_start": 96,
+  "name": "test_tenant_update_nonexistent_fails",
+  "signature": "async fn test_tenant_update_nonexistent_fails()"
+}

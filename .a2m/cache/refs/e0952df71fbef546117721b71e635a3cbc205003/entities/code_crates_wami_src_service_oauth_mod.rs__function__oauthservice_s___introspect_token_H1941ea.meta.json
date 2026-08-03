@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami/src/wami/oauth/model.rs::function::TokenIntrospection::inactive",
+    "extern:Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:df107706b06b5db6b70c8d3a4c2be9578042f6bf0cd72f47aa8b41d8ef699b7b",
+  "doc": "Answer an introspection request — RFC 7662.\n\nNever fails on a bad token: an expired, revoked, forged or unknown token\nall return `active: false` with nothing else. Returning an error instead\nwould let a caller tell those apart.",
+  "file": "crates/wami/src/service/oauth/mod.rs",
+  "id": "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::introspect_token",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 213,
+  "line_start": 187,
+  "name": "introspect_token",
+  "signature": "pub async fn introspect_token("
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ed54ad1f14f48bda6072f5679c98138b6c3f56e805c069ceb826773ec9ded0a6",
+  "doc": "",
+  "file": "crates/wami-provider/src/lib.rs",
+  "id": "code:crates/wami-provider/src/lib.rs::struct::ProviderConfig",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 73,
+  "line_start": 61,
+  "name": "ProviderConfig",
+  "signature": "pub struct ProviderConfig"
+}

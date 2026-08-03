@@ -1,0 +1,27 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::new",
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::with_authorizer",
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::guard",
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::create_policy",
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::get_policy",
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::update_policy",
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::delete_policy",
+    "code:crates/wami/src/service/policies/policy.rs::function::PolicyService<S>::list_policies"
+  ],
+  "content_hash": "sha256:c5e2ff921622db7fcf127d935f9f10c71b1c97a7b5fb96f0815677e11a949927",
+  "doc": "",
+  "file": "crates/wami/src/service/policies/policy.rs",
+  "id": "code:crates/wami/src/service/policies/policy.rs::impl::PolicyService<S>",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 153,
+  "line_start": 30,
+  "name": "PolicyService<S>",
+  "signature": "impl<S: PolicyStore> PolicyService<S>"
+}

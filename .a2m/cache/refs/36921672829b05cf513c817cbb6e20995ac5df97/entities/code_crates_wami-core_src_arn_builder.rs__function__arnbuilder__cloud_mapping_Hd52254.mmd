@@ -1,0 +1,15 @@
+%% id: code:crates/wami-core/src/arn/builder.rs::function::ArnBuilder::cloud_mapping
+%% kind: function
+%% file: crates/wami-core/src/arn/builder.rs:217-220
+%% content_hash: sha256:3de468ab9df07cb1f123171c0d239ce839f25d406e0e009ebce6469042d756c3
+%% signature: pub fn cloud_mapping(mut self, mapping: CloudMapping) -> Self
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_crates_wami_core_src_arn_builder_rs__function__ArnBuilder__cloud_mapping_Hd5225487:::function[cloud_mapping]
+  code_crates_wami_core_src_arn_builder_rs__function__ArnBuilder__cloud_provider_Heb182683:::function[cloud_provider] -- calls --> code_crates_wami_core_src_arn_builder_rs__function__ArnBuilder__cloud_mapping_Hd5225487
+  code_crates_wami_core_src_arn_builder_rs__function__ArnBuilder__cloud_provider_with_region_Hd868e787:::function[cloud_provider_with_region] -- calls --> code_crates_wami_core_src_arn_builder_rs__function__ArnBuilder__cloud_mapping_Hd5225487
+  code_crates_wami_core_src_arn_builder_rs__function__ArnBuilder__region_H37ebf7d3:::function[region] -- calls --> code_crates_wami_core_src_arn_builder_rs__function__ArnBuilder__cloud_mapping_Hd5225487
+  code_crates_wami_core_src_arn_builder_rs__function__ArnBuilder__no_cloud_mapping_Hb3221b48:::function[no_cloud_mapping] -- calls --> code_crates_wami_core_src_arn_builder_rs__function__ArnBuilder__cloud_mapping_Hd5225487
+  code_crates_wami_core_src_arn_builder_rs__function__ArnBuilder__build_H447727b0:::function[build] -- calls --> code_crates_wami_core_src_arn_builder_rs__function__ArnBuilder__cloud_mapping_Hd5225487

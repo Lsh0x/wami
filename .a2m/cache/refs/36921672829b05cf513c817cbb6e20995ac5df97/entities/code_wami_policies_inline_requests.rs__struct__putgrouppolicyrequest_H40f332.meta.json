@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d001d033c3345f34d076f36db841da3eed779598fe9344a05c843df251b593b7",
+  "doc": "",
+  "file": "wami/policies/inline/requests.rs",
+  "id": "code:wami/policies/inline/requests.rs::struct::PutGroupPolicyRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 54,
+  "line_start": 47,
+  "name": "PutGroupPolicyRequest",
+  "signature": "pub struct PutGroupPolicyRequest"
+}

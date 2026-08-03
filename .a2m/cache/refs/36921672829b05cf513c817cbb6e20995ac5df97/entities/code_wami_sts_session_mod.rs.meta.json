@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "765d21ebc07ce5ca63ed05bb0aed011fcc01dcfeef7e3afad66733a4d3ee75f4",
+  "doc": "",
+  "file": "wami/sts/session/mod.rs",
+  "id": "code:wami/sts/session/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 9,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

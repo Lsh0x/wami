@@ -1,0 +1,34 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::create_saml_provider",
+    "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::get_saml_provider",
+    "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::update_saml_provider",
+    "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::delete_saml_provider",
+    "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::list_saml_providers",
+    "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::create_oidc_provider",
+    "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::get_oidc_provider",
+    "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::update_oidc_provider",
+    "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::delete_oidc_provider",
+    "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::list_oidc_providers",
+    "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::tag_identity_provider",
+    "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::list_identity_provider_tags",
+    "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::untag_identity_provider"
+  ],
+  "content_hash": "sha256:8370a64345f203aae4620654d4004cf4a58f19e020691b9a9b6ce724d15c64a6",
+  "doc": "",
+  "file": "store/memory/identity/identity_provider.rs",
+  "id": "code:store/memory/identity/identity_provider.rs::impl::IdentityProviderStore for InMemoryWamiStore",
+  "implemented_by": [],
+  "implements": [
+    "code:store/traits/identity/identity_provider.rs::trait::IdentityProviderStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 227,
+  "line_start": 11,
+  "name": "IdentityProviderStore for InMemoryWamiStore",
+  "signature": "impl IdentityProviderStore for InMemoryWamiStore"
+}

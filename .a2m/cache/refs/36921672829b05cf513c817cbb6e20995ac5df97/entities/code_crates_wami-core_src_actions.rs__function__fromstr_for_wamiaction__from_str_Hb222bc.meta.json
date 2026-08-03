@@ -1,0 +1,24 @@
+{
+  "callees": [
+    "extern:ActionParseError::InvalidFormat",
+    "code:crates/wami-core/src/actions.rs::function::FromStr for WamiServicePrefix::from_str",
+    "extern:ActionParseError::Unknown"
+  ],
+  "callers": [
+    "code:crates/wami-core/src/actions.rs::function::Deserialize<'de> for WamiAction::deserialize"
+  ],
+  "children": [],
+  "content_hash": "sha256:2e25bc5833cddded70fedbc7c0757785deb4effdc13e095c011ead3e0d102a1e",
+  "doc": "",
+  "file": "crates/wami-core/src/actions.rs",
+  "id": "code:crates/wami-core/src/actions.rs::function::FromStr for WamiAction::from_str",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 693,
+  "line_start": 574,
+  "name": "from_str",
+  "signature": "fn from_str(s: &str) -> Result<Self, Self::Err>"
+}

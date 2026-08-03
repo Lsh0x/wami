@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:37b16bacc29a9f9002dba9e4ed89726ef578d0f7918c35af25b54d8fa62489df",
+  "doc": "",
+  "file": "crates/wami/src/wami/oauth/model.rs",
+  "id": "code:crates/wami/src/wami/oauth/model.rs::struct::OAuthClaims",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 111,
+  "line_start": 90,
+  "name": "OAuthClaims",
+  "signature": "pub struct OAuthClaims"
+}

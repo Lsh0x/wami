@@ -1,0 +1,24 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:service/identity/service_linked_role.rs::function::ServiceLinkedRoleService<S>::new",
+    "code:service/identity/service_linked_role.rs::function::ServiceLinkedRoleService<S>::with_authorizer",
+    "code:service/identity/service_linked_role.rs::function::ServiceLinkedRoleService<S>::guard",
+    "code:service/identity/service_linked_role.rs::function::ServiceLinkedRoleService<S>::create_service_linked_role",
+    "code:service/identity/service_linked_role.rs::function::ServiceLinkedRoleService<S>::get_service_linked_role_deletion_task"
+  ],
+  "content_hash": "sha256:43cb49a04aaec5ddfe17e8ab527c9169936406e2488afa69a7c989f406998324",
+  "doc": "",
+  "file": "service/identity/service_linked_role.rs",
+  "id": "code:service/identity/service_linked_role.rs::impl::ServiceLinkedRoleService<S>",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 117,
+  "line_start": 33,
+  "name": "ServiceLinkedRoleService<S>",
+  "signature": "impl<S: ServiceLinkedRoleServiceStore> ServiceLinkedRoleService<S>"
+}

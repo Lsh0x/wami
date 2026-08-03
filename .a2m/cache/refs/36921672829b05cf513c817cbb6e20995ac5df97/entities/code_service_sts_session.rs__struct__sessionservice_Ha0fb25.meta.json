@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:63de8615dc26923ac4ef6668e0674dfa3822d0690ce1cb065d8c9477e68b095d",
+  "doc": "",
+  "file": "service/sts/session.rs",
+  "id": "code:service/sts/session.rs::struct::SessionService",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 24,
+  "line_start": 19,
+  "name": "SessionService",
+  "signature": "pub struct SessionService<S>"
+}

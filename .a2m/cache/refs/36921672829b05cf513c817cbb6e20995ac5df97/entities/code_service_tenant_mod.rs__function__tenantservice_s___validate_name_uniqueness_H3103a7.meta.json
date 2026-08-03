@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:service/tenant/mod.rs::function::TenantService<S>::list_child_tenants",
+    "code:service/tenant/mod.rs::function::TenantService<S>::list_tenants"
+  ],
+  "callers": [
+    "code:service/tenant/mod.rs::function::TenantService<S>::create_tenant"
+  ],
+  "children": [],
+  "content_hash": "sha256:2cabc70c1086532ae648383a230b8962f4e0c0f9a73536f9cf5218e5a002d418",
+  "doc": "Validate that tenant name is unique within the parent\n\nNames must be unique within a parent tenant to enable name-to-ID mapping for UI display.",
+  "file": "service/tenant/mod.rs",
+  "id": "code:service/tenant/mod.rs::function::TenantService<S>::validate_name_uniqueness",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 86,
+  "line_start": 56,
+  "name": "validate_name_uniqueness",
+  "signature": "async fn validate_name_uniqueness("
+}

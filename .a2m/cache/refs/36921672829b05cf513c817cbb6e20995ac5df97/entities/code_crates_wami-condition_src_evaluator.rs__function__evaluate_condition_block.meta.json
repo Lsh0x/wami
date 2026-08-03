@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/evaluator.rs::function::evaluate_operator_block",
+    "code:crates/wami-condition/src/operators.rs::function::FromStr for ConditionOperator::from_str"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:9188d8bb60caf21d938942cc4a0a6e4f495485314b6d021ea246a143fcf16ebc",
+  "doc": "Evaluate a condition block\n\nA condition block evaluates to `true` if ALL operator blocks evaluate to `true` (AND logic).",
+  "file": "crates/wami-condition/src/evaluator.rs",
+  "id": "code:crates/wami-condition/src/evaluator.rs::function::evaluate_condition_block",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 81,
+  "line_start": 63,
+  "name": "evaluate_condition_block",
+  "signature": "pub fn evaluate_condition_block("
+}

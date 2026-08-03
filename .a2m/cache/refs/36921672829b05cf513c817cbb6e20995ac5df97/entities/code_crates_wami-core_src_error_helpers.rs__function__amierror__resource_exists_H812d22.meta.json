@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7606a3a8597abee80ea25b5e031cee5096314087846383eb6cd06351a49acc37",
+  "doc": "Create a \"Resource already exists\" error\n\n# Example\n\n```rust\nuse wami_core::error::AmiError;\n\nlet error = AmiError::resource_exists(\"User: alice\");\n```",
+  "file": "crates/wami-core/src/error/helpers.rs",
+  "id": "code:crates/wami-core/src/error/helpers.rs::function::AmiError::resource_exists",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 84,
+  "line_start": 80,
+  "name": "resource_exists",
+  "signature": "pub fn resource_exists(resource: impl Into<String>) -> Self"
+}

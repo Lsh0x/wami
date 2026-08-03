@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:service/gdpr/mod.rs::function::generate_id",
+    "extern:Utc::now"
+  ],
+  "callers": [
+    "code:service/gdpr/mod.rs::function::GdprService<S>::grant_consent"
+  ],
+  "children": [],
+  "content_hash": "sha256:da1a4b12d9750d3af23d325f7b0e504270b6d665fa812e23ceab8940eb47c7e1",
+  "doc": "Revoke consent for a specific category.",
+  "file": "service/gdpr/mod.rs",
+  "id": "code:service/gdpr/mod.rs::function::GdprService<S>::revoke_consent",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 129,
+  "line_start": 91,
+  "name": "revoke_consent",
+  "signature": "pub async fn revoke_consent("
+}

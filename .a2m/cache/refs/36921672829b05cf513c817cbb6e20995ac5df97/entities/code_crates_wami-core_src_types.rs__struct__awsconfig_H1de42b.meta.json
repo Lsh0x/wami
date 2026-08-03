@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:fb260b13e7337f6f39b1f7bb336aaadfcf9be5f5f041428a99307a3d33c2b575",
+  "doc": "",
+  "file": "crates/wami-core/src/types.rs",
+  "id": "code:crates/wami-core/src/types.rs::struct::AwsConfig",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 36,
+  "line_start": 32,
+  "name": "AwsConfig",
+  "signature": "pub struct AwsConfig"
+}

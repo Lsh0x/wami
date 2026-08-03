@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/tenant/tests.rs::function::build_test_tenant",
+    "code:wami/tenant/model.rs::function::TenantId::root"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:935eab50a8a7834db0d16d9bf7a9eaf9124dfd96c6f9e617d26a06e1a3395b83",
+  "doc": "",
+  "file": "store/memory/tenant/tests.rs",
+  "id": "code:store/memory/tenant/tests.rs::function::test_tenant_get_ancestors_root",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 229,
+  "line_start": 218,
+  "name": "test_tenant_get_ancestors_root",
+  "signature": "async fn test_tenant_get_ancestors_root()"
+}

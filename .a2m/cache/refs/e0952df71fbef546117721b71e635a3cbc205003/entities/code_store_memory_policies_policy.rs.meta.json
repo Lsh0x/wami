@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/policies/policy.rs::impl::PolicyStore for InMemoryWamiStore"
+  ],
+  "content_hash": "9ac961adc49c50b2d45b337a61858b3d8390b5263f07338a58eff12cc82429ef",
+  "doc": "",
+  "file": "store/memory/policies/policy.rs",
+  "id": "code:store/memory/policies/policy.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 76,
+  "line_start": 1,
+  "name": "policy",
+  "signature": ""
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e77c53186c4f2f091ef5ffd86a5da494e2c742334410750f71b510bbc2bcfb3a",
+  "doc": "",
+  "file": "service/sts/session_token.rs",
+  "id": "code:service/sts/session_token.rs::struct::GetSessionTokenResponse",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 23,
+  "line_start": 21,
+  "name": "GetSessionTokenResponse",
+  "signature": "pub struct GetSessionTokenResponse"
+}

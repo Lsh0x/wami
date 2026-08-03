@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/arn/types.rs::function::fmt::Display for Resource::fmt"
+  ],
+  "content_hash": "sha256:4274139a185e4db0bc9a7d1ec5fe7383c2121f6e4a4128fcd1dd1352bbb61a26",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::impl::fmt::Display for Resource",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 278,
+  "line_start": 274,
+  "name": "fmt::Display for Resource",
+  "signature": "impl fmt::Display for Resource"
+}

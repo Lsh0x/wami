@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7caad25527dbd46dc00aa31f4f782a1c72a0ef36862cf5220f0741cb4639a3c4",
+  "doc": "Update group's name (pure transformation)",
+  "file": "wami/identity/group/builder.rs",
+  "id": "code:wami/identity/group/builder.rs::function::update_group_name",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 94,
+  "line_start": 91,
+  "name": "update_group_name",
+  "signature": "pub fn update_group_name(mut group: Group, new_name: String) -> Group"
+}

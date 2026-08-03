@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/identity/user.rs::function::UserService<S>::guard",
+    "extern:user_builder::build_user",
+    "extern:user_builder::set_permissions_boundary",
+    "extern:user_builder::add_tags"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:790e75c24ebbdf78f577dbf7e686168486c7181ed86b76fc61da0a8dd736500d",
+  "doc": "Create a new user",
+  "file": "crates/wami/src/service/identity/user.rs",
+  "id": "code:crates/wami/src/service/identity/user.rs::function::UserService<S>::create_user",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 89,
+  "line_start": 58,
+  "name": "create_user",
+  "signature": "pub async fn create_user("
+}

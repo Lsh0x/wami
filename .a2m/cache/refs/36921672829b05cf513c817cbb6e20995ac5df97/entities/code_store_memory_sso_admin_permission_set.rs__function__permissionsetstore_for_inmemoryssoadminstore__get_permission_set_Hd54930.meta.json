@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:19c78424d67aad02baace1727741b8a04dd14305d1be43fa8c50e5af55c5ecea",
+  "doc": "",
+  "file": "store/memory/sso_admin/permission_set.rs",
+  "id": "code:store/memory/sso_admin/permission_set.rs::function::PermissionSetStore for InMemorySsoAdminStore::get_permission_set",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 24,
+  "line_start": 22,
+  "name": "get_permission_set",
+  "signature": "async fn get_permission_set(&self, permission_set_arn: &str) -> Result<Option<PermissionSet>>"
+}

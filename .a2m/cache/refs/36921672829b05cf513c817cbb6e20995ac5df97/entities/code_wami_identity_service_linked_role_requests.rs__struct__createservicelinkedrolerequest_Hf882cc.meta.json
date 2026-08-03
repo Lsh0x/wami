@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:499953c7b9c9d61756e0de891dad80b44dc72ea7c96a20e7ff7500f92ca84411",
+  "doc": "",
+  "file": "wami/identity/service_linked_role/requests.rs",
+  "id": "code:wami/identity/service_linked_role/requests.rs::struct::CreateServiceLinkedRoleRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 17,
+  "line_start": 10,
+  "name": "CreateServiceLinkedRoleRequest",
+  "signature": "pub struct CreateServiceLinkedRoleRequest"
+}

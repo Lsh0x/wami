@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c89a709579965a48918b5d3153a2e601d9c32de57a6c4397659d0aa125ea42b6",
+  "doc": "",
+  "file": "wami/identity/identity_provider/requests.rs",
+  "id": "code:wami/identity/identity_provider/requests.rs::struct::ListOpenIDConnectProvidersRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 116,
+  "line_start": 113,
+  "name": "ListOpenIDConnectProvidersRequest",
+  "signature": "pub struct ListOpenIDConnectProvidersRequest"
+}

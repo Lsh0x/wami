@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-macros/src/service_attr.rs::function::expand",
+    "code:crates/wami-macros/src/service_attr.rs::struct::ServiceArgs",
+    "code:crates/wami-macros/src/service_attr.rs::impl::Parse for ServiceArgs",
+    "code:crates/wami-macros/src/service_attr.rs::function::expand_inner"
+  ],
+  "content_hash": "0cec3f467d85b9f46a8241e1f400880fdb3023220d73d18ce8bc9017487a78ae",
+  "doc": "",
+  "file": "crates/wami-macros/src/service_attr.rs",
+  "id": "code:crates/wami-macros/src/service_attr.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 219,
+  "line_start": 1,
+  "name": "service_attr",
+  "signature": ""
+}

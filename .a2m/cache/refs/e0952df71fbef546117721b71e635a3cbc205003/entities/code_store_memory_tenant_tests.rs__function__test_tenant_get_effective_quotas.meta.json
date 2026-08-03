@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:store/memory/tenant/tests.rs::function::build_test_tenant"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e008ebf114ffb5788a9c26d3ef2c706f13e3bff2919577040d53a8419a283a8d",
+  "doc": "",
+  "file": "store/memory/tenant/tests.rs",
+  "id": "code:store/memory/tenant/tests.rs::function::test_tenant_get_effective_quotas",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 296,
+  "line_start": 275,
+  "name": "test_tenant_get_effective_quotas",
+  "signature": "async fn test_tenant_get_effective_quotas()"
+}

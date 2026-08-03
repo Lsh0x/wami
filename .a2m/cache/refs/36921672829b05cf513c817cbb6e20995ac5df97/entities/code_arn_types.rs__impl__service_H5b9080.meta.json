@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:arn/types.rs::function::Service::as_str"
+  ],
+  "content_hash": "sha256:0ac8eb428e438696fa97263825292d7d6a9f231b556061f52b4cb035acc97b18",
+  "doc": "",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::impl::Service",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 302,
+  "line_start": 292,
+  "name": "Service",
+  "signature": "impl Service"
+}

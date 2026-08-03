@@ -1,0 +1,22 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/sts/session/model.rs::struct::StsSession",
+    "code:wami/sts/session/model.rs::enum::SessionStatus",
+    "code:wami/sts/session/model.rs::impl::StsSession"
+  ],
+  "content_hash": "234373456b5580f3c9ce0b9936915c0fff52af4475cc63675f1364d3082ee3a7",
+  "doc": "",
+  "file": "wami/sts/session/model.rs",
+  "id": "code:wami/sts/session/model.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 187,
+  "line_start": 1,
+  "name": "model",
+  "signature": ""
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:96a52ac70eadbea76ac0082e4b1dbc9911483b37f425a370c5b91b1ad7929824",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wami_condition_with_session_age",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7804,
+  "line_start": 7790,
+  "name": "test_wami_condition_with_session_age",
+  "signature": "fn test_wami_condition_with_session_age()"
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/tenant/tests.rs::function::build_test_tenant",
+    "code:wami/tenant/model.rs::function::TenantId::root"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:13d7c6f2e056d0cef9dbb4a5945884932dacb45dbfd7a34aa8891772ec11fc51",
+  "doc": "",
+  "file": "store/memory/tenant/tests.rs",
+  "id": "code:store/memory/tenant/tests.rs::function::test_tenant_get_descendants",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 259,
+  "line_start": 232,
+  "name": "test_tenant_get_descendants",
+  "signature": "async fn test_tenant_get_descendants()"
+}

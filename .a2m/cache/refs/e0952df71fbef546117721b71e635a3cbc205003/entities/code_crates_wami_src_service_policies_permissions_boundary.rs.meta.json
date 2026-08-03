@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/policies/permissions_boundary.rs::trait::PermissionsBoundaryServiceStore",
+    "code:crates/wami/src/service/policies/permissions_boundary.rs::impl::PermissionsBoundaryServiceStore for T",
+    "code:crates/wami/src/service/policies/permissions_boundary.rs::struct::PermissionsBoundaryService",
+    "code:crates/wami/src/service/policies/permissions_boundary.rs::impl::PermissionsBoundaryService<S>"
+  ],
+  "content_hash": "54c26c9fa03341d755497e5cdd9e9df4f42a2864ac4c82cf7f2569985fbc95d8",
+  "doc": "",
+  "file": "crates/wami/src/service/policies/permissions_boundary.rs",
+  "id": "code:crates/wami/src/service/policies/permissions_boundary.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 607,
+  "line_start": 1,
+  "name": "permissions_boundary",
+  "signature": ""
+}

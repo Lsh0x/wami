@@ -1,0 +1,26 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthTokenStore for InMemoryOAuthStore::record_oauth_token",
+    "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthTokenStore for InMemoryOAuthStore::get_oauth_token",
+    "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthTokenStore for InMemoryOAuthStore::revoke_oauth_token",
+    "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthTokenStore for InMemoryOAuthStore::revoke_oauth_tokens_for_client",
+    "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthTokenStore for InMemoryOAuthStore::list_oauth_tokens_for_client"
+  ],
+  "content_hash": "sha256:d6512f59d19a1fd5bb7ab0b982ceb1f9dbc01c7811a0044d2fc42af1a2229a8a",
+  "doc": "",
+  "file": "crates/wami/src/store/memory/oauth/mod.rs",
+  "id": "code:crates/wami/src/store/memory/oauth/mod.rs::impl::OAuthTokenStore for InMemoryOAuthStore",
+  "implemented_by": [],
+  "implements": [
+    "code:crates/wami/src/store/traits/oauth/mod.rs::trait::OAuthTokenStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 120,
+  "line_start": 78,
+  "name": "OAuthTokenStore for InMemoryOAuthStore",
+  "signature": "impl OAuthTokenStore for InMemoryOAuthStore"
+}

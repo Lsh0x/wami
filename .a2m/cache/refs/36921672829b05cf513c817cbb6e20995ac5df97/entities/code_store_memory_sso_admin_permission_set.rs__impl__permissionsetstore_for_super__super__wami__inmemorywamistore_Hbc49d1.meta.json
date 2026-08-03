@@ -1,0 +1,26 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/sso_admin/permission_set.rs::function::PermissionSetStore for super::super::wami::InMemoryWamiStore::create_permission_set",
+    "code:store/memory/sso_admin/permission_set.rs::function::PermissionSetStore for super::super::wami::InMemoryWamiStore::get_permission_set",
+    "code:store/memory/sso_admin/permission_set.rs::function::PermissionSetStore for super::super::wami::InMemoryWamiStore::update_permission_set",
+    "code:store/memory/sso_admin/permission_set.rs::function::PermissionSetStore for super::super::wami::InMemoryWamiStore::delete_permission_set",
+    "code:store/memory/sso_admin/permission_set.rs::function::PermissionSetStore for super::super::wami::InMemoryWamiStore::list_permission_sets"
+  ],
+  "content_hash": "sha256:b3b82f0fe694fd2ce59a88852e53e16a3d3974e6b1a94d025c71ee1eda576788",
+  "doc": "",
+  "file": "store/memory/sso_admin/permission_set.rs",
+  "id": "code:store/memory/sso_admin/permission_set.rs::impl::PermissionSetStore for super::super::wami::InMemoryWamiStore",
+  "implemented_by": [],
+  "implements": [
+    "code:store/traits/sso_admin/permission_set.rs::trait::PermissionSetStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 89,
+  "line_start": 49,
+  "name": "PermissionSetStore for super::super::wami::InMemoryWamiStore",
+  "signature": "impl PermissionSetStore for super::super::wami::InMemoryWamiStore"
+}

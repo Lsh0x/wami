@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "d34e0de67aed4f9dd925955ce2e4fdf1067919f90d32ae901cb52c28ae249945",
+  "doc": "",
+  "file": "crates/wami-identity/src/lib.rs",
+  "id": "code:crates/wami-identity/src/lib.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 15,
+  "line_start": 1,
+  "name": "lib",
+  "signature": ""
+}

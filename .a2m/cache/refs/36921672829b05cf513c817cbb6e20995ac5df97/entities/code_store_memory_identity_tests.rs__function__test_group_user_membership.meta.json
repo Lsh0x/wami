@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:user_builder::build_user",
+    "extern:group_builder::build_group"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e4f45b32817f49a2302eb5a2e1e3c0aeb64025a44034f4cefc823aef6aa7dcb3",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_group_user_membership",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 299,
+  "line_start": 271,
+  "name": "test_group_user_membership",
+  "signature": "async fn test_group_user_membership()"
+}

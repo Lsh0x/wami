@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0e32f619bfd28c261633e89ce17e73d4a911db11f0306daecc1f7a0b7be00f40",
+  "doc": "",
+  "file": "store/memory/tenant/mod.rs",
+  "id": "code:store/memory/tenant/mod.rs::function::TenantStore for InMemoryTenantStore::list_tenants",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 66,
+  "line_start": 64,
+  "name": "list_tenants",
+  "signature": "async fn list_tenants(&self) -> Result<Vec<Tenant>>"
+}

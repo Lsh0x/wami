@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:8321145f39962ee9c59c8a670bef02d09da590ee582d79fa2614bb5c084273ed",
+  "doc": "",
+  "file": "store/memory/sso_admin/trusted_token_issuer.rs",
+  "id": "code:store/memory/sso_admin/trusted_token_issuer.rs::function::TrustedTokenIssuerStore for super::super::wami::InMemoryWamiStore::get_trusted_token_issuer",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 57,
+  "line_start": 52,
+  "name": "get_trusted_token_issuer",
+  "signature": "async fn get_trusted_token_issuer("
+}

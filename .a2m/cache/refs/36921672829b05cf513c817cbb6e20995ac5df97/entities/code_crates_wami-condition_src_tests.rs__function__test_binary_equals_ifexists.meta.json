@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:6a008f196c54041b3f96bae7ae6d979a8df798ccd7338da2a55e35a46413b1fa",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_binary_equals_ifexists",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 4697,
+  "line_start": 4668,
+  "name": "test_binary_equals_ifexists",
+  "signature": "fn test_binary_equals_ifexists()"
+}

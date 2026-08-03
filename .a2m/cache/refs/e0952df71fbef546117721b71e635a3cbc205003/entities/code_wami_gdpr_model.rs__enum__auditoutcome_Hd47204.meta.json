@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:cc1441f031ce5ccc6efaead844b196e3c30a55a292686a0670a38355862d193b",
+  "doc": "",
+  "file": "wami/gdpr/model.rs",
+  "id": "code:wami/gdpr/model.rs::enum::AuditOutcome",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 105,
+  "line_start": 101,
+  "name": "AuditOutcome",
+  "signature": "pub enum AuditOutcome"
+}

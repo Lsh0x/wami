@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/unified.rs::function::Store for InMemoryStore::wami_store",
+    "code:store/memory/unified.rs::function::Store for InMemoryStore::sts_store",
+    "code:store/memory/unified.rs::function::Store for InMemoryStore::sso_admin_store",
+    "code:store/memory/unified.rs::function::Store for InMemoryStore::tenant_store"
+  ],
+  "content_hash": "sha256:4dc29f7b3ff54df16e6eb8aad511072269afa1c725749e7705e1be93a1a50b4c",
+  "doc": "",
+  "file": "store/memory/unified.rs",
+  "id": "code:store/memory/unified.rs::impl::Store for InMemoryStore",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 54,
+  "line_start": 33,
+  "name": "Store for InMemoryStore",
+  "signature": "impl Store for InMemoryStore"
+}

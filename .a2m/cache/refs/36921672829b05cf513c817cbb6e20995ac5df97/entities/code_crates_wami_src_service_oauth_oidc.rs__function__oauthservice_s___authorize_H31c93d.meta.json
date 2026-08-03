@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::enabled_client",
+    "code:crates/wami/src/wami/oauth/oidc.rs::function::validate_redirect_uri",
+    "code:crates/wami/src/wami/oauth/oidc.rs::function::generate_opaque_value",
+    "extern:Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e090ccc4bce837638edd86ad95528f48fd28ded84ea20e4b056a903576aabd03",
+  "doc": "Issue an authorization code for an authenticated user, or ask for\nconsent.\n\n# Errors\n\n[`AmiError::AccessDenied`] if the client is unknown, disabled, or not\nregistered for the `authorization_code` grant.\n[`AmiError::InvalidParameter`] if the redirect URI is not registered or\na requested scope is outside the client's set.\n\nBoth are returned *to the caller of this library* and must never be\nredirected to the client: sending an error to an unverified redirect URI\nis the vulnerability the check exists to prevent.",
+  "file": "crates/wami/src/service/oauth/oidc.rs",
+  "id": "code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::authorize",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 234,
+  "line_start": 172,
+  "name": "authorize",
+  "signature": "pub async fn authorize(&self, request: AuthorizationRequest) -> Result<Authorization>"
+}

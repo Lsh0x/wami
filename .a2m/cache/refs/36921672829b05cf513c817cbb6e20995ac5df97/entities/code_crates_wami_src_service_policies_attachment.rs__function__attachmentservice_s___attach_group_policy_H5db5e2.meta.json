@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:2afdf7327116d8de3622f18c2fe39c8496965e56bc9b9944bc4afebf262dc6b6",
+  "doc": "Attach a managed policy to a group",
+  "file": "crates/wami/src/service/policies/attachment.rs",
+  "id": "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::attach_group_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 264,
+  "line_start": 210,
+  "name": "attach_group_policy",
+  "signature": "pub async fn attach_group_policy("
+}

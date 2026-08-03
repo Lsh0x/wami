@@ -1,0 +1,38 @@
+{
+  "callees": [
+    "code:wami/tenant/model.rs::function::TenantId::root",
+    "extern:chrono::Utc::now"
+  ],
+  "callers": [
+    "code:store/memory/tenant/tests.rs::function::test_tenant_create_and_get",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_create_duplicate_fails",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_delete",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_different_statuses",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_different_types",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_get_ancestors",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_get_ancestors_root",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_get_descendants",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_get_descendants_leaf",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_get_effective_quotas",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_get_usage",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_hierarchy",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_list_child_tenants_empty",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_list_multiple",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_update",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_update_nonexistent_fails"
+  ],
+  "children": [],
+  "content_hash": "sha256:0087eefdb058898b5bcc47931781f4356a9364e802db01f7aa154bc2a784f76a",
+  "doc": "",
+  "file": "store/memory/tenant/tests.rs",
+  "id": "code:store/memory/tenant/tests.rs::function::build_test_tenant",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 29,
+  "line_start": 8,
+  "name": "build_test_tenant",
+  "signature": "fn build_test_tenant(name: &str, parent: Option<TenantId>) -> Tenant"
+}

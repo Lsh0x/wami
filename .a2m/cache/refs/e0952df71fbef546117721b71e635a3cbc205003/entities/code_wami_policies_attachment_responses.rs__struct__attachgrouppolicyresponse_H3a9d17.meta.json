@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:79873e086e441b6e1f1ec569b0ef1a5f1a3678b8e45f0e475925152fd0faff46",
+  "doc": "",
+  "file": "wami/policies/attachment/responses.rs",
+  "id": "code:wami/policies/attachment/responses.rs::struct::AttachGroupPolicyResponse",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 32,
+  "line_start": 29,
+  "name": "AttachGroupPolicyResponse",
+  "signature": "pub struct AttachGroupPolicyResponse"
+}

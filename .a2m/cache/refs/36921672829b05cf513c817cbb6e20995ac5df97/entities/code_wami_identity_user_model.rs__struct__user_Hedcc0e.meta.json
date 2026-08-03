@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0b90e18bf34a0d78194fe3fa89d8d75fa93a3c88663a2fa2b93ba6d93dc329bb",
+  "doc": "",
+  "file": "wami/identity/user/model.rs",
+  "id": "code:wami/identity/user/model.rs::struct::User",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 66,
+  "line_start": 43,
+  "name": "User",
+  "signature": "pub struct User"
+}

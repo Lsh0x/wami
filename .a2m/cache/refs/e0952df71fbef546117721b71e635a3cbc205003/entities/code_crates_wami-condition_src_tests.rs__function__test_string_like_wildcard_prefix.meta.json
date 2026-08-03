@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::create_test_context",
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e1bc5c4e19c3917966f438a9869307fa5f0d0db19bd751541825dbefb5e86a6d",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_string_like_wildcard_prefix",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 480,
+  "line_start": 468,
+  "name": "test_string_like_wildcard_prefix",
+  "signature": "fn test_string_like_wildcard_prefix()"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:8518ad0384954c29dc1f5d69a7e750865e0af3fee96de277a1bf6de9b94ced3f",
+  "doc": "",
+  "file": "wami/tags/requests.rs",
+  "id": "code:wami/tags/requests.rs::struct::UntagResourceRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 26,
+  "line_start": 19,
+  "name": "UntagResourceRequest",
+  "signature": "pub struct UntagResourceRequest"
+}

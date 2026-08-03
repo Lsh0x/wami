@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:51118f1d8cb073689751654de507afc4dbb70ca7b9e87b4046ab344d70253279",
+  "doc": "Get an account assignment by ID",
+  "file": "service/sso_admin/account_assignment.rs",
+  "id": "code:service/sso_admin/account_assignment.rs::function::AccountAssignmentService<S>::get_account_assignment",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 62,
+  "line_start": 53,
+  "name": "get_account_assignment",
+  "signature": "pub async fn get_account_assignment("
+}

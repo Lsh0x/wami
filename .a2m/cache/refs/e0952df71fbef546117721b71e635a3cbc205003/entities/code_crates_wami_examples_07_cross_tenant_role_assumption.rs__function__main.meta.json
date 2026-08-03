@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::builder",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder",
+    "code:wami/tenant/model.rs::function::TenantId::from_string"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:45c5b65295126e05b2ad4337fc81a3a0aa6732d1fcde0de7dec58a1f8f42d3d2",
+  "doc": "",
+  "file": "crates/wami/examples/07_cross_tenant_role_assumption.rs",
+  "id": "code:crates/wami/examples/07_cross_tenant_role_assumption.rs::function::main",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 213,
+  "line_start": 24,
+  "name": "main",
+  "signature": "async fn main() -> Result<(), Box<dyn std::error::Error>>"
+}

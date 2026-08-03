@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:39dbf2badf78a140b224287070266bd922e81649d7210cd32209852e774250a8",
+  "doc": "Validate that child quotas don't exceed parent quotas",
+  "file": "wami/tenant/model.rs",
+  "id": "code:wami/tenant/model.rs::function::TenantQuotas::validate_against_parent",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 332,
+  "line_start": 315,
+  "name": "validate_against_parent",
+  "signature": "pub fn validate_against_parent(&self, parent: &TenantQuotas) -> Result<(), String>"
+}

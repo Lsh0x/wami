@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:d04252b1df4cb2780ef8a8918131b6a5398794004a0faf44a63da9f6b5d42bec",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::source_vpce",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 266,
+  "line_start": 263,
+  "name": "source_vpce",
+  "signature": "pub fn source_vpce(mut self, vpce: impl Into<String>) -> Self"
+}

@@ -1,0 +1,28 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami/examples/06_tenant_quotas_and_limits.rs::function::main",
+    "code:service/tenant/mod.rs::function::TenantService<S>::generate_unique_tenant_id",
+    "code:store/memory/tenant/tests.rs::function::build_test_tenant",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_get_nonexistent",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_delete_nonexistent_fails",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_get_ancestors",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_get_ancestors_root",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_get_descendants",
+    "code:store/memory/tenant/tests.rs::function::test_tenant_get_effective_quotas_nonexistent"
+  ],
+  "children": [],
+  "content_hash": "sha256:27a262f6bdc46959b4d896ac819a8ea8aed8ef08c81c78509eac38ac4827c1ec",
+  "doc": "Generate a new root tenant ID with a random numeric segment\n\n# Example\n\n```rust\nuse wami::tenant::TenantId;\n\nlet root = TenantId::root();\nassert_eq!(root.depth(), 0);\n```",
+  "file": "wami/tenant/model.rs",
+  "id": "code:wami/tenant/model.rs::function::TenantId::root",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 48,
+  "line_start": 44,
+  "name": "root",
+  "signature": "pub fn root() -> Self"
+}

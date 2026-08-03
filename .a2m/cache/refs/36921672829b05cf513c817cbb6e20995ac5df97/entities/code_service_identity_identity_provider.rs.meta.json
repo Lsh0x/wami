@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:service/identity/identity_provider.rs::struct::IdentityProviderService",
+    "code:service/identity/identity_provider.rs::impl::IdentityProviderService<S>"
+  ],
+  "content_hash": "8a5c127be52b542c5fdd5c522465148764a57e53b341403dfae742ed47661ff8",
+  "doc": "",
+  "file": "service/identity/identity_provider.rs",
+  "id": "code:service/identity/identity_provider.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 473,
+  "line_start": 1,
+  "name": "identity_provider",
+  "signature": ""
+}

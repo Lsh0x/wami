@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "extern:Utc::now",
+    "extern:Duration::hours"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:1d07c44949de4c3e94964e975c0124ed3b6cdcc1b4a7ccec2d6344ffcd3c7926",
+  "doc": "",
+  "file": "store/memory/sts/tests.rs",
+  "id": "code:store/memory/sts/tests.rs::function::test_session_with_providers",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 216,
+  "line_start": 177,
+  "name": "test_session_with_providers",
+  "signature": "async fn test_session_with_providers()"
+}

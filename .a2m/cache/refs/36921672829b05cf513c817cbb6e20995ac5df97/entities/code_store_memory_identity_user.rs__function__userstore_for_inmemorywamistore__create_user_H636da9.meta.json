@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:96047b313dc471e8ade20f68fb6da21dc8a613b7614881f72d83b0b69dc3854b",
+  "doc": "",
+  "file": "store/memory/identity/user.rs",
+  "id": "code:store/memory/identity/user.rs::function::UserStore for InMemoryWamiStore::create_user",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 15,
+  "line_start": 12,
+  "name": "create_user",
+  "signature": "async fn create_user(&mut self, user: User) -> Result<User>"
+}

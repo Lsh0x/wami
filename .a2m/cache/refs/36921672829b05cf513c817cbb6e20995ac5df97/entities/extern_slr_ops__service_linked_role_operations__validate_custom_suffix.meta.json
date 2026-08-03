@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/identity/service_linked_role.rs::function::ServiceLinkedRoleService<S>::create_service_linked_role"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:slr_ops::service_linked_role_operations::validate_custom_suffix",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "validate_custom_suffix",
+  "signature": "slr_ops::service_linked_role_operations::validate_custom_suffix"
+}

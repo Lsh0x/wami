@@ -1,0 +1,24 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/identity/root_user.rs::const::ROOT_USER_ID",
+    "code:wami/identity/root_user.rs::struct::RootUser",
+    "code:wami/identity/root_user.rs::impl::RootUser",
+    "code:wami/identity/root_user.rs::impl::From<RootUser> for User",
+    "code:wami/identity/root_user.rs::impl::AsRef<User> for RootUser"
+  ],
+  "content_hash": "8ea36b522b82ef8ac77b38cecaeb34b348e608665b20cdf79bb2917c283aa117",
+  "doc": "",
+  "file": "wami/identity/root_user.rs",
+  "id": "code:wami/identity/root_user.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 273,
+  "line_start": 1,
+  "name": "root_user",
+  "signature": ""
+}

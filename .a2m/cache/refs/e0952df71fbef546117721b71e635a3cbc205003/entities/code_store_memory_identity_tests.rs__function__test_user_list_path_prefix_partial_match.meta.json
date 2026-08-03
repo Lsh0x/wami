@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:user_builder::build_user"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e6674ea9124f1cd605cebd45c9b5558393f3bb812b51b62028ab7597b306206a",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_user_list_path_prefix_partial_match",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 925,
+  "line_start": 901,
+  "name": "test_user_list_path_prefix_partial_match",
+  "signature": "async fn test_user_list_path_prefix_partial_match()"
+}

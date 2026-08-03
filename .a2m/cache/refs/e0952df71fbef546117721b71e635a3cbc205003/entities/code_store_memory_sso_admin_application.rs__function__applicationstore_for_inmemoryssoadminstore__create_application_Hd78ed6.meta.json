@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:53b134fbab5245a8b729407ae5b0ab332342248f0255d027aa7b8c93b57b0027",
+  "doc": "",
+  "file": "store/memory/sso_admin/application.rs",
+  "id": "code:store/memory/sso_admin/application.rs::function::ApplicationStore for InMemorySsoAdminStore::create_application",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 15,
+  "line_start": 11,
+  "name": "create_application",
+  "signature": "async fn create_application(&mut self, application: Application) -> Result<Application>"
+}

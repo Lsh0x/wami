@@ -1,0 +1,344 @@
+---
+description: Formal workflow enforcement system with universal guard rule (R₀) and mathematical guarantees
+alwaysApply: true
+---
+
+## Formal Workflow System
+
+This rule defines a formal mathematical specification for workflow enforcement that provides guarantees about agent behavior. The system ensures that workflow rules are always evaluated before any agent action, with hard stops on violations.
+
+**Complete state machine**: See `docs/workflow_state_machine.md` for the complete state machine with all 22 states, transitions, validation rules, and recovery paths. This formal specification applies to all states in the workflow.
+
+## Formal Specification
+
+### Workflow Formula (WF)
+
+The workflow formula defines what constitutes a valid workflow state:
+
+```
+WF ≜ ∃ I, B, C, S, U :
+  ( Path(I) ∧ Consis(S,I) ∧ Auth(I) ∧ Br(B) ∧ Q(G) ∧ Cm(I,C) )
+  ∨ ( Appr(I,U) ∧ Create(I) )
+```
+
+Where:
+- **Path(I)**: Issue file exists at correct path (`issues/<project>/todo/` or `issues/<project>/in_progress/`)
+- **Consis(S,I)**: State `S` is consistent with issue `I` (branch matches, status matches)
+- **Auth(I)**: Issue `I` has been approved by user (in `todo/` or `in_progress/`)
+- **Br(B)**: Branch `B` exists and matches issue specification
+- **Q(G)**: Quality gates `G` have passed (format, lint, test, docs)
+- **Cm(I,C)**: Commit `C` references issue `I`
+- **Appr(I,U)**: Issue `I` approved by user `U`
+- **Create(I)**: Issue `I` can be created (proposal exists or exploration completed)
+
+### Rule R₀ (Universal Guard)
+
+**CRITICAL**: Rule R₀ MUST be evaluated before ANY agent action, reasoning, planning, or file modification.
+
+```
+R₀ ≜ ∀ A, act, t :
+  Load(A,t) ∧ HasWF(A,t) ∧ WF(Pre(A,act,t)) ⇒ Exec(A,act,t)
+```
+
+Where:
+- **A**: Agent
+- **act**: Action to be performed
+- **t**: Time/context
+- **Load(A,t)**: Workflow rules are loaded into agent context
+- **HasWF(A,t)**: Agent has workflow formula available in context
+- **WF(Pre(A,act,t))**: Pre-state validation - workflow formula holds before action
+- **Exec(A,act,t)**: Action is allowed to execute
+
+**Enforcement**: If `R₀` does not hold, the action MUST be rejected with a hard stop.
+
+### Context Management Predicates
+
+#### HasWF(A,t) - Workflow Presence Check
+
+**Definition**: Agent `A` has workflow rules loaded and pinned in context at time `t`.
+
+**Implementation**:
+- Agent context must contain workflow rules from `rules/workflow-enforcement.mdc`
+- Agent context must contain `rules/core-standards.mdc` (always applied)
+- Agent context must contain `rules/workflows.mdc` (always applied)
+- Workflow rules must remain pinned throughout agent session
+
+**Check**: Before any action, verify:
+1. Workflow rules are in agent context
+2. Rule R₀ is explicitly referenced
+3. Workflow predicates are available
+
+#### Load(A,t) - Workflow Loading
+
+**Definition**: Load and pin workflow rules to agent context.
+
+**Implementation**:
+- Auto-load `rules/workflow-enforcement.mdc` at session start
+- Auto-load `rules/core-standards.mdc` (always applied)
+- Auto-load `rules/workflows.mdc` (always applied)
+- Pin these rules in context (do not remove during session)
+- Ensure rules are available before any action
+
+**Trigger**: 
+- At agent session initialization
+- When context is refreshed
+- When switching between workflows
+
+#### Refresh(A,t) - Context Refresh
+
+**Definition**: Auto-reload workflow rules when context changes.
+
+**Implementation**:
+- When agent context is updated, verify workflow rules are still present
+- If workflow rules are missing, reload them immediately
+- Ensure `HasWF(A,t)` holds after refresh
+
+**Trigger**:
+- After context updates
+- After loading new files
+- After switching repositories
+- Periodically during long sessions
+
+### State Validation Predicates
+
+#### WF(Pre(A,act,t)) - Pre-State Validation
+
+**Definition**: Validate that workflow formula holds before action `act` is executed.
+
+**Implementation**:
+- Check that issue exists in correct location (`todo/` or `in_progress/`)
+- Verify issue status matches current workflow stage
+- Verify branch exists and matches issue specification
+- Verify user approval is present (issue in `todo/` or `in_progress/`)
+- For file modifications: verify issue exists and is approved
+- For commits: verify quality gates passed
+
+**Validation Steps**:
+1. **Issue Check**: `Path(I)` - Issue file exists at `issues/<project>/todo/` or `issues/<project>/in_progress/`
+2. **State Consistency**: `Consis(S,I)` - Current state (branch, files) matches issue
+3. **Authorization**: `Auth(I)` - Issue is approved (not in `proposal/`)
+4. **Branch Check**: `Br(B)` - Branch exists and matches issue
+5. **Quality Gates**: `Q(G)` - Format, lint, test, docs passed (for commits)
+
+**Hard Stop**: If `WF(Pre(A,act,t))` is false, transition to **Reject** state immediately.
+
+**State Transitions**:
+- **PreCheck → Ready**: If `WF(Pre(A,act,t))` holds, transition to Ready state
+- **PreCheck → Reject**: If `WF(Pre(A,act,t))` fails, transition to Reject state
+- **QualityGate → Fix**: If quality gates fail, transition to Fix state
+- **QualityGate → Reject**: If workflow violation detected, transition to Reject state
+- **Fix → Work**: After corrections, return to Work state
+- **Reject → Explore**: Recovery path, restart workflow from beginning
+
+#### WF(Post(A,act,t)) - Post-State Validation
+
+**Definition**: Validate that workflow formula holds after action `act` is executed.
+
+**Implementation**:
+- After file modifications: verify issue still exists and is valid
+- After commits: verify commit references issue
+- After moving issue: verify new location is valid
+- Verify state consistency maintained
+
+**Validation Steps**:
+1. Issue still exists and is valid
+2. State consistency maintained
+3. Quality gates still pass (if applicable)
+4. Commit references issue (if action was commit)
+
+**Warning**: If `WF(Post(A,act,t))` is false, log warning and suggest remediation.
+
+#### Allow(A,act,t) - Action Permission
+
+**Definition**: Evaluate if action `act` is allowed for agent `A` at time `t`.
+
+**Implementation**:
+- Evaluate `R₀`: `Load(A,t) ∧ HasWF(A,t) ∧ WF(Pre(A,act,t))`
+- If `R₀` holds, action is allowed
+- If `R₀` does not hold, action is rejected
+
+**Decision Logic**:
+```
+Allow(A,act,t) ≜ Load(A,t) ∧ HasWF(A,t) ∧ WF(Pre(A,act,t))
+```
+
+### Safety Property
+
+**Definition**: Violations result in hard stops - no action executes if workflow doesn't hold.
+
+```
+Safety ≜ ∀ A, act, t : ¬Allow(A,act,t) ⇒ Reject(A,act,t)
+```
+
+**Enforcement**:
+- If `Allow(A,act,t)` is false, action MUST be rejected
+- **Transition to Reject state**: Do not proceed with action
+- Clear error message explaining violation
+- Suggest remediation steps
+- **Recovery path**: `Reject → Explore` (restart workflow from beginning)
+
+**Violation Examples**:
+- File modification without issue → **REJECT** state (explain: issue required, suggest exploration workflow)
+- Issue missing or in wrong location → **REJECT** state (explain: issue must be in `todo/` or `in_progress/`)
+- Branch doesn't match issue → **REJECT** state (explain: branch must match issue specification)
+- Quality gates failed → **REJECT** state (for workflow violations) or **Fix** state (for quality failures)
+- Workflow rules not loaded → **REJECT** state (explain: workflow rules must be loaded)
+
+### Liveness Property
+
+**Definition**: Every action either executes or is explicitly rejected - no silent failures.
+
+```
+Totality ≜ ∀ A, act, t : Exec(A,act,t) ⊕ Reject(A,act,t)
+```
+
+**Enforcement**:
+- Every action must have explicit outcome: Execute or Reject
+- No silent failures or skipped actions
+- Always provide feedback on action status
+- Log all rejections with reasons
+
+**Implementation**:
+- Explicit `Exec(A,act,t)` or `Reject(A,act,t)` for every action
+- Clear messaging about action outcome
+- No ambiguous states
+
+### Persistence Property
+
+**Definition**: Workflow rules remain pinned in active agent contexts.
+
+```
+Persistence ≜ ∀ A, t : Active(A,t) ⇒ (HasWF(A,t) ∧ (Refresh(A,t) ⇒ HasWF(A,t)))
+```
+
+**Enforcement**:
+- Workflow rules must be present in active agent contexts
+- Rules persist throughout agent session
+- Refresh operations maintain workflow presence
+- Rules are not removed during context updates
+
+**Implementation**:
+- Pin workflow rules at session start
+- Verify rules present before each action
+- Reload rules if missing after refresh
+- Maintain rules throughout session lifecycle
+
+## Practical Implementation
+
+### Before Every Action
+
+**MANDATORY CHECKLIST** (Rule R₀ enforcement):
+
+1. **Load Check**: Verify workflow rules are loaded (`Load(A,t)`)
+   - Check: Are `workflow-enforcement.mdc`, `core-standards.mdc`, `workflows.mdc` in context?
+   - If no: Load rules immediately, then proceed
+
+2. **Presence Check**: Verify workflow is present (`HasWF(A,t)`)
+   - Check: Can I access Rule R₀ and workflow predicates?
+   - If no: Reload rules, then proceed
+
+3. **Pre-State Validation**: Verify workflow formula holds (`WF(Pre(A,act,t))`)
+   - For file modifications:
+     - Issue exists in `issues/<project>/todo/` or `issues/<project>/in_progress/`?
+     - Issue is approved (not in `proposal/`)?
+     - Branch matches issue?
+   - For commits:
+     - Quality gates passed?
+     - Commit message references issue?
+   - If no: **HARD STOP** - Transition to **Reject** state, explain violation, suggest remediation, restart workflow
+
+4. **Action Decision**: Evaluate `Allow(A,act,t)`
+   - If true: Execute action
+   - If false: **HARD STOP** - Transition to **Reject** state with clear error message, suggest remediation, restart workflow
+
+5. **Post-State Validation**: After action, verify `WF(Post(A,act,t))`
+   - Check state consistency
+   - Log warnings if validation fails
+
+### Error Messages
+
+When rejecting actions, provide clear error messages:
+
+**Example 1 - Missing Issue**:
+```
+❌ WORKFLOW VIOLATION: Cannot modify files without an issue.
+
+Action: Modify file X
+Required: Issue file in issues/<project>/todo/ or issues/<project>/in_progress/
+Status: No issue found
+
+Remediation:
+1. Follow exploration workflow to create issue
+2. Get user approval
+3. Move issue to todo/
+4. Then proceed with implementation
+```
+
+**Example 2 - Workflow Not Loaded**:
+```
+❌ WORKFLOW VIOLATION: Workflow rules not loaded.
+
+Action: Execute action X
+Required: Rule R₀ must be evaluated first
+Status: Workflow rules missing from context
+
+Remediation:
+1. Load workflow-enforcement.mdc
+2. Load core-standards.mdc
+3. Load workflows.mdc
+4. Verify HasWF(A,t) holds
+5. Then proceed with action
+```
+
+**Example 3 - Pre-State Invalid**:
+```
+❌ WORKFLOW VIOLATION: Pre-state validation failed.
+
+Action: Commit changes
+Required: WF(Pre(A,act,t)) must hold
+Status: Quality gates not passed
+
+Remediation:
+1. Run format
+2. Run lint (warnings as errors)
+3. Run tests
+4. Update docs
+5. Then commit
+```
+
+### Integration Points
+
+**Rule R₀ must be integrated into**:
+1. `core-standards.mdc` - As first check in "Workflow Rules" section
+2. `workflows.mdc` - Before exploration and implementation workflows
+3. `code-work.mdc` - Before any file modifications
+
+**Context Loading**:
+- Auto-load at session start
+- Verify before each action
+- Refresh when context changes
+
+**Validation Points**:
+- Before file modifications
+- Before commits
+- Before issue creation
+- Before branch operations
+- Before PR creation
+
+## Guarantees
+
+This formal system provides:
+
+1. **Safety**: Violations result in hard stops - no action executes if workflow doesn't hold
+2. **Liveness**: Every action either executes or is explicitly rejected - no silent failures
+3. **Persistence**: Workflow rules remain pinned in active contexts throughout sessions
+4. **Totality**: Complete coverage - Rule R₀ evaluated before every action
+5. **Consistency**: State validation ensures workflow formula holds at all times
+
+## Notes
+
+- This is a formal specification that provides mathematical guarantees
+- Practical implementation translates formal predicates into actionable checks
+- Hard stops ensure violations cannot be ignored
+- Clear error messages guide remediation
+- Integration with existing rules maintains backward compatibility

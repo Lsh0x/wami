@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:536a7113fd1a88d4ad49779f687cafddd5ce99621115d75710080f159e4b07d4",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::principal_tag_role",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 603,
+  "line_start": 597,
+  "name": "principal_tag_role",
+  "signature": "pub fn principal_tag_role(mut self, roles: Vec<String>) -> Self"
+}

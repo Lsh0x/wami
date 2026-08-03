@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:458b2e4e366fd1044eae7054a2a0e373ab763d61e97fe52c192c4f412b2f835f",
+  "doc": "Override how long issued tokens live.\n\nShorter narrows the window in which a revoked token is still accepted by\nan offline verifier; longer reduces how often clients come back.",
+  "file": "crates/wami/src/service/oauth/mod.rs",
+  "id": "code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::with_token_lifetime",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 94,
+  "line_start": 91,
+  "name": "with_token_lifetime",
+  "signature": "pub fn with_token_lifetime(mut self, lifetime: Duration) -> Self"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:36a5d9da165220ff085d7467a123f06967aa5369a25b489d094620945bab10dc",
+  "doc": "Tries to downcast to Policy",
+  "file": "store/resource.rs",
+  "id": "code:store/resource.rs::function::Resource::as_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 153,
+  "line_start": 147,
+  "name": "as_policy",
+  "signature": "pub fn as_policy(&self) -> Option<&Policy>"
+}

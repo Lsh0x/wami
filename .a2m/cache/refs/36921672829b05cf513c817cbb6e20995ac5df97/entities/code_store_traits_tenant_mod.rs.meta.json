@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/traits/tenant/mod.rs::trait::TenantStore"
+  ],
+  "content_hash": "8fcc312041196b7cac616ae668d1c47d68ee8aeadc6f072bc415ced2835ec0e7",
+  "doc": "",
+  "file": "store/traits/tenant/mod.rs",
+  "id": "code:store/traits/tenant/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 43,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

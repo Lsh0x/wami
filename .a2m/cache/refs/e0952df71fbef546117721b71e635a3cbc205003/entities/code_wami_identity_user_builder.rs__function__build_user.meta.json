@@ -1,0 +1,25 @@
+{
+  "callees": [
+    "extern:Uuid::new_v4",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder",
+    "extern:Utc::now"
+  ],
+  "callers": [
+    "code:crates/wami/examples/01_hello_wami.rs::function::main",
+    "code:crates/wami/examples/02_basic_crud_operations.rs::function::main"
+  ],
+  "children": [],
+  "content_hash": "sha256:3d6aa361d3244c0f549519052f85c6c7cfb9afec17a7eb8ab98e22076e69bdcc",
+  "doc": "",
+  "file": "wami/identity/user/builder.rs",
+  "id": "code:wami/identity/user/builder.rs::function::build_user",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 46,
+  "line_start": 13,
+  "name": "build_user",
+  "signature": "pub fn build_user(user_name: String, path: Option<String>, context: &WamiContext) -> Result<User>"
+}

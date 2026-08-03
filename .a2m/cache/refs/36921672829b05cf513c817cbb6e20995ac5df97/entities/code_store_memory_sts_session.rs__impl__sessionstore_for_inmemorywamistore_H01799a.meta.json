@@ -1,0 +1,25 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/sts/session.rs::function::SessionStore for InMemoryWamiStore::create_session",
+    "code:store/memory/sts/session.rs::function::SessionStore for InMemoryWamiStore::get_session",
+    "code:store/memory/sts/session.rs::function::SessionStore for InMemoryWamiStore::delete_session",
+    "code:store/memory/sts/session.rs::function::SessionStore for InMemoryWamiStore::list_sessions"
+  ],
+  "content_hash": "sha256:464a904d2abcf5b02a50b4791f6ca1ad7d52c06c220e01a3ad8adf5ab04a33b6",
+  "doc": "",
+  "file": "store/memory/sts/session.rs",
+  "id": "code:store/memory/sts/session.rs::impl::SessionStore for InMemoryWamiStore",
+  "implemented_by": [],
+  "implements": [
+    "code:store/traits/sts/session.rs::trait::SessionStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 54,
+  "line_start": 34,
+  "name": "SessionStore for InMemoryWamiStore",
+  "signature": "impl SessionStore for InMemoryWamiStore"
+}

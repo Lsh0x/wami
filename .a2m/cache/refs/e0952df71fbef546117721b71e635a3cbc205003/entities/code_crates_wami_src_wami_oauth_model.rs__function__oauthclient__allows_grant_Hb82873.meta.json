@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:1dd69919c36aad8994ae50986df793d87b84ca37d73e64c39cc7be03ed2b5131",
+  "doc": "Whether this client is allowed to use `grant`.",
+  "file": "crates/wami/src/wami/oauth/model.rs",
+  "id": "code:crates/wami/src/wami/oauth/model.rs::function::OAuthClient::allows_grant",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 52,
+  "line_start": 50,
+  "name": "allows_grant",
+  "signature": "pub fn allows_grant(&self, grant: GrantType) -> bool"
+}

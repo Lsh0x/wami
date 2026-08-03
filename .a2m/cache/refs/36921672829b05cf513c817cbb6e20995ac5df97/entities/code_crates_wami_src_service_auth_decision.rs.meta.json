@@ -1,0 +1,33 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/auth/decision.rs::struct::NonEmpty",
+    "code:crates/wami/src/service/auth/decision.rs::impl::NonEmpty<T>",
+    "code:crates/wami/src/service/auth/decision.rs::impl::Deref for NonEmpty<T>",
+    "code:crates/wami/src/service/auth/decision.rs::impl::IntoIterator for NonEmpty<T>",
+    "code:crates/wami/src/service/auth/decision.rs::impl::IntoIterator for &'a NonEmpty<T>",
+    "code:crates/wami/src/service/auth/decision.rs::enum::PolicySource",
+    "code:crates/wami/src/service/auth/decision.rs::impl::fmt::Display for PolicySource",
+    "code:crates/wami/src/service/auth/decision.rs::struct::StatementRef",
+    "code:crates/wami/src/service/auth/decision.rs::impl::fmt::Display for StatementRef",
+    "code:crates/wami/src/service/auth/decision.rs::enum::AllowReason",
+    "code:crates/wami/src/service/auth/decision.rs::enum::DenyReason",
+    "code:crates/wami/src/service/auth/decision.rs::enum::Decision",
+    "code:crates/wami/src/service/auth/decision.rs::impl::Decision",
+    "code:crates/wami/src/service/auth/decision.rs::impl::fmt::Display for Decision"
+  ],
+  "content_hash": "16399a9c7baac0840c8f2ddfc2b85eb95fb4da3cf63c2a3ccffe444b3fe2fa2c",
+  "doc": "",
+  "file": "crates/wami/src/service/auth/decision.rs",
+  "id": "code:crates/wami/src/service/auth/decision.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 465,
+  "line_start": 1,
+  "name": "decision",
+  "signature": ""
+}

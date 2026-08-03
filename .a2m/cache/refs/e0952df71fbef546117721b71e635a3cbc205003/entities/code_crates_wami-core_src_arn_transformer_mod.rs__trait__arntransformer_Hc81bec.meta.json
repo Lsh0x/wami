@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7fee9b8745a012860fc5e8b38b75bd64cf9f76533d4492b10f1854d96fa38623",
+  "doc": "Trait for transforming WAMI ARNs to and from provider-specific formats.",
+  "file": "crates/wami-core/src/arn/transformer/mod.rs",
+  "id": "code:crates/wami-core/src/arn/transformer/mod.rs::trait::ArnTransformer",
+  "implemented_by": [
+    "code:crates/wami-core/src/arn/transformer/aws.rs::impl::ArnTransformer for AwsArnTransformer",
+    "code:crates/wami-core/src/arn/transformer/azure.rs::impl::ArnTransformer for AzureArnTransformer",
+    "code:crates/wami-core/src/arn/transformer/gcp.rs::impl::ArnTransformer for GcpArnTransformer",
+    "code:crates/wami-core/src/arn/transformer/scaleway.rs::impl::ArnTransformer for ScalewayArnTransformer"
+  ],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "trait",
+  "line_end": 42,
+  "line_start": 29,
+  "name": "ArnTransformer",
+  "signature": "pub trait ArnTransformer"
+}

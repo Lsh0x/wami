@@ -1,0 +1,25 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/lib.rs::function::From<Value> for ConditionValue::from",
+    "code:crates/wami-condition/src/tests.rs::function::test_condition_value_as_string",
+    "code:crates/wami-condition/src/tests.rs::function::test_condition_value_as_number",
+    "code:crates/wami-condition/src/tests.rs::function::test_condition_value_as_boolean",
+    "code:crates/wami-condition/src/tests.rs::function::test_condition_value_as_array",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::build_condition_context"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:ConditionValue::Boolean",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "Boolean",
+  "signature": "ConditionValue::Boolean"
+}

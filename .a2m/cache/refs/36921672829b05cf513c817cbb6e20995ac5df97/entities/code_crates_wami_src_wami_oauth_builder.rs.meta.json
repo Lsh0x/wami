@@ -1,0 +1,26 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/wami/oauth/builder.rs::const::DEFAULT_TOKEN_LIFETIME",
+    "code:crates/wami/src/wami/oauth/builder.rs::function::build_client",
+    "code:crates/wami/src/wami/oauth/builder.rs::function::generate_client_secret",
+    "code:crates/wami/src/wami/oauth/builder.rs::function::build_claims",
+    "code:crates/wami/src/wami/oauth/builder.rs::function::build_user_claims",
+    "code:crates/wami/src/wami/oauth/builder.rs::function::build_token_record",
+    "code:crates/wami/src/wami/oauth/builder.rs::function::build_response"
+  ],
+  "content_hash": "eda92a7d971dfe4a88cefb67d1f861b48dac809fe614a55e6d9113ca1b661972",
+  "doc": "",
+  "file": "crates/wami/src/wami/oauth/builder.rs",
+  "id": "code:crates/wami/src/wami/oauth/builder.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 269,
+  "line_start": 1,
+  "name": "builder",
+  "signature": ""
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::enabled_client",
+    "extern:Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7607b9d7b2e08742685ca3b33cc3cf08bb6213e3ebe12d2f2e8d5d49e9e88c79",
+  "doc": "Record a user's approval of a client's scopes.\n\nWidening an existing consent replaces it; the record is what the user\nlast agreed to, not a log of every time they agreed.",
+  "file": "crates/wami/src/service/oauth/oidc.rs",
+  "id": "code:crates/wami/src/service/oauth/oidc.rs::function::OAuthService<S>::grant_consent",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 264,
+  "line_start": 240,
+  "name": "grant_consent",
+  "signature": "pub async fn grant_consent("
+}

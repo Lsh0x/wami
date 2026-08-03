@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a22cf24e2c2f5ef220a9105f1b229da3a22364874582c88087dee5c027f4cba5",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wami_quota_remaining_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7647,
+  "line_start": 7643,
+  "name": "test_wami_quota_remaining_key",
+  "signature": "fn test_wami_quota_remaining_key()"
+}

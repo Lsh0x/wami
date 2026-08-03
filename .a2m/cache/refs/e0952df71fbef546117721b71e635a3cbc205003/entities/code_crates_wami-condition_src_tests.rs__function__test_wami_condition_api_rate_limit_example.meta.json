@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:80fcd34354bc26cc92542dc8d9af9028e725f0e437c3016c4033cbd4c3eeacce",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_wami_condition_api_rate_limit_example",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7974,
+  "line_start": 7956,
+  "name": "test_wami_condition_api_rate_limit_example",
+  "signature": "fn test_wami_condition_api_rate_limit_example()"
+}

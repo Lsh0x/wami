@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:57c63d227856b82d19d028020643bd54fa262502675671dc1e1380232abdaedd",
+  "doc": "",
+  "file": "store/traits/policies/policy.rs",
+  "id": "code:store/traits/policies/policy.rs::trait::PolicyStore",
+  "implemented_by": [
+    "code:store/memory/policies/policy.rs::impl::PolicyStore for InMemoryWamiStore"
+  ],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "trait",
+  "line_end": 31,
+  "line_start": 12,
+  "name": "PolicyStore",
+  "signature": "pub trait PolicyStore: Send + Sync"
+}

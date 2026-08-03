@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d72a5a01feb985922e75589c0dcc2b9533d3b6af2cd72e0186b68013af0e7186",
+  "doc": "",
+  "file": "store/memory/identity/identity_provider.rs",
+  "id": "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::create_oidc_provider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 101,
+  "line_start": 91,
+  "name": "create_oidc_provider",
+  "signature": "async fn create_oidc_provider(&mut self, provider: OidcProvider) -> Result<OidcProvider>"
+}

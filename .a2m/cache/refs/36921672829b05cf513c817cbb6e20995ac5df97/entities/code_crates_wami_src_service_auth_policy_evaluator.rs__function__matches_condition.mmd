@@ -1,0 +1,13 @@
+%% id: code:crates/wami/src/service/auth/policy_evaluator.rs::function::matches_condition
+%% kind: function
+%% file: crates/wami/src/service/auth/policy_evaluator.rs:168-180
+%% content_hash: sha256:9f6e96620999cbd71f8c8647f4d4d8339e693a7e89ef622f8b689cbb5a3df40f
+%% signature: pub fn matches_condition(statement: &PolicyStatement, cond_ctx: &ConditionContext) -> bool
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_crates_wami_src_service_auth_policy_evaluator_rs__function__matches_condition_Hfbd2c6cd:::function[matches_condition]
+  code_crates_wami_src_service_auth_policy_evaluator_rs__function__matches_condition_Hfbd2c6cd -- calls --> code_crates_wami_condition_src_evaluator_rs__function__parse_condition_block_H57f19e29:::function[parse_condition_block]
+  code_crates_wami_src_service_auth_policy_evaluator_rs__function__matches_condition_Hfbd2c6cd -- calls --> extern_wami_condition__evaluate_condition_block_Hb78e288a:::function[evaluate_condition_block]
+  code_crates_wami_src_service_auth_policy_evaluator_rs__function__evaluate_policy_document_Hac84d3b8:::function[evaluate_policy_document] -- calls --> code_crates_wami_src_service_auth_policy_evaluator_rs__function__matches_condition_Hfbd2c6cd

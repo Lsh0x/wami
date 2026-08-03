@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:7e5161eff279d64e1632d4f13c7de9ff115ba7d9ff29bc92e4e7b71653fdc9c6",
+  "doc": "",
+  "file": "store/memory/sts/identity.rs",
+  "id": "code:store/memory/sts/identity.rs::function::IdentityStore for InMemoryWamiStore::get_identity",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 37,
+  "line_start": 35,
+  "name": "get_identity",
+  "signature": "async fn get_identity(&self, arn: &str) -> Result<Option<CallerIdentity>>"
+}

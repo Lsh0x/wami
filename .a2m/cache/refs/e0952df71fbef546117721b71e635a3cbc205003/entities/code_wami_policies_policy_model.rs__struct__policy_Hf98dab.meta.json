@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:71537121250b5fd82b2db530028304ef2f00b1103a38eb7e03e64cae4866c586",
+  "doc": "",
+  "file": "wami/policies/policy/model.rs",
+  "id": "code:wami/policies/policy/model.rs::struct::Policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 42,
+  "line_start": 9,
+  "name": "Policy",
+  "signature": "pub struct Policy"
+}

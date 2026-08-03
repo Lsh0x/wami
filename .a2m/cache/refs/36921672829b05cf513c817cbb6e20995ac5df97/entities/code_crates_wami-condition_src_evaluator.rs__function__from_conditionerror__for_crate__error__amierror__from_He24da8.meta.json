@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3d9c45772923874b2d07f628601f78fedb1e293af59aaf66884a68a43729319a",
+  "doc": "",
+  "file": "crates/wami-condition/src/evaluator.rs",
+  "id": "code:crates/wami-condition/src/evaluator.rs::function::From<ConditionError> for crate::error::AmiError::from",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 57,
+  "line_start": 53,
+  "name": "from",
+  "signature": "fn from(err: ConditionError) -> Self"
+}

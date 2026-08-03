@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:faa50b284095b8f62a25bfac1ac7c41050b7ccd44c542fb686caef7e2b5d6a1b",
+  "doc": "",
+  "file": "store/memory/sso_admin/mod.rs",
+  "id": "code:store/memory/sso_admin/mod.rs::struct::InMemorySsoAdminStore",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 38,
+  "line_start": 32,
+  "name": "InMemorySsoAdminStore",
+  "signature": "pub struct InMemorySsoAdminStore"
+}

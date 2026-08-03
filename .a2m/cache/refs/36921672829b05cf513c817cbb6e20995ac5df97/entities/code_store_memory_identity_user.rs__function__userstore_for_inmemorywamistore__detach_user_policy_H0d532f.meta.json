@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:df528d144ef43c7c7b4a9ec548d224ca42e6d24e1bb25c39c1c06bdb43298855",
+  "doc": "",
+  "file": "store/memory/identity/user.rs",
+  "id": "code:store/memory/identity/user.rs::function::UserStore for InMemoryWamiStore::detach_user_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 118,
+  "line_start": 113,
+  "name": "detach_user_policy",
+  "signature": "async fn detach_user_policy(&mut self, user_name: &str, policy_arn: &str) -> Result<()>"
+}

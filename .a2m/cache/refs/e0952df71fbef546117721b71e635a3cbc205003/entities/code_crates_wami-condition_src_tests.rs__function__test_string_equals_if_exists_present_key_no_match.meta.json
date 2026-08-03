@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::create_test_context",
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:dca6788b56e2e0f3ff09da229d60c4b9942419ad5aa59cef88ee3fb314ddb190",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_string_equals_if_exists_present_key_no_match",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 465,
+  "line_start": 453,
+  "name": "test_string_equals_if_exists_present_key_no_match",
+  "signature": "fn test_string_equals_if_exists_present_key_no_match()"
+}

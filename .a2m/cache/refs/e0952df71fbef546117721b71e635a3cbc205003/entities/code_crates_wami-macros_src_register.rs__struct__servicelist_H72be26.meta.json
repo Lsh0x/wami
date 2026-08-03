@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b69e0b208f50cfdb7a9c4161816b2c7748b1f44f6da1bfcf9080fea1bd37b61e",
+  "doc": "",
+  "file": "crates/wami-macros/src/register.rs",
+  "id": "code:crates/wami-macros/src/register.rs::struct::ServiceList",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 43,
+  "line_start": 41,
+  "name": "ServiceList",
+  "signature": "struct ServiceList"
+}

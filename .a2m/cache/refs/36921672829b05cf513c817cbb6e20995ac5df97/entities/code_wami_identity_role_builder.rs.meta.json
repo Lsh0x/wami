@@ -1,0 +1,28 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/identity/role/builder.rs::function::build_role",
+    "code:wami/identity/role/builder.rs::function::build_role_legacy",
+    "code:wami/identity/role/builder.rs::function::update_assume_role_policy",
+    "code:wami/identity/role/builder.rs::function::update_description",
+    "code:wami/identity/role/builder.rs::function::update_max_session_duration",
+    "code:wami/identity/role/builder.rs::function::set_permissions_boundary",
+    "code:wami/identity/role/builder.rs::function::clear_permissions_boundary",
+    "code:wami/identity/role/builder.rs::function::add_tags",
+    "code:wami/identity/role/builder.rs::function::set_tenant_id"
+  ],
+  "content_hash": "c2f5e32f6d3f1986a8e1aa9df6fbf68a1c2bd5c443aba0de1ac5119dea3eb4fa",
+  "doc": "",
+  "file": "wami/identity/role/builder.rs",
+  "id": "code:wami/identity/role/builder.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 605,
+  "line_start": 1,
+  "name": "builder",
+  "signature": ""
+}

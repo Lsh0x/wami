@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5273db968561d75f8f583cdc916227b26f449560df16d3934a42c49f1c32a50f",
+  "doc": "",
+  "file": "crates/wami/examples/11_hybrid_cloud_setup.rs",
+  "id": "code:crates/wami/examples/11_hybrid_cloud_setup.rs::function::CloudProvider for OnPremiseProvider::validate_path",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 100,
+  "line_start": 89,
+  "name": "validate_path",
+  "signature": "fn validate_path(&self, path: &str) -> Result<()>"
+}

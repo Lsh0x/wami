@@ -1,0 +1,24 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/sts/identity.rs::function::IdentityStore for InMemoryWamiStore::create_identity",
+    "code:store/memory/sts/identity.rs::function::IdentityStore for InMemoryWamiStore::get_identity",
+    "code:store/memory/sts/identity.rs::function::IdentityStore for InMemoryWamiStore::list_identities"
+  ],
+  "content_hash": "sha256:6582200df7e4e1a603b24917f361b664aebaadc686522a27a92704a2263630b6",
+  "doc": "",
+  "file": "store/memory/sts/identity.rs",
+  "id": "code:store/memory/sts/identity.rs::impl::IdentityStore for InMemoryWamiStore",
+  "implemented_by": [],
+  "implements": [
+    "code:store/traits/sts/identity.rs::trait::IdentityStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 42,
+  "line_start": 28,
+  "name": "IdentityStore for InMemoryWamiStore",
+  "signature": "impl IdentityStore for InMemoryWamiStore"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/examples/04_simple_multi_tenant.rs::function::main"
+  ],
+  "content_hash": "83b079c2405cd4ae0b112713e54168c49e2839502335ad910c58ccc5773cebf3",
+  "doc": "",
+  "file": "crates/wami/examples/04_simple_multi_tenant.rs",
+  "id": "code:crates/wami/examples/04_simple_multi_tenant.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 228,
+  "line_start": 1,
+  "name": "04_simple_multi_tenant",
+  "signature": ""
+}

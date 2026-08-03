@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:076079cc4db14a865fcd2bc5fe17a0912e8b34a3cadd42dd1d3d6c358170b471",
+  "doc": "",
+  "file": "store/memory/identity/identity_provider.rs",
+  "id": "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::update_oidc_provider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 117,
+  "line_start": 107,
+  "name": "update_oidc_provider",
+  "signature": "async fn update_oidc_provider(&mut self, provider: OidcProvider) -> Result<OidcProvider>"
+}

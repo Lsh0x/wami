@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:33024504a65a509e74e10071cf21bc457d64f29911b9cb056a0bfa4f72280a75",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_not_ip_address_ifexists_missing_key",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 6606,
+  "line_start": 6592,
+  "name": "test_not_ip_address_ifexists_missing_key",
+  "signature": "fn test_not_ip_address_ifexists_missing_key()"
+}

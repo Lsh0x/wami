@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "extern:uuid::Uuid::new_v4"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ccf94a7db7e1493da83fd14a84e0a7438d458adb8a6fd1c6cad5cc917bbd140c",
+  "doc": "",
+  "file": "crates/cloud-provider/wami-provider-azure/src/lib.rs",
+  "id": "code:crates/cloud-provider/wami-provider-azure/src/lib.rs::function::CloudProvider for AzureProvider::generate_resource_id",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 82,
+  "line_start": 80,
+  "name": "generate_resource_id",
+  "signature": "fn generate_resource_id(&self, _resource_type: ResourceType) -> String"
+}

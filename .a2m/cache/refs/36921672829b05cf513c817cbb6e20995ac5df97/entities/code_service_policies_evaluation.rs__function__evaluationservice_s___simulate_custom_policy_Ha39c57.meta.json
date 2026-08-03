@@ -1,0 +1,23 @@
+{
+  "callees": [
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::build_condition_context",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::evaluate_action",
+    "code:service/policies/evaluation.rs::function::EvaluationService<S>::find_matching_statements",
+    "extern:serde_json::from_str"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:cd6a75a97bae72a2e35521fac0f78e588b8066ca5dad0b228d7f59abef38ad48",
+  "doc": "Simulate custom policy documents without creating them\n\nThis is a stateless operation that evaluates policy documents directly.",
+  "file": "service/policies/evaluation.rs",
+  "id": "code:service/policies/evaluation.rs::function::EvaluationService<S>::simulate_custom_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 113,
+  "line_start": 58,
+  "name": "simulate_custom_policy",
+  "signature": "pub async fn simulate_custom_policy("
+}

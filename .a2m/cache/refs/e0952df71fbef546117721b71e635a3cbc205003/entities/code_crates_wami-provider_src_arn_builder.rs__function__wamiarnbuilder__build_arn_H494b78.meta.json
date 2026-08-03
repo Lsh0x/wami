@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami-provider/src/arn_builder.rs::function::WamiArnBuilder::hash_account"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:2fed119e85f8e9003718a12955b3c95f3b7d2758ed9bb71295802cd57bd16591",
+  "doc": "Builds a WAMI ARN\n\n# Arguments\n\n* `service` - Service name (\"iam\", \"sts\", \"tenant\")\n* `account_id` - Real account/project ID\n* `resource_type` - Resource type (\"user\", \"role\", \"policy\", etc.)\n* `path` - Resource path (e.g., \"/tenants/acme/\")\n* `name` - Resource name\n\n# Returns\n\nA WAMI ARN in format: `arn:wami:<service>:tenant-<hash>:<resource_type><path><name>`",
+  "file": "crates/wami-provider/src/arn_builder.rs",
+  "id": "code:crates/wami-provider/src/arn_builder.rs::function::WamiArnBuilder::build_arn",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 88,
+  "line_start": 75,
+  "name": "build_arn",
+  "signature": "pub fn build_arn("
+}

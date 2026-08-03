@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:80b8cdf4ebcfe55e54e00a3f299c4049903a737175785d86eb3285364791885f",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::token_issue_time",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 246,
+  "line_start": 243,
+  "name": "token_issue_time",
+  "signature": "pub fn token_issue_time(mut self, time: DateTime<Utc>) -> Self"
+}

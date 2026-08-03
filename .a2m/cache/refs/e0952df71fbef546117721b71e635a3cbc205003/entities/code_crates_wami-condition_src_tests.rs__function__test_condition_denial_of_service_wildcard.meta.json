@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder",
+    "extern:std::time::Instant::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:239e3736e2c16dc49a4b1ffb8c3ead488712bf7373069f7fdddabf738e807df9",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_denial_of_service_wildcard",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 1807,
+  "line_start": 1783,
+  "name": "test_condition_denial_of_service_wildcard",
+  "signature": "fn test_condition_denial_of_service_wildcard()"
+}

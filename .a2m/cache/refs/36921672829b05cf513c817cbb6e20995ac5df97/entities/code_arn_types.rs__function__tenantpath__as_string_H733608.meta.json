@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0ebc97577dee7ecd0bb3cb2847cce17bcc8ec80354f8f70e326643e1822b4560",
+  "doc": "Returns the full path as a string joined by '/'.",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::function::TenantPath::as_string",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 91,
+  "line_start": 85,
+  "name": "as_string",
+  "signature": "pub fn as_string(&self) -> String"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d47038f326513772c8050aa66c9f2ca00ae3e87754641e634291b4c0ab925355",
+  "doc": "",
+  "file": "wami/identity/group/requests.rs",
+  "id": "code:wami/identity/group/requests.rs::struct::ListGroupsResponse",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 37,
+  "line_start": 33,
+  "name": "ListGroupsResponse",
+  "signature": "pub struct ListGroupsResponse"
+}

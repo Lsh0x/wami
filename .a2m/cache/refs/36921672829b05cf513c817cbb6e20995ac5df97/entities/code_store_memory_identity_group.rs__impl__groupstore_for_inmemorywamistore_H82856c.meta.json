@@ -1,0 +1,36 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::create_group",
+    "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::get_group",
+    "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::update_group",
+    "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::delete_group",
+    "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::list_groups",
+    "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::list_groups_for_user",
+    "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::add_user_to_group",
+    "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::remove_user_from_group",
+    "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::attach_group_policy",
+    "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::detach_group_policy",
+    "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::list_attached_group_policies",
+    "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::put_group_policy",
+    "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::get_group_policy",
+    "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::delete_group_policy",
+    "code:store/memory/identity/group.rs::function::GroupStore for InMemoryWamiStore::list_group_policies"
+  ],
+  "content_hash": "sha256:006b7a8e3502a6274dd4a20e818edd96f840e069ed6bb8075496e609e89c341a",
+  "doc": "",
+  "file": "store/memory/identity/group.rs",
+  "id": "code:store/memory/identity/group.rs::impl::GroupStore for InMemoryWamiStore",
+  "implemented_by": [],
+  "implements": [
+    "code:store/traits/identity/group.rs::trait::GroupStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 169,
+  "line_start": 11,
+  "name": "GroupStore for InMemoryWamiStore",
+  "signature": "impl GroupStore for InMemoryWamiStore"
+}

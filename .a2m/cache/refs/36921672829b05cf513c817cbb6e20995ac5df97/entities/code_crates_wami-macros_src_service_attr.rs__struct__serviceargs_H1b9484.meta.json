@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a6a1f33ea6069279b66c78ded2c9744658f0551536a3796b9bf9ff4ce22f8715",
+  "doc": "",
+  "file": "crates/wami-macros/src/service_attr.rs",
+  "id": "code:crates/wami-macros/src/service_attr.rs::struct::ServiceArgs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 20,
+  "line_start": 17,
+  "name": "ServiceArgs",
+  "signature": "struct ServiceArgs"
+}

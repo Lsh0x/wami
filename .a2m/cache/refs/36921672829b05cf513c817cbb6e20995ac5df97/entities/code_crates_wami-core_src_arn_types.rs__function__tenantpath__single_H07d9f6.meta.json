@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-core/src/arn/builder.rs::function::ArnBuilder::tenant"
+  ],
+  "children": [],
+  "content_hash": "sha256:c4233b9eba1b473377d35f6147dc37439a65d9b48a9d444fcf0db7545a3e69f6",
+  "doc": "Creates a tenant path from a single numeric tenant ID.",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::function::TenantPath::single",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 78,
+  "line_start": 74,
+  "name": "single",
+  "signature": "pub fn single(tenant_id: u64) -> Self"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "c2facbbf514dc6c8bfc7c942c6b87f8702f01c5778124ef10a734bd8c14ba201",
+  "doc": "",
+  "file": "service/reports/mod.rs",
+  "id": "code:service/reports/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 8,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

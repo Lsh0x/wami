@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:wami/identity/root_user.rs::function::RootUser::aws_arn"
+  ],
+  "children": [],
+  "content_hash": "sha256:3e5286a05863af072d77041f3662f2746c61748f81ffd387678800b1b22893cc",
+  "doc": "Get the WAMI ARN",
+  "file": "wami/identity/root_user.rs",
+  "id": "code:wami/identity/root_user.rs::function::RootUser::arn",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 128,
+  "line_start": 126,
+  "name": "arn",
+  "signature": "pub fn arn(&self) -> &WamiArn"
+}

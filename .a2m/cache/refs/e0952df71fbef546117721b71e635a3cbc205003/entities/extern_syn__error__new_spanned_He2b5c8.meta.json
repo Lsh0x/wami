@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-macros/src/derive_service.rs::function::expand_inner",
+    "code:crates/wami-macros/src/derive_service.rs::function::parse_args"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:syn::Error::new_spanned",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "new_spanned",
+  "signature": "syn::Error::new_spanned"
+}

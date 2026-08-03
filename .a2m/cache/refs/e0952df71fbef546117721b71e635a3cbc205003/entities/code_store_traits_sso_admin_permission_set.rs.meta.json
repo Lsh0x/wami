@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/traits/sso_admin/permission_set.rs::trait::PermissionSetStore"
+  ],
+  "content_hash": "04b2cefb521eb494227cc9caf101bb0d11e7c4b5a6cb0d62687a093f99572437",
+  "doc": "",
+  "file": "store/traits/sso_admin/permission_set.rs",
+  "id": "code:store/traits/sso_admin/permission_set.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 26,
+  "line_start": 1,
+  "name": "permission_set",
+  "signature": ""
+}

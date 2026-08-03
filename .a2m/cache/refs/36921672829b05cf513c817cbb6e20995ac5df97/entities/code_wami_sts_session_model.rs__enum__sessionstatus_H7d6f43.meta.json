@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:fb8a061e364a5216700dc21abc91fec4389b9e25c25a296ec5b2e8988f3aab50",
+  "doc": "",
+  "file": "wami/sts/session/model.rs",
+  "id": "code:wami/sts/session/model.rs::enum::SessionStatus",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 72,
+  "line_start": 65,
+  "name": "SessionStatus",
+  "signature": "pub enum SessionStatus"
+}

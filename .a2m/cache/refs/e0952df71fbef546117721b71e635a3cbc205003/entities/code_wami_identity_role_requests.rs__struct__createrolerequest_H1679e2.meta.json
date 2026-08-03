@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:085879a8987c127857ed83668f088d00deb86e5eeaf6ede71587e9ef92ace265",
+  "doc": "",
+  "file": "wami/identity/role/requests.rs",
+  "id": "code:wami/identity/role/requests.rs::struct::CreateRoleRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 25,
+  "line_start": 10,
+  "name": "CreateRoleRequest",
+  "signature": "pub struct CreateRoleRequest"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/examples/03_service_layer_intro.rs::function::main"
+  ],
+  "content_hash": "0d08035fa37564fc0b5f6879748954982369de50868221a68e25cb961bc0c889",
+  "doc": "",
+  "file": "crates/wami/examples/03_service_layer_intro.rs",
+  "id": "code:crates/wami/examples/03_service_layer_intro.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 158,
+  "line_start": 1,
+  "name": "03_service_layer_intro",
+  "signature": ""
+}

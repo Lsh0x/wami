@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/identity/user.rs::function::UserService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f19dbc195ba37c58fd15f667dbedd782b19fc2b2dde83c292e023c68777ff1d8",
+  "doc": "List tags for a user",
+  "file": "crates/wami/src/service/identity/user.rs",
+  "id": "code:crates/wami/src/service/identity/user.rs::function::UserService<S>::list_user_tags",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 196,
+  "line_start": 192,
+  "name": "list_user_tags",
+  "signature": "pub async fn list_user_tags(&self, context: &WamiContext, user_name: &str) -> Result<Vec<Tag>>"
+}

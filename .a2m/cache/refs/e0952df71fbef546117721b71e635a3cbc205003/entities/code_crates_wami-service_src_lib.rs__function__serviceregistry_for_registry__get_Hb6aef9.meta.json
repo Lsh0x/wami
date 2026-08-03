@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3188196095b2c8d44a8d60544ae16284c58fa6065ca6ce3870ea61e821cd12d1",
+  "doc": "",
+  "file": "crates/wami-service/src/lib.rs",
+  "id": "code:crates/wami-service/src/lib.rs::function::ServiceRegistry for Registry::get",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 48,
+  "line_start": 42,
+  "name": "get",
+  "signature": "fn get<S>(&self, name: &str) -> Option<Arc<S>>"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:9a639dee0f019eaead83d5202bbdde7185fb70d457075493f3aab4f276c0dca8",
+  "doc": "Tries to downcast to Tenant",
+  "file": "store/resource.rs",
+  "id": "code:store/resource.rs::function::Resource::as_tenant",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 189,
+  "line_start": 183,
+  "name": "as_tenant",
+  "signature": "pub fn as_tenant(&self) -> Option<&Tenant>"
+}

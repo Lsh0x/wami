@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:040bebb38eaa39390263487efd760ed5476366ad9fa38aeb052e3b2687fe1f2b",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_condition_sql_injection_in_pattern",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 1587,
+  "line_start": 1573,
+  "name": "test_condition_sql_injection_in_pattern",
+  "signature": "fn test_condition_sql_injection_in_pattern()"
+}

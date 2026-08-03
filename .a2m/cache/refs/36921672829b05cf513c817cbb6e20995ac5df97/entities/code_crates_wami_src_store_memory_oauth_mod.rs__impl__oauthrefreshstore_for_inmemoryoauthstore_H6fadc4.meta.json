@@ -1,0 +1,25 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthRefreshStore for InMemoryOAuthStore::store_refresh_token",
+    "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthRefreshStore for InMemoryOAuthStore::get_refresh_token",
+    "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthRefreshStore for InMemoryOAuthStore::rotate_refresh_token",
+    "code:crates/wami/src/store/memory/oauth/mod.rs::function::OAuthRefreshStore for InMemoryOAuthStore::revoke_refresh_chain"
+  ],
+  "content_hash": "sha256:4d65ce26ef49a96ca4c3be9c108ad708215411d39ea3643dd4bbb10268a92154",
+  "doc": "",
+  "file": "crates/wami/src/store/memory/oauth/mod.rs",
+  "id": "code:crates/wami/src/store/memory/oauth/mod.rs::impl::OAuthRefreshStore for InMemoryOAuthStore",
+  "implemented_by": [],
+  "implements": [
+    "code:crates/wami/src/store/traits/oauth/mod.rs::trait::OAuthRefreshStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 187,
+  "line_start": 141,
+  "name": "OAuthRefreshStore for InMemoryOAuthStore",
+  "signature": "impl OAuthRefreshStore for InMemoryOAuthStore"
+}

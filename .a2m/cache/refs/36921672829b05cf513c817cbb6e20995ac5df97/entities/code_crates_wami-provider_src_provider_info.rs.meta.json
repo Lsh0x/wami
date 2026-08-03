@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-provider/src/provider_info.rs::struct::ProviderInfo",
+    "code:crates/wami-provider/src/provider_info.rs::impl::ProviderInfo"
+  ],
+  "content_hash": "4426b7631b614c1d7d02cd54d91723222edd06aa2e42e4eb3f8f73c28eb9cf61",
+  "doc": "",
+  "file": "crates/wami-provider/src/provider_info.rs",
+  "id": "code:crates/wami-provider/src/provider_info.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 126,
+  "line_start": 1,
+  "name": "provider_info",
+  "signature": ""
+}

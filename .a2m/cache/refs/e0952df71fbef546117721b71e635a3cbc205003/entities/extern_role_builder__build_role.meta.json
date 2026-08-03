@@ -1,0 +1,32 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami/src/service/identity/role.rs::function::RoleService<S>::create_role",
+    "code:service/identity/service_linked_role.rs::function::ServiceLinkedRoleService<S>::create_service_linked_role",
+    "code:store/memory/identity/tests.rs::function::test_role_create_and_get",
+    "code:store/memory/identity/tests.rs::function::test_role_update",
+    "code:store/memory/identity/tests.rs::function::test_role_delete",
+    "code:store/memory/identity/tests.rs::function::test_role_list_multiple",
+    "code:store/memory/identity/tests.rs::function::test_role_with_path_prefix",
+    "code:store/memory/identity/tests.rs::function::test_role_list_with_pagination",
+    "code:store/memory/identity/tests.rs::function::test_role_policy_management",
+    "code:store/memory/identity/tests.rs::function::test_role_inline_policy_management",
+    "code:store/memory/identity/tests.rs::function::test_role_list_path_prefix_empty_string",
+    "code:store/memory/identity/tests.rs::function::test_role_list_pagination_max_items_zero",
+    "code:wami/instance/bootstrap.rs::function::InstanceBootstrap::create_platform_roles"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:role_builder::build_role",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "build_role",
+  "signature": "role_builder::build_role"
+}

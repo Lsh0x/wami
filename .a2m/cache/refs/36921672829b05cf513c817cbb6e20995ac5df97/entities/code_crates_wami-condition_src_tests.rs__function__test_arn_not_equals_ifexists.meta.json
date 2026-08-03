@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5a9c10acd38e55152d87b2b34e9f7b3a1a8747173152f48b568aab7171b28b13",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_arn_not_equals_ifexists",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 4752,
+  "line_start": 4721,
+  "name": "test_arn_not_equals_ifexists",
+  "signature": "fn test_arn_not_equals_ifexists()"
+}

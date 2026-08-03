@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0af01161899363cf00182feee7878b8c403dba5e0d20c2f804cd8cdef707c56b",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_ipv4_parsing_edge_cases",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 6170,
+  "line_start": 6130,
+  "name": "test_ipv4_parsing_edge_cases",
+  "signature": "fn test_ipv4_parsing_edge_cases()"
+}

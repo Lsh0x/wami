@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5431d1ddd5446cf4e477e37a0e3256cf3789ac63eb9d9f3b58c96a380b6fee9a",
+  "doc": "",
+  "file": "store/memory/identity/identity_provider.rs",
+  "id": "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::create_saml_provider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 26,
+  "line_start": 16,
+  "name": "create_saml_provider",
+  "signature": "async fn create_saml_provider(&mut self, provider: SamlProvider) -> Result<SamlProvider>"
+}

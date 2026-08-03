@@ -1,0 +1,15 @@
+%% id: code:wami/instance/bootstrap.rs::function::InstanceBootstrap::create_platform_roles
+%% kind: function
+%% file: wami/instance/bootstrap.rs:261-367
+%% content_hash: sha256:0be9e972bbfc6dfdbedf33fd459d82759c27330c2728a66d5d7356bb608447e6
+%% signature: async fn create_platform_roles<S>(store: &mut S, instance_id: &str) -> Result<()>
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_wami_instance_bootstrap_rs__function__InstanceBootstrap__create_platform_roles_H7de0fce8:::function[create_platform_roles]
+  code_wami_instance_bootstrap_rs__function__InstanceBootstrap__create_platform_roles_H7de0fce8 -- calls --> code_crates_wami_core_src_arn_builder_rs__function__WamiArn__builder_Hb7ab6e53:::function[builder]
+  code_wami_instance_bootstrap_rs__function__InstanceBootstrap__create_platform_roles_H7de0fce8 -- calls --> code_crates_wami_core_src_context_rs__function__WamiContext__builder_H35a6cc9b:::function[builder]
+  code_wami_instance_bootstrap_rs__function__InstanceBootstrap__create_platform_roles_H7de0fce8 -- calls --> extern_policy_builder__build_policy_H0f4f25bb:::function[build_policy]
+  code_wami_instance_bootstrap_rs__function__InstanceBootstrap__create_platform_roles_H7de0fce8 -- calls --> extern_role_builder__build_role_Hccaeef2b:::function[build_role]
+  code_wami_instance_bootstrap_rs__function__InstanceBootstrap__initialize_instance_H58b33c19:::function[initialize_instance] -- calls --> code_wami_instance_bootstrap_rs__function__InstanceBootstrap__create_platform_roles_H7de0fce8

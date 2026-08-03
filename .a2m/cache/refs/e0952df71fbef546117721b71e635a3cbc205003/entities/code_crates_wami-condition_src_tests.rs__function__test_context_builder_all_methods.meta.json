@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder",
+    "extern:Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:fb7b3bb6c98859e9b664facb7f3636119485f68c3636d332ea426fdd899049df",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_context_builder_all_methods",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 3280,
+  "line_start": 3234,
+  "name": "test_context_builder_all_methods",
+  "signature": "fn test_context_builder_all_methods()"
+}

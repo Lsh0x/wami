@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:de7064d3caf3e2fb56e054c47933c11ede47955c15a5d555a090695057475920",
+  "doc": "Returns the root (first) tenant ID as a string.",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::function::TenantPath::root",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 96,
+  "line_start": 94,
+  "name": "root",
+  "signature": "pub fn root(&self) -> Option<String>"
+}

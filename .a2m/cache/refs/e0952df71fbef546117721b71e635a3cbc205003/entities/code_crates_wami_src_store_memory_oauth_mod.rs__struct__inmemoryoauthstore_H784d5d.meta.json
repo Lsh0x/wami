@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:745872464954a876fd48ebdf2c3ae839e3bb062cea45c2409c77aa555f1ecf94",
+  "doc": "",
+  "file": "crates/wami/src/store/memory/oauth/mod.rs",
+  "id": "code:crates/wami/src/store/memory/oauth/mod.rs::struct::InMemoryOAuthStore",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 19,
+  "line_start": 16,
+  "name": "InMemoryOAuthStore",
+  "signature": "pub struct InMemoryOAuthStore"
+}

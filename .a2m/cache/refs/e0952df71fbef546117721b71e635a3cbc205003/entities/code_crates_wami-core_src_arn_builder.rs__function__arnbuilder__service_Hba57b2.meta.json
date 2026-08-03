@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-core/src/arn/builder.rs::function::ArnBuilder::service_str",
+    "code:crates/wami-core/src/arn/builder.rs::function::ArnBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:c7c27fece52590d9a731dcee5ccd407d82d648c3ff9537a040bf971023e9b3e4",
+  "doc": "Sets the service.\n\n# Examples\n\n```\nuse wami_core::arn::{WamiArn, Service};\n\nlet builder = WamiArn::builder().service(Service::Iam);\n```",
+  "file": "crates/wami-core/src/arn/builder.rs",
+  "id": "code:crates/wami-core/src/arn/builder.rs::function::ArnBuilder::service",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 75,
+  "line_start": 72,
+  "name": "service",
+  "signature": "pub fn service(mut self, service: Service) -> Self"
+}

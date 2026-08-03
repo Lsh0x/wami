@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami/examples/arn_architecture_demo.rs::function::main"
+  ],
+  "children": [],
+  "content_hash": "sha256:2e339cfbbeba95141c2c89f1fd0661e9978e6945c4f85e283eb9e52601251ab7",
+  "doc": "",
+  "file": "crates/wami/examples/arn_architecture_demo.rs",
+  "id": "code:crates/wami/examples/arn_architecture_demo.rs::function::demo_multi_provider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 165,
+  "line_start": 117,
+  "name": "demo_multi_provider",
+  "signature": "fn demo_multi_provider() -> Result<(), Box<dyn std::error::Error>>"
+}

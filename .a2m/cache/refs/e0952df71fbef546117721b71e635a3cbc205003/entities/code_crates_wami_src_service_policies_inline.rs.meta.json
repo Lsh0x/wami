@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/policies/inline.rs::trait::InlinePolicyServiceStore",
+    "code:crates/wami/src/service/policies/inline.rs::impl::InlinePolicyServiceStore for T",
+    "code:crates/wami/src/service/policies/inline.rs::struct::InlinePolicyService",
+    "code:crates/wami/src/service/policies/inline.rs::impl::InlinePolicyService<S>"
+  ],
+  "content_hash": "c87c978a1503ff5f14bb0c040f6872474fb855fa933bd4179cd9fa830d71720b",
+  "doc": "",
+  "file": "crates/wami/src/service/policies/inline.rs",
+  "id": "code:crates/wami/src/service/policies/inline.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 1361,
+  "line_start": 1,
+  "name": "inline",
+  "signature": ""
+}

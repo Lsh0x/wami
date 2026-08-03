@@ -1,0 +1,25 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-core/src/actions.rs::function::Deserialize<'de> for WamiAction::deserialize",
+    "code:crates/wami-core/src/arn/types.rs::function::Deserialize<'de> for TenantPath::deserialize",
+    "code:crates/wami-core/src/arn/types.rs::function::Deserialize<'de> for WamiArn::deserialize",
+    "code:arn/types.rs::function::Deserialize<'de> for TenantPath::deserialize",
+    "code:arn/types.rs::function::Deserialize<'de> for WamiArn::deserialize",
+    "code:wami/tenant/model.rs::function::Deserialize<'de> for TenantId::deserialize"
+  ],
+  "children": [],
+  "content_hash": "",
+  "doc": "",
+  "file": "",
+  "id": "extern:String::deserialize",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "extern",
+  "line_end": 0,
+  "line_start": 0,
+  "name": "deserialize",
+  "signature": "String::deserialize"
+}

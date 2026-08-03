@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:07f714f406c23d8253bce2c21a419f2fbbef6a67350224cc7000f3a2467ae519",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::proxy_detected",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 506,
+  "line_start": 503,
+  "name": "proxy_detected",
+  "signature": "pub fn proxy_detected(mut self, detected: bool) -> Self"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d5055d9bdef332f09d724caa90bbfc3ba0b11e45174651ba5bb7e308cd1519dd",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/parser.rs",
+  "id": "code:crates/wami-core/src/arn/parser.rs::enum::ArnParseError",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 16,
+  "line_start": 9,
+  "name": "ArnParseError",
+  "signature": "pub enum ArnParseError"
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b354b3f21b031f7f5c3478a355c1d8ea413822309f11913669f0e307b094ed2c",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_for_any_value_string_equals_empty_request",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 1221,
+  "line_start": 1206,
+  "name": "test_for_any_value_string_equals_empty_request",
+  "signature": "fn test_for_any_value_string_equals_empty_request()"
+}

@@ -1,0 +1,24 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/service/auth/authorization.rs::function::AuthorizationService<S>::new",
+    "code:crates/wami/src/service/auth/authorization.rs::function::AuthorizationService<S>::authorize",
+    "code:crates/wami/src/service/auth/authorization.rs::function::AuthorizationService<S>::check_or_deny",
+    "code:crates/wami/src/service/auth/authorization.rs::function::AuthorizationService<S>::evaluate_user_policies",
+    "code:crates/wami/src/service/auth/authorization.rs::function::AuthorizationService<S>::extract_user_name_from_arn"
+  ],
+  "content_hash": "sha256:b5380a0a1c5447c85a462d1247efdd7b24ca79b25e43701ee09547a58ba6e0ee",
+  "doc": "",
+  "file": "crates/wami/src/service/auth/authorization.rs",
+  "id": "code:crates/wami/src/service/auth/authorization.rs::impl::AuthorizationService<S>",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 343,
+  "line_start": 61,
+  "name": "AuthorizationService<S>",
+  "signature": "impl<S> AuthorizationService<S>"
+}

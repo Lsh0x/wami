@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "extern:proc_macro2::Span::call_site"
+  ],
+  "callers": [
+    "code:crates/wami-macros/src/register.rs::function::expand"
+  ],
+  "children": [],
+  "content_hash": "sha256:1ab18187fd96ba497e12fa458c2116fefc1c82dbed70291cba8c8367755b3c6b",
+  "doc": "",
+  "file": "crates/wami-macros/src/register.rs",
+  "id": "code:crates/wami-macros/src/register.rs::function::generate",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 39,
+  "line_start": 15,
+  "name": "generate",
+  "signature": "fn generate(idents: &[Ident]) -> Result<proc_macro2::TokenStream>"
+}

@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_json",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f3a4e9cccaa47031bbe092ea6e181a5ef531331c7e235266b098407ef11a303e",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_string_like_missing_key_returns_false",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 168,
+  "line_start": 159,
+  "name": "test_string_like_missing_key_returns_false",
+  "signature": "fn test_string_like_missing_key_returns_false()"
+}

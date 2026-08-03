@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d0d06f0837d92ae12287e0f8d452991dc74adf1104d64942bc657ff5481d35e5",
+  "doc": "List all SSO instances",
+  "file": "service/sso_admin/instance.rs",
+  "id": "code:service/sso_admin/instance.rs::function::InstanceService<S>::list_instances",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 53,
+  "line_start": 51,
+  "name": "list_instances",
+  "signature": "pub async fn list_instances(&self) -> Result<Vec<SsoInstance>>"
+}

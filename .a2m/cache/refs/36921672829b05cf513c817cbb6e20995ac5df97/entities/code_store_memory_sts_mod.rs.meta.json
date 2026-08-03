@@ -1,0 +1,21 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/sts/mod.rs::struct::InMemoryStsStore",
+    "code:store/memory/sts/mod.rs::impl::InMemoryStsStore"
+  ],
+  "content_hash": "2f10b9e5e26c70dfce0b59a4942560432175847b6fd35fd8a5633c27caf2204a",
+  "doc": "",
+  "file": "store/memory/sts/mod.rs",
+  "id": "code:store/memory/sts/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 43,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

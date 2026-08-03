@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:role_builder::build_role"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0f908c4538237d9ae86c9ed84b7ffb02593dd06adae0b80a0815abaa01a83222",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_role_inline_policy_management",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 727,
+  "line_start": 679,
+  "name": "test_role_inline_policy_management",
+  "signature": "async fn test_role_inline_policy_management()"
+}

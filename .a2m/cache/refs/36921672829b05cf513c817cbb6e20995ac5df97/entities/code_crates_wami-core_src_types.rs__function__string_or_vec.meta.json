@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "extern:Value::deserialize",
+    "extern:serde::de::Error::custom"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:62bdc91b9f3c7619e76d6696d974d284088f40efecaa24afc625129677cf5be6",
+  "doc": "Deserialize either a single string or an array of strings into a Vec<String>",
+  "file": "crates/wami-core/src/types.rs",
+  "id": "code:crates/wami-core/src/types.rs::function::string_or_vec",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 144,
+  "line_start": 125,
+  "name": "string_or_vec",
+  "signature": "fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>"
+}

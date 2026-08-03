@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d5aa23dca8f4865f0d4617576b61e1d6fecba9054caa31848f1d82ac35f00e37",
+  "doc": "",
+  "file": "crates/wami-condition/src/lib.rs",
+  "id": "code:crates/wami-condition/src/lib.rs::enum::ConditionValue",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 35,
+  "line_start": 30,
+  "name": "ConditionValue",
+  "signature": "pub enum ConditionValue"
+}

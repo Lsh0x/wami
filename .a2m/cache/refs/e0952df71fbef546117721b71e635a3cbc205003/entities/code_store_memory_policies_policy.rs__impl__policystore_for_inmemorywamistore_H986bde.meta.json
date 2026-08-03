@@ -1,0 +1,26 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:store/memory/policies/policy.rs::function::PolicyStore for InMemoryWamiStore::create_policy",
+    "code:store/memory/policies/policy.rs::function::PolicyStore for InMemoryWamiStore::get_policy",
+    "code:store/memory/policies/policy.rs::function::PolicyStore for InMemoryWamiStore::update_policy",
+    "code:store/memory/policies/policy.rs::function::PolicyStore for InMemoryWamiStore::delete_policy",
+    "code:store/memory/policies/policy.rs::function::PolicyStore for InMemoryWamiStore::list_policies"
+  ],
+  "content_hash": "sha256:01490e8decf17d52e280c79eeec3146f578f21d37e00b4d1083fd5e5d79af6d9",
+  "doc": "",
+  "file": "store/memory/policies/policy.rs",
+  "id": "code:store/memory/policies/policy.rs::impl::PolicyStore for InMemoryWamiStore",
+  "implemented_by": [],
+  "implements": [
+    "code:store/traits/policies/policy.rs::trait::PolicyStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 75,
+  "line_start": 11,
+  "name": "PolicyStore for InMemoryWamiStore",
+  "signature": "impl PolicyStore for InMemoryWamiStore"
+}

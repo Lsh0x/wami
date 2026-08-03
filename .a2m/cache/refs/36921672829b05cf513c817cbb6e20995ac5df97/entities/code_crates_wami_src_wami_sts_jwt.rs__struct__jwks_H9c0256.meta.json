@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f6b408856dd7b13c0d29d52d23f46021c25d0ca95f14e75547aef0ed2b63b622",
+  "doc": "",
+  "file": "crates/wami/src/wami/sts/jwt.rs",
+  "id": "code:crates/wami/src/wami/sts/jwt.rs::struct::Jwks",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 27,
+  "line_start": 24,
+  "name": "Jwks",
+  "signature": "pub struct Jwks"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:754259b588d710e5bb5f1c716f84a734b4819b4e830a57eb5673cd25b7193e12",
+  "doc": "",
+  "file": "store/memory/identity/user.rs",
+  "id": "code:store/memory/identity/user.rs::function::UserStore for InMemoryWamiStore::get_user",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 19,
+  "line_start": 17,
+  "name": "get_user",
+  "signature": "async fn get_user(&self, user_name: &str) -> Result<Option<User>>"
+}

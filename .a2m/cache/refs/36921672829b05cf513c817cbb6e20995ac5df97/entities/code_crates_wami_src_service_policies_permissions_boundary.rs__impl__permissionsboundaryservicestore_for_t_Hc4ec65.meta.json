@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:75c6c1c429ad8b4689e6a041524228e08b3fa40144cf7d4b06c502b9661481fe",
+  "doc": "",
+  "file": "crates/wami/src/service/policies/permissions_boundary.rs",
+  "id": "code:crates/wami/src/service/policies/permissions_boundary.rs::impl::PermissionsBoundaryServiceStore for T",
+  "implemented_by": [],
+  "implements": [
+    "code:crates/wami/src/service/policies/permissions_boundary.rs::trait::PermissionsBoundaryServiceStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 17,
+  "line_start": 17,
+  "name": "PermissionsBoundaryServiceStore for T",
+  "signature": "impl<T> PermissionsBoundaryServiceStore for T where T: UserStore + RoleStore + PolicyStore {}"
+}

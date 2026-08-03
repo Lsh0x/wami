@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f6daa4bec7084f82778e25328c3dee728cb5459c537575493fee6dd131cb2033",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::struct::CloudMapping",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 213,
+  "line_start": 203,
+  "name": "CloudMapping",
+  "signature": "pub struct CloudMapping"
+}

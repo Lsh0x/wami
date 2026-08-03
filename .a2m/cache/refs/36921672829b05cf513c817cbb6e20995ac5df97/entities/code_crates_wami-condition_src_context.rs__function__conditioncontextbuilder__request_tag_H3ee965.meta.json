@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d0b0fc3dc27dd41595003fdc2e3f07c0c2debd85bc4cb5d09f243f26a1a2528d",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::request_tag",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 311,
+  "line_start": 308,
+  "name": "request_tag",
+  "signature": "pub fn request_tag(mut self, key: impl Into<String>, value: impl Into<String>) -> Self"
+}

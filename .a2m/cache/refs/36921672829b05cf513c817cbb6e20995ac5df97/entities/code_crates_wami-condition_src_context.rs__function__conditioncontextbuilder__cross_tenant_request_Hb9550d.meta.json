@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:e5a0552680840a1e95f7542173cd85a5c9ab33c8f7ee54e0f9b134e9f5f3089b",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::cross_tenant_request",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 362,
+  "line_start": 359,
+  "name": "cross_tenant_request",
+  "signature": "pub fn cross_tenant_request(mut self, cross: bool) -> Self"
+}

@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:21dcaa759bcf18d080fd92f1a9888a8be7a1f6c5b93100f55866722d8d4b1492",
+  "doc": "",
+  "file": "crates/wami/src/service/policies/attachment.rs",
+  "id": "code:crates/wami/src/service/policies/attachment.rs::impl::AttachmentServiceStore for T",
+  "implemented_by": [],
+  "implements": [
+    "code:crates/wami/src/service/policies/attachment.rs::trait::AttachmentServiceStore"
+  ],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 15,
+  "line_start": 15,
+  "name": "AttachmentServiceStore for T",
+  "signature": "impl<T> AttachmentServiceStore for T where T: UserStore + GroupStore + RoleStore + PolicyStore {}"
+}

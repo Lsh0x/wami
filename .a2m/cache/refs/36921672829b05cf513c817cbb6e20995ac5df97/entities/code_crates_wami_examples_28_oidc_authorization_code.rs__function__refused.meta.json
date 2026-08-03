@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d7d4c2d201e8753d0d5a07b8fba7aaf2221341318076396d7a1f42ca8c4fef83",
+  "doc": "Print an error's message, or complain loudly if there was no error.",
+  "file": "crates/wami/examples/28_oidc_authorization_code.rs",
+  "id": "code:crates/wami/examples/28_oidc_authorization_code.rs::function::refused",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 239,
+  "line_start": 234,
+  "name": "refused",
+  "signature": "fn refused<T>(outcome: &std::result::Result<T, wami_core::error::AmiError>) -> String"
+}

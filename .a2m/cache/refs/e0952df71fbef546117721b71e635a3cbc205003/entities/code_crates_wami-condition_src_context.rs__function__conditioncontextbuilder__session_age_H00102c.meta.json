@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:7d0135c424317ea21bc702e7736d7e4fdd54646f160891662439c0da1b087fc1",
+  "doc": "",
+  "file": "crates/wami-condition/src/context.rs",
+  "id": "code:crates/wami-condition/src/context.rs::function::ConditionContextBuilder::session_age",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 466,
+  "line_start": 463,
+  "name": "session_age",
+  "signature": "pub fn session_age(mut self, age: u64) -> Self"
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:ae73043681d2dd10f9b401bad712399980f6408ec39d02b5a0f43df570e984bd",
+  "doc": "",
+  "file": "wami/tenant/model.rs",
+  "id": "code:wami/tenant/model.rs::struct::TenantUsage",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 377,
+  "line_start": 362,
+  "name": "TenantUsage",
+  "signature": "pub struct TenantUsage"
+}

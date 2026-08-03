@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "695a9bd2a4202472ddc3ab17aa4777ad38d882e3989dc503ca28324ad98bc9a0",
+  "doc": "",
+  "file": "service/identity/mod.rs",
+  "id": "code:service/identity/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 16,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

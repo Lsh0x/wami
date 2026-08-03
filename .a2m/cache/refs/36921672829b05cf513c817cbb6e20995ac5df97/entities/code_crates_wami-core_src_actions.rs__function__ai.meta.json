@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:37af9414e9c45e84ecd646ceb4832129aa5a6d7b90bb791a7b7ab4e8f5b48423",
+  "doc": "Helper to construct an [`ActionInfo`].",
+  "file": "crates/wami-core/src/actions.rs",
+  "id": "code:crates/wami-core/src/actions.rs::function::ai",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 955,
+  "line_start": 949,
+  "name": "ai",
+  "signature": "fn ai(action: &str, description: &str, category: &str) -> ActionInfo"
+}

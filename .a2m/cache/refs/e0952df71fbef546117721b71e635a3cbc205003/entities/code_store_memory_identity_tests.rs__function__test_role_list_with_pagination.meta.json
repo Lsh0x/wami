@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:role_builder::build_role"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:eb2b278c018f2491351ec93cf92bd08649872104a314744a855215c3b856d501",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_role_list_with_pagination",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 621,
+  "line_start": 590,
+  "name": "test_role_list_with_pagination",
+  "signature": "async fn test_role_list_with_pagination()"
+}

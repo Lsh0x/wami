@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:arn/types.rs::function::Serialize for TenantPath::serialize"
+  ],
+  "content_hash": "sha256:2580a27f5475862f14cfffca4a488843912970ece73f71f48396c05a5b743800",
+  "doc": "",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::impl::Serialize for TenantPath",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 158,
+  "line_start": 151,
+  "name": "Serialize for TenantPath",
+  "signature": "impl Serialize for TenantPath"
+}

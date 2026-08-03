@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:da7c969fce3d830f0d61c0a1179335470c84d545185d6814bd6ee047a16e9f79",
+  "doc": "",
+  "file": "store/memory/identity/identity_provider.rs",
+  "id": "code:store/memory/identity/identity_provider.rs::function::IdentityProviderStore for InMemoryWamiStore::untag_identity_provider",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 226,
+  "line_start": 208,
+  "name": "untag_identity_provider",
+  "signature": "async fn untag_identity_provider(&mut self, arn: &str, tag_keys: Vec<String>) -> Result<()>"
+}

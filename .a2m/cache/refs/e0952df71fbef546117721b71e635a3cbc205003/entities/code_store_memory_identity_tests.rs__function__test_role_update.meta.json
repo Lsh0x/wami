@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:store/memory/identity/tests.rs::function::test_context",
+    "extern:role_builder::build_role",
+    "extern:role_builder::update_description"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:4750ba7e3a5329706afdd6d890c7e13e154b0960061f1a35577556e77004cc12",
+  "doc": "",
+  "file": "store/memory/identity/tests.rs",
+  "id": "code:store/memory/identity/tests.rs::function::test_role_update",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 505,
+  "line_start": 480,
+  "name": "test_role_update",
+  "signature": "async fn test_role_update()"
+}

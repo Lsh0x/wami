@@ -1,0 +1,22 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-traits/src/lib.rs::trait::Store",
+    "code:crates/wami-traits/src/lib.rs::trait::Service",
+    "code:crates/wami-traits/src/lib.rs::trait::ServiceRegistry"
+  ],
+  "content_hash": "ee70c77d305bf8a5366c409be4d6d1f46e282824b41ee9e937905895cd904327",
+  "doc": "",
+  "file": "crates/wami-traits/src/lib.rs",
+  "id": "code:crates/wami-traits/src/lib.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 38,
+  "line_start": 1,
+  "name": "lib",
+  "signature": ""
+}

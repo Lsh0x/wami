@@ -1,0 +1,23 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/policies/permissions_boundary/operations.rs::function::validate_boundary_policy",
+    "code:wami/policies/permissions_boundary/operations.rs::function::is_allowed_by_boundary",
+    "code:wami/policies/permissions_boundary/operations.rs::function::action_matches",
+    "code:wami/policies/permissions_boundary/operations.rs::function::resource_matches"
+  ],
+  "content_hash": "546ebd5fd23408c557a198eb4d274374bf3ba57a5398cf0dc2e86809fad53add",
+  "doc": "",
+  "file": "wami/policies/permissions_boundary/operations.rs",
+  "id": "code:wami/policies/permissions_boundary/operations.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 374,
+  "line_start": 1,
+  "name": "operations",
+  "signature": ""
+}

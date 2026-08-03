@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:wami/tenant/model.rs::function::TenantId::segments"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:669ffea74b95f9e752d06a83b1fc3238c1c8b16ce87fdcc1efa8093e695cc435",
+  "doc": "Get parent tenant ID\n\nReturns None if this is a root tenant.",
+  "file": "wami/tenant/model.rs",
+  "id": "code:wami/tenant/model.rs::function::TenantId::parent",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 78,
+  "line_start": 70,
+  "name": "parent",
+  "signature": "pub fn parent(&self) -> Option<Self>"
+}

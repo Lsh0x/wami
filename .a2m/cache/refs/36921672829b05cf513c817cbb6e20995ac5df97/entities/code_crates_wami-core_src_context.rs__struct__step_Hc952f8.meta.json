@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:eda4b00048ab16c283eb220d813eb035c58328126da568c1fd5b752daceba55e",
+  "doc": "",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::struct::Step",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 92,
+  "line_start": 89,
+  "name": "Step",
+  "signature": "pub struct Step"
+}

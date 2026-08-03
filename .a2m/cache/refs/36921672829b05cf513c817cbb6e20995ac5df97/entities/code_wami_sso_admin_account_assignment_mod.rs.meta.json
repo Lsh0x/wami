@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "7e03d88f46ef5eb3cc4a868be1f61af34efedeabca2d8766ea962b3869a2e310",
+  "doc": "",
+  "file": "wami/sso_admin/account_assignment/mod.rs",
+  "id": "code:wami/sso_admin/account_assignment/mod.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 6,
+  "line_start": 1,
+  "name": "mod",
+  "signature": ""
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e2929a3d9a9e9b86c61e2d2ec61cee9450eb19ba0a1eaea43a793d0dee9ee8f1",
+  "doc": "Add tags to role (pure transformation)",
+  "file": "wami/identity/role/builder.rs",
+  "id": "code:wami/identity/role/builder.rs::function::add_tags",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 142,
+  "line_start": 135,
+  "name": "add_tags",
+  "signature": "pub fn add_tags(mut role: Role, tags: Vec<crate::types::Tag>) -> Role"
+}

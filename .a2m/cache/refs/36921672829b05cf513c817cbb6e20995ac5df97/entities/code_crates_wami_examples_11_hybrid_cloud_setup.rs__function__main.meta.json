@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/context.rs::function::WamiContext::builder",
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:b14861c633099869ccbf95576b9234be31b5ec58844670e7aeb8dccda153ffc9",
+  "doc": "",
+  "file": "crates/wami/examples/11_hybrid_cloud_setup.rs",
+  "id": "code:crates/wami/examples/11_hybrid_cloud_setup.rs::function::main",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 277,
+  "line_start": 120,
+  "name": "main",
+  "signature": "async fn main() -> std::result::Result<(), Box<dyn std::error::Error>>"
+}

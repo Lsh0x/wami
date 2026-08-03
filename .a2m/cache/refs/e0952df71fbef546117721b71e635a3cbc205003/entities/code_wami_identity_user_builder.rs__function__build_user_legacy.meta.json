@@ -1,0 +1,21 @@
+{
+  "callees": [
+    "code:crates/wami-core/src/arn/builder.rs::function::WamiArn::builder",
+    "extern:Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:a9ca8e83742fe16d861d9cac97008dad82b610233f56cabb65e606f61aa6ef5c",
+  "doc": "",
+  "file": "wami/identity/user/builder.rs",
+  "id": "code:wami/identity/user/builder.rs::function::build_user_legacy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 88,
+  "line_start": 50,
+  "name": "build_user_legacy",
+  "signature": "pub fn build_user_legacy("
+}

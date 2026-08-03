@@ -1,0 +1,24 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-provider/src/arn_builder.rs::function::WamiArnBuilder::new",
+    "code:crates/wami-provider/src/arn_builder.rs::function::WamiArnBuilder::with_salt",
+    "code:crates/wami-provider/src/arn_builder.rs::function::WamiArnBuilder::build_arn",
+    "code:crates/wami-provider/src/arn_builder.rs::function::WamiArnBuilder::hash_account",
+    "code:crates/wami-provider/src/arn_builder.rs::function::WamiArnBuilder::salt"
+  ],
+  "content_hash": "sha256:b51345549328256add5974c92b7a39d37b00930fb2e4c760c8d3024b04116e1a",
+  "doc": "",
+  "file": "crates/wami-provider/src/arn_builder.rs",
+  "id": "code:crates/wami-provider/src/arn_builder.rs::impl::WamiArnBuilder",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 111,
+  "line_start": 45,
+  "name": "WamiArnBuilder",
+  "signature": "impl WamiArnBuilder"
+}

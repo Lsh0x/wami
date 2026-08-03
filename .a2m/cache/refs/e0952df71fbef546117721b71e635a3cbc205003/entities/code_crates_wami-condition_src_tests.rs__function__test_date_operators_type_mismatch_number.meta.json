@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:crates/wami-condition/src/tests.rs::function::parse_condition_block_from_string",
+    "code:crates/wami-condition/src/context.rs::function::ConditionContext::builder",
+    "extern:chrono::Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:fdbf11e72e29aa1d33ebf7220b38ad800954e9ded309d9675eeb1b7e87ccf5d9",
+  "doc": "",
+  "file": "crates/wami-condition/src/tests.rs",
+  "id": "code:crates/wami-condition/src/tests.rs::function::test_date_operators_type_mismatch_number",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 7192,
+  "line_start": 7149,
+  "name": "test_date_operators_type_mismatch_number",
+  "signature": "fn test_date_operators_type_mismatch_number()"
+}

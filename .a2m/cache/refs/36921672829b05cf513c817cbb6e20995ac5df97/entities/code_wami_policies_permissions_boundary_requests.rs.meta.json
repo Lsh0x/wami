@@ -1,0 +1,22 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:wami/policies/permissions_boundary/requests.rs::enum::PrincipalType",
+    "code:wami/policies/permissions_boundary/requests.rs::struct::PutPermissionsBoundaryRequest",
+    "code:wami/policies/permissions_boundary/requests.rs::struct::DeletePermissionsBoundaryRequest"
+  ],
+  "content_hash": "ee0a1d1df696c8d8410cdbeed4fd6d2194b40fb9986bc8618a6e731a8328aad9",
+  "doc": "",
+  "file": "wami/policies/permissions_boundary/requests.rs",
+  "id": "code:wami/policies/permissions_boundary/requests.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 68,
+  "line_start": 1,
+  "name": "requests",
+  "signature": ""
+}

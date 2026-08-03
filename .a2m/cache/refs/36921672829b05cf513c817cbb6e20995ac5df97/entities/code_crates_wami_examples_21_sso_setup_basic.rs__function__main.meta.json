@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "extern:chrono::Utc::now"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:bf34ebcb2d5cbd284209a309439770339123f3f0a7e50301bfd2ea35252c7ab9",
+  "doc": "",
+  "file": "crates/wami/examples/21_sso_setup_basic.rs",
+  "id": "code:crates/wami/examples/21_sso_setup_basic.rs::function::main",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 71,
+  "line_start": 21,
+  "name": "main",
+  "signature": "async fn main() -> Result<(), Box<dyn std::error::Error>>"
+}

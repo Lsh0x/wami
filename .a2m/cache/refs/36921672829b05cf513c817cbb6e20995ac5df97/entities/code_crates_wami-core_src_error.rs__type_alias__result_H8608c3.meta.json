@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:60174195a261a56310b2e999729a17b5245fd526469f8d054e42e0afd802a671",
+  "doc": "",
+  "file": "crates/wami-core/src/error.rs",
+  "id": "code:crates/wami-core/src/error.rs::type_alias::Result",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "type_alias",
+  "line_end": 71,
+  "line_start": 71,
+  "name": "Result",
+  "signature": "pub type Result<T> = std::result::Result<T, AmiError>;"
+}

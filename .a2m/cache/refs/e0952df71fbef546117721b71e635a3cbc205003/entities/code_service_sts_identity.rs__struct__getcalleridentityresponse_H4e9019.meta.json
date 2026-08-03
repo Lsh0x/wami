@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:583c22e3a744dcd5c12e1da5d1c5d89e693d6a64e247c971a2360493d99a16a6",
+  "doc": "",
+  "file": "service/sts/identity.rs",
+  "id": "code:service/sts/identity.rs::struct::GetCallerIdentityResponse",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 25,
+  "line_start": 21,
+  "name": "GetCallerIdentityResponse",
+  "signature": "pub struct GetCallerIdentityResponse"
+}

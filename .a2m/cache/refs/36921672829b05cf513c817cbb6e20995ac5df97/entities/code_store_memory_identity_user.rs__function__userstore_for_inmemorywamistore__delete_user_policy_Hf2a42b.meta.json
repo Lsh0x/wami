@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:55fed820b9e6125a26b5a5e68bb44450515fb7afdd89f3b8cd25b50182ddf49d",
+  "doc": "",
+  "file": "store/memory/identity/user.rs",
+  "id": "code:store/memory/identity/user.rs::function::UserStore for InMemoryWamiStore::delete_user_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 156,
+  "line_start": 151,
+  "name": "delete_user_policy",
+  "signature": "async fn delete_user_policy(&mut self, user_name: &str, policy_name: &str) -> Result<()>"
+}

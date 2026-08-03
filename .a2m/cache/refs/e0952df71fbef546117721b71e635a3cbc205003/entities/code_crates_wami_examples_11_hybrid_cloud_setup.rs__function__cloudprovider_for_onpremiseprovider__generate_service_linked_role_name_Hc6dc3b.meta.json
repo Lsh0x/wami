@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:98d8a9e407724623c69056e7ab044ec9eaadcd95ae5bf8fd910dc614f72f4729",
+  "doc": "",
+  "file": "crates/wami/examples/11_hybrid_cloud_setup.rs",
+  "id": "code:crates/wami/examples/11_hybrid_cloud_setup.rs::function::CloudProvider for OnPremiseProvider::generate_service_linked_role_name",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 112,
+  "line_start": 102,
+  "name": "generate_service_linked_role_name",
+  "signature": "fn generate_service_linked_role_name("
+}

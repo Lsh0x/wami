@@ -1,0 +1,24 @@
+{
+  "callees": [
+    "extern:SystemTime::now",
+    "extern:rand::random"
+  ],
+  "callers": [
+    "code:wami/gdpr/operations.rs::function::build_consent_audit_event",
+    "code:wami/gdpr/operations.rs::function::build_erasure_audit_event"
+  ],
+  "children": [],
+  "content_hash": "sha256:314c9e8fa5dd786690c8024e12e620a32a6d9d43fec92f06839b8592c62acae6",
+  "doc": "Generate a unique ID (ULID-like).",
+  "file": "wami/gdpr/operations.rs",
+  "id": "code:wami/gdpr/operations.rs::function::generate_id",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 142,
+  "line_start": 134,
+  "name": "generate_id",
+  "signature": "fn generate_id() -> String"
+}

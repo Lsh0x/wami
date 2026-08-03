@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:crates/wami-core/src/context.rs::function::WamiContextBuilder::build"
+  ],
+  "children": [],
+  "content_hash": "sha256:65d05cb2edf886e0f8c922f5a2a2a3faf9ec1484f47d280898bf8d38d0ee1b20",
+  "doc": "Set the default region",
+  "file": "crates/wami-core/src/context.rs",
+  "id": "code:crates/wami-core/src/context.rs::function::WamiContextBuilder::region",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 502,
+  "line_start": 499,
+  "name": "region",
+  "signature": "pub fn region(mut self, region: impl Into<String>) -> Self"
+}

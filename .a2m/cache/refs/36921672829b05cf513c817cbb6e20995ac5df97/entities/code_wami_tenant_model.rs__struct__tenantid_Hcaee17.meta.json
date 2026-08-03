@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:5f14037e27e49d4092070e08bc82cdf23ad717d631b74db0d9bfc16c2c64a86c",
+  "doc": "",
+  "file": "wami/tenant/model.rs",
+  "id": "code:wami/tenant/model.rs::struct::TenantId",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 24,
+  "line_start": 21,
+  "name": "TenantId",
+  "signature": "pub struct TenantId"
+}

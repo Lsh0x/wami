@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:16a7d04c5210d731d6dfe60aac8df77686f604775b969534bb41a8c349a360cb",
+  "doc": "",
+  "file": "crates/wami/src/service/auth/decision.rs",
+  "id": "code:crates/wami/src/service/auth/decision.rs::enum::AllowReason",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "enum",
+  "line_end": 194,
+  "line_start": 187,
+  "name": "AllowReason",
+  "signature": "pub enum AllowReason"
+}

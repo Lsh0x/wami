@@ -1,0 +1,24 @@
+{
+  "callees": [
+    "code:service/identity/service_linked_role.rs::function::ServiceLinkedRoleService<S>::guard",
+    "extern:slr_ops::service_linked_role_operations::validate_service_name",
+    "extern:slr_ops::service_linked_role_operations::validate_custom_suffix",
+    "extern:slr_ops::service_linked_role_operations::generate_role_name",
+    "extern:role_builder::build_role"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:2ce0850e889841948753d8bfd20235c4f1dc049ae5f858fe2c7a69eb039657af",
+  "doc": "Create a service-linked role",
+  "file": "service/identity/service_linked_role.rs",
+  "id": "code:service/identity/service_linked_role.rs::function::ServiceLinkedRoleService<S>::create_service_linked_role",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 101,
+  "line_start": 60,
+  "name": "create_service_linked_role",
+  "signature": "pub async fn create_service_linked_role("
+}

@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:3a9127cd030edb6c4d920ef8d3109b7515f6f0e23a01a9392848a30eb29499d5",
+  "doc": "",
+  "file": "crates/wami-service/src/lib.rs",
+  "id": "code:crates/wami-service/src/lib.rs::function::ServiceRegistry for Registry::register",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 40,
+  "line_start": 34,
+  "name": "register",
+  "signature": "fn register<S>(&mut self, name: &str, service: Arc<S>)"
+}

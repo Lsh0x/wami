@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:493522e385edbe5bcc9274716bf9f6bee7834504796bee7c1c09738c4e0e212f",
+  "doc": "Convert into the underlying User object",
+  "file": "wami/identity/root_user.rs",
+  "id": "code:wami/identity/root_user.rs::function::RootUser::into_user",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 148,
+  "line_start": 146,
+  "name": "into_user",
+  "signature": "pub fn into_user(self) -> User"
+}

@@ -1,0 +1,22 @@
+{
+  "callees": [
+    "code:wami/tenant/authorization.rs::function::TenantAuthorizer::wildcard_match"
+  ],
+  "callers": [
+    "code:wami/tenant/authorization.rs::function::TenantAuthorizer::check_permission"
+  ],
+  "children": [],
+  "content_hash": "sha256:d88c5fbf380fd803522ff395973439bdf52f5619453ee09b7db3718f70c6cb12",
+  "doc": "Check if a resource matches a statement's resources",
+  "file": "wami/tenant/authorization.rs",
+  "id": "code:wami/tenant/authorization.rs::function::TenantAuthorizer::matches_resource",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 291,
+  "line_start": 284,
+  "name": "matches_resource",
+  "signature": "fn matches_resource(&self, statement: &PolicyStatement, resource: &str) -> bool"
+}

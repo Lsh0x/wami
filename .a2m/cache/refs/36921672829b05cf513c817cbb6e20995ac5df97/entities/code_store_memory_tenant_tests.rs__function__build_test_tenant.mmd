@@ -1,0 +1,28 @@
+%% id: code:store/memory/tenant/tests.rs::function::build_test_tenant
+%% kind: function
+%% file: store/memory/tenant/tests.rs:8-29
+%% content_hash: sha256:0087eefdb058898b5bcc47931781f4356a9364e802db01f7aa154bc2a784f76a
+%% signature: fn build_test_tenant(name: &str, parent: Option<TenantId>) -> Tenant
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca:::function[build_test_tenant]
+  code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca -- calls --> code_wami_tenant_model_rs__function__TenantId__root_H9571e118:::function[root]
+  code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca -- calls --> extern_chrono__Utc__now_H71e4ffc2:::function[now]
+  code_store_memory_tenant_tests_rs__function__test_tenant_create_and_get_H76079df5:::function[test_tenant_create_and_get] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca
+  code_store_memory_tenant_tests_rs__function__test_tenant_create_duplicate_fails_H030df15c:::function[test_tenant_create_duplicate_fails] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca
+  code_store_memory_tenant_tests_rs__function__test_tenant_delete_H191a7929:::function[test_tenant_delete] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca
+  code_store_memory_tenant_tests_rs__function__test_tenant_different_statuses_Hfc2e8365:::function[test_tenant_different_statuses] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca
+  code_store_memory_tenant_tests_rs__function__test_tenant_different_types_H23c6dd8e:::function[test_tenant_different_types] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca
+  code_store_memory_tenant_tests_rs__function__test_tenant_get_ancestors_Hdf79c1a1:::function[test_tenant_get_ancestors] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca
+  code_store_memory_tenant_tests_rs__function__test_tenant_get_ancestors_root_H7ccee7a7:::function[test_tenant_get_ancestors_root] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca
+  code_store_memory_tenant_tests_rs__function__test_tenant_get_descendants_He801100c:::function[test_tenant_get_descendants] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca
+  code_store_memory_tenant_tests_rs__function__test_tenant_get_descendants_leaf_Haacb0a5b:::function[test_tenant_get_descendants_leaf] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca
+  code_store_memory_tenant_tests_rs__function__test_tenant_get_effective_quotas_H65117fec:::function[test_tenant_get_effective_quotas] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca
+  code_store_memory_tenant_tests_rs__function__test_tenant_get_usage_Hc3c7d75a:::function[test_tenant_get_usage] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca
+  code_store_memory_tenant_tests_rs__function__test_tenant_hierarchy_H7cb13dfe:::function[test_tenant_hierarchy] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca
+  code_store_memory_tenant_tests_rs__function__test_tenant_list_child_tenants_empty_H08aa8925:::function[test_tenant_list_child_tenants_empty] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca
+  code_store_memory_tenant_tests_rs__function__test_tenant_list_multiple_Hecbb21df:::function[test_tenant_list_multiple] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca
+  code_store_memory_tenant_tests_rs__function__test_tenant_update_H1db81acc:::function[test_tenant_update] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca
+  code_store_memory_tenant_tests_rs__function__test_tenant_update_nonexistent_fails_H39e92c97:::function[test_tenant_update_nonexistent_fails] -- calls --> code_store_memory_tenant_tests_rs__function__build_test_tenant_H2eb343ca

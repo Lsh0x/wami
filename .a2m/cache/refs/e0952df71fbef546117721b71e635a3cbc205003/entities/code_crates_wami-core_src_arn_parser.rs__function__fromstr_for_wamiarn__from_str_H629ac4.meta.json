@@ -1,0 +1,27 @@
+{
+  "callees": [
+    "extern:ArnParseError::InvalidFormat",
+    "extern:ArnParseError::InvalidComponent",
+    "code:crates/wami-core/src/arn/types.rs::function::CloudMapping::with_region"
+  ],
+  "callers": [
+    "code:crates/wami-core/src/arn/parser.rs::function::parse_arn",
+    "code:crates/wami-core/src/arn/types.rs::function::Deserialize<'de> for WamiArn::deserialize",
+    "code:crates/wami/examples/25_arn_usage.rs::function::parsing_arns",
+    "code:arn/types.rs::function::Deserialize<'de> for WamiArn::deserialize"
+  ],
+  "children": [],
+  "content_hash": "sha256:d785f247f875437b58e96c750e6e278db05a5b2491a2aff9f58f731c115e9987",
+  "doc": "Parses a WAMI ARN from a string.\n\n# Format\n\n## WAMI Native:\n```text\narn:wami:{service}:{tenant_path}:wami:{wami_instance_id}:{resource_type}/{resource_id}\n```\n\n## Cloud-Synced:\n```text\narn:wami:{service}:{tenant_path}:wami:{wami_instance_id}:{provider}:{account_id}:{resource_type}/{resource_id}\n```\n\n# Examples\n\n```\nuse wami_core::arn::WamiArn;\nuse std::str::FromStr;\n\nlet arn = WamiArn::from_str(\"arn:wami:iam:12345678/87654321/99999999:wami:999888777:user/77557755\").unwrap();\nassert_eq!(arn.resource_type(), \"user\");\nassert_eq!(arn.resource_id(), \"77557755\");\n\nlet arn = WamiArn::from_str(\"arn:wami:iam:12345678:wami:999888777:aws:223344556677:user/77557755\").unwrap();\nassert!(arn.is_cloud_synced());\nassert_eq!(arn.provider(), Some(\"aws\"));\n```",
+  "file": "crates/wami-core/src/arn/parser.rs",
+  "id": "code:crates/wami-core/src/arn/parser.rs::function::FromStr for WamiArn::from_str",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 230,
+  "line_start": 69,
+  "name": "from_str",
+  "signature": "fn from_str(s: &str) -> std::result::Result<Self, Self::Err>"
+}

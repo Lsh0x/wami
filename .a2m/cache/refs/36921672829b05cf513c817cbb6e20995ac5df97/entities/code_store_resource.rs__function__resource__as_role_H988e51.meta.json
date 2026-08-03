@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:0c0b410c155fc32d0d42c6990d952010933185cbe6dd2e33d2915254b8cd1f33",
+  "doc": "Tries to downcast to Role",
+  "file": "store/resource.rs",
+  "id": "code:store/resource.rs::function::Resource::as_role",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 144,
+  "line_start": 138,
+  "name": "as_role",
+  "signature": "pub fn as_role(&self) -> Option<&Role>"
+}

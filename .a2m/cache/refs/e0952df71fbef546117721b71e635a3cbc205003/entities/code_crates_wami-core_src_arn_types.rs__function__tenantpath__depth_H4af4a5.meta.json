@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:e888d38669659d76a500e23a1532c89e596cf054a9b110e1306e7859aeefc984",
+  "doc": "Returns the depth of the tenant hierarchy.",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::function::TenantPath::depth",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 122,
+  "line_start": 120,
+  "name": "depth",
+  "signature": "pub fn depth(&self) -> usize"
+}

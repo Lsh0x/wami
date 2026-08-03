@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami-core/src/arn/types.rs::function::fmt::Display for Service::fmt"
+  ],
+  "content_hash": "sha256:470a48775864179634bda067ef0eaa482ad3dd885c4cd0d84927c2ca8b1babef",
+  "doc": "",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::impl::fmt::Display for Service",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 314,
+  "line_start": 310,
+  "name": "fmt::Display for Service",
+  "signature": "impl fmt::Display for Service"
+}

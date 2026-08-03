@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:d1dc311b4a6d795dad9b2d4e24bac2b124fda440343893f5e5ad740f4d88e2d7",
+  "doc": "Get an inline policy from a group",
+  "file": "crates/wami/src/service/policies/inline.rs",
+  "id": "code:crates/wami/src/service/policies/inline.rs::function::InlinePolicyService<S>::get_group_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 321,
+  "line_start": 282,
+  "name": "get_group_policy",
+  "signature": "pub async fn get_group_policy("
+}

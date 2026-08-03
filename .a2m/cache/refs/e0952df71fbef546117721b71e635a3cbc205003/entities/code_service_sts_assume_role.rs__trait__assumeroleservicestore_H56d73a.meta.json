@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:405fa5429947c16636548345f05ae5434031693635fd2defe32f9418642f01e6",
+  "doc": "",
+  "file": "service/sts/assume_role.rs",
+  "id": "code:service/sts/assume_role.rs::trait::AssumeRoleServiceStore",
+  "implemented_by": [
+    "code:service/sts/assume_role.rs::impl::AssumeRoleServiceStore for T"
+  ],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "trait",
+  "line_end": 21,
+  "line_start": 21,
+  "name": "AssumeRoleServiceStore",
+  "signature": "pub trait AssumeRoleServiceStore: SessionStore + RoleStore {}"
+}

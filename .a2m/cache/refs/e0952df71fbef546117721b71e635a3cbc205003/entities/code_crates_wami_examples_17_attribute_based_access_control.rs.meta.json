@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/examples/17_attribute_based_access_control.rs::function::main"
+  ],
+  "content_hash": "208661b4971994baa4199a34a4f7efc79fbbddd066c5f64ef1c375e50fb1ddfe",
+  "doc": "",
+  "file": "crates/wami/examples/17_attribute_based_access_control.rs",
+  "id": "code:crates/wami/examples/17_attribute_based_access_control.rs",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "module",
+  "line_end": 156,
+  "line_start": 1,
+  "name": "17_attribute_based_access_control",
+  "signature": ""
+}

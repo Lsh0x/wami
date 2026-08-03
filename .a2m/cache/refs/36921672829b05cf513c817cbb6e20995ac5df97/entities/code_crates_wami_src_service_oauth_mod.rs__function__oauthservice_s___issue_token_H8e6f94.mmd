@@ -1,0 +1,16 @@
+%% id: code:crates/wami/src/service/oauth/mod.rs::function::OAuthService<S>::issue_token
+%% kind: function
+%% file: crates/wami/src/service/oauth/mod.rs:153-192
+%% content_hash: sha256:c12f5ff3c1d4a9404677f7eb1af7261213883b4c872db41b0d538d72bb888505
+%% signature: pub async fn issue_token(&self, request: GrantRequest) -> Result<TokenResponse>
+graph LR
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef function fill:#e1f5fe,stroke:#01579b
+  classDef module fill:#f3e5f5,stroke:#4a148c
+  code_crates_wami_src_service_oauth_mod_rs__function__OAuthService_S___issue_token_H8e6f9457:::function[issue_token]
+  code_crates_wami_src_service_oauth_mod_rs__function__OAuthService_S___issue_token_H8e6f9457 -- calls --> code_crates_wami_src_service_oauth_mod_rs__function__OAuthService_S___validate_client_H70e7acaf:::function[validate_client]
+  code_crates_wami_src_service_oauth_mod_rs__function__OAuthService_S___issue_token_H8e6f9457 -- calls --> extern_Utc__now_H7825cf5c:::function[now]
+  code_crates_wami_src_service_oauth_mod_rs__function__OAuthService_S___issue_token_H8e6f9457 -- calls --> code_crates_wami_src_wami_oauth_builder_rs__function__build_claims_H526c7d9c:::function[build_claims]
+  code_crates_wami_src_service_oauth_mod_rs__function__OAuthService_S___issue_token_H8e6f9457 -- calls --> extern_AmiError__StoreError_H237d900f:::function[StoreError]
+  code_crates_wami_src_service_oauth_mod_rs__function__OAuthService_S___issue_token_H8e6f9457 -- calls --> code_crates_wami_src_wami_oauth_builder_rs__function__build_token_record_Hd4addcd9:::function[build_token_record]
+  code_crates_wami_src_service_oauth_mod_rs__function__OAuthService_S___issue_token_H8e6f9457 -- calls --> code_crates_wami_src_wami_oauth_builder_rs__function__build_response_Hefc37792:::function[build_response]

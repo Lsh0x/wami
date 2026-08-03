@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [
+    "code:crates/wami/src/wami/oauth/model.rs::function::TokenIntrospection::inactive"
+  ],
+  "content_hash": "sha256:71143dbc5df0b9359a15dd938cd973155cd467b24803e3979b78c9cc28fcc324",
+  "doc": "",
+  "file": "crates/wami/src/wami/oauth/model.rs",
+  "id": "code:crates/wami/src/wami/oauth/model.rs::impl::TokenIntrospection",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "impl",
+  "line_end": 218,
+  "line_start": 202,
+  "name": "TokenIntrospection",
+  "signature": "impl TokenIntrospection"
+}

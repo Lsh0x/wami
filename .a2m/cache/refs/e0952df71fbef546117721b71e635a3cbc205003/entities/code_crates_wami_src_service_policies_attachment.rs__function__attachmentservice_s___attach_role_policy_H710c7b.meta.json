@@ -1,0 +1,20 @@
+{
+  "callees": [
+    "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::guard"
+  ],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:32c64671e95ba1ba5a50b56a06a65d7ead11edbd0b0c09728195d4f634936d37",
+  "doc": "Attach a managed policy to a role",
+  "file": "crates/wami/src/service/policies/attachment.rs",
+  "id": "code:crates/wami/src/service/policies/attachment.rs::function::AttachmentService<S>::attach_role_policy",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 410,
+  "line_start": 356,
+  "name": "attach_role_policy",
+  "signature": "pub async fn attach_role_policy("
+}

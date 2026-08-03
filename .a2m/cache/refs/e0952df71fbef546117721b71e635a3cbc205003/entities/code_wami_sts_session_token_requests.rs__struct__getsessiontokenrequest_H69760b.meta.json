@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:debc8971bff8bfd3ba50b30e650fba6d74897623807173a4854f64160f33f80c",
+  "doc": "",
+  "file": "wami/sts/session_token/requests.rs",
+  "id": "code:wami/sts/session_token/requests.rs::struct::GetSessionTokenRequest",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "struct",
+  "line_end": 27,
+  "line_start": 20,
+  "name": "GetSessionTokenRequest",
+  "signature": "pub struct GetSessionTokenRequest"
+}

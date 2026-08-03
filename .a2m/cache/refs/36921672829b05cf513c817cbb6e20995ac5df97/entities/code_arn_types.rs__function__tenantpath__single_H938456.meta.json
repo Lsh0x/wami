@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:c4233b9eba1b473377d35f6147dc37439a65d9b48a9d444fcf0db7545a3e69f6",
+  "doc": "Creates a tenant path from a single numeric tenant ID.",
+  "file": "arn/types.rs",
+  "id": "code:arn/types.rs::function::TenantPath::single",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 72,
+  "line_start": 68,
+  "name": "single",
+  "signature": "pub fn single(tenant_id: u64) -> Self"
+}

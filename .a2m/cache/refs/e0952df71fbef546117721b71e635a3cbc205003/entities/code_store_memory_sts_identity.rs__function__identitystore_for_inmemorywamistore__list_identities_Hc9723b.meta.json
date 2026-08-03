@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:df5b168440d8260f1b5f9b24f0b7b2a69d933c8cf8d684a70602d33c26d59227",
+  "doc": "",
+  "file": "store/memory/sts/identity.rs",
+  "id": "code:store/memory/sts/identity.rs::function::IdentityStore for InMemoryWamiStore::list_identities",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 41,
+  "line_start": 39,
+  "name": "list_identities",
+  "signature": "async fn list_identities(&self) -> Result<Vec<CallerIdentity>>"
+}

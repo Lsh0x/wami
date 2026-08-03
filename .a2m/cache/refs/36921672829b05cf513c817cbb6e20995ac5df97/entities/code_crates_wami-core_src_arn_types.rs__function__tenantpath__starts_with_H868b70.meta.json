@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:64781398b0e929afe36be3a73fa449b190bd1c6d2f4c49ae39ebed73b8e3968f",
+  "doc": "Check if this tenant path starts with another tenant path (is a child or same)",
+  "file": "crates/wami-core/src/arn/types.rs",
+  "id": "code:crates/wami-core/src/arn/types.rs::function::TenantPath::starts_with",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 137,
+  "line_start": 125,
+  "name": "starts_with",
+  "signature": "pub fn starts_with(&self, other: &TenantPath) -> bool"
+}

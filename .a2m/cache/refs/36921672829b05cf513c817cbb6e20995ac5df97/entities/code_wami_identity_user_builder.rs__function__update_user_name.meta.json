@@ -1,0 +1,18 @@
+{
+  "callees": [],
+  "callers": [],
+  "children": [],
+  "content_hash": "sha256:f348e1f507f46c240f1402e693468101c0687989b19ea1bfa58e979209125303",
+  "doc": "Update user's name (pure transformation)",
+  "file": "wami/identity/user/builder.rs",
+  "id": "code:wami/identity/user/builder.rs::function::update_user_name",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 94,
+  "line_start": 91,
+  "name": "update_user_name",
+  "signature": "pub fn update_user_name(mut user: User, new_name: String) -> User"
+}

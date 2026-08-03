@@ -1,0 +1,20 @@
+{
+  "callees": [],
+  "callers": [
+    "code:service/gdpr/mod.rs::function::GdprService<S>::request_erasure"
+  ],
+  "children": [],
+  "content_hash": "sha256:acf694ba8255493c51fcfd6d27ea6310cfd52d3c80781d754d17d24d85c7ae6d",
+  "doc": "Determine which categories should be erased vs. retained given retention policies.",
+  "file": "wami/gdpr/operations.rs",
+  "id": "code:wami/gdpr/operations.rs::function::compute_erasure_scope",
+  "implemented_by": [],
+  "implements": [],
+  "imported_by": [],
+  "imports": [],
+  "kind": "function",
+  "line_end": 85,
+  "line_start": 65,
+  "name": "compute_erasure_scope",
+  "signature": "pub fn compute_erasure_scope("
+}
