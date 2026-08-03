@@ -66,7 +66,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-wami = "0.11.0"
+wami = "0.16"
 tokio = { version = "1.0", features = ["full"] }
 ```
 
@@ -77,14 +77,14 @@ tokio = { version = "1.0", features = ["full"] }
 ```rust
 use wami::arn::{TenantPath, WamiArn};
 use wami::context::WamiContext;
-use wami::store::memory::InMemoryStore;
+use wami::store::memory::InMemoryWamiStore;
 use wami::store::traits::UserStore;
 use wami::wami::identity::user::builder::build_user;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize storage
-    let mut store = InMemoryStore::default();
+    let mut store = InMemoryWamiStore::default();
     
     // Create WAMI context with ARN (using numeric tenant IDs)
     let context = WamiContext::builder()
