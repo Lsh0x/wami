@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 description = "Service registry and orchestration utilities for the WAMI workspace"
+# Not in `wami`\'s dependency graph, so nothing forces it onto crates.io.
+# Saying so explicitly stops a stray `cargo publish --workspace` from
+# minting a public name for something nobody asked for.
+publish = false
 
 [dependencies]
 wami-core = { path = "../wami-core" }

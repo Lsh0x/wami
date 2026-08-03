@@ -5,7 +5,7 @@ for service implementations and service registration.
 
 ## Macros
 
-- `#[derive(Service)]` – Derive the `wami_traits::Service` trait for a struct.
+- `#[derive(Service)]` – Derive the `wami_core::traits::Service` trait for a struct.
 - `#[service]` – Attribute macro that generates standard service boilerplate
   (constructor, store helpers) with support for composite trait bounds and an
   optional `generate_new = false` flag.
@@ -23,7 +23,7 @@ wami-macros = { path = "../wami-macros" }
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_macros::service;
-use wami_traits::Service;
+use wami_core::traits::Service;
 
 pub trait UserServiceStore: wami::store::traits::UserStore {}
 impl<T> UserServiceStore for T where T: wami::store::traits::UserStore {}

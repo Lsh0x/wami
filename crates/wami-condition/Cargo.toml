@@ -1,16 +1,23 @@
 [package]
 name = "wami-condition"
-version = "0.1.0"
+version = "0.16.0"
 edition = "2021"
 license = "MIT"
-description = "Policy condition key evaluation for WAMI"
+description = "IAM policy condition key evaluation, as used by wami"
+rust-version = "1.90.0"
+repository = "https://github.com/Lsh0x/wami"
+homepage = "https://github.com/Lsh0x/wami"
+documentation = "https://docs.rs/wami-condition"
+readme = "README.md"
+keywords = ["iam", "policy", "authorization", "conditions"]
+categories = ["authentication", "parser-implementations"]
 authors = ["LSH <github@lsh.tech>"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
-wami-core = { path = "../wami-core" }
+wami-core = { path = "../wami-core", version = "0.16.0" }
 
 [dev-dependencies]
 

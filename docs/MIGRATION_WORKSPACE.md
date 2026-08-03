@@ -1,5 +1,10 @@
 # Workspace Migration Summary
 
+> **Historical.** This records the split *into* a workspace. The shape has
+> changed since: six of those crates were folded back into `wami` so it could
+> be published at all. See [#129](https://github.com/Lsh0x/wami/issues/129)
+> and [WORKSPACE_STRUCTURE.md](WORKSPACE_STRUCTURE.md) for what exists today.
+
 This document summarizes the migration from a monolithic crate structure to a modular workspace architecture.
 
 ## Migration Date

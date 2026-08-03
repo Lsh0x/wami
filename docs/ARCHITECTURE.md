@@ -31,20 +31,22 @@ WAMI (Who Am I) is a **domain-driven**, cloud-agnostic Identity and Access Manag
 ┌────────────────────────────┼──────────────────────────────────┐
 │                    Workspace Crates                           │
 │                                                               │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │ wami-core│  │wami-traits│ │wami-pro  │  │wami-macros│  │
-│  │  ARN     │  │  Store    │  │  vider   │  │  Service │  │
-│  │ Context  │  │  Service  │  │  AWS/GCP │  │  derive  │  │
-│  │  Error   │  │ Registry  │  │  Azure   │  │  macros  │  │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
-│       │              │              │              │       │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐              │
-│  │wami-ident│  │wami-cred  │  │wami-serv │              │
-│  │   ity    │  │  entials  │  │   ice    │              │
-│  │ User     │  │ AccessKey │  │ Registry │              │
-│  │ Group    │  │ MFA       │  │          │              │
-│  │ Role     │  │ Login     │  │          │              │
-│  └──────────┘  └──────────┘  └──────────┘              │
+│   ┌───────────┐   ┌────────────────┐   ┌─────────────┐        │
+│   │ wami-core │   │ wami-condition │   │ wami-macros │        │
+│   │   ARN     │   │  Condition key │   │   #[service]│        │
+│   │  Context  │   │   evaluation   │   │   derive    │        │
+│   │   Error   │   │                │   │             │        │
+│   │  traits   │   │                │   │             │        │
+│   └───────────┘   └────────────────┘   └─────────────┘        │
+│         │                  │                   │              │
+│         └──────────────────┴───────────────────┘              │
+│                            │                                  │
+│                    ┌───────────────┐                          │
+│                    │     wami      │                          │
+│                    │  identity ·  policies · STS              │
+│                    │  OAuth/OIDC · provider · credentials      │
+│                    │  services · stores                       │
+│                    └───────────────┘                          │
 └────────────────────────────┬──────────────────────────────────┘
                              │
 ┌────────────────────────────┼──────────────────────────────────┐
