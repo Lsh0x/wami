@@ -9,7 +9,7 @@ license = "MIT"
 repository = "https://github.com/Lsh0x/wami"
 homepage = "https://github.com/Lsh0x/wami"
 documentation = "https://docs.rs/wami"
-readme = "../README.md"
+readme = "README.md"
 keywords = ["iam", "sso", "identity", "multicloud", "aws"]
 categories = ["api-bindings", "authentication", "development-tools"]
 
