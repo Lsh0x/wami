@@ -1,1 +1,7 @@
 /target
+
+# a2m's local code-graph cache. Generated, machine-specific, and large —
+# 38k lines of index alone. Committed by accident in the 0.16.0 release
+# (a `git add -A` that swept the working tree); ignored so it cannot happen
+# again.
+/.a2m
