@@ -1,8 +1,8 @@
 //! Signing Certificate Store Trait
 
+use crate::credentials::signing_certificate::SigningCertificate;
 use async_trait::async_trait;
 use wami_core::error::Result;
-use wami_credentials::signing_certificate::SigningCertificate;
 
 /// Trait for signing certificate storage operations
 #[async_trait]

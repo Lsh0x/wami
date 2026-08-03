@@ -1,12 +1,6 @@
 [workspace]
 members = [
     "crates/wami-core",
-    "crates/wami-provider",
-    "crates/cloud-provider/wami-provider-aws",
-    "crates/cloud-provider/wami-provider-gcp",
-    "crates/cloud-provider/wami-provider-azure",
-    "crates/cloud-provider/wami-provider-custom",
-    "crates/wami-credentials",
     "crates/wami-condition",
     "crates/wami-service",
     "crates/wami",

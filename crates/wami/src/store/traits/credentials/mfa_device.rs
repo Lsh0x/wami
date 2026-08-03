@@ -2,9 +2,9 @@
 //!
 //! Focused trait for MFA device storage operations
 
+use crate::credentials::MfaDevice;
 use async_trait::async_trait;
 use wami_core::error::Result;
-use wami_credentials::MfaDevice;
 
 /// Store trait for IAM MFA device operations
 #[async_trait]

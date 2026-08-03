@@ -1,8 +1,8 @@
 //! Service-Specific Credential Store Trait
 
+use crate::credentials::service_credential::ServiceSpecificCredential;
 use async_trait::async_trait;
 use wami_core::error::Result;
-use wami_credentials::service_credential::ServiceSpecificCredential;
 
 /// Trait for service-specific credential storage operations
 #[async_trait]

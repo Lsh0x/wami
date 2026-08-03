@@ -4,12 +4,12 @@
 
 use crate::arn::{TenantPath, WamiArn};
 use crate::context::WamiContext;
+use crate::credentials::access_key::builder as access_key_builder;
+use crate::credentials::login_profile::builder as login_profile_builder;
+use crate::credentials::mfa_device::builder as mfa_builder;
 use crate::store::memory::InMemoryWamiStore;
 use crate::store::traits::{AccessKeyStore, LoginProfileStore, MfaDeviceStore};
 use wami_core::types::PaginationParams;
-use wami_credentials::access_key::builder as access_key_builder;
-use wami_credentials::login_profile::builder as login_profile_builder;
-use wami_credentials::mfa_device::builder as mfa_builder;
 
 fn test_context() -> WamiContext {
     let arn: WamiArn = "arn:wami:.*:12345678:wami:123456789012:user/test"

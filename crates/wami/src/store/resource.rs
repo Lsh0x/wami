@@ -3,6 +3,12 @@
 //! Provides a single enum to represent all IAM/STS/Tenant resources,
 //! enabling generic store operations like `get(arn)` and `query(pattern)`.
 
+use crate::credentials::access_key::AccessKey;
+use crate::credentials::login_profile::LoginProfile;
+use crate::credentials::mfa_device::MfaDevice;
+use crate::credentials::server_certificate::ServerCertificate;
+use crate::credentials::service_credential::ServiceSpecificCredential;
+use crate::credentials::signing_certificate::SigningCertificate;
 use crate::wami::identity::group::Group;
 use crate::wami::identity::role::Role;
 use crate::wami::identity::user::User;
@@ -11,12 +17,6 @@ use crate::wami::sts::credentials::Credentials;
 use crate::wami::sts::session::StsSession;
 use crate::wami::tenant::Tenant;
 use serde::{Deserialize, Serialize};
-use wami_credentials::access_key::AccessKey;
-use wami_credentials::login_profile::LoginProfile;
-use wami_credentials::mfa_device::MfaDevice;
-use wami_credentials::server_certificate::ServerCertificate;
-use wami_credentials::service_credential::ServiceSpecificCredential;
-use wami_credentials::signing_certificate::SigningCertificate;
 
 /// Unified resource type for generic store operations
 ///
@@ -257,11 +257,11 @@ mod tests {
     use super::*;
     use crate::arn::{TenantPath, WamiArn};
     use crate::context::WamiContext;
+    use crate::credentials::access_key::builder as access_key_builder;
     use crate::wami::identity::group::builder as group_builder;
     use crate::wami::identity::role::builder as role_builder;
     use crate::wami::identity::user::builder as user_builder;
     use crate::wami::policies::policy::builder as policy_builder;
-    use wami_credentials::access_key::builder as access_key_builder;
 
     fn test_context() -> WamiContext {
         let arn: WamiArn = "arn:wami:.*:12345678:wami:123456789012:user/test"

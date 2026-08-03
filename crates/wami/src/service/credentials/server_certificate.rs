@@ -2,6 +2,10 @@
 //!
 //! Orchestrates server certificate management operations.
 
+use crate::credentials::server_certificate::{
+    builder as cert_builder, ListServerCertificatesRequest, ServerCertificateMetadata,
+    UpdateServerCertificateRequest, UploadServerCertificateRequest,
+};
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::ServerCertificateStore;
 use std::sync::Arc;
@@ -10,10 +14,6 @@ use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
 use wami_core::types::PaginationParams;
-use wami_credentials::server_certificate::{
-    builder as cert_builder, ListServerCertificatesRequest, ServerCertificateMetadata,
-    UpdateServerCertificateRequest, UploadServerCertificateRequest,
-};
 
 /// Service for managing IAM server certificates
 ///

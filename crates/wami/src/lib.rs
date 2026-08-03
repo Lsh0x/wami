@@ -108,10 +108,9 @@ pub use store::memory::InMemoryStore;
 pub use store::{SsoAdminStore, Store, StsStore, WamiStore};
 
 // Re-export provider types
+pub mod credentials;
 pub mod provider;
 pub use provider::ProviderConfig;
-pub use wami_credentials as credentials;
-
 // Re-export service layer
 pub use service::{
     hash_secret, verify_secret, AccessKeyService, AccountAssignmentService, ApplicationService,

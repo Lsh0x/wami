@@ -2,6 +2,10 @@
 //!
 //! Orchestrates signing certificate management operations.
 
+use crate::credentials::signing_certificate::{
+    builder as cert_builder, DeleteSigningCertificateRequest, ListSigningCertificatesRequest,
+    SigningCertificate, UpdateSigningCertificateRequest, UploadSigningCertificateRequest,
+};
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::SigningCertificateStore;
 use std::sync::Arc;
@@ -9,10 +13,6 @@ use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
-use wami_credentials::signing_certificate::{
-    builder as cert_builder, DeleteSigningCertificateRequest, ListSigningCertificatesRequest,
-    SigningCertificate, UpdateSigningCertificateRequest, UploadSigningCertificateRequest,
-};
 
 /// Service for managing IAM signing certificates
 ///
@@ -176,9 +176,9 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::credentials::signing_certificate::CertificateStatus;
     use crate::service::auth::decision::{Decision, DenyReason};
     use crate::store::memory::InMemoryWamiStore;
-    use wami_credentials::signing_certificate::CertificateStatus;
 
     fn setup_service() -> SigningCertificateService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));

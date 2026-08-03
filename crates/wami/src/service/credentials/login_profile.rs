@@ -2,6 +2,9 @@
 //!
 //! Orchestrates login profile management operations.
 
+use crate::credentials::login_profile::{
+    builder as login_builder, CreateLoginProfileRequest, LoginProfile, UpdateLoginProfileRequest,
+};
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::LoginProfileStore;
 use std::sync::Arc;
@@ -9,9 +12,6 @@ use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
-use wami_credentials::login_profile::{
-    builder as login_builder, CreateLoginProfileRequest, LoginProfile, UpdateLoginProfileRequest,
-};
 
 /// Service for managing IAM login profiles
 ///

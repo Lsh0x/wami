@@ -1079,13 +1079,7 @@ dependencies = [
  "uuid",
  "wami-condition",
  "wami-core",
- "wami-credentials",
  "wami-macros",
- "wami-provider",
- "wami-provider-aws",
- "wami-provider-azure",
- "wami-provider-custom",
- "wami-provider-gcp",
 ]
 
 [[package]]
@@ -1109,71 +1103,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "wami-credentials"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "serde",
- "uuid",
- "wami-core",
- "wami-provider",
-]
-
-[[package]]
 name = "wami-macros"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "wami-provider"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "hex",
- "regex",
- "serde",
- "sha2",
- "wami-core",
-]
-
-[[package]]
-name = "wami-provider-aws"
-version = "0.1.0"
-dependencies = [
- "uuid",
- "wami-core",
- "wami-provider",
-]
-
-[[package]]
-name = "wami-provider-azure"
-version = "0.1.0"
-dependencies = [
- "uuid",
- "wami-core",
- "wami-provider",
-]
-
-[[package]]
-name = "wami-provider-custom"
-version = "0.1.0"
-dependencies = [
- "uuid",
- "wami-core",
- "wami-provider",
-]
-
-[[package]]
-name = "wami-provider-gcp"
-version = "0.1.0"
-dependencies = [
- "uuid",
- "wami-core",
- "wami-provider",
 ]
 
 [[package]]

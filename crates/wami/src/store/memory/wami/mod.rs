@@ -6,6 +6,7 @@
 //! - `credentials/` - AccessKeyStore, MfaDeviceStore, LoginProfileStore
 //! - `policies/` - PolicyStore
 
+use crate::credentials::{AccessKey, LoginProfile, MfaDevice};
 use crate::wami::identity::identity_provider::{OidcProvider, SamlProvider};
 use crate::wami::identity::{Group, Role, User};
 use crate::wami::policies::Policy;
@@ -15,7 +16,6 @@ use crate::wami::sso_admin::{
 use crate::wami::sts::{CallerIdentity, StsSession};
 use crate::wami::tenant::{Tenant, TenantId};
 use std::collections::HashMap;
-use wami_credentials::{AccessKey, LoginProfile, MfaDevice};
 
 /// In-memory implementation of WAMI store
 ///

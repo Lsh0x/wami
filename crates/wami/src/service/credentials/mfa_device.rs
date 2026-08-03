@@ -2,6 +2,9 @@
 //!
 //! Orchestrates MFA device management operations.
 
+use crate::credentials::mfa_device::{
+    builder as mfa_builder, EnableMfaDeviceRequest, ListMfaDevicesRequest, MfaDevice,
+};
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
 use crate::store::traits::MfaDeviceStore;
 use std::sync::Arc;
@@ -9,9 +12,6 @@ use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
-use wami_credentials::mfa_device::{
-    builder as mfa_builder, EnableMfaDeviceRequest, ListMfaDevicesRequest, MfaDevice,
-};
 
 /// Service for managing IAM MFA devices
 ///

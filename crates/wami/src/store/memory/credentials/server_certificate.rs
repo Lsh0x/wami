@@ -1,12 +1,12 @@
 //! Server Certificate Store Implementation for InMemoryWamiStore
 
+use crate::credentials::server_certificate::ServerCertificateMetadata;
+use crate::credentials::ServerCertificate;
 use crate::store::memory::InMemoryWamiStore;
 use crate::store::traits::ServerCertificateStore;
 use async_trait::async_trait;
 use wami_core::error::Result;
 use wami_core::types::PaginationParams;
-use wami_credentials::server_certificate::ServerCertificateMetadata;
-use wami_credentials::ServerCertificate;
 
 #[async_trait]
 impl ServerCertificateStore for InMemoryWamiStore {

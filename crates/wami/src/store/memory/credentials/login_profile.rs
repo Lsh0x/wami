@@ -1,10 +1,10 @@
 //! Login Profile Store Implementation for InMemoryWamiStore
 
+use crate::credentials::LoginProfile;
 use crate::store::memory::InMemoryWamiStore;
 use crate::store::traits::LoginProfileStore;
 use async_trait::async_trait;
 use wami_core::error::Result;
-use wami_credentials::LoginProfile;
 
 #[async_trait]
 impl LoginProfileStore for InMemoryWamiStore {
