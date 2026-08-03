@@ -502,3 +502,165 @@ impl dyn CloudProvider {
 }
 
 // Re-export provider implementations
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::provider::aws::AwsProvider;
+
+    /// Exercised through a real provider: no implementation overrides
+    /// [`CloudProvider::generate_wami_arn`], so this is the code every one of
+    /// them runs.
+    fn provider() -> AwsProvider {
+        AwsProvider::default()
+    }
+
+    #[test]
+    fn every_resource_type_maps_to_a_service_and_a_prefix() {
+        // The mapping is a pair of sixteen-arm matches with no fallback, so a
+        // new variant is a compile error rather than a silent miscategory —
+        // but nothing checked the arms themselves led anywhere sensible.
+        let p = provider();
+        let cases = [
+            (ResourceType::User, "iam", "user"),
+            (ResourceType::Group, "iam", "group"),
+            (ResourceType::Role, "iam", "role"),
+            (ResourceType::Policy, "iam", "policy"),
+            (ResourceType::AccessKey, "iam", "access-key"),
+            (ResourceType::MfaDevice, "iam", "mfa"),
+            (ResourceType::ServiceLinkedRole, "iam", "role"),
+            (ResourceType::ServiceCredential, "iam", "service-credential"),
+            (
+                ResourceType::SigningCertificate,
+                "iam",
+                "signing-certificate",
+            ),
+            (ResourceType::ServerCertificate, "iam", "server-certificate"),
+            (ResourceType::SamlProvider, "iam", "saml-provider"),
+            (ResourceType::OidcProvider, "iam", "oidc-provider"),
+            (ResourceType::StsAssumedRole, "sts", "assumed-role"),
+            (ResourceType::StsFederatedUser, "sts", "federated-user"),
+            (ResourceType::StsSession, "sts", "session"),
+            (ResourceType::Tenant, "organizations", "ou"),
+        ];
+
+        for (ty, service, prefix) in cases {
+            let arn = p.generate_wami_arn(ty, "123456789012", "/", "thing");
+            assert_eq!(
+                arn,
+                format!("arn:wami:{service}::123456789012:{prefix}/thing"),
+                "{ty:?} landed in the wrong place"
+            );
+        }
+    }
+
+    #[test]
+    fn a_service_linked_role_is_a_role_but_a_session_is_not_an_identity() {
+        // The two arms that are easy to get wrong: one collapses onto another
+        // prefix on purpose, the other changes service entirely.
+        let p = provider();
+        assert_eq!(
+            p.generate_wami_arn(ResourceType::ServiceLinkedRole, "1", "/", "n"),
+            p.generate_wami_arn(ResourceType::Role, "1", "/", "n"),
+            "a service-linked role is addressed as a role"
+        );
+        assert!(p
+            .generate_wami_arn(ResourceType::StsSession, "1", "/", "n")
+            .starts_with("arn:wami:sts::"));
+    }
+
+    #[test]
+    fn a_path_reaches_the_arn_in_one_shape_however_it_was_written() {
+        // Callers pass paths with and without either slash. All four spellings
+        // of the same path must produce the same ARN, or the same resource
+        // gets two identifiers.
+        let p = provider();
+        let expected = "arn:wami:iam::123456789012:user/engineering/alice";
+        for spelling in [
+            "/engineering/",
+            "engineering",
+            "/engineering",
+            "engineering/",
+        ] {
+            assert_eq!(
+                p.generate_wami_arn(ResourceType::User, "123456789012", spelling, "alice"),
+                expected,
+                "{spelling:?} produced a different ARN"
+            );
+        }
+    }
+
+    #[test]
+    fn an_empty_path_leaves_no_trace() {
+        let p = provider();
+        for empty in ["", "/", "  "] {
+            assert_eq!(
+                p.generate_wami_arn(ResourceType::User, "123456789012", empty, "alice"),
+                "arn:wami:iam::123456789012:user/alice",
+                "{empty:?} left something behind"
+            );
+        }
+    }
+
+    #[test]
+    fn a_nested_path_keeps_its_depth() {
+        let p = provider();
+        assert_eq!(
+            p.generate_wami_arn(ResourceType::Role, "1", "/eng/platform/", "deployer"),
+            "arn:wami:iam::1:role/eng/platform/deployer"
+        );
+    }
+
+    #[test]
+    fn a_session_duration_is_checked_against_the_providers_own_limits() {
+        // The default implementation reads `resource_limits()`, so it enforces
+        // whatever the provider declares rather than a constant.
+        let p = provider();
+        let limits = p.resource_limits();
+
+        assert!(p
+            .validate_session_duration(limits.session_duration_min)
+            .is_ok());
+        assert!(p
+            .validate_session_duration(limits.session_duration_max)
+            .is_ok());
+        assert!(p
+            .validate_session_duration(limits.session_duration_min - 1)
+            .is_err());
+        assert!(p
+            .validate_session_duration(limits.session_duration_max + 1)
+            .is_err());
+    }
+
+    #[test]
+    fn a_tenant_path_round_trips() {
+        let path = <dyn CloudProvider>::tenant_aware_path(Some("acme/engineering"), "/");
+        assert_eq!(path, "/tenants/acme/engineering/");
+        assert_eq!(
+            <dyn CloudProvider>::extract_tenant_from_path(&path),
+            Some("acme/engineering".to_string())
+        );
+    }
+
+    #[test]
+    fn a_path_without_a_tenant_is_left_alone_and_yields_none() {
+        assert_eq!(
+            <dyn CloudProvider>::tenant_aware_path(None, "/admin/"),
+            "/admin/"
+        );
+        // An empty tenant id is not a tenant.
+        assert_eq!(
+            <dyn CloudProvider>::tenant_aware_path(Some(""), "/admin/"),
+            "/admin/"
+        );
+        assert_eq!(
+            <dyn CloudProvider>::extract_tenant_from_path("/admin/"),
+            None
+        );
+        assert_eq!(
+            <dyn CloudProvider>::extract_tenant_from_path("/tenants/"),
+            None,
+            "the marker alone names no tenant"
+        );
+    }
+}

@@ -145,4 +145,46 @@ mod tests {
         assert_eq!(limits.max_access_keys_per_user, 10);
         assert_eq!(limits.max_tags_per_resource, 64);
     }
+
+    #[test]
+    fn each_resource_type_gets_its_own_gcp_shape() {
+        // Four distinct formats plus a fallback. A type routed to the wrong
+        // arm produces a well-formed but meaningless resource name.
+        let p = GcpProvider::new("proj".to_string());
+        let id = |t| p.generate_resource_identifier(t, "acct", "/", "thing");
+
+        assert_eq!(
+            id(ResourceType::User),
+            "projects/proj/serviceAccounts/thing@proj.iam.gserviceaccount.com",
+            "a user is a service account, and the project appears twice"
+        );
+        assert_eq!(id(ResourceType::Role), "projects/proj/roles/thing");
+        assert_eq!(
+            id(ResourceType::SamlProvider),
+            "projects/proj/locations/global/workforcePools/default/providers/thing",
+            "SAML federates a workforce"
+        );
+        assert_eq!(
+            id(ResourceType::OidcProvider),
+            "projects/proj/locations/global/workloadIdentityPools/default/providers/thing",
+            "OIDC federates a workload — a different pool entirely"
+        );
+        assert_eq!(
+            id(ResourceType::Policy),
+            "projects/proj/resources/thing",
+            "anything unmapped falls back"
+        );
+    }
+
+    #[test]
+    fn gcp_ids_are_numeric_and_do_not_repeat() {
+        // GCP identifiers are decimal, not the hyphenated UUID other providers
+        // hand out.
+        let p = GcpProvider::new("proj".to_string());
+        let a = p.generate_resource_id(ResourceType::User);
+        let b = p.generate_resource_id(ResourceType::User);
+        assert_ne!(a, b);
+        assert!(a.chars().all(|c| c.is_ascii_digit()), "{a} is not decimal");
+        assert_eq!(p.name(), "gcp");
+    }
 }

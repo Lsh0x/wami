@@ -161,4 +161,22 @@ mod tests {
         registry.register_boxed("dummy", Box::new(DummyProvider));
         assert!(registry.get("dummy").is_some());
     }
+
+    #[test]
+    fn a_registry_reports_emptiness_and_honours_a_capacity_hint() {
+        let empty = ProviderRegistry::new();
+        assert!(empty.is_empty());
+        assert_eq!(empty.len(), 0);
+
+        // The hint changes allocation, not behaviour — a registry built with
+        // one is still empty.
+        let mut sized = ProviderRegistry::with_capacity(8);
+        assert!(sized.is_empty());
+        sized.register(
+            "aws",
+            std::sync::Arc::new(crate::provider::aws::AwsProvider::default()),
+        );
+        assert!(!sized.is_empty());
+        assert_eq!(sized.len(), 1);
+    }
 }
