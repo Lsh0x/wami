@@ -1,9 +1,17 @@
 [package]
 name = "wami-core"
-version = "0.1.0"
+version = "0.16.0"
 edition = "2021"
 license = "MIT"
-description = "Core primitives shared across the WAMI workspace"
+description = "Core primitives for wami: ARNs, contexts, errors and shared types"
+authors = ["LSH <github@lsh.tech>"]
+rust-version = "1.90.0"
+repository = "https://github.com/Lsh0x/wami"
+homepage = "https://github.com/Lsh0x/wami"
+documentation = "https://docs.rs/wami-core"
+readme = "README.md"
+keywords = ["iam", "identity", "arn", "multicloud"]
+categories = ["api-bindings", "authentication"]
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }

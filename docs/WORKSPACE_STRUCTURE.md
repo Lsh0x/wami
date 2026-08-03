@@ -13,197 +13,46 @@ WAMI is organized as a **Cargo workspace** containing multiple crates, each with
 
 ## Workspace Crates
 
-### Core Crates
+Five members. Four are published to crates.io; the fifth is internal.
 
-#### `wami-core`
-**Purpose**: Foundation primitives shared across the entire workspace
+| crate | published | what it is |
+|-------|-----------|------------|
+| [`wami`](../crates/wami) | ✅ | the library — identity, policies, STS, OAuth/OIDC, stores, services, and the provider and credential modules |
+| [`wami-core`](../crates/wami-core) | ✅ | ARNs, `WamiContext`, `AmiError`, shared types, and the `traits` module (`Store`, `Service`, `ServiceRegistry`) |
+| [`wami-condition`](../crates/wami-condition) | ✅ | IAM condition-key evaluation — self-contained enough to use on its own |
+| [`wami-macros`](../crates/wami-macros) | ✅ | procedural macros. Separate because Rust requires it: a `proc-macro = true` crate cannot hold ordinary library code |
+| [`wami-service`](../crates/wami-service) | ❌ | a service registry, not in `wami`'s dependency graph. `publish = false` |
 
-**Contains**:
-- `arn` - ARN parsing, building, and transformation
-- `context` - `WamiContext` and session information
-- `error` - `AmiError` and `Result` types
-- `types` - Common types (`PolicyDocument`, `Tag`, etc.)
-
-**Usage**:
-```rust
-use wami_core::arn::{WamiArn, Service, TenantPath};
-use wami_core::context::WamiContext;
-use wami_core::error::{AmiError, Result};
-use wami_core::types::PolicyDocument;
+```
+wami-core ──┬── wami-condition ──┐
+            ├── wami-service     ├── wami
+wami-macros ────────────────────-┘
 ```
 
-**Dependencies**: AWS SDKs, `chrono`, `serde`, `thiserror`
+### Why so few
 
----
+There were ten. Publishing `wami` requires every crate in its graph to be on
+crates.io — cargo strips `path` at publish time, so a consumer resolves
+`wami-core = "0.16.0"` from the registry and nothing else. Six of the ten had no
+public identity to justify that: `wami-provider` and the four cloud
+implementations existed only behind a re-export façade, `wami-credentials`
+behind `pub use wami_credentials as credentials`, and `wami-traits` was 37 lines
+that `wami` never referenced.
 
-#### `wami-traits`
-**Purpose**: Domain-agnostic trait definitions for stores and services
+They are now modules — `wami::provider`, `wami::provider::aws`,
+`wami::credentials`, `wami_core::traits` — at exactly the paths they were
+reachable from before. See [#129](https://github.com/Lsh0x/wami/issues/129) for
+the reasoning and what it cost.
 
-**Contains**:
-- `Store<T>` - Generic CRUD trait for backing stores
-- `Service` - Abstraction over high-level services
-- `ServiceRegistry` - Dependency injection mechanism
+`wami-condition` stayed separate on purpose: 10k lines that rarely change, whose
+separate compilation is worth keeping, and a problem someone might genuinely
+want to solve without adopting an identity model.
 
-**Usage**:
-```rust
-use wami_traits::Store;
-use wami_traits::Service;
-use wami_traits::ServiceRegistry;
-```
+### Versioning
 
-**Dependencies**: `wami-core`
-
----
-
-#### `wami-provider`
-**Purpose**: Cloud provider abstraction layer
-
-**Contains**:
-- `CloudProvider` trait definition
-- Provider configuration structures (`ProviderConfig`, `ResourceLimits`, `ResourceType`)
-- ARN builder utilities
-- Provider registry for runtime loading
-
-**Usage**:
-```rust
-use wami_provider::{CloudProvider, ProviderConfig, ResourceType};
-```
-
-**Dependencies**: `wami-core`
-
-**Note**: Concrete provider implementations live in separate crates under `crates/cloud-provider/`:
-- `wami-provider-aws` - AWS provider implementation
-- `wami-provider-gcp` - Google Cloud Platform provider implementation
-- `wami-provider-azure` - Microsoft Azure provider implementation
-- `wami-provider-custom` - Custom provider builder for on-premise or other clouds
-
-**Provider Crate Usage**:
-```rust
-use wami_provider::CloudProvider;
-use wami_provider_aws::AwsProvider;
-
-let provider = AwsProvider::new();
-let arn = provider.generate_resource_identifier(
-    wami_provider::ResourceType::User,
-    "123456789012",
-    "/",
-    "alice",
-);
-```
-
----
-
-### Domain Crates
-
-#### `wami-identity`
-**Purpose**: Identity domain models and builders
-
-**Contains**:
-- `User`, `Group`, `Role`
-- `IdentityProvider`, `ServiceLinkedRole`
-- Builders and operations for identity management
-
-**Usage**:
-```rust
-use wami_identity::{User, Group, Role, UserBuilder};
-```
-
-**Dependencies**: `wami-core`
-
----
-
-#### `wami-credentials`
-**Purpose**: Credential management domain
-
-**Contains**:
-- `AccessKey`, `LoginProfile`, `MfaDevice`
-- `ServerCertificate`, `SigningCertificate`
-- Service-specific credentials
-
-**Usage**:
-```rust
-use wami_credentials::{AccessKey, LoginProfile, MfaDevice};
-```
-
-**Dependencies**: `wami-core`
-
----
-
-### Infrastructure Crates
-
-#### `wami-macros`
-**Purpose**: Procedural macros for reducing boilerplate
-
-**Contains**:
-- `#[derive(Service)]` - Auto-generate `Service` trait implementations
-- `#[service]` - Generate service struct boilerplate
-- `register_services!` - Register multiple services in a registry
-
-**Usage**:
-```rust
-use wami_macros::service;
-
-#[service(store_trait = "crate::store::traits::UserStore")]
-pub struct UserService<S> {
-    store: Arc<RwLock<S>>,
-}
-```
-
-**Dependencies**: `syn`, `quote`, `proc-macro2`
-
-**Note**: This is a procedural macro crate (`proc-macro = true`)
-
----
-
-#### `wami-service`
-**Purpose**: Service registry and orchestration utilities
-
-**Contains**:
-- `Registry` - Dynamic service registration and retrieval
-- Service discovery utilities
-
-**Usage**:
-```rust
-use wami_service::Registry;
-use wami_traits::ServiceRegistry;
-
-let mut registry = Registry::new();
-registry.register("user_service", Arc::new(user_service));
-```
-
-**Dependencies**: `wami-traits`
-
----
-
-### Main Crate
-
-#### `wami`
-**Purpose**: Main façade crate that re-exports everything
-
-**Contains**:
-- Re-exports from all workspace crates
-- Service layer implementations
-- Store implementations (memory, traits)
-- Backward compatibility layer
-
-**Usage**:
-```rust
-// All public APIs are available through the main crate
-use wami::{
-    // Core types
-    WamiContext, WamiArn, AmiError, Result,
-    // Domain types
-    User, Group, Role, AccessKey,
-    // Stores
-    InMemoryStore, UserStore,
-    // Services
-    UserService, GroupService,
-};
-```
-
-**Dependencies**: All workspace crates
-
----
+`wami`, `wami-core`, `wami-condition` and `wami-macros` move in lockstep at one
+version. They are released together and tested together; separate version lines
+would imply an independence that does not exist.
 
 ## Import Patterns
 
@@ -303,7 +152,7 @@ cargo build --workspace
 ### Build specific crate
 ```bash
 cargo build -p wami-core
-cargo build -p wami-identity
+cargo build -p wami-condition
 ```
 
 ### Build with tests
@@ -313,10 +162,12 @@ cargo test --workspace
 
 ## Development Workflow
 
-1. **Core changes** → Edit `wami-core`
-2. **Domain changes** → Edit `wami-identity`, `wami-credentials`, etc.
-3. **Service changes** → Edit `wami` crate's service layer
-4. **Macro changes** → Edit `wami-macros` (requires full rebuild)
+1. **Core changes** → Edit `wami-core` (ARNs, context, errors, shared traits)
+2. **Condition evaluation** → Edit `wami-condition`
+3. **Everything else** → Edit `wami`: domain, services, stores, providers,
+   credentials. They are modules there, not crates.
+4. **Macro changes** → Edit `wami-macros` (requires a full rebuild, since every
+   expansion downstream is invalidated)
 
 ## Migration Guide
 

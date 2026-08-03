@@ -8,6 +8,30 @@
       "bump-minor-pre-major": true,
       "draft": false,
       "prerelease": false
+    },
+    "crates/wami-core": {
+      "release-type": "rust",
+      "package-name": "wami-core",
+      "include-component-in-tag": true,
+      "bump-minor-pre-major": true,
+      "draft": false,
+      "prerelease": false
+    },
+    "crates/wami-condition": {
+      "release-type": "rust",
+      "package-name": "wami-condition",
+      "include-component-in-tag": true,
+      "bump-minor-pre-major": true,
+      "draft": false,
+      "prerelease": false
+    },
+    "crates/wami-macros": {
+      "release-type": "rust",
+      "package-name": "wami-macros",
+      "include-component-in-tag": true,
+      "bump-minor-pre-major": true,
+      "draft": false,
+      "prerelease": false
     }
   },
   "changelog-sections": [
@@ -45,6 +69,20 @@
       "type": "chore",
       "section": "Chores",
       "hidden": true
+    }
+  ],
+  "separate-pull-requests": false,
+  "group-pull-request-title-pattern": "chore(main): release ${version}",
+  "plugins": [
+    {
+      "type": "linked-versions",
+      "groupName": "wami",
+      "components": [
+        "wami",
+        "wami-core",
+        "wami-condition",
+        "wami-macros"
+      ]
     }
   ]
 }

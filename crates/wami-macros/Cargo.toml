@@ -1,9 +1,16 @@
 [package]
 name = "wami-macros"
-version = "0.1.0"
+version = "0.16.0"
 edition = "2021"
 license = "MIT"
-description = "Procedural macros for WAMI, the multi-cloud IAM library"
+description = "Procedural macros for wami, the multicloud IAM library"
+authors = ["LSH <github@lsh.tech>"]
+rust-version = "1.90.0"
+homepage = "https://github.com/Lsh0x/wami"
+documentation = "https://docs.rs/wami-macros"
+readme = "README.md"
+keywords = ["iam", "macros", "derive"]
+categories = ["development-tools::procedural-macro-helpers"]
 repository = "https://github.com/Lsh0x/wami"
 
 [lib]

@@ -16,13 +16,13 @@ trait-object interface.
 ```toml
 [dependencies]
 wami-service = { path = "../wami-service" }
-wami-traits = { path = "../wami-traits" }
+wami-core = { path = "../wami-core" }
 ```
 
 ```rust
 use std::sync::Arc;
 use wami_service::Registry;
-use wami_traits::{Service, ServiceRegistry};
+use wami_core::traits::{Service, ServiceRegistry};
 
 #[derive(Default)]
 struct EchoService;
