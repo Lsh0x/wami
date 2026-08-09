@@ -575,6 +575,23 @@ mod tests {
         );
     }
 
+    /// The guard was here and nothing exercised it.
+    ///
+    /// An empty instance id would otherwise build an ARN naming no instance, and
+    /// `is_initialized` compares against exactly that field — so a second boot
+    /// would find the first one's root and decline to run, for an instance that
+    /// is not the same one.
+    #[tokio::test]
+    async fn test_initialize_instance_refuses_an_empty_id() {
+        let store = Arc::new(tokio::sync::RwLock::new(InMemoryWamiStore::default()));
+
+        let error = InstanceBootstrap::initialize_instance(store.clone(), "   ")
+            .await
+            .expect_err("whitespace is not an instance id");
+
+        assert!(error.to_string().contains("instance_id"));
+    }
+
     #[tokio::test]
     async fn test_seed_roles_creates_what_it_was_given() {
         use crate::store::traits::{PolicyStore, RoleStore};
@@ -630,6 +647,48 @@ mod tests {
         assert!(
             store.read().await.get_role("good").await.unwrap().is_none(),
             "the roles before the bad one should not have been written"
+        );
+    }
+
+    /// The other document, which is checked to a different depth and says so.
+    ///
+    /// A trust policy carries `Principal` and no `Resource`, and this crate
+    /// models no type for one — so the check here is JSON validity and stops
+    /// there. It still has to refuse what is not JSON at all, and the error has
+    /// to name which of the two documents was wrong: they are both policy JSON
+    /// to a reader, and "invalid document" would send them to the wrong one.
+    #[tokio::test]
+    async fn test_seed_roles_refuses_a_trust_policy_that_is_not_json() {
+        use crate::store::traits::RoleStore;
+
+        let store = Arc::new(tokio::sync::RwLock::new(InMemoryWamiStore::default()));
+        InstanceBootstrap::initialize_instance(store.clone(), "999888777")
+            .await
+            .unwrap();
+
+        let bad = RoleSeed {
+            assume_role_policy: "{not json",
+            ..seed("reader", READS)
+        };
+
+        let error = InstanceBootstrap::seed_roles(store.clone(), "999888777", &[bad])
+            .await
+            .expect_err("a trust policy that is not JSON should be refused");
+
+        let message = error.to_string();
+        assert!(
+            message.contains("assume_role_policy"),
+            "the error should name the document that was wrong, got: {message}"
+        );
+        assert!(
+            store
+                .read()
+                .await
+                .get_role("reader")
+                .await
+                .unwrap()
+                .is_none(),
+            "nothing should have been written"
         );
     }
 
