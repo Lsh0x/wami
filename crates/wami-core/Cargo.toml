@@ -1,6 +1,6 @@
 [package]
 name = "wami-core"
-version = "0.16.0"
+version = "0.17.0"
 edition = "2021"
 license = "MIT"
 description = "Core primitives for wami: ARNs, contexts, errors and shared types"
