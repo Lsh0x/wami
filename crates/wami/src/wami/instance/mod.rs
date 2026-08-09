@@ -8,4 +8,4 @@
 
 pub mod bootstrap;
 
-pub use bootstrap::{InstanceBootstrap, RootCredentials};
+pub use bootstrap::{InstanceBootstrap, RoleSeed, RootCredentials};

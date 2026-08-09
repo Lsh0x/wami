@@ -127,7 +127,7 @@ pub use service::{
 pub use wami::{instance, sso_admin, sts, tenant};
 
 // Re-export instance types
-pub use wami::instance::{InstanceBootstrap, RootCredentials};
+pub use wami::instance::{InstanceBootstrap, RoleSeed, RootCredentials};
 
 // Re-export identity types
 pub use wami::identity::{Group, Role, RootUser, User};
