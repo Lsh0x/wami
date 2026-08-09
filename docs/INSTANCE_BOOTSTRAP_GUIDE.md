@@ -98,6 +98,49 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 5. **Stores credentials**: Hashed secret only (never plaintext)
 6. **Returns credentials**: Plaintext secret shown ONCE
 
+And nothing else. In particular it writes no role and no policy — see below.
+
+### Seeding roles, if you want any
+
+Until v0.17 this list was incomplete without saying so: bootstrap also created
+three roles of its own — `platform-admin` granting `*` on `*`,
+`platform-space-creator`, and `platform-user` — with their policies attached.
+Every instance that booted held them, whether or not its operator wanted them,
+and there was no argument to decline them with. One of those documents named
+`chat:Read`, which is not an action, and nothing ever said so.
+
+Which roles an instance should have is not something this library can know, so
+it no longer guesses. `initialize_instance` creates the root user and its key.
+If you want roles at bootstrap, pass them:
+
+```rust
+use wami::{InstanceBootstrap, RoleSeed};
+
+const TRUST: &str = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"wami.local"},"Action":"sts:AssumeRole"}]}"#;
+
+InstanceBootstrap::seed_roles(store.clone(), "999888777", &[
+    RoleSeed {
+        name: "reader",
+        path: "/",
+        description: "Reads users and roles, on every resource",
+        assume_role_policy: TRUST,
+        policy_name: "ReaderPolicy",
+        policy_document: r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["iam:ReadUser","iam:ReadRole"],"Resource":["*"]}]}"#,
+    },
+]).await?;
+```
+
+Every document is parsed before anything is written, so a malformed one refuses
+the whole call rather than leaving half a set of roles behind. Their contents
+are not judged: an action this build has never heard of is a valid document,
+because a vocabulary belongs to whoever declares it.
+
+**Upgrading from 0.16 or earlier.** A store initialised before this release
+still holds those three roles — removing the call does not remove rows already
+written. Decide what to do with them deliberately; in particular
+`platform-admin` grants `*` on `*` and `platform-space-creator` reaches every
+resource despite a description that said otherwise.
+
 ### Checking if Instance is Initialized
 
 ```rust

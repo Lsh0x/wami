@@ -58,6 +58,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use wami_core::PolicyDocument;
 
 /// Root user credentials returned after instance initialization
 ///
@@ -79,6 +80,38 @@ pub struct RootCredentials {
 
     /// The root user ARN
     pub user_arn: String,
+}
+
+/// One role to create at bootstrap, with the policy it carries.
+///
+/// The two documents are named rather than positional on purpose. Both are
+/// policy JSON and both parse, so a pair passed the wrong way round is accepted
+/// everywhere and produces a role anybody may assume, carrying whatever the
+/// trust policy happened to say. Named fields make that mistake unwritable
+/// rather than merely unlikely.
+#[derive(Debug, Clone, Copy)]
+pub struct RoleSeed<'a> {
+    /// Role name, as it will be referred to — `platform-admin`, `reader`.
+    pub name: &'a str,
+
+    /// IAM path, `/` if you have no use for one.
+    pub path: &'a str,
+
+    /// Shown wherever the role is listed.
+    ///
+    /// Say what it reaches, not what it is meant for. A description that
+    /// disagrees with its document is worse than an absent one: it is read, and
+    /// believed, by whoever is deciding whether to grant it.
+    pub description: &'a str,
+
+    /// Who may assume the role.
+    pub assume_role_policy: &'a str,
+
+    /// Name of the managed policy created and attached.
+    pub policy_name: &'a str,
+
+    /// What the role may do, once assumed.
+    pub policy_document: &'a str,
 }
 
 /// Instance Bootstrap - Initialize WAMI instances
@@ -137,7 +170,7 @@ impl InstanceBootstrap {
         instance_id: impl Into<String>,
     ) -> Result<RootCredentials>
     where
-        S: UserStore + AccessKeyStore + RoleStore + PolicyStore + Send + Sync,
+        S: UserStore + AccessKeyStore + Send + Sync,
     {
         let instance_id = instance_id.into();
 
@@ -206,9 +239,6 @@ impl InstanceBootstrap {
         // Store access key
         store_guard.create_access_key(access_key).await?;
 
-        // Create platform bootstrap roles and their policies
-        Self::create_platform_roles(&mut *store_guard, &instance_id).await?;
-
         // Return credentials (secret in plaintext - ONLY TIME IT'S VISIBLE!)
         Ok(RootCredentials {
             access_key_id,
@@ -252,19 +282,73 @@ impl InstanceBootstrap {
             .collect()
     }
 
-    /// Create platform bootstrap roles with their policies
+    /// Create the given roles, each with the policy it carries, as root.
     ///
-    /// Creates 3 default roles:
-    /// - `platform-admin`: Full access to all actions (*)
-    /// - `platform-space-creator`: Can create spaces + manage IAM within own spaces
-    /// - `platform-user`: Minimal read-only access
-    async fn create_platform_roles<S>(store: &mut S, instance_id: &str) -> Result<()>
+    /// This library builds the ARNs, the root context and the ordering — create
+    /// the policy, create the role, attach one to the other. It supplies no
+    /// content: which roles an instance should have, and what they may reach,
+    /// belongs to whoever runs it, and a general IAM library has no way to know.
+    ///
+    /// Until v0.17 there was no parameter. `initialize_instance` wrote three
+    /// roles of its own unconditionally, so every instance that booted held a
+    /// `platform-admin` granting `*` on `*` that its operator had never asked
+    /// for and could not decline. One of those documents also named an action
+    /// that does not exist, unnoticed for as long as it shipped, because nothing
+    /// reads a seeded document back.
+    ///
+    /// Each document is parsed before anything is written, and a malformed one
+    /// refuses the whole call rather than leaving half a set of roles behind.
+    /// Their *contents* are not judged: an action this build has never heard of
+    /// is a valid document, because a vocabulary belongs to whoever declares it.
+    ///
+    /// ```no_run
+    /// # use wami::{InstanceBootstrap, RoleSeed};
+    /// # async fn f<S: wami::store::traits::RoleStore + wami::store::traits::PolicyStore + Send + Sync>(
+    /// #     store: std::sync::Arc<tokio::sync::RwLock<S>>) -> Result<(), Box<dyn std::error::Error>> {
+    /// InstanceBootstrap::seed_roles(store, "999888777", &[RoleSeed {
+    ///     name: "reader",
+    ///     path: "/",
+    ///     description: "Reads users and roles, on every resource",
+    ///     assume_role_policy: r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"wami.local"},"Action":"sts:AssumeRole"}]}"#,
+    ///     policy_name: "ReaderPolicy",
+    ///     policy_document: r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["iam:ReadUser","iam:ReadRole"],"Resource":["*"]}]}"#,
+    /// }]).await?;
+    /// # Ok(()) }
+    /// ```
+    pub async fn seed_roles<S>(
+        store: Arc<RwLock<S>>,
+        instance_id: &str,
+        roles: &[RoleSeed<'_>],
+    ) -> Result<()>
     where
         S: RoleStore + PolicyStore + Send + Sync,
     {
         use crate::wami::identity::root_user::ROOT_TENANT_ID;
 
-        // Build a root context for creating bootstrap resources
+        // Every document is checked before the first one is stored. Validating
+        // as we go would leave a caller who passed four roles and one typo with
+        // three roles created and no way to tell from the error which.
+        for role in roles {
+            serde_json::from_str::<PolicyDocument>(role.policy_document).map_err(|e| {
+                AmiError::InvalidParameter {
+                    message: format!("role {}: policy_document is not a policy: {e}", role.name),
+                }
+            })?;
+
+            // Only that it is JSON. A trust policy carries `Principal` and no
+            // `Resource`, and this library models no type for one — `PolicyDocument`
+            // rejects it outright, which is how this check was written the first
+            // time and how the test above caught it. Claiming a stronger guarantee
+            // than the crate can back would be the same fault as the description
+            // that said "scoped" over a document saying `Resource: ["*"]`.
+            serde_json::from_str::<serde_json::Value>(role.assume_role_policy).map_err(|e| {
+                AmiError::InvalidParameter {
+                    message: format!("role {}: assume_role_policy is not JSON: {e}", role.name),
+                }
+            })?;
+        }
+
+        // Root, because at bootstrap there is nobody else yet to authorise this.
         let root_arn = WamiArn::builder()
             .service(Service::Iam)
             .tenant_path(TenantPath::single(ROOT_TENANT_ID))
@@ -279,89 +363,32 @@ impl InstanceBootstrap {
             .is_root(true)
             .build()?;
 
-        // ── 1. platform-admin: full access ──────────────────────
-        let admin_policy_doc = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["*"],"Resource":["*"]}]}"#;
+        let mut store_guard = store.write().await;
+        let store = &mut *store_guard;
 
-        let admin_policy = policy_builder::build_policy(
-            "PlatformAdminPolicy".to_string(),
-            admin_policy_doc.to_string(),
-            Some("/platform/".to_string()),
-            Some("Full access to all platform actions".to_string()),
-            None,
-            &ctx,
-        )?;
-        let admin_policy_arn = admin_policy.arn.clone();
-        store.create_policy(admin_policy).await?;
+        for role in roles {
+            let policy = policy_builder::build_policy(
+                role.policy_name.to_string(),
+                role.policy_document.to_string(),
+                Some(role.path.to_string()),
+                Some(role.description.to_string()),
+                None,
+                &ctx,
+            )?;
+            let policy_arn = policy.arn.clone();
+            store.create_policy(policy).await?;
 
-        let admin_assume = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"wami.local"},"Action":"sts:AssumeRole"}]}"#;
-        let admin_role = role_builder::build_role(
-            "platform-admin".to_string(),
-            admin_assume.to_string(),
-            Some("/platform/".to_string()),
-            Some("Full platform administrator — unrestricted access".to_string()),
-            None,
-            &ctx,
-        )?;
-        store.create_role(admin_role).await?;
-        store
-            .attach_role_policy("platform-admin", &admin_policy_arn)
-            .await?;
-
-        // ── 2. platform-space-creator: create spaces + scoped IAM ──
-        let creator_policy_doc = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["space:Create","space:Read","space:Update","space:Delete","iam:CreateRole","iam:DeleteRole","iam:CreateUser","iam:ReadUser","iam:ReadRole","iam:ListUsers","iam:ManageGroupMembers"],"Resource":["*"]}]}"#;
-
-        let creator_policy = policy_builder::build_policy(
-            "PlatformSpaceCreatorPolicy".to_string(),
-            creator_policy_doc.to_string(),
-            Some("/platform/".to_string()),
-            Some("Can create and manage spaces with scoped IAM".to_string()),
-            None,
-            &ctx,
-        )?;
-        let creator_policy_arn = creator_policy.arn.clone();
-        store.create_policy(creator_policy).await?;
-
-        let creator_assume = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"wami.local"},"Action":"sts:AssumeRole"}]}"#;
-        let creator_role = role_builder::build_role(
-            "platform-space-creator".to_string(),
-            creator_assume.to_string(),
-            Some("/platform/".to_string()),
-            Some("Can create spaces and manage IAM within owned spaces".to_string()),
-            None,
-            &ctx,
-        )?;
-        store.create_role(creator_role).await?;
-        store
-            .attach_role_policy("platform-space-creator", &creator_policy_arn)
-            .await?;
-
-        // ── 3. platform-user: minimal read access ──────────────
-        let user_policy_doc = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["iam:ReadUser","iam:ReadRole","iam:ListUsers","space:Read","chat:Send","chat:Read"],"Resource":["*"]}]}"#;
-
-        let user_policy = policy_builder::build_policy(
-            "PlatformUserPolicy".to_string(),
-            user_policy_doc.to_string(),
-            Some("/platform/".to_string()),
-            Some("Minimal read-only access for regular users".to_string()),
-            None,
-            &ctx,
-        )?;
-        let user_policy_arn = user_policy.arn.clone();
-        store.create_policy(user_policy).await?;
-
-        let user_assume = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"wami.local"},"Action":"sts:AssumeRole"}]}"#;
-        let user_role = role_builder::build_role(
-            "platform-user".to_string(),
-            user_assume.to_string(),
-            Some("/platform/".to_string()),
-            Some("Standard platform user with minimal permissions".to_string()),
-            None,
-            &ctx,
-        )?;
-        store.create_role(user_role).await?;
-        store
-            .attach_role_policy("platform-user", &user_policy_arn)
-            .await?;
+            let built = role_builder::build_role(
+                role.name.to_string(),
+                role.assume_role_policy.to_string(),
+                Some(role.path.to_string()),
+                Some(role.description.to_string()),
+                None,
+                &ctx,
+            )?;
+            store.create_role(built).await?;
+            store.attach_role_policy(role.name, &policy_arn).await?;
+        }
 
         Ok(())
     }
@@ -507,8 +534,28 @@ mod tests {
             .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '/'));
     }
 
+    /// Two documents that parse, so nothing downstream can tell them apart.
+    fn seed<'a>(name: &'a str, policy_document: &'a str) -> RoleSeed<'a> {
+        RoleSeed {
+            name,
+            path: "/",
+            description: "Reads users and roles, on every resource",
+            assume_role_policy: r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"wami.local"},"Action":"sts:AssumeRole"}]}"#,
+            policy_name: "SeedPolicy",
+            policy_document,
+        }
+    }
+
+    const READS: &str = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["iam:ReadUser","iam:ReadRole"],"Resource":["*"]}]}"#;
+
+    /// The regression this whole change exists for.
+    ///
+    /// Before it, booting an instance also wrote three roles and three policies
+    /// nobody had asked for, one of them granting `*` on `*`. Asserting that the
+    /// store holds them is what the old test did, and it passed for as long as
+    /// the behaviour was wrong — so what is asserted here is the absence.
     #[tokio::test]
-    async fn test_bootstrap_creates_platform_roles() {
+    async fn test_initialize_instance_writes_no_policy() {
         use crate::store::traits::{PolicyStore, RoleStore};
 
         let store = Arc::new(tokio::sync::RwLock::new(InMemoryWamiStore::default()));
@@ -518,56 +565,90 @@ mod tests {
             .unwrap();
 
         let s = store.read().await;
-
-        // Verify 3 platform roles exist
-        let admin_role = s.get_role("platform-admin").await.unwrap();
-        assert!(admin_role.is_some(), "platform-admin role should exist");
-        let admin_role = admin_role.unwrap();
-        assert_eq!(admin_role.path, "/platform/");
-
-        let creator_role = s.get_role("platform-space-creator").await.unwrap();
         assert!(
-            creator_role.is_some(),
-            "platform-space-creator role should exist"
+            s.list_roles(None, None).await.unwrap().0.is_empty(),
+            "initialize_instance created a role nobody asked for"
         );
+        assert!(
+            s.list_policies(None, None).await.unwrap().0.is_empty(),
+            "initialize_instance created a policy nobody asked for"
+        );
+    }
 
-        let user_role = s.get_role("platform-user").await.unwrap();
-        assert!(user_role.is_some(), "platform-user role should exist");
+    #[tokio::test]
+    async fn test_seed_roles_creates_what_it_was_given() {
+        use crate::store::traits::{PolicyStore, RoleStore};
 
-        // Verify each role has an attached policy
-        let admin_policies = s
-            .list_attached_role_policies("platform-admin")
+        let store = Arc::new(tokio::sync::RwLock::new(InMemoryWamiStore::default()));
+        InstanceBootstrap::initialize_instance(store.clone(), "999888777")
             .await
             .unwrap();
-        assert_eq!(
-            admin_policies.len(),
-            1,
-            "platform-admin should have 1 attached policy"
-        );
 
-        let creator_policies = s
-            .list_attached_role_policies("platform-space-creator")
+        InstanceBootstrap::seed_roles(store.clone(), "999888777", &[seed("reader", READS)])
             .await
             .unwrap();
+
+        let s = store.read().await;
+        let role = s.get_role("reader").await.unwrap();
+        assert!(role.is_some(), "the role that was passed should exist");
+
+        let attached = s.list_attached_role_policies("reader").await.unwrap();
+        assert_eq!(attached.len(), 1, "its policy should be attached to it");
+
+        let policy = s.get_policy(&attached[0]).await.unwrap().unwrap();
         assert_eq!(
-            creator_policies.len(),
-            1,
-            "platform-space-creator should have 1 attached policy"
+            policy.policy_document, READS,
+            "the document stored should be the document given, untouched"
         );
 
-        let user_policies = s
-            .list_attached_role_policies("platform-user")
+        assert_eq!(
+            s.list_roles(None, None).await.unwrap().0.len(),
+            1,
+            "and nothing else should have appeared beside it"
+        );
+    }
+
+    /// A caller who passes four roles and one typo should get four roles or
+    /// none, never the three that happened to come before the bad one.
+    #[tokio::test]
+    async fn test_seed_roles_writes_nothing_when_a_document_is_malformed() {
+        use crate::store::traits::RoleStore;
+
+        let store = Arc::new(tokio::sync::RwLock::new(InMemoryWamiStore::default()));
+        InstanceBootstrap::initialize_instance(store.clone(), "999888777")
             .await
             .unwrap();
-        assert_eq!(
-            user_policies.len(),
-            1,
-            "platform-user should have 1 attached policy"
-        );
 
-        // Verify admin policy grants full access
-        let admin_policy = s.get_policy(&admin_policies[0]).await.unwrap().unwrap();
-        assert!(admin_policy.policy_document.contains(r#""Action":["*"]"#));
-        assert!(admin_policy.policy_document.contains(r#""Resource":["*"]"#));
+        let outcome = InstanceBootstrap::seed_roles(
+            store.clone(),
+            "999888777",
+            &[seed("good", READS), seed("bad", "{not json")],
+        )
+        .await;
+
+        assert!(outcome.is_err(), "a malformed document should be refused");
+        assert!(
+            store.read().await.get_role("good").await.unwrap().is_none(),
+            "the roles before the bad one should not have been written"
+        );
+    }
+
+    /// An action this build has never heard of is a valid document.
+    ///
+    /// A vocabulary belongs to whoever declares it, and refusing here would put
+    /// this library in the position of knowing every consumer's verbs — which
+    /// is how it came to ship `chat:` and `space:` in the first place.
+    #[tokio::test]
+    async fn test_seed_roles_does_not_judge_the_vocabulary() {
+        let store = Arc::new(tokio::sync::RwLock::new(InMemoryWamiStore::default()));
+        InstanceBootstrap::initialize_instance(store.clone(), "999888777")
+            .await
+            .unwrap();
+
+        let theirs = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["mermaid:PublishDiagram"],"Resource":["*"]}]}"#;
+
+        InstanceBootstrap::seed_roles(store.clone(), "999888777", &[seed("publisher", theirs)])
+            .await
+            .expect("a caller's own action should be storable");
     }
 }
