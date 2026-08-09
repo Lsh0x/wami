@@ -74,6 +74,7 @@
   "separate-pull-requests": false,
   "group-pull-request-title-pattern": "chore(main): release ${version}",
   "plugins": [
+    "cargo-workspace",
     {
       "type": "linked-versions",
       "groupName": "wami",
