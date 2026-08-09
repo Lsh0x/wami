@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.0](https://github.com/Lsh0x/wami/compare/v0.16.0...v0.17.0) (2026-08-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* `initialize_instance` no longer creates the `platform-admin`, `platform-space-creator` and `platform-user` roles. Callers relying on them should call `seed_roles` with the documents they actually want. Stores initialised before this release keep the rows already written — removing the call does not remove them, and `platform-admin` grants `*` on `*`.
+* fold the provider crates and wami-credentials into wami ([#131](https://github.com/Lsh0x/wami/issues/131))
+* **core:** fold wami-traits in, and stop the macros naming it relatively ([#130](https://github.com/Lsh0x/wami/issues/130))
+
+### Bug Fixes
+
+* stop bootstrap writing policy its caller never asked for ([#137](https://github.com/Lsh0x/wami/issues/137)) ([f93d0dd](https://github.com/Lsh0x/wami/commit/f93d0dd79147b3524019d9ceb5e2e483e82c75d1))
+
+
+### Refactoring
+
+* **core:** fold wami-traits in, and stop the macros naming it relatively ([#130](https://github.com/Lsh0x/wami/issues/130)) ([6147ea4](https://github.com/Lsh0x/wami/commit/6147ea4a8bb91732d28b884fc61437be6d554450))
+* fold the provider crates and wami-credentials into wami ([#131](https://github.com/Lsh0x/wami/issues/131)) ([0f11cf5](https://github.com/Lsh0x/wami/commit/0f11cf5140ed93334e258be690d4942c3b662e4f))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * wami-condition bumped from 0.16.0 to 0.17.0
+    * wami-core bumped from 0.16.0 to 0.17.0
+    * wami-macros bumped from 0.16.0 to 0.17.0
+
 ## [0.16.0](https://github.com/Lsh0x/wami/compare/v0.15.0...v0.16.0) (2026-08-02)
 
 
