@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/Lsh0x/wami/compare/wami-core-v0.17.0...wami-core-v0.18.0) (2026-08-09)
+
+
+### Chores
+
+* **wami-core:** Synchronize wami versions
+
 ## [0.17.0](https://github.com/Lsh0x/wami/compare/wami-core-v0.16.0...wami-core-v0.17.0) (2026-08-09)
 
 

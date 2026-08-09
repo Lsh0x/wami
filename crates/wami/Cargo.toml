@@ -1,6 +1,6 @@
 [package]
 name = "wami"
-version = "0.17.0"
+version = "0.17.1"
 authors = ["LSH <github@lsh.tech>"]
 edition = "2021"
 rust-version = "1.90.0"
@@ -34,9 +34,9 @@ getrandom = "0.2"
 ed25519-dalek = { version = "2", features = ["rand_core", "pkcs8"], optional = true }
 jsonwebtoken = { version = "9", optional = true }
 roxmltree = "0.21"
-wami-condition = { path = "../wami-condition", version = "0.17.0" }
-wami-core = { path = "../wami-core", version = "0.17.0" }
-wami-macros = { path = "../wami-macros", version = "0.17.0" }
+wami-condition = { path = "../wami-condition", version = "0.18.0" }
+wami-core = { path = "../wami-core", version = "0.18.0" }
+wami-macros = { path = "../wami-macros", version = "0.18.0" }
 
 [features]
 # Provider translations, forwarded to wami-core. Off by default there, so off
