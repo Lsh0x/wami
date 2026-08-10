@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.18.0](https://github.com/Lsh0x/wami/compare/wami-core-v0.17.0...wami-core-v0.18.0) (2026-08-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* `space:*` no longer parses. `WamiAction::SpaceRead`, `SpaceUpdate` and `SpaceDelete` are removed — use the `tenant:` equivalents, which already existed — and the other five are renamed. `WamiServicePrefix::Space` is gone. Any stored policy document naming a `space:` action will stop matching: `WamiAction::from_str` refuses it, and `matches_pattern` compares strings, so an Allow silently grants nothing and a Deny silently denies nothing. Rewrite them before upgrading.
+
+### Refactoring
+
+* a space was a tenant, and three actions had two names ([#143](https://github.com/Lsh0x/wami/issues/143)) ([faac409](https://github.com/Lsh0x/wami/commit/faac4096a6fa9537a5b933f8f709d8fa67ff63b2))
+
 ## [0.17.0](https://github.com/Lsh0x/wami/compare/wami-core-v0.16.0...wami-core-v0.17.0) (2026-08-09)
 
 

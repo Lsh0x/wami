@@ -1,7 +1,7 @@
 {
-  "crates/wami": "0.17.0",
-  "crates/wami-core": "0.17.0",
-  "crates/wami-condition": "0.17.0",
+  "crates/wami": "0.17.1",
+  "crates/wami-core": "0.18.0",
+  "crates/wami-condition": "0.17.1",
   "crates/wami-macros": "0.17.0",
-  "crates/wami-service": "0.1.1"
+  "crates/wami-service": "0.1.2"
 }
