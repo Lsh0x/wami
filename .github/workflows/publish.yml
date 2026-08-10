@@ -51,11 +51,19 @@ jobs:
       - name: refuser tôt s'il n'y a pas de jeton
         run: |
           if [ -z "${{ secrets.CARGO_REGISTERY_TOKEN }}" ]; then
-            echo "::error::CARGO_REGISTERY_TOKEN absent de l'environnement production."
-            echo "::error::Rien n'est publiable, et les étapes suivantes échoueraient"
-            echo "::error::une par une en le disant moins bien."
+            echo "::error::CARGO_REGISTERY_TOKEN n'a pas été lu."
+            echo "::error::Il vit dans l'environnement production ; si ce travail"
+            echo "::error::ne déclare pas \`environment: production\`, il reçoit une"
+            echo "::error::chaîne vide sans que rien ne le signale."
             exit 1
           fi
+          # Et le dire dans l'autre sens aussi. Personne dans ce dépôt n'avait
+          # encore lu un secret d'environnement — `auto-release.yml` déclare
+          # bien un `environment`, mais pour déployer des pages, pas pour lire.
+          # Donc la question <<est-ce qu'il y arrive>> n'avait pas de réponse
+          # observée, et une ligne de log vaut mieux qu'une certitude.
+          echo "jeton lu depuis l'environnement production"
+
 
       # L'ordre est celui des dépendances et il n'est pas négociable : une crate
       # ne peut pas être publiée avant celles qu'elle nomme. `wami-core` et
