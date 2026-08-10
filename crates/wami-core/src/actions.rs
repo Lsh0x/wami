@@ -54,8 +54,15 @@ pub enum WamiAction {
     TenantConfigure,
     /// Manage tenant members (add, remove, ban)
     TenantManageMembers,
-    /// Suspend / reactivate a tenant
+    /// Suspend a tenant
+    ///
+    /// Its opposite is `TenantResume` and not this: cutting access off and
+    /// giving it back are not one permission. A tenant is usually suspended
+    /// FOR a reason — unpaid, abusive, breached — and whoever may cut it off is
+    /// not automatically whoever may decide the reason has passed.
     TenantSuspend,
+    /// Lift a suspension
+    TenantResume,
     /// List all tenants (platform-level)
     TenantList,
 
@@ -100,9 +107,14 @@ pub enum WamiAction {
     IamReadRole,
     /// Assume IAM role
     IamAssumeRole,
-    /// Create / attach IAM policy
+    /// Create an IAM policy
+    ///
+    /// Attaching it is `IamAttachPolicy`, which exists. Saying both here would
+    /// make that one grant nothing anybody could not already do.
     IamCreatePolicy,
-    /// Delete / detach IAM policy
+    /// Delete an IAM policy
+    ///
+    /// Detaching it is `IamDetachPolicy`, for the same reason.
     IamDeletePolicy,
     /// Read IAM policy
     IamReadPolicy,
@@ -352,6 +364,7 @@ impl WamiAction {
             Self::TenantConfigure => "tenant:Configure",
             Self::TenantManageMembers => "tenant:ManageMembers",
             Self::TenantSuspend => "tenant:Suspend",
+            Self::TenantResume => "tenant:Resume",
             Self::TenantList => "tenant:List",
             // Tenant
             Self::TenantRead => "tenant:Read",
@@ -453,6 +466,7 @@ impl WamiAction {
             | Self::TenantConfigure
             | Self::TenantManageMembers
             | Self::TenantSuspend
+            | Self::TenantResume
             | Self::TenantList
             | Self::TenantRead
             | Self::TenantUpdate
@@ -581,6 +595,7 @@ impl FromStr for WamiAction {
             ("tenant", "Configure") => Ok(Self::TenantConfigure),
             ("tenant", "ManageMembers") => Ok(Self::TenantManageMembers),
             ("tenant", "Suspend") => Ok(Self::TenantSuspend),
+            ("tenant", "Resume") => Ok(Self::TenantResume),
             ("tenant", "List") => Ok(Self::TenantList),
             ("tenant", "Read") => Ok(Self::TenantRead),
             ("tenant", "Update") => Ok(Self::TenantUpdate),
@@ -802,7 +817,8 @@ static REGISTRY: LazyLock<Vec<ActionInfo>> = LazyLock::new(|| {
             "tenant",
         ),
         ai("tenant:ManageMembers", "Manage tenant members", "tenant"),
-        ai("tenant:Suspend", "Suspend / reactivate a tenant", "tenant"),
+        ai("tenant:Suspend", "Suspend a tenant", "tenant"),
+        ai("tenant:Resume", "Lift a tenant suspension", "tenant"),
         ai("tenant:List", "List all tenants (platform-level)", "tenant"),
         ai("tenant:Read", "Read tenant info", "tenant"),
         ai("tenant:Update", "Update tenant", "tenant"),
@@ -1071,6 +1087,7 @@ mod tests {
             WamiAction::TenantConfigure,
             WamiAction::TenantManageMembers,
             WamiAction::TenantSuspend,
+            WamiAction::TenantResume,
             WamiAction::TenantList,
             // Tenant
             WamiAction::TenantRead,
@@ -1237,6 +1254,7 @@ mod tests {
             (WamiAction::TenantConfigure, WamiServicePrefix::Tenant),
             (WamiAction::TenantManageMembers, WamiServicePrefix::Tenant),
             (WamiAction::TenantSuspend, WamiServicePrefix::Tenant),
+            (WamiAction::TenantResume, WamiServicePrefix::Tenant),
             (WamiAction::TenantList, WamiServicePrefix::Tenant),
             (WamiAction::TenantRead, WamiServicePrefix::Tenant),
             (WamiAction::TenantUpdate, WamiServicePrefix::Tenant),
@@ -1385,6 +1403,7 @@ mod tests {
             "tenant:ManageMembers"
         );
         assert_eq!(WamiAction::TenantSuspend.as_str(), "tenant:Suspend");
+        assert_eq!(WamiAction::TenantResume.as_str(), "tenant:Resume");
         assert_eq!(WamiAction::TenantList.as_str(), "tenant:List");
     }
 
@@ -1881,7 +1900,7 @@ mod tests {
             (WamiServicePrefix::Platform, 4),
             // Douze : les sept d origine, plus les cinq qui vivaient sous
             // `space` et ne s en distinguaient pas.
-            (WamiServicePrefix::Tenant, 12),
+            (WamiServicePrefix::Tenant, 13),
             (WamiServicePrefix::Iam, 19),
             (WamiServicePrefix::Db, 9),
             (WamiServicePrefix::Chat, 4),
@@ -1919,6 +1938,6 @@ mod tests {
     fn registry_total_action_count() {
         let all = ActionRegistry::list_actions();
         // 4+8+7+19+9+4+6+6+4+4+6+3+5 = 85
-        assert_eq!(all.len(), 82);
+        assert_eq!(all.len(), 83);
     }
 }
