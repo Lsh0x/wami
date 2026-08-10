@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.17.1](https://github.com/Lsh0x/wami/compare/wami-condition-v0.17.0...wami-condition-v0.17.1) (2026-08-10)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * wami-core bumped from 0.17.0 to 0.18.0
+
 ## [0.17.0](https://github.com/Lsh0x/wami/compare/wami-condition-v0.16.0...wami-condition-v0.17.0) (2026-08-09)
 
 
