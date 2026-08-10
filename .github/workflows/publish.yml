@@ -30,14 +30,30 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Le jeton n'est PAS un secret de depot : `gh secret list` ne rend rien.
+    # Il vit dans l'environnement `production`, et un travail qui ne le declare
+    # pas ne le recoit pas — silencieusement, avec une chaine vide. C'est deja
+    # le cas de `codecov.yml`, qui lit `secrets.CODECOV_TOKEN` sans environnement
+    # et televerse donc sans authentification depuis toujours.
+    #
+    # `production` ne porte aucune regle de protection, donc ceci n'ajoute pas
+    # d'approbation a demander.
+    environment: production
     steps:
       - uses: actions/checkout@v4
 
+      # LE NOM DU SECRET PORTE UNE FAUTE DE FRAPPE, et elle est cotee ici plutot
+      # que corrigee en silence : le secret s'appelle `CARGO_REGISTERY_TOKEN`,
+      # avec un E de trop. Cargo, lui, lit `CARGO_REGISTRY_TOKEN` dans
+      # l'environnement — donc le nom GitHub peut etre n'importe lequel du
+      # moment que la correspondance est ecrite. La renommer cote GitHub est
+      # une bonne idee et n'est pas de ce fichier.
       - name: refuser tôt s'il n'y a pas de jeton
         run: |
-          if [ -z "${{ secrets.CARGO_REGISTRY_TOKEN }}" ]; then
-            echo "::error::CARGO_REGISTRY_TOKEN absent. Rien n'est publiable, et"
-            echo "::error::les étapes suivantes échoueraient une par une en le disant mal."
+          if [ -z "${{ secrets.CARGO_REGISTERY_TOKEN }}" ]; then
+            echo "::error::CARGO_REGISTERY_TOKEN absent de l'environnement production."
+            echo "::error::Rien n'est publiable, et les étapes suivantes échoueraient"
+            echo "::error::une par une en le disant moins bien."
             exit 1
           fi
 
@@ -51,7 +67,7 @@ jobs:
       # après un échec au milieu sans qu'on ait à savoir où il s'était arrêté.
       - name: publier, dans l'ordre, en sautant ce qui existe
         env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTERY_TOKEN }}
         run: |
           set -u
           for crate in wami-core wami-macros wami-condition wami; do
