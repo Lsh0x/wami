@@ -1,6 +1,6 @@
 //! WAMI Action vocabulary — the complete set of permissions for the obrain ecosystem.
 //!
-//! Each action follows the `service:Operation` convention (e.g. `"db:Query"`, `"space:Create"`).
+//! Each action follows the `service:Operation` convention (e.g. `"db:Query"`, `"tenant:Create"`).
 //! Special wildcards:
 //! - `"*"` matches ALL actions
 //! - `"service:*"` matches all actions within a service prefix
@@ -18,7 +18,6 @@ use std::sync::LazyLock;
 ///
 /// Actions are organized by service prefix:
 /// - `platform:*` — Platform-level administration
-/// - `space:*` — Space lifecycle and configuration
 /// - `tenant:*` — Tenant hierarchy management
 /// - `iam:*` — Identity & access management
 /// - `db:*` — Database / knowledge store operations
@@ -48,23 +47,17 @@ pub enum WamiAction {
     /// View platform audit logs
     PlatformViewAuditLog,
 
-    // -- space --------------------------------------------------------------
-    /// Create a new Space
-    SpaceCreate,
-    /// Delete a Space
-    SpaceDelete,
-    /// Read Space metadata
-    SpaceRead,
-    /// Update Space settings (branding, visibility, quotas)
-    SpaceUpdate,
-    /// Configure Space domain and port
-    SpaceConfigure,
-    /// Manage Space members (add, remove, ban)
-    SpaceManageMembers,
-    /// Suspend / reactivate a Space
-    SpaceSuspend,
-    /// List all Spaces (platform-level)
-    SpaceList,
+    // -- tenant -------------------------------------------------------------
+    /// Create a new tenant
+    TenantCreate,
+    /// Configure tenant domain and port
+    TenantConfigure,
+    /// Manage tenant members (add, remove, ban)
+    TenantManageMembers,
+    /// Suspend / reactivate a tenant
+    TenantSuspend,
+    /// List all tenants (platform-level)
+    TenantList,
 
     // -- tenant -------------------------------------------------------------
     /// Read tenant info
@@ -243,7 +236,6 @@ pub enum WamiAction {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum WamiServicePrefix {
     Platform,
-    Space,
     Tenant,
     Iam,
     Db,
@@ -261,7 +253,6 @@ impl WamiServicePrefix {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Platform => "platform",
-            Self::Space => "space",
             Self::Tenant => "tenant",
             Self::Iam => "iam",
             Self::Db => "db",
@@ -279,7 +270,6 @@ impl WamiServicePrefix {
     pub fn all() -> &'static [WamiServicePrefix] {
         &[
             Self::Platform,
-            Self::Space,
             Self::Tenant,
             Self::Iam,
             Self::Db,
@@ -301,7 +291,6 @@ impl FromStr for WamiServicePrefix {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "platform" => Ok(Self::Platform),
-            "space" => Ok(Self::Space),
             "tenant" => Ok(Self::Tenant),
             "iam" => Ok(Self::Iam),
             "db" => Ok(Self::Db),
@@ -342,7 +331,6 @@ impl WamiAction {
             Self::All => "*",
             Self::ServiceAll(prefix) => match prefix {
                 WamiServicePrefix::Platform => "platform:*",
-                WamiServicePrefix::Space => "space:*",
                 WamiServicePrefix::Tenant => "tenant:*",
                 WamiServicePrefix::Iam => "iam:*",
                 WamiServicePrefix::Db => "db:*",
@@ -360,15 +348,11 @@ impl WamiAction {
             Self::PlatformViewSettings => "platform:ViewSettings",
             Self::PlatformUpdateSettings => "platform:UpdateSettings",
             Self::PlatformViewAuditLog => "platform:ViewAuditLog",
-            // Space
-            Self::SpaceCreate => "space:Create",
-            Self::SpaceDelete => "space:Delete",
-            Self::SpaceRead => "space:Read",
-            Self::SpaceUpdate => "space:Update",
-            Self::SpaceConfigure => "space:Configure",
-            Self::SpaceManageMembers => "space:ManageMembers",
-            Self::SpaceSuspend => "space:Suspend",
-            Self::SpaceList => "space:List",
+            Self::TenantCreate => "tenant:Create",
+            Self::TenantConfigure => "tenant:Configure",
+            Self::TenantManageMembers => "tenant:ManageMembers",
+            Self::TenantSuspend => "tenant:Suspend",
+            Self::TenantList => "tenant:List",
             // Tenant
             Self::TenantRead => "tenant:Read",
             Self::TenantUpdate => "tenant:Update",
@@ -465,15 +449,12 @@ impl WamiAction {
             | Self::PlatformViewSettings
             | Self::PlatformUpdateSettings
             | Self::PlatformViewAuditLog => Some(WamiServicePrefix::Platform),
-            Self::SpaceCreate
-            | Self::SpaceDelete
-            | Self::SpaceRead
-            | Self::SpaceUpdate
-            | Self::SpaceConfigure
-            | Self::SpaceManageMembers
-            | Self::SpaceSuspend
-            | Self::SpaceList => Some(WamiServicePrefix::Space),
-            Self::TenantRead
+            Self::TenantCreate
+            | Self::TenantConfigure
+            | Self::TenantManageMembers
+            | Self::TenantSuspend
+            | Self::TenantList
+            | Self::TenantRead
             | Self::TenantUpdate
             | Self::TenantDelete
             | Self::TenantCreateSubTenant
@@ -595,16 +576,12 @@ impl FromStr for WamiAction {
             ("platform", "ViewSettings") => Ok(Self::PlatformViewSettings),
             ("platform", "UpdateSettings") => Ok(Self::PlatformUpdateSettings),
             ("platform", "ViewAuditLog") => Ok(Self::PlatformViewAuditLog),
-            // Space
-            ("space", "Create") => Ok(Self::SpaceCreate),
-            ("space", "Delete") => Ok(Self::SpaceDelete),
-            ("space", "Read") => Ok(Self::SpaceRead),
-            ("space", "Update") => Ok(Self::SpaceUpdate),
-            ("space", "Configure") => Ok(Self::SpaceConfigure),
-            ("space", "ManageMembers") => Ok(Self::SpaceManageMembers),
-            ("space", "Suspend") => Ok(Self::SpaceSuspend),
-            ("space", "List") => Ok(Self::SpaceList),
             // Tenant
+            ("tenant", "Create") => Ok(Self::TenantCreate),
+            ("tenant", "Configure") => Ok(Self::TenantConfigure),
+            ("tenant", "ManageMembers") => Ok(Self::TenantManageMembers),
+            ("tenant", "Suspend") => Ok(Self::TenantSuspend),
+            ("tenant", "List") => Ok(Self::TenantList),
             ("tenant", "Read") => Ok(Self::TenantRead),
             ("tenant", "Update") => Ok(Self::TenantUpdate),
             ("tenant", "Delete") => Ok(Self::TenantDelete),
@@ -817,20 +794,16 @@ static REGISTRY: LazyLock<Vec<ActionInfo>> = LazyLock::new(|| {
             "View platform audit logs",
             "platform",
         ),
-        // Space
-        ai("space:Create", "Create a new Space", "space"),
-        ai("space:Delete", "Delete a Space", "space"),
-        ai("space:Read", "Read Space metadata", "space"),
-        ai("space:Update", "Update Space settings", "space"),
-        ai(
-            "space:Configure",
-            "Configure Space domain and port",
-            "space",
-        ),
-        ai("space:ManageMembers", "Manage Space members", "space"),
-        ai("space:Suspend", "Suspend / reactivate a Space", "space"),
-        ai("space:List", "List all Spaces", "space"),
         // Tenant
+        ai("tenant:Create", "Create a new tenant", "tenant"),
+        ai(
+            "tenant:Configure",
+            "Configure tenant domain and port",
+            "tenant",
+        ),
+        ai("tenant:ManageMembers", "Manage tenant members", "tenant"),
+        ai("tenant:Suspend", "Suspend / reactivate a tenant", "tenant"),
+        ai("tenant:List", "List all tenants (platform-level)", "tenant"),
         ai("tenant:Read", "Read tenant info", "tenant"),
         ai("tenant:Update", "Update tenant", "tenant"),
         ai("tenant:Delete", "Delete tenant", "tenant"),
@@ -991,7 +964,7 @@ mod tests {
             WamiAction::All,
             WamiAction::ServiceAll(WamiServicePrefix::Db),
             WamiAction::PlatformAdmin,
-            WamiAction::SpaceCreate,
+            WamiAction::TenantCreate,
             WamiAction::TenantRead,
             WamiAction::IamCreateUser,
             WamiAction::DbQuery,
@@ -1094,15 +1067,11 @@ mod tests {
             WamiAction::PlatformViewSettings,
             WamiAction::PlatformUpdateSettings,
             WamiAction::PlatformViewAuditLog,
-            // Space
-            WamiAction::SpaceCreate,
-            WamiAction::SpaceDelete,
-            WamiAction::SpaceRead,
-            WamiAction::SpaceUpdate,
-            WamiAction::SpaceConfigure,
-            WamiAction::SpaceManageMembers,
-            WamiAction::SpaceSuspend,
-            WamiAction::SpaceList,
+            WamiAction::TenantCreate,
+            WamiAction::TenantConfigure,
+            WamiAction::TenantManageMembers,
+            WamiAction::TenantSuspend,
+            WamiAction::TenantList,
             // Tenant
             WamiAction::TenantRead,
             WamiAction::TenantUpdate,
@@ -1264,14 +1233,11 @@ mod tests {
                 WamiAction::PlatformViewAuditLog,
                 WamiServicePrefix::Platform,
             ),
-            (WamiAction::SpaceCreate, WamiServicePrefix::Space),
-            (WamiAction::SpaceDelete, WamiServicePrefix::Space),
-            (WamiAction::SpaceRead, WamiServicePrefix::Space),
-            (WamiAction::SpaceUpdate, WamiServicePrefix::Space),
-            (WamiAction::SpaceConfigure, WamiServicePrefix::Space),
-            (WamiAction::SpaceManageMembers, WamiServicePrefix::Space),
-            (WamiAction::SpaceSuspend, WamiServicePrefix::Space),
-            (WamiAction::SpaceList, WamiServicePrefix::Space),
+            (WamiAction::TenantCreate, WamiServicePrefix::Tenant),
+            (WamiAction::TenantConfigure, WamiServicePrefix::Tenant),
+            (WamiAction::TenantManageMembers, WamiServicePrefix::Tenant),
+            (WamiAction::TenantSuspend, WamiServicePrefix::Tenant),
+            (WamiAction::TenantList, WamiServicePrefix::Tenant),
             (WamiAction::TenantRead, WamiServicePrefix::Tenant),
             (WamiAction::TenantUpdate, WamiServicePrefix::Tenant),
             (WamiAction::TenantDelete, WamiServicePrefix::Tenant),
@@ -1411,18 +1377,15 @@ mod tests {
     }
 
     #[test]
-    fn as_str_space() {
-        assert_eq!(WamiAction::SpaceCreate.as_str(), "space:Create");
-        assert_eq!(WamiAction::SpaceDelete.as_str(), "space:Delete");
-        assert_eq!(WamiAction::SpaceRead.as_str(), "space:Read");
-        assert_eq!(WamiAction::SpaceUpdate.as_str(), "space:Update");
-        assert_eq!(WamiAction::SpaceConfigure.as_str(), "space:Configure");
+    fn as_str_tenant_lifecycle() {
+        assert_eq!(WamiAction::TenantCreate.as_str(), "tenant:Create");
+        assert_eq!(WamiAction::TenantConfigure.as_str(), "tenant:Configure");
         assert_eq!(
-            WamiAction::SpaceManageMembers.as_str(),
-            "space:ManageMembers"
+            WamiAction::TenantManageMembers.as_str(),
+            "tenant:ManageMembers"
         );
-        assert_eq!(WamiAction::SpaceSuspend.as_str(), "space:Suspend");
-        assert_eq!(WamiAction::SpaceList.as_str(), "space:List");
+        assert_eq!(WamiAction::TenantSuspend.as_str(), "tenant:Suspend");
+        assert_eq!(WamiAction::TenantList.as_str(), "tenant:List");
     }
 
     #[test]
@@ -1592,8 +1555,8 @@ mod tests {
             "platform:*"
         );
         assert_eq!(
-            WamiAction::ServiceAll(WamiServicePrefix::Space).as_str(),
-            "space:*"
+            WamiAction::ServiceAll(WamiServicePrefix::Tenant).as_str(),
+            "tenant:*"
         );
         assert_eq!(
             WamiAction::ServiceAll(WamiServicePrefix::Tenant).as_str(),
@@ -1720,8 +1683,8 @@ mod tests {
     #[test]
     fn matches_str_service_wildcard_every_prefix() {
         let prefixes_and_actions: Vec<(&str, &str, &str)> = vec![
-            ("platform:*", "platform:Admin", "space:Create"),
-            ("space:*", "space:Create", "tenant:Read"),
+            ("platform:*", "platform:Admin", "tenant:Create"),
+            ("platform:*", "platform:Admin", "tenant:Read"),
             ("tenant:*", "tenant:Read", "iam:CreateUser"),
             ("iam:*", "iam:CreateUser", "db:Query"),
             ("db:*", "db:Query", "chat:Send"),
@@ -1820,7 +1783,6 @@ mod tests {
     #[test]
     fn service_prefix_as_str_all() {
         assert_eq!(WamiServicePrefix::Platform.as_str(), "platform");
-        assert_eq!(WamiServicePrefix::Space.as_str(), "space");
         assert_eq!(WamiServicePrefix::Tenant.as_str(), "tenant");
         assert_eq!(WamiServicePrefix::Iam.as_str(), "iam");
         assert_eq!(WamiServicePrefix::Db.as_str(), "db");
@@ -1857,8 +1819,8 @@ mod tests {
     }
 
     #[test]
-    fn service_prefix_all_returns_all_13() {
-        assert_eq!(WamiServicePrefix::all().len(), 13);
+    fn service_prefix_all_returns_all_12() {
+        assert_eq!(WamiServicePrefix::all().len(), 12);
     }
 
     // -----------------------------------------------------------------------
@@ -1917,8 +1879,9 @@ mod tests {
     fn registry_list_by_every_prefix() {
         let expected_counts: Vec<(WamiServicePrefix, usize)> = vec![
             (WamiServicePrefix::Platform, 4),
-            (WamiServicePrefix::Space, 8),
-            (WamiServicePrefix::Tenant, 7),
+            // Douze : les sept d origine, plus les cinq qui vivaient sous
+            // `space` et ne s en distinguaient pas.
+            (WamiServicePrefix::Tenant, 12),
             (WamiServicePrefix::Iam, 19),
             (WamiServicePrefix::Db, 9),
             (WamiServicePrefix::Chat, 4),
@@ -1949,13 +1912,13 @@ mod tests {
     #[test]
     fn registry_list_prefixes() {
         let prefixes = ActionRegistry::list_prefixes();
-        assert_eq!(prefixes.len(), 13);
+        assert_eq!(prefixes.len(), 12);
     }
 
     #[test]
     fn registry_total_action_count() {
         let all = ActionRegistry::list_actions();
         // 4+8+7+19+9+4+6+6+4+4+6+3+5 = 85
-        assert_eq!(all.len(), 85);
+        assert_eq!(all.len(), 82);
     }
 }
