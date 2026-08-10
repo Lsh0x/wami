@@ -73,7 +73,6 @@
   ],
   "separate-pull-requests": false,
   "plugins": [
-    "cargo-workspace",
     {
       "type": "linked-versions",
       "groupName": "wami",
@@ -83,6 +82,7 @@
         "wami-condition",
         "wami-macros"
       ]
-    }
+    },
+    "cargo-workspace"
   ]
 }
