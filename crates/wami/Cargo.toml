@@ -28,7 +28,7 @@ base64 = "0.22"
 sha2 = "0.10"
 hex = "0.4"
 regex = "1.10"
-bcrypt = "0.15"
+bcrypt = "0.18"
 rand = "0.8"
 getrandom = "0.2"
 ed25519-dalek = { version = "2", features = ["rand_core", "pkcs8"], optional = true }
