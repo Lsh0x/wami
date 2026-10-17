@@ -10,6 +10,7 @@ pub mod context;
 pub mod evaluator;
 pub mod keys;
 pub mod operators;
+mod validate;
 
 #[cfg(test)]
 mod tests;

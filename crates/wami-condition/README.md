@@ -41,8 +41,17 @@ implemented — `String*`, `Numeric*`, `Date*`, `Bool`, `IpAddress`, `Arn*`,
 `IfExists` to a `Deny` can turn a rule that blocked something into one that
 permits it. The distinction is implemented, and tested.
 
-Likewise an absent key under a plain operator makes the condition **fail**, not
-succeed: a statement that cannot be evaluated does not apply.
+Likewise an absent key under a plain operator makes the condition **false**,
+not true — as in AWS, a key the request does not carry is not met.
+
+An **unreadable** condition is not a false one. An operator nobody defined
+(`StringEqualz`), a value its operator cannot read (an `IpAddress` that is no
+address, a `Bool` that is neither `true` nor `false`, a list where the operator
+reads one value) is refused by `parse_condition_block`, and an evaluation that
+cannot be carried out — a context value the operator cannot compare — is an
+`Err` from `evaluate_condition_block`, never a `false`. Answered as `false`,
+it made the statement carrying it vanish: for a `Deny`, the rule meant to block
+an action stopped applying.
 
 ## Context keys
 

@@ -13,11 +13,33 @@ use std::str::FromStr;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConditionError {
     UnknownOperator(String),
-    TypeMismatch { expected: String, actual: String },
+    TypeMismatch {
+        expected: String,
+        actual: String,
+    },
     InvalidBooleanValue(String),
-    InvalidDate { value: String, error: String },
+    InvalidDate {
+        value: String,
+        error: String,
+    },
     MissingContextKey(String),
     InvalidConditionStructure(String),
+    /// A value its operator cannot read, refused when the condition is parsed.
+    ///
+    /// It names where the value sits — operator, key, and the element when the
+    /// value is a list — and what the operator reads, but never the value
+    /// itself: a caller logging the error must not echo policy text it has
+    /// not checked.
+    InvalidConditionValue {
+        /// The operator as written in the condition.
+        operator: String,
+        /// The condition key the value is compared with.
+        key: String,
+        /// The offending element's index, when the value is a list.
+        position: Option<usize>,
+        /// What the operator reads.
+        expected: String,
+    },
 }
 
 impl std::fmt::Display for ConditionError {
@@ -42,6 +64,18 @@ impl std::fmt::Display for ConditionError {
             }
             ConditionError::InvalidConditionStructure(msg) => {
                 write!(f, "Invalid condition structure: {}", msg)
+            }
+            ConditionError::InvalidConditionValue {
+                operator,
+                key,
+                position,
+                expected,
+            } => {
+                write!(f, "Invalid value for {operator} on key {key}")?;
+                if let Some(index) = position {
+                    write!(f, " at element {index}")?;
+                }
+                write!(f, ": expected {expected}")
             }
         }
     }
@@ -97,11 +131,14 @@ fn evaluate_operator_block(
     for (key, expected_value) in key_value_map {
         let actual_value = get_context_value(key, context)
             .map_err(|e| ConditionError::MissingContextKey(format!("{}: {}", key, e)))?;
-        // If operator evaluation fails (e.g., type mismatch), treat as condition failure
-        match super::operators::evaluate_operator(operator, actual_value, expected_value) {
-            Ok(true) => continue,          // Condition passes
-            Ok(false) => return Ok(false), // Condition fails
-            Err(_) => return Ok(false),    // Type mismatch or other error = condition fails
+        // An error is not a `false`: answering it as one made the statement
+        // vanish, and a vanished Deny is a fail-open. `parse_condition_block`
+        // refuses every policy-side value an operator cannot read, so what
+        // still errs here is the CONTEXT side — a key whose value the operator
+        // cannot compare (`NumericLessThan` on `aws:username`) — or a block
+        // built by hand without going through parse.
+        if !super::operators::evaluate_operator(operator, actual_value, expected_value)? {
+            return Ok(false);
         }
     }
 
@@ -109,6 +146,18 @@ fn evaluate_operator_block(
 }
 
 /// Parse a condition block from JSON Value
+///
+/// Refuses, rather than defers to evaluation, everything evaluation could not
+/// read: a block that is not an object, an operator nobody defined, and a
+/// value its operator cannot compare (the table in `validate.rs`). Each used to
+/// evaluate to `false`, which made the statement carrying it vanish.
+///
+/// # Errors
+///
+/// [`ConditionError::InvalidConditionStructure`] for the shape,
+/// [`ConditionError::UnknownOperator`] for a misspelt operator, and
+/// [`ConditionError::InvalidConditionValue`] for a value its operator cannot
+/// read — including a list where the operator reads one value (wami 002).
 pub fn parse_condition_block(value: &Value) -> Result<ConditionBlock, ConditionError> {
     let obj = value.as_object().ok_or_else(|| {
         ConditionError::InvalidConditionStructure("Condition must be an object".to_string())
@@ -117,6 +166,7 @@ pub fn parse_condition_block(value: &Value) -> Result<ConditionBlock, ConditionE
     let mut block = ConditionBlock::new();
 
     for (operator_name, key_value_obj) in obj {
+        let operator = ConditionOperator::from_str(operator_name)?;
         let key_value_map = key_value_obj.as_object().ok_or_else(|| {
             ConditionError::InvalidConditionStructure(format!(
                 "Operator '{}' value must be an object",
@@ -126,6 +176,7 @@ pub fn parse_condition_block(value: &Value) -> Result<ConditionBlock, ConditionE
 
         let mut key_values = HashMap::new();
         for (key, value) in key_value_map {
+            crate::validate::check_value(operator_name, operator, key, value)?;
             let condition_value = ConditionValue::from(value.clone());
             key_values.insert(key.clone(), condition_value);
         }

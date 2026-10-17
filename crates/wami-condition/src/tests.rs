@@ -4,34 +4,16 @@
 
 #[test]
 fn test_ip_address_expected_type_mismatch() {
-    // expected is a number (not string/array) => operator returns false
-    let context = ConditionContext::builder().source_ip("127.0.0.1").build();
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "IpAddress": {
-                "aws:SourceIp": 123
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(!result);
+    // expected is a number (not string/array): the operator could only ever
+    // answer false, so it is refused at parse (wami 001)
+    parse_err(r#"{"IpAddress": {"aws:SourceIp": 123}}"#);
 }
 
 #[test]
 fn test_ip_address_ipv6_fallback_exact_match() {
-    // prefix_len > 128 triggers IPv6 fallback branch returning ip == network
-    let ip = "2001:db8::";
-    let context = ConditionContext::builder().source_ip(ip).build();
-    let condition = parse_condition_block_from_json(&format!(
-        r#"{{
-            "IpAddress": {{
-                "aws:SourceIp": "{}/255"
-            }}
-        }}"#,
-        ip
-    ));
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result);
+    // A v6 prefix above 128 is no CIDR: refused at parse (wami 001) rather
+    // than falling back to an exact match on the network part.
+    parse_err(r#"{"IpAddress": {"aws:SourceIp": "2001:db8::/255"}}"#);
 }
 
 #[test]
@@ -757,18 +739,9 @@ fn test_numeric_very_large() {
 
 #[test]
 fn test_numeric_invalid_string() {
-    let context = create_test_context();
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "NumericEquals": {
-                "aws:username": "alice"
-            }
-        }"#,
-    );
-
-    // Should fail - can't compare string as number
-    let result = evaluate_condition_block(&condition, &context);
-    assert!(result.is_err() || !result.unwrap());
+    // "alice" is not a number: refused at parse (wami 001).
+    let message = parse_err(r#"{"NumericEquals": {"aws:username": "alice"}}"#);
+    assert!(message.contains("a number"), "{message}");
 }
 
 // ============================================================================
@@ -836,19 +809,10 @@ fn test_date_greater_than() {
 
 #[test]
 fn test_date_invalid_format() {
-    let context = create_test_context();
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "DateEquals": {
-                "aws:CurrentTime": "invalid-date"
-            }
-        }"#,
-    );
-
-    let result = evaluate_condition_block(&condition, &context);
-    // Invalid date format causes condition to fail (returns false, not error)
-    assert!(result.is_ok());
-    assert!(!result.unwrap());
+    // An invalid date used to make the condition false; it is now refused at
+    // parse (wami 001).
+    let message = parse_err(r#"{"DateEquals": {"aws:CurrentTime": "invalid-date"}}"#);
+    assert!(message.contains("RFC 3339"), "{message}");
 }
 
 // ============================================================================
@@ -1089,19 +1053,10 @@ fn test_bool_mismatch() {
 
 #[test]
 fn test_bool_invalid_value() {
-    let context = ConditionContext::builder().mfa_present(true).build();
-
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "Bool": {
-                "aws:MultiFactorAuthPresent": "yes"
-            }
-        }"#,
-    );
-
-    // Should fail - only "true" and "false" are valid
-    let result = evaluate_condition_block(&condition, &context);
-    assert!(result.is_err() || !result.unwrap());
+    // Only "true" and "false" are valid; "yes" used to be a silent false and
+    // is now refused at parse (wami 001).
+    let message = parse_err(r#"{"Bool": {"aws:MultiFactorAuthPresent": "yes"}}"#);
+    assert!(message.contains("true or false"), "{message}");
 }
 
 // ============================================================================
@@ -1401,16 +1356,20 @@ fn test_condition_type_mismatch() {
 
 #[test]
 fn test_condition_invalid_operator() {
-    let context = create_test_context();
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "InvalidOperator": {
-                "aws:username": "alice"
-            }
-        }"#,
-    );
+    // Refused at parse (wami 001) ...
+    let message = parse_err(r#"{"InvalidOperator": {"aws:username": "alice"}}"#);
+    assert!(message.contains("InvalidOperator"), "{message}");
 
-    let result = evaluate_condition_block(&condition, &context);
+    // ... and still an error for a block built by hand.
+    let mut condition = ConditionBlock::new();
+    condition.insert(
+        "InvalidOperator".to_string(),
+        std::collections::HashMap::from([(
+            "aws:username".to_string(),
+            ConditionValue::String("alice".to_string()),
+        )]),
+    );
+    let result = evaluate_condition_block(&condition, &create_test_context());
     assert!(result.is_err());
 }
 
@@ -1896,22 +1855,10 @@ fn test_condition_type_coercion_security() {
 #[test]
 fn test_condition_array_injection() {
     // Test that arrays in condition values are handled safely
-    let context = ConditionContext::builder()
-        .tag_keys(vec!["Env".to_string(), "Owner".to_string()])
-        .build();
-
-    // Try to inject array where string expected
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "StringEquals": {
-                "aws:TagKeys": ["Env", "Owner"]
-            }
-        }"#,
-    );
-
-    let result = evaluate_condition_block(&condition, &context);
-    // Should fail - type mismatch
-    assert!(result.is_err() || !result.unwrap());
+    // A list where one string is read: refused at parse, never a silent
+    // false (wami 001; wami 002 will read it as OR).
+    let message = parse_err(r#"{"StringEquals": {"aws:TagKeys": ["Env", "Owner"]}}"#);
+    assert!(message.contains("wami 002"), "{message}");
 }
 
 #[test]
@@ -3502,11 +3449,11 @@ fn test_all_forallvalues_operators() {
             false,
         ),
         (
-            r#"{"ForAllValues:NumericLessThan": {"aws:TagKeys": ["500"]}}"#,
+            r#"{"ForAllValues:NumericLessThan": {"aws:TagKeys": "500"}}"#,
             false,
         ), // TagKeys is array of strings, not numbers
         (
-            r#"{"ForAllValues:NumericGreaterThan": {"aws:TagKeys": ["100"]}}"#,
+            r#"{"ForAllValues:NumericGreaterThan": {"aws:TagKeys": "100"}}"#,
             false,
         ),
         (
@@ -3555,11 +3502,11 @@ fn test_all_foranyvalue_operators() {
             false,
         ),
         (
-            r#"{"ForAnyValue:NumericLessThan": {"aws:TagKeys": ["500"]}}"#,
+            r#"{"ForAnyValue:NumericLessThan": {"aws:TagKeys": "500"}}"#,
             false,
         ),
         (
-            r#"{"ForAnyValue:NumericGreaterThan": {"aws:TagKeys": ["100"]}}"#,
+            r#"{"ForAnyValue:NumericGreaterThan": {"aws:TagKeys": "100"}}"#,
             false,
         ),
         (
@@ -4233,19 +4180,8 @@ fn test_foranyvalue_date_greater_than_array_with_invalid_dates() {
 #[test]
 fn test_ip_address_cidr_parse_failure() {
     // Test CIDR parsing failure (invalid prefix length)
-    let context = ConditionContext::builder()
-        .source_ip("203.0.113.42")
-        .build();
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "IpAddress": {
-                "aws:SourceIp": "203.0.113.0/invalid"
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    // Should fail to match due to invalid CIDR
-    assert!(!result);
+    // An invalid prefix used to fail to match; refused at parse (wami 001).
+    parse_err(r#"{"IpAddress": {"aws:SourceIp": "203.0.113.0/invalid"}}"#);
 }
 
 #[test]
@@ -4302,19 +4238,8 @@ fn test_ip_address_cidr_no_slash() {
 #[test]
 fn test_ip_address_cidr_prefix_len_too_large() {
     // Test prefix_len > 32 for IPv4
-    let context = ConditionContext::builder()
-        .source_ip("203.0.113.42")
-        .build();
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "IpAddress": {
-                "aws:SourceIp": "203.0.113.0/33"
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    // Should fail (prefix_len > 32)
-    assert!(!result);
+    // A v4 prefix above 32 matched nothing; refused at parse (wami 001).
+    parse_err(r#"{"IpAddress": {"aws:SourceIp": "203.0.113.0/33"}}"#);
 }
 
 #[test]
@@ -4836,14 +4761,12 @@ fn test_date_operator_error_paths() {
         .current_time(chrono::Utc::now())
         .build();
 
+    // An invalid date, or a number where a date is read, is refused at parse
+    // (wami 001) — it used to evaluate to false.
+    parse_err(r#"{"DateEquals": {"aws:CurrentTime": "not-a-date"}}"#);
+    parse_err(r#"{"DateEquals": {"aws:CurrentTime": "123"}}"#);
+
     let test_cases = vec![
-        // Invalid date format
-        (
-            r#"{"DateEquals": {"aws:CurrentTime": "not-a-date"}}"#,
-            false,
-        ),
-        // Type mismatch (number instead of date string)
-        (r#"{"DateEquals": {"aws:CurrentTime": "123"}}"#, false),
         // Missing context key
         (
             r#"{"DateEquals": {"aws:TokenIssueTime": "2024-01-01T00:00:00Z"}}"#,
@@ -4877,7 +4800,7 @@ fn test_forallvalues_numeric_operators() {
     let condition1 = parse_condition_block_from_json(
         r#"{
             "ForAllValues:NumericLessThan": {
-                "aws:TagKeys": ["500"]
+                "aws:TagKeys": "500"
             }
         }"#,
     );
@@ -5323,10 +5246,10 @@ fn test_ip_parsing_edge_cases() {
         ("not-an-ip", "203.0.113.0/24", false),
         // CIDR without prefix
         ("203.0.113.42", "203.0.113.42", true), // Exact match
-        // Invalid CIDR format
-        ("203.0.113.42", "203.0.113.0/", false),
-        ("203.0.113.42", "203.0.113.0/33", false), // Prefix > 32
     ];
+    // Invalid CIDR formats used to fail to match; refused at parse (wami 001).
+    parse_err(r#"{"IpAddress": {"aws:SourceIp": "203.0.113.0/"}}"#);
+    parse_err(r#"{"IpAddress": {"aws:SourceIp": "203.0.113.0/33"}}"#);
 
     for (ip, cidr, expected) in test_cases {
         let context = ConditionContext::builder().source_ip(ip).build();
@@ -5376,11 +5299,11 @@ fn test_forallvalues_empty_actual_edge_cases() {
             true,
         ),
         (
-            r#"{"ForAllValues:NumericLessThan": {"aws:TagKeys": ["500"]}}"#,
+            r#"{"ForAllValues:NumericLessThan": {"aws:TagKeys": "500"}}"#,
             true,
         ),
         (
-            r#"{"ForAllValues:NumericGreaterThan": {"aws:TagKeys": ["100"]}}"#,
+            r#"{"ForAllValues:NumericGreaterThan": {"aws:TagKeys": "100"}}"#,
             true,
         ),
         (
@@ -5421,11 +5344,11 @@ fn test_foranyvalue_empty_actual_edge_cases() {
             false,
         ),
         (
-            r#"{"ForAnyValue:NumericLessThan": {"aws:TagKeys": ["500"]}}"#,
+            r#"{"ForAnyValue:NumericLessThan": {"aws:TagKeys": "500"}}"#,
             false,
         ),
         (
-            r#"{"ForAnyValue:NumericGreaterThan": {"aws:TagKeys": ["100"]}}"#,
+            r#"{"ForAnyValue:NumericGreaterThan": {"aws:TagKeys": "100"}}"#,
             false,
         ),
         (
@@ -5444,20 +5367,9 @@ fn test_foranyvalue_empty_actual_edge_cases() {
 #[test]
 fn test_forallvalues_type_mismatch_paths() {
     // Test ForAllValues with type mismatches (non-array expected, etc.)
-    let context = ConditionContext::builder()
-        .tag_keys(vec!["Env".to_string(), "Owner".to_string()])
-        .build();
-
-    // Expected is not an array (should error)
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "ForAllValues:StringEquals": {
-                "aws:TagKeys": "Env"
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context);
-    assert!(result.is_err() || !result.unwrap()); // Should error or fail
+    // Expected is not an array: refused at parse (wami 001)
+    let message = parse_err(r#"{"ForAllValues:StringEquals": {"aws:TagKeys": "Env"}}"#);
+    assert!(message.contains("reads only a list"), "{message}");
 
     // Actual is not array or string (should return false)
     let context2 = ConditionContext::builder().mfa_age(300).build();
@@ -5475,20 +5387,9 @@ fn test_forallvalues_type_mismatch_paths() {
 #[test]
 fn test_foranyvalue_type_mismatch_paths() {
     // Test ForAnyValue with type mismatches
-    let context = ConditionContext::builder()
-        .tag_keys(vec!["Env".to_string(), "Owner".to_string()])
-        .build();
-
-    // Expected is not an array (should error)
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "ForAnyValue:StringEquals": {
-                "aws:TagKeys": "Env"
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context);
-    assert!(result.is_err() || !result.unwrap()); // Should error or fail
+    // Expected is not an array: refused at parse (wami 001)
+    let message = parse_err(r#"{"ForAnyValue:StringEquals": {"aws:TagKeys": "Env"}}"#);
+    assert!(message.contains("reads only a list"), "{message}");
 
     // Actual is not array or string (should return false)
     let context2 = ConditionContext::builder().mfa_age(300).build();
@@ -6141,9 +6042,9 @@ fn test_ipv4_parsing_edge_cases() {
         ("203.0.113.42", "0.0.0.0/0", true), // /0 matches all
         // Edge case: prefix length 32
         ("203.0.113.42", "203.0.113.42/32", true),
-        // Prefix length > 32
-        ("203.0.113.42", "203.0.113.0/33", false),
     ];
+    // Prefix length > 32 used to match nothing; refused at parse (wami 001).
+    parse_err(r#"{"IpAddress": {"aws:SourceIp": "203.0.113.0/33"}}"#);
 
     for (ip, cidr, expected) in test_cases {
         let context = ConditionContext::builder().source_ip(ip).build();
@@ -6176,9 +6077,10 @@ fn test_ipv6_basic_matching() {
         ("2001:db8::1", "2001:db8::/32", true),
         ("2001:db8::1", "2001:db8::1", true), // Exact match
         ("2001:db8::1", "2001:db9::/32", false),
-        // IPv6 with prefix > 128 (should fallback to exact match, and IP matches exactly)
-        ("2001:db8::1", "2001:db8::1/129", true), // Falls back to exact match
     ];
+    // IPv6 with prefix > 128 used to fall back to an exact match; refused at
+    // parse (wami 001).
+    parse_err(r#"{"IpAddress": {"aws:SourceIp": "2001:db8::1/129"}}"#);
 
     for (ip, cidr, expected) in test_cases {
         let context = ConditionContext::builder().source_ip(ip).build();
@@ -8039,4 +7941,226 @@ fn test_wami_encryption_algorithm_key() {
         .build();
     let value = get_context_value("wami:EncryptionAlgorithm", &context).unwrap();
     assert_eq!(value, Some(ConditionValue::String("AES-256".to_string())));
+}
+
+// ============================================================================
+// Unreadable is not false (wami 001)
+//
+// A condition that cannot be read used to be answered as a false one, so the
+// statement carrying it vanished — for a Deny, a fail-open. Parse now refuses
+// exactly what evaluation could not read, and evaluation no longer turns an
+// error into `false`.
+// ============================================================================
+
+fn parse_err(json: &str) -> String {
+    let value: Value = serde_json::from_str(json).unwrap();
+    match parse_condition_block(&value) {
+        Ok(block) => panic!("{json} parsed, as {block:?}; it must be refused"),
+        Err(e) => e.to_string(),
+    }
+}
+
+fn parses(json: &str) {
+    let value: Value = serde_json::from_str(json).unwrap();
+    if let Err(e) = parse_condition_block(&value) {
+        panic!("{json} was refused ({e}); it is a readable condition");
+    }
+}
+
+#[test]
+fn an_unknown_operator_is_refused_at_parse() {
+    // One letter off: "StringEqualz". It used to parse, then fail at
+    // evaluation, then be answered `false`.
+    let message = parse_err(r#"{"StringEqualz":{"aws:username":"alice"}}"#);
+    assert!(message.contains("StringEqualz"), "{message}");
+}
+
+#[test]
+fn a_malformed_value_is_refused_at_parse_for_every_operator_family() {
+    // (condition, operator, key) — each value is one its operator's evaluator
+    // could never read, so it used to evaluate to a silent `false`.
+    let cases = [
+        // IpAddress: not an address, not a CIDR (probed: Ok(false)).
+        (
+            r#"{"IpAddress":{"aws:SourceIp":"not-an-ip"}}"#,
+            "IpAddress",
+            "aws:SourceIp",
+        ),
+        (
+            r#"{"NotIpAddressIfExists":{"aws:SourceIp":"10.0.0.0/33"}}"#,
+            "NotIpAddressIfExists",
+            "aws:SourceIp",
+        ),
+        (
+            r#"{"IpAddress":{"aws:SourceIp":123}}"#,
+            "IpAddress",
+            "aws:SourceIp",
+        ),
+        // Bool: neither true nor false (probed: Ok(false)).
+        (
+            r#"{"Bool":{"aws:SecureTransport":"yes"}}"#,
+            "Bool",
+            "aws:SecureTransport",
+        ),
+        // Numeric: not a number (probed: Ok(false)).
+        (
+            r#"{"NumericEquals":{"aws:username":"abc"}}"#,
+            "NumericEquals",
+            "aws:username",
+        ),
+        (
+            r#"{"NumericLessThanIfExists":{"wami:SessionAge":true}}"#,
+            "NumericLessThanIfExists",
+            "wami:SessionAge",
+        ),
+        // Date: not RFC 3339.
+        (
+            r#"{"DateLessThan":{"aws:CurrentTime":"yesterday"}}"#,
+            "DateLessThan",
+            "aws:CurrentTime",
+        ),
+        // Null: neither true nor false.
+        (
+            r#"{"Null":{"aws:SourceIp":"maybe"}}"#,
+            "Null",
+            "aws:SourceIp",
+        ),
+        // String, Arn, Binary: an object or a null is no value anybody wrote —
+        // it used to become "" without a word.
+        (
+            r#"{"StringEquals":{"aws:username":{"a":1}}}"#,
+            "StringEquals",
+            "aws:username",
+        ),
+        (
+            r#"{"ArnLike":{"aws:PrincipalArn":null}}"#,
+            "ArnLike",
+            "aws:PrincipalArn",
+        ),
+        (
+            r#"{"BinaryEquals":{"wami:Custom":{}}}"#,
+            "BinaryEquals",
+            "wami:Custom",
+        ),
+        // ForAllValues / ForAnyValue on strings: their evaluator reads only a
+        // list, so a scalar is refused.
+        (
+            r#"{"ForAnyValue:StringEquals":{"aws:TagKeys":"env"}}"#,
+            "ForAnyValue:StringEquals",
+            "aws:TagKeys",
+        ),
+        // ... and their numeric and date forms read only a scalar.
+        (
+            r#"{"ForAllValues:NumericLessThan":{"wami:Custom":["1"]}}"#,
+            "ForAllValues:NumericLessThan",
+            "wami:Custom",
+        ),
+        (
+            r#"{"ForAnyValue:DateGreaterThan":{"wami:Custom":"soon"}}"#,
+            "ForAnyValue:DateGreaterThan",
+            "wami:Custom",
+        ),
+    ];
+    for (json, operator, key) in cases {
+        let message = parse_err(json);
+        assert!(message.contains(operator), "{json}: {message}");
+        assert!(message.contains(key), "{json}: {message}");
+    }
+}
+
+#[test]
+fn a_list_element_is_validated_and_named_by_its_position() {
+    // A non-string element used to be dropped from the list without a word.
+    let message = parse_err(r#"{"ForAnyValue:StringEquals":{"aws:TagKeys":["env", 5]}}"#);
+    assert!(message.contains("element 1"), "{message}");
+    let message = parse_err(r#"{"IpAddress":{"aws:SourceIp":["10.0.0.1","nope"]}}"#);
+    assert!(message.contains("element 1"), "{message}");
+}
+
+#[test]
+fn a_list_is_refused_where_its_operator_cannot_read_one() {
+    // `StringEquals` with a list is valid AWS (OR across the values), but this
+    // evaluator reads one value: the list used to be a silent `false`, so a
+    // Deny naming two users denied neither. Refused until wami 002 reads it.
+    for json in [
+        r#"{"StringEquals":{"aws:username":["alice","bob"]}}"#,
+        r#"{"ArnEquals":{"aws:PrincipalArn":["a","b"]}}"#,
+        r#"{"NumericEquals":{"wami:Custom":[1,2]}}"#,
+        r#"{"DateEquals":{"aws:CurrentTime":["2020-01-01T00:00:00Z"]}}"#,
+        r#"{"Bool":{"aws:SecureTransport":[true]}}"#,
+    ] {
+        let message = parse_err(json);
+        assert!(message.contains("wami 002"), "{json}: {message}");
+    }
+}
+
+#[test]
+fn every_readable_form_still_parses() {
+    // The guard against refusing too much: each form its evaluator reads.
+    for json in [
+        r#"{"StringEquals":{"aws:username":"alice"}}"#,
+        r#"{"StringLike":{"aws:username":5}}"#,
+        r#"{"StringEqualsIgnoreCase":{"aws:username":true}}"#,
+        r#"{"IpAddress":{"aws:SourceIp":"10.0.0.0/8"}}"#,
+        r#"{"IpAddress":{"aws:SourceIp":["10.0.0.1","2001:db8::/32","::1"]}}"#,
+        r#"{"Bool":{"aws:SecureTransport":true}}"#,
+        r#"{"BoolIfExists":{"aws:SecureTransport":"false"}}"#,
+        r#"{"NumericLessThan":{"wami:SessionAge":5}}"#,
+        r#"{"NumericGreaterThan":{"wami:SessionAge":"5.5"}}"#,
+        r#"{"DateGreaterThan":{"aws:CurrentTime":"2020-01-01T00:00:00Z"}}"#,
+        r#"{"Null":{"aws:SourceIp":"true"}}"#,
+        r#"{"ArnLike":{"aws:PrincipalArn":"arn:wami:iam:*"}}"#,
+        r#"{"ForAnyValue:StringEquals":{"aws:TagKeys":["env","team"]}}"#,
+        r#"{"ForAllValues:IpAddress":{"aws:SourceIp":["10.0.0.0/8"]}}"#,
+        r#"{"ForAllValues:NumericLessThan":{"wami:Custom":"10"}}"#,
+        r#"{"ForAnyValue:DateLessThan":{"wami:Custom":"2020-01-01T00:00:00Z"}}"#,
+        r#"{"StringEquals":{}}"#,
+        r#"{}"#,
+    ] {
+        parses(json);
+    }
+}
+
+#[test]
+fn a_missing_context_key_is_a_false_condition_not_an_error() {
+    // As AWS: a key absent from the request makes the condition false.
+    // `get_context_value` has no error path for an unknown or unset key.
+    let empty = ConditionContext::builder().build();
+    let block = parse_condition_block_from_json(r#"{"StringEquals":{"aws:SourceIp":"10.0.0.1"}}"#);
+    assert_eq!(evaluate_condition_block(&block, &empty), Ok(false));
+    let block = parse_condition_block_from_json(r#"{"StringEquals":{"wami:NoSuchKey":"x"}}"#);
+    assert_eq!(evaluate_condition_block(&block, &empty), Ok(false));
+    // ... and the IfExists forms pass on it, as AWS.
+    let block =
+        parse_condition_block_from_json(r#"{"StringEqualsIfExists":{"aws:SourceIp":"10.0.0.1"}}"#);
+    assert_eq!(evaluate_condition_block(&block, &empty), Ok(true));
+}
+
+#[test]
+fn a_context_value_its_operator_cannot_read_is_an_error_not_false() {
+    // Well-formed policy value, but `aws:username` is a name: comparing it
+    // numerically cannot be done. It used to be a silent `false`.
+    let context = ConditionContext::builder().username("alice").build();
+    let block = parse_condition_block_from_json(r#"{"NumericLessThan":{"aws:username":"5"}}"#);
+    assert!(
+        evaluate_condition_block(&block, &context).is_err(),
+        "an evaluation error must not be answered as false"
+    );
+}
+
+#[test]
+fn an_unreadable_value_that_bypassed_parse_is_an_error_at_evaluation() {
+    // `ConditionBlock` is a public map, so a block can reach evaluation
+    // without going through `parse_condition_block`. Its error must still
+    // surface rather than read as `false`.
+    let mut block = ConditionBlock::new();
+    block.insert(
+        "Bool".to_string(),
+        std::collections::HashMap::from([(
+            "aws:SecureTransport".to_string(),
+            ConditionValue::String("yes".to_string()),
+        )]),
+    );
+    let context = ConditionContext::builder().secure_transport(true).build();
+    assert!(evaluate_condition_block(&block, &context).is_err());
 }

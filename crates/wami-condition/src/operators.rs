@@ -673,7 +673,7 @@ fn evaluate_date_greater_than_equals(
     }
 }
 
-fn parse_rfc3339(s: &str) -> Result<chrono::DateTime<chrono::Utc>, ConditionError> {
+pub(crate) fn parse_rfc3339(s: &str) -> Result<chrono::DateTime<chrono::Utc>, ConditionError> {
     chrono::DateTime::parse_from_rfc3339(s)
         .map(|dt| dt.with_timezone(&chrono::Utc))
         .map_err(|e| ConditionError::InvalidDate {
@@ -742,7 +742,7 @@ fn ip_matches_cidr(ip: &str, cidr: &str) -> bool {
     false
 }
 
-fn parse_ipv4(ip: &str) -> Option<[u8; 4]> {
+pub(crate) fn parse_ipv4(ip: &str) -> Option<[u8; 4]> {
     let parts: Vec<&str> = ip.split('.').collect();
     if parts.len() != 4 {
         return None;
