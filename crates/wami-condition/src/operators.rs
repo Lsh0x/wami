@@ -692,7 +692,7 @@ fn evaluate_ip_address(
 }
 
 /// Whether `s` is an IP address alone.
-fn is_address(s: &str) -> bool {
+pub(crate) fn is_address(s: &str) -> bool {
     parse_ipv4(s).is_some() || s.parse::<std::net::Ipv6Addr>().is_ok()
 }
 

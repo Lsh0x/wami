@@ -7114,3 +7114,71 @@ fn a_hand_built_block_cannot_reach_a_set_operator_no_key_can_feed() {
         })
     );
 }
+
+#[test]
+fn every_declared_key_is_written_where_it_is_read() {
+    // A simulation's context entry for a declared key used to go to the custom
+    // values, which a declared key is never read from: the key read as absent.
+    use crate::keys::{assign_context_value, declared_keys, KeyType};
+    for (key, declared) in declared_keys() {
+        let sample: Vec<String> = match declared {
+            KeyType::String | KeyType::Arn => vec!["7".to_string()],
+            KeyType::Number => vec!["1600000000".to_string()],
+            KeyType::Boolean => vec!["true".to_string()],
+            KeyType::Date => vec!["2020-01-01T00:00:00Z".to_string()],
+            KeyType::Ip => vec!["10.0.0.1".to_string()],
+            KeyType::StringList => vec!["a".to_string(), "b".to_string()],
+        };
+        let mut context = ConditionContext::builder().build();
+        assert_eq!(
+            assign_context_value(&mut context, key, &sample),
+            Ok(true),
+            "{key}"
+        );
+        assert!(
+            context.custom_values.is_empty(),
+            "{key} went to the custom values"
+        );
+        let read = get_context_value(key, &context).unwrap();
+        assert!(read.is_some(), "{key} written, then read as absent");
+    }
+    // A tag is written to its map; an undeclared key is left to the caller.
+    let mut context = ConditionContext::builder().build();
+    let core = ["core".to_string()];
+    assert_eq!(
+        assign_context_value(&mut context, "aws:PrincipalTag/team", &core),
+        Ok(true)
+    );
+    assert_eq!(
+        get_context_value("aws:PrincipalTag/team", &context).unwrap(),
+        Some(ConditionValue::String("core".to_string()))
+    );
+    assert_eq!(
+        assign_context_value(&mut context, "wami:Team", &core),
+        Ok(false)
+    );
+}
+
+#[test]
+fn a_value_that_does_not_read_as_its_key_is_refused_without_being_quoted() {
+    use crate::keys::assign_context_value;
+    let secret = "s3cr3t".to_string();
+    for key in [
+        "aws:SecureTransport",
+        "wami:SessionAge",
+        "wami:SessionRiskScore",
+        "aws:CurrentTime",
+        "aws:EpochTime",
+        "aws:SourceIp",
+        "wami:TenantId",
+    ] {
+        let mut context = ConditionContext::builder().build();
+        let err =
+            assign_context_value(&mut context, key, std::slice::from_ref(&secret)).expect_err(key);
+        assert!(!format!("{err:?}").contains("s3cr3t"), "{key}: {err:?}");
+    }
+    // A scalar key takes one value, not two.
+    let mut context = ConditionContext::builder().build();
+    let two = ["a".to_string(), "b".to_string()];
+    assert!(assign_context_value(&mut context, "aws:username", &two).is_err());
+}
