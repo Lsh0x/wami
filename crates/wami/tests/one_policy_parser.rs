@@ -1,21 +1,21 @@
 //! One door for reading a policy document (wami 001): the authorizer, the
-//! simulation and every write path read JSON into a `PolicyDocument` through
-//! `policy_evaluator::decode_policy_document`, so what one refuses the others
-//! refuse. Every place production code in `wami` and `wami-condition`
-//! deserializes anything is listed below with the reason it is not a second
-//! door; a new one — `from_str`, `from_value`, `from_slice`, `from_reader` or a
-//! `deserialize` call — turns this test red until it is classified.
+//! simulation, the tenant authorizer and every write path read JSON into a
+//! `PolicyDocument` through `policy_evaluator::decode_policy_document`, so
+//! what one refuses the others refuse. Every place production code in `wami`
+//! and `wami-condition` deserializes anything is listed below: the policy
+//! door, which must stay exactly one, and every other deserialization with
+//! the reason it is not one. A new site — `from_str`, `from_value`,
+//! `from_slice`, `from_reader` or a `deserialize` call — turns this test red
+//! until it is classified.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-/// (file, count, why it is not a policy-reading door)
-const KNOWN: &[(&str, usize, &str)] = &[
-    (
-        "wami/src/service/auth/policy_evaluator.rs",
-        1,
-        "decode_policy_document: THE door",
-    ),
+/// The doors that read a policy document. Exactly one.
+const POLICY_DOORS: &[(&str, usize)] = &[("wami/src/service/auth/policy_evaluator.rs", 1)];
+
+/// Every other deserialization: (file, count, why it reads no policy).
+const OTHER: &[(&str, usize, &str)] = &[
     ("wami/src/arn/types.rs", 2, "an ARN's text"),
     ("wami/src/wami/tenant/model.rs", 1, "a tenant id's text"),
     (
@@ -27,11 +27,6 @@ const KNOWN: &[(&str, usize, &str)] = &[
         "wami/src/wami/instance/bootstrap.rs",
         1,
         "assume_role_policy: a trust policy, no PolicyDocument type",
-    ),
-    (
-        "wami/src/wami/tenant/authorization.rs",
-        1,
-        "the tenant authorizer, the third evaluator: wami 003",
     ),
     (
         "wami/src/wami/policies/permissions_boundary/operations.rs",
@@ -49,6 +44,33 @@ fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
             out.push(path);
         }
     }
+}
+
+/// The file without its inline test modules (`#[cfg(test)] mod x { … }`),
+/// skipped by brace count — everything else is scanned, code after a test
+/// module included.
+fn without_test_modules(text: &str) -> String {
+    let mut kept = String::new();
+    let mut lines = text.lines().peekable();
+    while let Some(line) = lines.next() {
+        let is_test_module = line.trim() == "#[cfg(test)]"
+            && lines
+                .peek()
+                .is_some_and(|next| next.trim_start().starts_with("mod ") && next.contains('{'));
+        if !is_test_module {
+            kept.push_str(line);
+            kept.push('\n');
+            continue;
+        }
+        let mut depth = 0i64;
+        for inner in lines.by_ref() {
+            depth += inner.matches('{').count() as i64 - inner.matches('}').count() as i64;
+            if depth <= 0 && inner.contains('}') {
+                break;
+            }
+        }
+    }
+    kept
 }
 
 fn is_deserialization(line: &str) -> bool {
@@ -71,23 +93,26 @@ fn every_deserialization_in_production_code_is_known_and_one_reads_policies() {
     assert!(files.len() > 50, "the scan found {} files", files.len());
     let mut found: BTreeMap<String, usize> = BTreeMap::new();
     for path in &files {
-        // wami-condition's `tests.rs` is a test module (`#[cfg(test)] mod tests`).
-        if path.ends_with("tests.rs") {
+        // wami-condition's `tests.rs` is an out-of-line test module.
+        if path.ends_with("wami-condition/src/tests.rs") {
             continue;
         }
-        let text = std::fs::read_to_string(path).unwrap();
-        // Production code only: the tests build documents however they like.
-        let production = text.split("#[cfg(test)]").next().unwrap();
+        let production = without_test_modules(&std::fs::read_to_string(path).unwrap());
         let count = production.lines().filter(|l| is_deserialization(l)).count();
         if count > 0 {
             let relative = path.strip_prefix(&crates).unwrap();
-            let key = relative.to_string_lossy().replace('\\', "/");
-            found.insert(key, count);
+            found.insert(relative.to_string_lossy().replace('\\', "/"), count);
         }
     }
-    let known: BTreeMap<String, usize> = KNOWN
+    assert_eq!(POLICY_DOORS.len(), 1, "one door reads policies");
+    let known: BTreeMap<String, usize> = POLICY_DOORS
         .iter()
-        .map(|(file, count, _)| ((*file).to_string(), *count))
+        .map(|(file, count)| ((*file).to_string(), *count))
+        .chain(
+            OTHER
+                .iter()
+                .map(|(file, count, _)| ((*file).to_string(), *count)),
+        )
         .collect();
     assert_eq!(
         found, known,

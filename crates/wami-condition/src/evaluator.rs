@@ -130,12 +130,13 @@ impl From<ConditionError> for crate::error::AmiError {
 ///
 /// A condition block evaluates to `true` if ALL operator blocks evaluate to `true` (AND logic).
 ///
-/// Every part is read before the block answers, in a fixed order (operators,
-/// then keys, sorted): a part that cannot be compared is an error even when
-/// another part is false (wami 001, read everything before deciding). It used
-/// to stop at the first false part in `HashMap` order, so one request was
-/// refused on one parse and decided on the next. When several parts err, the
-/// first in that order is the one returned.
+/// Parts are read in sorted order (operators, then keys); a false part does
+/// not stop the reading; the first part that cannot be compared stops the
+/// evaluation with its error. So a part that cannot be compared is an error
+/// even when another part is false, and the answer is deterministic (wami 001,
+/// read everything before deciding). It used to stop at the first FALSE part,
+/// in `HashMap` order: one request was refused on one parse and decided on the
+/// next.
 ///
 /// # Errors
 ///
@@ -158,7 +159,8 @@ pub fn evaluate_condition_block(
 /// Evaluate an operator block
 ///
 /// An operator block evaluates to `true` if ALL key-value pairs evaluate to
-/// `true` (AND logic) — every key read, sorted, before it answers.
+/// `true` (AND logic) — keys read in sorted order, a false one not stopping
+/// the reading, the first that cannot be compared stopping it with its error.
 fn evaluate_operator_block(
     operator: ConditionOperator,
     key_value_map: &HashMap<String, ConditionValue>,

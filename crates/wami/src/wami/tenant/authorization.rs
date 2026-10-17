@@ -29,7 +29,7 @@
 //!     }"#.to_string(),
 //! ];
 //!
-//! let authorizer = TenantAuthorizer::new(policies);
+//! let authorizer = TenantAuthorizer::new(policies)?;
 //!
 //! // Check permissions
 //! let allowed = authorizer.check_permission(
@@ -89,7 +89,7 @@
 //! let created_policy = store.create_policy(policy).await?;
 //!
 //! // Use the policy for authorization
-//! let authorizer = TenantAuthorizer::new(vec![created_policy.policy_document]);
+//! let authorizer = TenantAuthorizer::new(vec![created_policy.policy_document])?;
 //!
 //! let allowed = authorizer.check_permission(
 //!     "arn:aws:iam::123456789012:user/admin",
@@ -151,7 +151,7 @@ impl TenantAction {
 /// It can work standalone (without a store) by accepting policies directly.
 ///
 /// **A third evaluator, not on the rules the other two keep** (wami 001): it
-/// drops a document it cannot read instead of refusing, never reads a
+/// refuses a document it cannot read (it used to drop it), but never reads a
 /// statement's `Condition`, and matches the `Effect` case-sensitively, so a
 /// misspelt one vanishes. Bringing it onto `service::auth::policy_evaluator`
 /// is wami 003. Until then nothing in the workspace calls it, and
@@ -184,16 +184,27 @@ impl TenantAuthorizer {
     ///     }"#.to_string(),
     /// ];
     ///
-    /// let authorizer = TenantAuthorizer::new(policies);
+    /// let authorizer = TenantAuthorizer::new(policies).unwrap();
     /// ```
-    pub fn new(policy_json_list: Vec<String>) -> Self {
-        let mut policies = Vec::new();
-        for policy_json in policy_json_list {
-            if let Ok(doc) = serde_json::from_str::<PolicyDocument>(&policy_json) {
-                policies.push(doc);
-            }
-        }
-        Self { policies }
+    ///
+    /// # Errors
+    ///
+    /// [`AmiError::UnreadablePolicy`](crate::error::AmiError::UnreadablePolicy)
+    /// naming the document (`tenant policy #i`) when one cannot be read. It
+    /// used to be skipped — and a skipped Deny let the Allow beside it grant
+    /// what it forbade (wami 001). Read through the library's one decoder.
+    pub fn new(policy_json_list: Vec<String>) -> Result<Self> {
+        let policies = policy_json_list
+            .iter()
+            .enumerate()
+            .map(|(i, json)| {
+                crate::service::auth::policy_evaluator::decode_policy_document(
+                    json,
+                    &format!("tenant policy #{i}"),
+                )
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(Self { policies })
     }
 
     /// Create an authorizer with already-parsed policy documents
@@ -230,7 +241,7 @@ impl TenantAuthorizer {
     ///     }"#.to_string(),
     /// ];
     ///
-    /// let authorizer = TenantAuthorizer::new(policies);
+    /// let authorizer = TenantAuthorizer::new(policies)?;
     /// let allowed = authorizer.check_permission(
     ///     "arn:aws:iam::123456789012:user/alice",
     ///     "acme/engineering",
@@ -416,7 +427,7 @@ mod tests {
         }"#
         .to_string()];
 
-        let authorizer = TenantAuthorizer::new(policies);
+        let authorizer = TenantAuthorizer::new(policies).unwrap();
         let allowed = authorizer
             .check_permission(
                 "arn:aws:iam::123456789012:user/alice",
@@ -441,7 +452,7 @@ mod tests {
         }"#
         .to_string()];
 
-        let authorizer = TenantAuthorizer::new(policies);
+        let authorizer = TenantAuthorizer::new(policies).unwrap();
         let allowed = authorizer
             .check_permission(
                 "arn:aws:iam::123456789012:user/alice",
@@ -477,7 +488,7 @@ mod tests {
             .to_string(),
         ];
 
-        let authorizer = TenantAuthorizer::new(policies);
+        let authorizer = TenantAuthorizer::new(policies).unwrap();
         let allowed = authorizer
             .check_permission(
                 "arn:aws:iam::123456789012:user/alice",
@@ -502,7 +513,7 @@ mod tests {
         }"#
         .to_string()];
 
-        let authorizer = TenantAuthorizer::new(policies);
+        let authorizer = TenantAuthorizer::new(policies).unwrap();
         let allowed = authorizer
             .check_permission(
                 "arn:aws:iam::123456789012:user/admin",
@@ -527,5 +538,31 @@ mod tests {
         let policy = build_tenant_readonly_policy("acme/engineering");
         assert!(policy.contains("tenant:Read"));
         assert!(policy.contains("arn:wami:tenant::acme/engineering"));
+    }
+
+    /// The Deny this authorizer cannot read (a field wami-core now refuses).
+    fn allow_and_unreadable_deny() -> Vec<String> {
+        vec![
+            r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"tenant:*","Resource":"*"}]}"#.to_string(),
+            r#"{"Version":"2012-10-17","Id":"no-deletes","Statement":[{"Effect":"Deny","Action":"tenant:Delete","Resource":"*"}]}"#.to_string(),
+        ]
+    }
+
+    #[test]
+    fn a_deny_it_cannot_read_is_never_skipped() {
+        // wami 001, Δ24: since wami-core refuses unknown fields, this Deny no
+        // longer parsed — and `new` skipped what it could not parse, so the
+        // Allow beside it granted the Delete the Deny forbade. Construction
+        // is refused instead, the document named.
+        let Err(err) = TenantAuthorizer::new(allow_and_unreadable_deny()) else {
+            panic!("a document that cannot be read must refuse construction");
+        };
+        assert!(
+            matches!(err, crate::error::AmiError::UnreadablePolicy { .. }),
+            "{err:?}"
+        );
+        let message = err.to_string();
+        assert!(message.contains("tenant policy #1"), "{message}");
+        assert!(message.contains("unknown field \"Id\""), "{message}");
     }
 }
