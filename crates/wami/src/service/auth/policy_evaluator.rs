@@ -15,8 +15,11 @@
 //!    condition that cannot be READ refuses the decision, naming the policy
 //!    and the statement ([`AmiError::UnreadablePolicy`] at parse,
 //!    [`AmiError::UnreadableCondition`] at evaluation)
-//! 3. **Glob matching**: `*` = single segment, `**` = multi-segment
-//! 4. **Variable substitution**: `${tenant}`, `${principal}`, `${service}` from context
+//! 3. **Read everything before deciding**: every statement whose action and
+//!    resource match has its condition read before any verdict, so a `Deny`
+//!    that holds does not excuse a broken statement beside it
+//! 4. **Glob matching**: `*` = single segment, `**` = multi-segment
+//! 5. **Variable substitution**: `${tenant}`, `${principal}`, `${service}` from context
 
 use wami_condition::{
     evaluate_condition_block, evaluator::parse_condition_block, ConditionContext, ConditionError,
@@ -61,14 +64,20 @@ pub struct StatementHit {
 /// apply. Which statement decided is what lets a caller write an audit line
 /// naming it — the effect alone cannot be traced back to anything.
 ///
+/// Every statement whose action and resource match has its condition read
+/// BEFORE any verdict: a Deny that holds does not excuse a statement beside it
+/// whose condition cannot be read, whatever its effect (wami 001, read
+/// everything before deciding). Only then does a Deny win over an Allow.
+///
 /// `source` names the document in an error: it is what an operator needs to
 /// find the policy to fix.
 ///
 /// # Errors
 ///
 /// [`AmiError::UnreadableCondition`] when a statement whose action and
-/// resource match carries a condition that cannot be evaluated. The decision
-/// is refused rather than guessed: that statement might have been a Deny.
+/// resource match carries a condition that cannot be evaluated — every such
+/// statement named, in document order. The decision is refused rather than
+/// guessed: that statement might have been a Deny.
 pub fn evaluate_policy_document(
     policy: &PolicyDocument,
     action: &str,
@@ -84,38 +93,95 @@ pub fn evaluate_policy_document(
     };
     let cond_ctx = build_condition_context(context, resource_arn);
 
-    let hit = |effect: PolicyEffect, index: usize, statement: &PolicyStatement| StatementHit {
-        effect,
-        sid: statement.sid.clone(),
-        index,
-    };
-
     // The condition is read only once action and resource match, as the
     // design orders it: a statement about something else cannot decide.
-    let applies = |index: usize, statement: &PolicyStatement| -> Result<bool> {
+    let mut applying = Vec::new();
+    let mut unreadable = Vec::new();
+    for (index, statement) in policy.statement.iter().enumerate() {
         if !(matches_action(&statement.action, action)
             && matches_resource(&statement.resource, &resource_str, &match_ctx))
         {
-            return Ok(false);
+            continue;
         }
-        matches_condition(statement, index, &cond_ctx, source)
-    };
+        match matches_condition(statement, index, &cond_ctx, source) {
+            Ok(true) => applying.push((index, statement)),
+            Ok(false) => {}
+            Err(e) => unreadable.push(e),
+        }
+    }
+    if let Some(error) = combine(unreadable) {
+        return Err(error);
+    }
 
+    let hit = |effect: PolicyEffect| {
+        applying
+            .iter()
+            .find(|(_, statement)| effect_of(statement) == Some(effect))
+            .map(|(index, statement)| StatementHit {
+                effect,
+                sid: statement.sid.clone(),
+                index: *index,
+            })
+    };
     // Explicit denies first — a deny anywhere in the document wins over an
     // allow later in it.
-    for (index, statement) in policy.statement.iter().enumerate() {
-        if statement.effect.to_lowercase() == "deny" && applies(index, statement)? {
-            return Ok(Some(hit(PolicyEffect::Deny, index, statement)));
-        }
-    }
+    Ok(hit(PolicyEffect::Deny).or_else(|| hit(PolicyEffect::Allow)))
+}
 
-    for (index, statement) in policy.statement.iter().enumerate() {
-        if statement.effect.to_lowercase() == "allow" && applies(index, statement)? {
-            return Ok(Some(hit(PolicyEffect::Allow, index, statement)));
-        }
+/// A statement's effect, read as the authorizer has always read it: `Allow`
+/// or `Deny`, in any case. Anything else is refused at parse
+/// ([`parse_policy_doc`]), so `None` here means a document that bypassed it.
+pub(crate) fn effect_of(statement: &PolicyStatement) -> Option<PolicyEffect> {
+    if statement.effect.eq_ignore_ascii_case("deny") {
+        Some(PolicyEffect::Deny)
+    } else if statement.effect.eq_ignore_ascii_case("allow") {
+        Some(PolicyEffect::Allow)
+    } else {
+        None
     }
+}
 
-    Ok(None)
+/// One error naming every unreadable item, or `None` when there is none.
+///
+/// Every item is named rather than the first, so an operator fixes them all in
+/// one pass and two identical requests name the same documents whatever order
+/// a store returned them in — the caller hands them in its canonical order.
+/// The items of one call are of one kind (all from parse, or all from
+/// evaluation), so the variant is kept; each field lists the items' values in
+/// order, joined by `"; "`.
+pub(crate) fn combine(mut errors: Vec<AmiError>) -> Option<AmiError> {
+    if errors.len() <= 1 {
+        return errors.pop();
+    }
+    let join = |field: fn(&AmiError) -> Option<&String>| -> String {
+        errors
+            .iter()
+            .filter_map(field)
+            .map(String::as_str)
+            .collect::<Vec<_>>()
+            .join("; ")
+    };
+    let policy = join(|e| match e {
+        AmiError::UnreadablePolicy { policy, .. }
+        | AmiError::UnreadableCondition { policy, .. } => Some(policy),
+        _ => None,
+    });
+    let message = join(|e| match e {
+        AmiError::UnreadablePolicy { message, .. }
+        | AmiError::UnreadableCondition { message, .. } => Some(message),
+        _ => None,
+    });
+    Some(match &errors[0] {
+        AmiError::UnreadableCondition { .. } => AmiError::UnreadableCondition {
+            policy,
+            statement: join(|e| match e {
+                AmiError::UnreadableCondition { statement, .. } => Some(statement),
+                _ => None,
+            }),
+            message,
+        },
+        _ => AmiError::UnreadablePolicy { policy, message },
+    })
 }
 
 /// Check if an action matches any of the policy action patterns.
@@ -235,8 +301,10 @@ pub(crate) fn unreadable_condition(
     }
 }
 
-/// Refuse a document one of whose statements carries a condition that cannot
-/// be read — an unknown operator, a value its operator cannot compare.
+/// Refuse a document one of whose statements cannot be read — an `Effect`
+/// that is neither `Allow` nor `Deny`, or a condition that cannot be (an
+/// unknown operator, an operator its key's type rules out, a value its
+/// operator cannot compare).
 ///
 /// Run on every document [`parse_policy_doc`] returns, so the refusal is
 /// deterministic: it does not wait for a request whose action happens to
@@ -245,18 +313,30 @@ pub(crate) fn unreadable_condition(
 ///
 /// # Errors
 ///
-/// [`AmiError::UnreadablePolicy`], `message` naming the statement.
-pub(crate) fn check_conditions(document: &PolicyDocument, policy: &str) -> Result<()> {
+/// [`AmiError::UnreadablePolicy`], `message` naming every broken statement in
+/// document order.
+pub(crate) fn check_statements(document: &PolicyDocument, policy: &str) -> Result<()> {
+    let mut broken = Vec::new();
     for (index, statement) in document.statement.iter().enumerate() {
-        let Some(condition) = statement.condition.as_ref().filter(|c| !c.is_null()) else {
-            continue;
-        };
-        parse_condition_block(condition).map_err(|e| AmiError::UnreadablePolicy {
-            policy: policy.to_string(),
-            message: format!("statement {}: {e}", statement_name(statement, index)),
-        })?;
+        let name = statement_name(statement, index);
+        // A misspelt "Dney" used to be neither effect: the statement vanished.
+        if effect_of(statement).is_none() {
+            broken.push(format!("statement {name}: Effect must be Allow or Deny"));
+        }
+        if let Some(condition) = statement.condition.as_ref().filter(|c| !c.is_null()) {
+            if let Err(e) = parse_condition_block(condition) {
+                broken.push(format!("statement {name}: {e}"));
+            }
+        }
     }
-    Ok(())
+    if broken.is_empty() {
+        Ok(())
+    } else {
+        Err(AmiError::UnreadablePolicy {
+            policy: policy.to_string(),
+            message: broken.join("; "),
+        })
+    }
 }
 
 /// Parse a policy document, refusing to guess when it cannot be read.
@@ -277,20 +357,22 @@ pub(crate) fn check_conditions(document: &PolicyDocument, policy: &str) -> Resul
 /// The same story held one level down, for conditions. A statement's
 /// `Condition` that could not be read — `StringEqualz` for `StringEquals`, an
 /// `IpAddress` that is no address — was answered as a false condition, so the
-/// statement vanished and the Deny with it. Every condition is therefore
-/// parsed here too, and a broken one refuses the
-/// document with the statement named, whatever the action asked.
+/// statement vanished and the Deny with it — and so did a statement whose
+/// `Effect` was misspelt. Every statement is therefore checked here too, and a
+/// broken one refuses the document with the statement named, whatever the
+/// action asked.
 ///
 /// # Errors
 ///
 /// [`AmiError::UnreadablePolicy`] when the JSON is not a policy document, or
-/// when one of its statements carries a condition that cannot be read.
+/// when one of its statements has an effect or a condition that cannot be
+/// read.
 pub fn parse_policy_doc(json: &str, policy: &PolicySource) -> Result<PolicyDocument> {
     let document = serde_json::from_str(json).map_err(|e| AmiError::UnreadablePolicy {
         policy: policy.to_string(),
         message: e.to_string(),
     })?;
-    check_conditions(&document, &policy.to_string())?;
+    check_statements(&document, &policy.to_string())?;
     Ok(document)
 }
 

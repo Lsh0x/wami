@@ -59,6 +59,11 @@ pub enum AmiError {
     /// 403 the user can act on and the second is a corrupt store that should
     /// page someone. Folding it into `AccessDenied` would hide a broken policy
     /// store behind what looks like an ordinary permission failure.
+    ///
+    /// When several documents cannot be read, one error names them all, in
+    /// the authorizer's canonical order: each field lists the documents'
+    /// values joined by `"; "`. The message names the statement (`Sid`, else
+    /// `#` and its index) and what the policy's author wrote — never a value.
     #[error("policy cannot be read ({policy}): {message}")]
     UnreadablePolicy {
         /// Which policy failed to parse, so an operator knows what to fix.
@@ -77,10 +82,17 @@ pub enum AmiError {
     /// [`AmiError::UnreadablePolicy`], it is not folded into `AccessDenied`
     /// either: the policy is broken, and the operator must be told which one.
     ///
-    /// What still reaches evaluation after the parse check is the context
-    /// side — a request value the operator cannot compare, such as
-    /// `NumericLessThan` on `aws:username` — or a document that did not go
-    /// through `parse_policy_doc`.
+    /// What still reaches evaluation after the parse check is the request
+    /// side — a value the operator cannot compare, such as an `aws:SourceIp`
+    /// that is no address, or a custom key holding a number under
+    /// `StringEquals` — or a document that did not go through
+    /// `parse_policy_doc`. Every statement whose action and resource match is
+    /// read before any verdict, so a `Deny` that holds does not hide one.
+    ///
+    /// Several such statements are named in one error, in order, each field
+    /// listing the values joined by `"; "` (`policy` and `statement` pair up
+    /// by position). The message names kinds and positions, never the
+    /// request's values.
     #[error("condition cannot be read ({policy}, statement {statement}): {message}")]
     UnreadableCondition {
         /// Which policy holds the statement.

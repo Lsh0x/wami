@@ -11,7 +11,7 @@
 
 use crate::provider::{AwsProvider, CloudProvider};
 use crate::service::auth::decision::PolicySource;
-use crate::service::auth::policy_evaluator;
+use crate::service::auth::policy_evaluator::{self, PolicyEffect};
 use crate::store::traits::{PolicyStore, RoleStore, UserStore};
 use crate::wami::policies::evaluation::{
     ContextEntry, EvaluationResult, SimulateCustomPolicyRequest, SimulatePolicyResponse,
@@ -28,15 +28,39 @@ use wami_core::types::{PolicyDocument, PolicyStatement};
 /// A document and the name an error gives it.
 type Named = (String, PolicyDocument);
 
-/// Parse a simulated document, refusing as the authorizer does one whose
-/// condition cannot be read.
-fn parse_simulated(json: &str, name: String) -> Result<Named> {
-    let document: PolicyDocument =
-        serde_json::from_str(json).map_err(|e| AmiError::InvalidParameter {
-            message: format!("Invalid policy document: {}", e),
-        })?;
-    policy_evaluator::check_conditions(&document, &name)?;
-    Ok((name, document))
+/// Parse the documents a request hands in. JSON that is no policy document
+/// is a malformed request (`InvalidParameter`, as before); the documents are
+/// then checked as the authorizer checks them, by [`check_every_document`].
+fn parse_simulated(jsons: &[String]) -> Result<Vec<Named>> {
+    jsons
+        .iter()
+        .enumerate()
+        .map(|(i, json)| {
+            let document: PolicyDocument =
+                serde_json::from_str(json).map_err(|e| AmiError::InvalidParameter {
+                    message: format!("Invalid policy document: {}", e),
+                })?;
+            Ok((format!("policy_input_list[{i}]"), document))
+        })
+        .collect()
+}
+
+/// Check every document as the authorizer does before it evaluates anything
+/// (wami 001: read everything before deciding); refuse, naming every one that
+/// cannot be read, in the order given.
+///
+/// `boundary_unreadable` is a boundary whose JSON could not be parsed: named
+/// last, where the authorizer names the boundary.
+fn check_every_document(documents: &[Named], boundary_unreadable: Option<AmiError>) -> Result<()> {
+    let unreadable = documents
+        .iter()
+        .filter_map(|(name, document)| policy_evaluator::check_statements(document, name).err())
+        .chain(boundary_unreadable)
+        .collect();
+    match policy_evaluator::combine(unreadable) {
+        Some(error) => Err(error),
+        None => Ok(()),
+    }
 }
 
 pub trait EvaluationServiceStore: UserStore + RoleStore + PolicyStore {}
@@ -82,23 +106,21 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
     /// # Errors
     ///
     /// The authorizer's own errors where it would refuse to decide:
-    /// [`AmiError::UnreadablePolicy`] for a condition that cannot be read
-    /// (`policy_input_list[i]` and the statement named), and
-    /// [`AmiError::UnreadableCondition`] for one that cannot be evaluated
-    /// against the request's context. The whole call errs: a response carries
-    /// one verdict string per action and resource, and a verdict is exactly
-    /// what cannot honestly be given.
+    /// [`AmiError::UnreadablePolicy`] for a statement that cannot be read —
+    /// a misspelt `Effect`, a condition that cannot be — and
+    /// [`AmiError::UnreadableCondition`] for a condition that cannot be
+    /// evaluated against the request's context. Every document is read
+    /// before any verdict, and every unreadable one is named
+    /// (`policy_input_list[i]` and the statement), in order. The whole call
+    /// errs: a response carries one verdict string per action and resource,
+    /// and a verdict is exactly what cannot honestly be given.
     pub async fn simulate_custom_policy(
         &self,
         request: SimulateCustomPolicyRequest,
     ) -> Result<SimulatePolicyResponse> {
-        // Parse policy documents
-        let policies = request
-            .policy_input_list
-            .iter()
-            .enumerate()
-            .map(|(i, json)| parse_simulated(json, format!("policy_input_list[{i}]")))
-            .collect::<Result<Vec<_>>>()?;
+        // Parse policy documents, and read every one before deciding anything
+        let policies = parse_simulated(&request.policy_input_list)?;
+        check_every_document(&policies, None)?;
 
         // Default resource if not provided
         let resources = request
@@ -147,8 +169,9 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
     /// # Errors
     ///
     /// As [`Self::simulate_custom_policy`]; and the permissions boundary is
-    /// read through `policy_evaluator::parse_policy_doc`, so a boundary the
-    /// authorizer cannot read fails here with the very same error.
+    /// read with the identity documents, last, as the authorizer reads it —
+    /// before any verdict and whatever the identity verdict — so a boundary
+    /// the authorizer cannot read or compare fails here with the same error.
     pub async fn simulate_principal_policy(
         &self,
         request: SimulatePrincipalPolicyRequest,
@@ -157,7 +180,9 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
         let (principal_type, principal_name) =
             self.parse_principal_arn(&request.policy_source_arn)?;
 
-        // Fetch principal's policies from store
+        // Fetch principal's policies from store. `fetch_principal_policies`
+        // returns none today (its TODO); they are checked below with the
+        // others all the same, so filling it cannot open a door.
         let mut policies: Vec<Named> = self
             .fetch_principal_policies(&principal_type, &principal_name)
             .await?
@@ -166,28 +191,36 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
             .map(|(i, document)| (format!("principal policy #{i}"), document))
             .collect();
 
-        // Fetch permissions boundary if present
+        // Add additional policy documents from request if provided
+        if let Some(extra_policies) = request.policy_input_list {
+            policies.extend(parse_simulated(&extra_policies)?);
+        }
+
+        // The boundary, named as the authorizer names it and read with the
+        // identity documents, last, as the authorizer reads it: before any
+        // evaluation and whatever the identity verdict.
         let boundary = self
             .fetch_permissions_boundary(&principal_type, &principal_name)
             .await?;
-
-        // Read the boundary as the authorizer reads it, before any evaluation:
-        // one it cannot read must not be simulated as if it could.
-        if let Some(boundary) = &boundary {
-            policy_evaluator::parse_policy_doc(
-                &boundary.policy_document,
-                &PolicySource::PermissionsBoundary {
-                    arn: boundary.arn.clone(),
-                },
-            )?;
-        }
-
-        // Add additional policy documents from request if provided
-        if let Some(extra_policies) = request.policy_input_list {
-            for (i, json) in extra_policies.iter().enumerate() {
-                policies.push(parse_simulated(json, format!("policy_input_list[{i}]"))?);
-            }
-        }
+        let boundary_named = boundary.as_ref().map(|boundary| {
+            let source = PolicySource::PermissionsBoundary {
+                arn: boundary.arn.clone(),
+            };
+            serde_json::from_str::<PolicyDocument>(&boundary.policy_document)
+                .map(|document| (source.to_string(), document))
+                .map_err(|e| AmiError::UnreadablePolicy {
+                    policy: source.to_string(),
+                    message: e.to_string(),
+                })
+        });
+        let (boundary_named, boundary_unreadable) = match boundary_named {
+            Some(Ok(named)) => (Some(named), None),
+            Some(Err(e)) => (None, Some(e)),
+            None => (None, None),
+        };
+        let mut read = policies.clone();
+        read.extend(boundary_named.clone());
+        check_every_document(&read, boundary_unreadable)?;
 
         // Default resource if not provided
         let resources = request
@@ -215,7 +248,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
                     &policies,
                     action,
                     resource,
-                    boundary.as_ref(),
+                    boundary.as_ref().zip(boundary_named.as_ref()),
                     &context,
                 )?;
                 let matched_statements = self.find_matching_statements(&policies, action, resource);
@@ -368,6 +401,52 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
         }
     }
 
+    /// Read every statement of every document that matches the action and
+    /// resource, and say per document whether a Deny and whether an Allow
+    /// applies — or refuse, naming every statement whose condition cannot be
+    /// compared, before any verdict (wami 001, read everything before
+    /// deciding: a Deny that holds does not excuse a broken statement).
+    fn effects_per_document(
+        &self,
+        policies: &[Named],
+        action: &str,
+        resource: &str,
+        context: &ConditionContext,
+    ) -> Result<Vec<(bool, bool)>> {
+        let mut effects = Vec::new();
+        let mut unreadable = Vec::new();
+        for (name, policy) in policies {
+            let (mut deny, mut allow) = (false, false);
+            for (index, statement) in policy.statement.iter().enumerate() {
+                let matches = statement
+                    .action
+                    .iter()
+                    .any(|a| Self::matches_pattern(action, a))
+                    && statement
+                        .resource
+                        .iter()
+                        .any(|r| Self::matches_pattern(resource, r));
+                if !matches {
+                    continue;
+                }
+                match self.condition_holds(name, index, statement, context) {
+                    Ok(true) => match policy_evaluator::effect_of(statement) {
+                        Some(PolicyEffect::Deny) => deny = true,
+                        Some(PolicyEffect::Allow) => allow = true,
+                        _ => {}
+                    },
+                    Ok(false) => {}
+                    Err(e) => unreadable.push(e),
+                }
+            }
+            effects.push((deny, allow));
+        }
+        match policy_evaluator::combine(unreadable) {
+            Some(error) => Err(error),
+            None => Ok(effects),
+        }
+    }
+
     /// Evaluate a single action/resource combination against policies
     fn evaluate_action(
         &self,
@@ -376,38 +455,11 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
         resource: &str,
         context: &ConditionContext,
     ) -> Result<String> {
-        let mut has_allow = false;
-        let mut has_deny = false;
-
-        for (name, policy) in policies {
-            for (index, statement) in policy.statement.iter().enumerate() {
-                let action_matches = statement
-                    .action
-                    .iter()
-                    .any(|a| Self::matches_pattern(action, a));
-
-                let resource_matches = statement
-                    .resource
-                    .iter()
-                    .any(|r| Self::matches_pattern(resource, r));
-
-                if action_matches
-                    && resource_matches
-                    && self.condition_holds(name, index, statement, context)?
-                {
-                    if statement.effect == "Deny" {
-                        has_deny = true;
-                    } else if statement.effect == "Allow" {
-                        has_allow = true;
-                    }
-                }
-            }
-        }
-
+        let effects = self.effects_per_document(policies, action, resource, context)?;
         // Explicit deny always wins
-        Ok(if has_deny {
+        Ok(if effects.iter().any(|(deny, _)| *deny) {
             "denied".to_string()
-        } else if has_allow {
+        } else if effects.iter().any(|(_, allow)| *allow) {
             "allowed".to_string()
         } else {
             "implicitDeny".to_string()
@@ -416,80 +468,47 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
 
     /// Evaluate action with permissions boundary
     ///
-    /// The effective permissions are the intersection of:
-    /// 1. Identity-based policies (must allow)
-    /// 2. Permissions boundary (must allow)
+    /// Implements AWS permissions boundary logic:
+    /// 1. Check identity policies (user/role policies)
+    /// 2. Check permissions boundary
+    /// 3. Effective permissions = intersection of both
     ///
     /// If either denies, the final result is deny.
+    ///
+    /// The boundary's statements are read with the identity documents, before
+    /// any verdict, so a condition the authorizer cannot compare refuses here
+    /// too, whatever the identity verdict.
     fn evaluate_action_with_boundary(
         &self,
         policies: &[Named],
         action: &str,
         resource: &str,
-        boundary: Option<&crate::wami::policies::Policy>,
+        boundary: Option<(&crate::wami::policies::Policy, &Named)>,
         context: &ConditionContext,
     ) -> Result<String> {
-        // Step 1: Check explicit deny in identity policies
-        for (name, policy) in policies {
-            for (index, statement) in policy.statement.iter().enumerate() {
-                let action_matches = statement
-                    .action
-                    .iter()
-                    .any(|a| Self::matches_pattern(action, a));
-
-                let resource_matches = statement
-                    .resource
-                    .iter()
-                    .any(|r| Self::matches_pattern(resource, r));
-
-                if action_matches
-                    && resource_matches
-                    && statement.effect == "Deny"
-                    && self.condition_holds(name, index, statement, context)?
-                {
-                    return Ok("denied".to_string());
-                }
-            }
+        let mut read = policies.to_vec();
+        read.extend(boundary.map(|(_, named)| named.clone()));
+        let mut effects = self.effects_per_document(&read, action, resource, context)?;
+        if boundary.is_some() {
+            effects.pop();
         }
 
-        // Step 2: Check if identity policies allow
-        let mut identity_allows = false;
-        for (name, policy) in policies {
-            for (index, statement) in policy.statement.iter().enumerate() {
-                let action_matches = statement
-                    .action
-                    .iter()
-                    .any(|a| Self::matches_pattern(action, a));
-                let resource_matches = statement
-                    .resource
-                    .iter()
-                    .any(|r| Self::matches_pattern(resource, r));
-
-                if action_matches
-                    && resource_matches
-                    && statement.effect == "Allow"
-                    && self.condition_holds(name, index, statement, context)?
-                {
-                    identity_allows = true;
-                    break;
-                }
-            }
-            if identity_allows {
-                break;
-            }
+        // Step 1: an explicit deny in the identity policies
+        if effects.iter().any(|(deny, _)| *deny) {
+            return Ok("denied".to_string());
         }
-
-        if !identity_allows {
+        // Step 2: something must allow it
+        if !effects.iter().any(|(_, allow)| *allow) {
             return Ok("implicitDeny".to_string());
         }
 
         // Step 3: Check permissions boundary (if present)
-        // Note: Boundary evaluation doesn't currently support conditions: a
-        // FALSE condition in the boundary is ignored here while the authorizer
-        // honours it — a divergence of its own, for wami 003. An UNREADABLE one
-        // cannot get this far: the boundary was parsed as the authorizer
-        // parses it before any evaluation.
-        if let Some(boundary_policy) = boundary {
+        // Note: the verdict below does not support conditions: a FALSE
+        // condition in the boundary is ignored here while the authorizer
+        // honours it — a divergence of its own, for wami 003. An UNREADABLE
+        // one cannot get this far: the boundary was read above, with the
+        // identity documents, as the authorizer reads it.
+        if let Some((boundary_policy, _)) = boundary {
             match crate::wami::policies::permissions_boundary::operations::is_allowed_by_boundary(
                 action,
                 resource,
@@ -2195,6 +2214,213 @@ mod tests {
             };
             assert_eq!(shape(a, "BlockAll"), shape(s, "BlockAll"), "{a} / {s}");
             assert_ne!(shape(a, "BlockAll").0, "other", "{a}");
+        }
+    }
+
+    // ─── wami 001, review round 1: read everything before deciding ──────
+
+    const OFFICE: &str = r#"{"IpAddress":{"aws:SourceIp":"10.0.0.0/8"}}"#;
+    const TYPO: &str = r#"{"StringEqualz":{"aws:username":"alice"}}"#;
+
+    fn stmt(sid: &str, effect: &str, condition: Option<&str>) -> String {
+        let condition = condition.map_or(String::new(), |c| format!(r#","Condition":{c}"#));
+        format!(
+            r#"{{"Sid":"{sid}","Effect":"{effect}","Action":["iam:*"],"Resource":["*"]{condition}}}"#
+        )
+    }
+
+    fn doc(statements: &[String]) -> String {
+        format!(
+            r#"{{"Version":"2012-10-17","Statement":[{}]}}"#,
+            statements.join(",")
+        )
+    }
+
+    /// The request comes from somewhere that is no address.
+    fn from_nowhere() -> Vec<ContextEntry> {
+        vec![ContextEntry {
+            context_key_name: "aws:SourceIp".to_string(),
+            context_key_values: vec!["not-an-ip".to_string()],
+            context_key_type: "String".to_string(),
+        }]
+    }
+
+    fn principal(
+        documents: Vec<String>,
+        context_entries: Option<Vec<ContextEntry>>,
+    ) -> SimulatePrincipalPolicyRequest {
+        SimulatePrincipalPolicyRequest {
+            policy_source_arn: "arn:wami:iam::999:user/alice".to_string(),
+            action_names: vec!["iam:GetUser".to_string()],
+            resource_arns: Some(vec!["arn:wami:iam:12345678:wami:999:user/bob".to_string()]),
+            policy_input_list: Some(documents),
+            context_entries,
+        }
+    }
+
+    #[tokio::test]
+    async fn a_simulated_deny_does_not_hide_a_broken_document_after_it() {
+        // It answered "denied" at the first Deny; the authorizer reads every
+        // document and refuses. The simulation tells what the authorizer does.
+        let (store, _) = alice_for_both_doors(None).await;
+        let documents = vec![
+            doc(&[stmt("DenyAll", "Deny", None)]),
+            doc(&[stmt("Office", "Deny", Some(OFFICE))]),
+        ];
+        let err = EvaluationService::new(store, "999".to_string())
+            .simulate_principal_policy(principal(documents, Some(from_nowhere())))
+            .await
+            .expect_err("a Deny earlier must not hide a document that cannot be read");
+        assert!(
+            matches!(err, AmiError::UnreadableCondition { .. }),
+            "{err:?}"
+        );
+        assert!(err.to_string().contains("Office"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn a_simulated_boundary_is_read_whatever_the_identity_verdict() {
+        // A boundary whose condition cannot be compared: the authorizer reads
+        // it before deciding, so the simulation must too.
+        let boundary = doc(&[stmt("Office", "Allow", Some(OFFICE))]);
+        let (store, _) = alice_for_both_doors(Some(&boundary)).await;
+        let documents = vec![doc(&[stmt("AllowAll", "Allow", None)])];
+        let err = EvaluationService::new(store, "999".to_string())
+            .simulate_principal_policy(principal(documents, Some(from_nowhere())))
+            .await
+            .expect_err("a boundary that cannot be compared must not read as allowing");
+        assert!(
+            matches!(err, AmiError::UnreadableCondition { .. }),
+            "{err:?}"
+        );
+        assert!(err.to_string().contains("permissions boundary"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn every_unreadable_simulated_document_is_named() {
+        let service = setup_service();
+        let broken = doc(&[stmt("Broken", "Deny", Some(TYPO))]);
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![broken.clone(), broken],
+            action_names: vec!["iam:GetUser".to_string()],
+            resource_arns: None,
+            context_entries: None,
+        };
+        let err = service.simulate_custom_policy(request).await.unwrap_err();
+        let message = err.to_string();
+        let first = message.find("policy_input_list[0]");
+        let second = message.find("policy_input_list[1]");
+        assert!(
+            first.is_some() && second.is_some() && first < second,
+            "{message}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_simulated_misspelt_effect_is_an_error() {
+        let service = setup_service();
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![
+                doc(&[stmt("AllowAll", "Allow", None)]),
+                doc(&[stmt("NoReads", "Dney", None)]),
+            ],
+            action_names: vec!["iam:GetUser".to_string()],
+            resource_arns: None,
+            context_entries: None,
+        };
+        let err = service.simulate_custom_policy(request).await.unwrap_err();
+        assert!(matches!(err, AmiError::UnreadablePolicy { .. }), "{err:?}");
+        assert!(err.to_string().contains("NoReads"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn a_simulated_broken_deny_on_another_action_is_refused_by_the_parse_net() {
+        let service = setup_service();
+        let broken = format!(
+            r#"{{"Version":"2012-10-17","Statement":[{{"Sid":"Elsewhere","Effect":"Deny","Action":["s3:*"],"Resource":["*"],"Condition":{TYPO}}}]}}"#
+        );
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![doc(&[stmt("AllowAll", "Allow", None)]), broken],
+            action_names: vec!["iam:GetUser".to_string()],
+            resource_arns: None,
+            context_entries: None,
+        };
+        let err = service.simulate_custom_policy(request).await.unwrap_err();
+        assert!(matches!(err, AmiError::UnreadablePolicy { .. }), "{err:?}");
+    }
+
+    #[tokio::test]
+    async fn the_two_doors_agree_when_several_statements_take_part() {
+        use crate::service::auth::AuthorizationService;
+
+        let resource = "arn:wami:iam:12345678:wami:999:user/bob";
+        let deny_all = doc(&[stmt("DenyAll", "Deny", None)]);
+        let allow_all = doc(&[stmt("AllowAll", "Allow", None)]);
+        // (identity documents, boundary, the Sid the error must name)
+        let cases: Vec<(Vec<String>, Option<String>, &str)> = vec![
+            // A Deny, then a document whose Deny cannot be compared.
+            (
+                vec![
+                    deny_all.clone(),
+                    doc(&[stmt("Office", "Deny", Some(OFFICE))]),
+                ],
+                None,
+                "Office",
+            ),
+            // One document: a Deny that holds, an Allow that cannot be compared.
+            (
+                vec![doc(&[
+                    stmt("DenyAll", "Deny", None),
+                    stmt("Office", "Allow", Some(OFFICE)),
+                ])],
+                None,
+                "Office",
+            ),
+            // A boundary that cannot be compared, under an identity Allow.
+            (
+                vec![allow_all.clone()],
+                Some(doc(&[stmt("Office", "Allow", Some(OFFICE))])),
+                "Office",
+            ),
+            // A boundary that cannot be read, under an identity Deny.
+            (
+                vec![deny_all.clone()],
+                Some(doc(&[stmt("Fence", "Deny", Some(TYPO))])),
+                "Fence",
+            ),
+        ];
+        for (documents, boundary, sid) in cases {
+            let (store, _) = alice_for_both_doors(boundary.as_deref()).await;
+            for (i, document) in documents.iter().enumerate() {
+                store
+                    .write()
+                    .await
+                    .put_user_policy("alice", &format!("Doc{i}"), document.clone())
+                    .await
+                    .unwrap();
+            }
+            let arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
+            let ctx = WamiContext::builder()
+                .instance_id("999")
+                .tenant_path(TenantPath::single(12345678))
+                .caller_arn(arn)
+                .is_root(false)
+                .source_ip("not-an-ip")
+                .build()
+                .unwrap();
+            let authorizer = AuthorizationService::new(store.clone())
+                .authorize(&ctx, "iam:GetUser", &resource.parse().unwrap())
+                .await;
+            let simulation = EvaluationService::new(store, "999".to_string())
+                .simulate_principal_policy(principal(documents.clone(), Some(from_nowhere())))
+                .await;
+            let (Err(a), Err(s)) = (&authorizer, &simulation) else {
+                panic!(
+                    "both doors must refuse {documents:?} (boundary {boundary:?}):\n authorizer {authorizer:?}\n simulation {simulation:?}"
+                );
+            };
+            assert_eq!(shape(a, sid), shape(s, sid), "{a} / {s}");
+            assert_ne!(shape(a, sid).0, "other", "{a}");
         }
     }
 }
