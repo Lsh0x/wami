@@ -3309,8 +3309,10 @@ fn test_all_foranyvalue_operators() {
         (
             r#"{"ForAnyValue:StringNotEquals": {"aws:TagKeys": ["Project", "Team"]}}"#,
             true,
-        ), // No value is in the list, so it is not true that one is: the table
-        // said false, never asserted until wami 001 tightened the loop
+        ), // The code reads ForAnyValue:StringNotEquals as NOT(ForAnyValue:
+        // StringEquals), "no value is listed" — not AWS's reading, "some value
+        // is not listed". Both give true here, so this row cannot tell them
+        // apart: the negated set operators are wami 009.
         (
             r#"{"ForAnyValue:StringLike": {"aws:TagKeys": ["Env*", "Pro*"]}}"#,
             true,
@@ -7139,8 +7141,27 @@ fn every_declared_key_is_written_where_it_is_read() {
             context.custom_values.is_empty(),
             "{key} went to the custom values"
         );
-        let read = get_context_value(key, &context).unwrap();
-        assert!(read.is_some(), "{key} written, then read as absent");
+        // The value read back is the value written — not merely something:
+        // aws:CurrentTime and aws:EpochTime always resolve to a value.
+        let read = get_context_value(key, &context)
+            .unwrap()
+            .unwrap_or_else(|| panic!("{key} written, then read as absent"));
+        let expected = match declared {
+            KeyType::String | KeyType::Arn => ConditionValue::String("7".to_string()),
+            KeyType::Number => ConditionValue::Number(1_600_000_000.0),
+            KeyType::Boolean => ConditionValue::Boolean(true),
+            KeyType::Ip => ConditionValue::String("10.0.0.1".to_string()),
+            KeyType::StringList => ConditionValue::Array(vec!["a".to_string(), "b".to_string()]),
+            KeyType::Date => {
+                let instant = |v: &ConditionValue| {
+                    crate::operators::parse_rfc3339(&v.as_string().unwrap()).unwrap()
+                };
+                let written = ConditionValue::String(sample[0].clone());
+                assert_eq!(instant(&read), instant(&written), "{key}");
+                continue;
+            }
+        };
+        assert_eq!(read, expected, "{key}");
     }
     // A tag is written to its map; an undeclared key is left to the caller.
     let mut context = ConditionContext::builder().build();
@@ -7181,4 +7202,35 @@ fn a_value_that_does_not_read_as_its_key_is_refused_without_being_quoted() {
     let mut context = ConditionContext::builder().build();
     let two = ["a".to_string(), "b".to_string()];
     assert!(assign_context_value(&mut context, "aws:username", &two).is_err());
+}
+
+#[test]
+fn every_part_of_a_condition_is_read_before_it_answers() {
+    // One part false (alice is not bob), one part that cannot be compared (the
+    // request's address is no address). Evaluation stopped at the first false
+    // part, in HashMap order: the same request was refused on one parse and
+    // decided on the next. Every part is read first, in a fixed order.
+    let context = ConditionContext::builder()
+        .username("alice")
+        .source_ip("not-an-ip")
+        .custom_value("wami:Team", ConditionValue::Number(5.0))
+        .build();
+    for json in [
+        // across operators
+        r#"{"StringEquals":{"aws:username":"bob"},"IpAddress":{"aws:SourceIp":"10.0.0.0/8"}}"#,
+        // within one operator, across keys
+        r#"{"StringEquals":{"aws:username":"bob","wami:Team":"5"}}"#,
+    ] {
+        let outcomes: std::collections::BTreeSet<String> = (0..200)
+            .map(|_| {
+                format!(
+                    "{:?}",
+                    evaluate_condition_block(&parse_condition_block_from_json(json), &context)
+                )
+            })
+            .collect();
+        assert_eq!(outcomes.len(), 1, "{json}: {outcomes:?}");
+        let outcome = outcomes.into_iter().next().unwrap();
+        assert!(outcome.starts_with("Err(TypeMismatch"), "{json}: {outcome}");
+    }
 }

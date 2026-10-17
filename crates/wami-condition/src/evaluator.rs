@@ -129,41 +129,45 @@ impl From<ConditionError> for crate::error::AmiError {
 /// Evaluate a condition block
 ///
 /// A condition block evaluates to `true` if ALL operator blocks evaluate to `true` (AND logic).
+///
+/// Every part is read before the block answers, in a fixed order (operators,
+/// then keys, sorted): a part that cannot be compared is an error even when
+/// another part is false (wami 001, read everything before deciding). It used
+/// to stop at the first false part in `HashMap` order, so one request was
+/// refused on one parse and decided on the next. When several parts err, the
+/// first in that order is the one returned.
+///
+/// # Errors
+///
+/// The first error in that order, from an unknown operator or a comparison
+/// that cannot be made.
 pub fn evaluate_condition_block(
     block: &ConditionBlock,
     context: &ConditionContext,
 ) -> Result<bool, ConditionError> {
-    // Empty block passes (no conditions to check)
-    if block.is_empty() {
-        return Ok(true);
-    }
-
-    // All operator blocks must pass (AND logic across operators)
-    for (operator_name, key_value_map) in block {
+    let mut operators: Vec<_> = block.iter().collect();
+    operators.sort_by_key(|(name, _)| *name);
+    let mut holds = true;
+    for (operator_name, key_value_map) in operators {
         let operator = ConditionOperator::from_str(operator_name)?;
-        if !evaluate_operator_block(operator, key_value_map, context)? {
-            return Ok(false); // One operator block fails = entire condition fails
-        }
+        holds &= evaluate_operator_block(operator, key_value_map, context)?;
     }
-
-    Ok(true) // All operator blocks passed
+    Ok(holds)
 }
 
 /// Evaluate an operator block
 ///
-/// An operator block evaluates to `true` if ALL key-value pairs evaluate to `true` (AND logic).
+/// An operator block evaluates to `true` if ALL key-value pairs evaluate to
+/// `true` (AND logic) — every key read, sorted, before it answers.
 fn evaluate_operator_block(
     operator: ConditionOperator,
     key_value_map: &HashMap<String, ConditionValue>,
     context: &ConditionContext,
 ) -> Result<bool, ConditionError> {
-    // Empty operator block passes
-    if key_value_map.is_empty() {
-        return Ok(true);
-    }
-
-    // All key-value pairs must pass (AND logic within operator)
-    for (key, expected_value) in key_value_map {
+    let mut keys: Vec<_> = key_value_map.iter().collect();
+    keys.sort_by_key(|(key, _)| *key);
+    let mut holds = true;
+    for (key, expected_value) in keys {
         let actual_value = get_context_value(key, context)
             .map_err(|e| ConditionError::MissingContextKey(format!("{}: {}", key, e)))?;
         // An error is not a `false`: answering it as one made the statement
@@ -171,14 +175,11 @@ fn evaluate_operator_block(
         // refuses every policy-side value an operator cannot read and every
         // operator its key's declared type rules out, so what still errs here
         // is the CONTEXT side — a custom key holding a value of another type,
-        // an `aws:SourceIp` that is no address, an unreadable element of a
-        // request list — or a block built by hand without going through parse.
-        if !super::operators::evaluate_operator(operator, actual_value, expected_value)? {
-            return Ok(false);
-        }
+        // an `aws:SourceIp` that is no address — or a block built by hand
+        // without going through parse.
+        holds &= super::operators::evaluate_operator(operator, actual_value, expected_value)?;
     }
-
-    Ok(true) // All keys passed
+    Ok(holds)
 }
 
 /// Parse a condition block from JSON Value
