@@ -159,8 +159,8 @@ impl fmt::Display for PolicySource {
 /// The statement that decided, and the policy it came from.
 ///
 /// One per contributing source — the *decisive* statement of that document, not
-/// every statement it contains: evaluation stops at the first match within a
-/// document, deny before allow.
+/// every statement it contains: every matching statement is read (wami 001),
+/// and the first Deny that holds, else the first Allow, is the one kept.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct StatementRef {
     /// Which policy this statement lives in.

@@ -149,6 +149,13 @@ impl TenantAction {
 ///
 /// This authorizer evaluates tenant permissions using standard IAM policy documents.
 /// It can work standalone (without a store) by accepting policies directly.
+///
+/// **A third evaluator, not on the rules the other two keep** (wami 001): it
+/// drops a document it cannot read instead of refusing, never reads a
+/// statement's `Condition`, and matches the `Effect` case-sensitively, so a
+/// misspelt one vanishes. Bringing it onto `service::auth::policy_evaluator`
+/// is wami 003. Until then nothing in the workspace calls it, and
+/// `tests/tenant_authorizer_has_no_caller.rs` keeps it that way.
 pub struct TenantAuthorizer {
     /// Policy documents to evaluate
     policies: Vec<PolicyDocument>,

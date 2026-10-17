@@ -21,27 +21,44 @@ use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_condition::evaluator::parse_condition_block;
-use wami_condition::{evaluate_condition_block, ConditionContext, ConditionValue};
+use wami_condition::{evaluate_condition_block, keys, ConditionContext, ConditionValue};
 use wami_core::error::{AmiError, Result};
 use wami_core::types::{PolicyDocument, PolicyStatement};
 
 /// A document and the name an error gives it.
 type Named = (String, PolicyDocument);
 
-/// Parse the documents a request hands in. JSON that is no policy document
-/// is a malformed request (`InvalidParameter`, as before); the documents are
-/// then checked as the authorizer checks them, by [`check_every_document`].
-fn parse_simulated(jsons: &[String]) -> Result<Vec<Named>> {
+/// Where a simulated document comes from, in reading order: the principal's
+/// stored documents, then the request's.
+type Origin = (u8, usize);
+
+/// Parse the documents a request hands in, through the authorizer's own
+/// decoder. JSON that is no policy document is a malformed request
+/// (`InvalidParameter`, as before, now saying where rather than quoting it);
+/// the documents are then checked as the authorizer checks them, by
+/// [`check_every_document`].
+fn parse_simulated(jsons: &[String]) -> Result<Vec<(Origin, Named)>> {
     jsons
         .iter()
         .enumerate()
         .map(|(i, json)| {
-            let document: PolicyDocument =
-                serde_json::from_str(json).map_err(|e| AmiError::InvalidParameter {
-                    message: format!("Invalid policy document: {}", e),
-                })?;
-            Ok((format!("policy_input_list[{i}]"), document))
+            let name = format!("policy_input_list[{i}]");
+            let document = policy_evaluator::decode_policy_document(json, &name).map_err(|e| {
+                AmiError::InvalidParameter {
+                    message: format!("Invalid policy document: {e}"),
+                }
+            })?;
+            Ok(((1, i), (name, document)))
         })
+        .collect()
+}
+
+/// The documents in the authorizer's reading order — by the same function —
+/// with their names.
+fn in_reading_order(identity: Vec<(Origin, Named)>, boundary: Option<Named>) -> Vec<Named> {
+    policy_evaluator::in_reading_order(identity, boundary.map(|named| ((2, 0), named)))
+        .into_iter()
+        .map(|(_, named)| named)
         .collect()
 }
 
@@ -119,7 +136,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
         request: SimulateCustomPolicyRequest,
     ) -> Result<SimulatePolicyResponse> {
         // Parse policy documents, and read every one before deciding anything
-        let policies = parse_simulated(&request.policy_input_list)?;
+        let policies = in_reading_order(parse_simulated(&request.policy_input_list)?, None);
         check_every_document(&policies, None)?;
 
         // Default resource if not provided
@@ -132,7 +149,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
             request.context_entries.as_deref(),
             None, // principal_arn not available in custom policy simulation
             None, // resource_arn will be set per evaluation
-        );
+        )?;
 
         // Evaluate each action against each resource
         let mut results = Vec::new();
@@ -183,18 +200,19 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
         // Fetch principal's policies from store. `fetch_principal_policies`
         // returns none today (its TODO); they are checked below with the
         // others all the same, so filling it cannot open a door.
-        let mut policies: Vec<Named> = self
+        let mut identity: Vec<(Origin, Named)> = self
             .fetch_principal_policies(&principal_type, &principal_name)
             .await?
             .into_iter()
             .enumerate()
-            .map(|(i, document)| (format!("principal policy #{i}"), document))
+            .map(|(i, document)| ((0, i), (format!("principal policy #{i}"), document)))
             .collect();
 
         // Add additional policy documents from request if provided
         if let Some(extra_policies) = request.policy_input_list {
-            policies.extend(parse_simulated(&extra_policies)?);
+            identity.extend(parse_simulated(&extra_policies)?);
         }
+        let policies = in_reading_order(identity, None);
 
         // The boundary, named as the authorizer names it and read with the
         // identity documents, last, as the authorizer reads it: before any
@@ -206,20 +224,21 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
             let source = PolicySource::PermissionsBoundary {
                 arn: boundary.arn.clone(),
             };
-            serde_json::from_str::<PolicyDocument>(&boundary.policy_document)
+            policy_evaluator::decode_policy_document(&boundary.policy_document, &source.to_string())
                 .map(|document| (source.to_string(), document))
-                .map_err(|e| AmiError::UnreadablePolicy {
-                    policy: source.to_string(),
-                    message: e.to_string(),
-                })
         });
         let (boundary_named, boundary_unreadable) = match boundary_named {
             Some(Ok(named)) => (Some(named), None),
             Some(Err(e)) => (None, Some(e)),
             None => (None, None),
         };
-        let mut read = policies.clone();
-        read.extend(boundary_named.clone());
+        let read = policies
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(i, named)| ((0, i), named))
+            .collect();
+        let read = in_reading_order(read, boundary_named.clone());
         check_every_document(&read, boundary_unreadable)?;
 
         // Default resource if not provided
@@ -232,7 +251,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
             request.context_entries.as_deref(),
             Some(&request.policy_source_arn),
             None, // resource_arn will be set per evaluation
-        );
+        )?;
 
         // Evaluate each action against each resource
         let mut results = Vec::new();
@@ -509,20 +528,16 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
         // one cannot get this far: the boundary was read above, with the
         // identity documents, as the authorizer reads it.
         if let Some((boundary_policy, _)) = boundary {
-            match crate::wami::policies::permissions_boundary::operations::is_allowed_by_boundary(
-                action,
-                resource,
-                boundary_policy,
-            ) {
-                Ok(allowed) => {
-                    if !allowed {
-                        return Ok("denied".to_string()); // Boundary restricts the action
-                    }
-                }
-                Err(_) => {
-                    // If boundary evaluation fails, deny for safety
-                    return Ok("denied".to_string());
-                }
+            // A boundary that cannot be evaluated is an error, never a
+            // verdict: it used to answer "denied" (wami 001, Δ15).
+            let allowed =
+                crate::wami::policies::permissions_boundary::operations::is_allowed_by_boundary(
+                    action,
+                    resource,
+                    boundary_policy,
+                )?;
+            if !allowed {
+                return Ok("denied".to_string()); // Boundary restricts the action
             }
         }
 
@@ -579,133 +594,62 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
     }
 
     /// Build a ConditionContext from request context entries
+    ///
+    /// Every DECLARED key is written through the key table, to the field it is
+    /// read from, parsed as its declared type (wami 001): written to the custom
+    /// values as before, a declared key read as absent, so a Deny on it was
+    /// false; and an entry whose value did not parse vanished the same way. A
+    /// key nobody declared is kept as text — one string, or a list of them —
+    /// whatever type the entry claims, since only string operators compare it.
+    ///
+    /// # Errors
+    ///
+    /// [`AmiError::InvalidParameter`] naming the entry and its key's type when
+    /// its value does not read as that type — never the value.
     fn build_condition_context(
         &self,
         context_entries: Option<&[ContextEntry]>,
         principal_arn: Option<&str>,
         resource_arn: Option<&str>,
-    ) -> ConditionContext {
+    ) -> Result<ConditionContext> {
         let mut builder = ConditionContext::builder().current_time(chrono::Utc::now());
-
         if let Some(arn) = resource_arn {
             builder = builder.resource_arn(arn);
         }
-
-        // Set principal ARN if provided
         if let Some(arn) = principal_arn {
             builder = builder.principal_arn(arn);
-            // Extract account ID from ARN if possible
             if let Some(account_id) = self.extract_account_id_from_arn(arn) {
                 builder = builder.principal_account(account_id);
             }
         }
+        let mut context = builder.build();
 
-        // Process context entries from request
-        if let Some(entries) = context_entries {
-            for entry in entries {
-                let key = &entry.context_key_name;
-                let values = &entry.context_key_values;
-
-                // Convert context entry to condition context based on key type
-                match entry.context_key_type.as_str() {
-                    "String" | "StringList" => {
-                        if let Some(first_value) = values.first() {
-                            let condition_value = if values.len() == 1 {
-                                ConditionValue::String(first_value.clone())
-                            } else {
-                                ConditionValue::Array(values.clone())
-                            };
-                            builder = builder.custom_value(key.clone(), condition_value);
+        for entry in context_entries.unwrap_or_default() {
+            let key = &entry.context_key_name;
+            let values = &entry.context_key_values;
+            match keys::assign_context_value(&mut context, key, values) {
+                Ok(true) => {}
+                Ok(false) => {
+                    let value = match values.as_slice() {
+                        [one] if !entry.context_key_type.ends_with("List") => {
+                            ConditionValue::String(one.clone())
                         }
-                    }
-                    "Numeric" => {
-                        if let Some(first_value) = values.first() {
-                            if let Ok(num) = first_value.parse::<f64>() {
-                                builder =
-                                    builder.custom_value(key.clone(), ConditionValue::Number(num));
-                            }
-                        }
-                    }
-                    "Boolean" => {
-                        if let Some(first_value) = values.first() {
-                            if let Ok(b) = first_value.parse::<bool>() {
-                                builder =
-                                    builder.custom_value(key.clone(), ConditionValue::Boolean(b));
-                            }
-                        }
-                    }
-                    _ => {
-                        // Default to string
-                        if let Some(first_value) = values.first() {
-                            builder = builder.custom_value(
-                                key.clone(),
-                                ConditionValue::String(first_value.clone()),
-                            );
-                        }
-                    }
+                        _ => ConditionValue::Array(values.clone()),
+                    };
+                    context.custom_values.insert(key.clone(), value);
                 }
-
-                // Map common AWS context keys to ConditionContext fields
-                match key.as_str() {
-                    "aws:SourceIp" => {
-                        if let Some(ip) = values.first() {
-                            builder = builder.source_ip(ip.clone());
-                        }
-                    }
-                    "aws:CurrentTime" => {
-                        if let Some(time_str) = values.first() {
-                            if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(time_str) {
-                                builder = builder.current_time(dt.with_timezone(&chrono::Utc));
-                            }
-                        }
-                    }
-                    "aws:RequestedRegion" => {
-                        if let Some(region) = values.first() {
-                            builder = builder.requested_region(region.clone());
-                        }
-                    }
-                    "aws:MultiFactorAuthPresent" => {
-                        if let Some(val) = values.first() {
-                            if let Ok(b) = val.parse::<bool>() {
-                                builder = builder.mfa_present(b);
-                            }
-                        }
-                    }
-                    // Map WAMI-specific keys to their fields
-                    "wami:ClientType" => {
-                        if let Some(val) = values.first() {
-                            builder = builder.client_type(val.clone());
-                        }
-                    }
-                    "wami:RequestsPerMinute" => {
-                        if let Some(val) = values.first() {
-                            if let Ok(num) = val.parse::<u64>() {
-                                builder = builder.requests_per_minute(num);
-                            }
-                        }
-                    }
-                    "wami:BurstCapacityUsed" => {
-                        if let Some(val) = values.first() {
-                            if let Ok(num) = val.parse::<f64>() {
-                                builder = builder.burst_capacity_used(num);
-                            }
-                        }
-                    }
-                    "wami:QuotaRemaining" => {
-                        if let Some(val) = values.first() {
-                            if let Ok(num) = val.parse::<u64>() {
-                                builder = builder.quota_remaining(num);
-                            }
-                        }
-                    }
-                    _ => {
-                        // Already handled in custom_values above
-                    }
+                Err(_) => {
+                    let expected = keys::key_type(key).map_or("text", |t| t.describe());
+                    return Err(AmiError::InvalidParameter {
+                        message: format!(
+                            "context entry {key} cannot be read as {expected} (one value \
+                             unless the key holds a list)"
+                        ),
+                    });
                 }
             }
         }
-
-        builder.build()
+        Ok(context)
     }
 
     /// Extract account ID from ARN (e.g., "arn:aws:iam::123456789012:user/alice" -> "123456789012")
@@ -2075,8 +2019,8 @@ mod tests {
         let policy = allow_and_conditional_deny(r#"{"StringEquals":{"wami:Team":"5"}}"#);
         let entries = vec![ContextEntry {
             context_key_name: "wami:Team".to_string(),
-            context_key_values: vec!["5".to_string()],
-            context_key_type: "Numeric".to_string(),
+            context_key_values: vec!["5".to_string(), "6".to_string()],
+            context_key_type: "StringList".to_string(),
         }];
         let err = service
             .simulate_custom_policy(custom(policy, Some(entries)))
@@ -2245,6 +2189,19 @@ mod tests {
         }]
     }
 
+    /// A custom key compared as one string...
+    const ONE_TEAM: &str = r#"{"StringEquals":{"wami:Team":"core"}}"#;
+
+    /// ... while the request holds a list for it: the comparison cannot be
+    /// made, at evaluation (custom keys are strings, so parse cannot know).
+    fn two_teams() -> Vec<ContextEntry> {
+        vec![ContextEntry {
+            context_key_name: "wami:Team".to_string(),
+            context_key_values: vec!["core".to_string(), "infra".to_string()],
+            context_key_type: "StringList".to_string(),
+        }]
+    }
+
     fn principal(
         documents: Vec<String>,
         context_entries: Option<Vec<ContextEntry>>,
@@ -2265,28 +2222,28 @@ mod tests {
         let (store, _) = alice_for_both_doors(None).await;
         let documents = vec![
             doc(&[stmt("DenyAll", "Deny", None)]),
-            doc(&[stmt("Office", "Deny", Some(OFFICE))]),
+            doc(&[stmt("Teams", "Deny", Some(ONE_TEAM))]),
         ];
         let err = EvaluationService::new(store, "999".to_string())
-            .simulate_principal_policy(principal(documents, Some(from_nowhere())))
+            .simulate_principal_policy(principal(documents, Some(two_teams())))
             .await
             .expect_err("a Deny earlier must not hide a document that cannot be read");
         assert!(
             matches!(err, AmiError::UnreadableCondition { .. }),
             "{err:?}"
         );
-        assert!(err.to_string().contains("Office"), "{err}");
+        assert!(err.to_string().contains("Teams"), "{err}");
     }
 
     #[tokio::test]
     async fn a_simulated_boundary_is_read_whatever_the_identity_verdict() {
         // A boundary whose condition cannot be compared: the authorizer reads
         // it before deciding, so the simulation must too.
-        let boundary = doc(&[stmt("Office", "Allow", Some(OFFICE))]);
+        let boundary = doc(&[stmt("Teams", "Allow", Some(ONE_TEAM))]);
         let (store, _) = alice_for_both_doors(Some(&boundary)).await;
         let documents = vec![doc(&[stmt("AllowAll", "Allow", None)])];
         let err = EvaluationService::new(store, "999".to_string())
-            .simulate_principal_policy(principal(documents, Some(from_nowhere())))
+            .simulate_principal_policy(principal(documents, Some(two_teams())))
             .await
             .expect_err("a boundary that cannot be compared must not read as allowing");
         assert!(
@@ -2411,7 +2368,7 @@ mod tests {
             let authorizer = AuthorizationService::new(store.clone())
                 .authorize(&ctx, "iam:GetUser", &resource.parse().unwrap())
                 .await;
-            let simulation = EvaluationService::new(store, "999".to_string())
+            let simulation = EvaluationService::new(store.clone(), "999".to_string())
                 .simulate_principal_policy(principal(documents.clone(), Some(from_nowhere())))
                 .await;
             let (Err(a), Err(s)) = (&authorizer, &simulation) else {
@@ -2419,8 +2376,165 @@ mod tests {
                     "both doors must refuse {documents:?} (boundary {boundary:?}):\n authorizer {authorizer:?}\n simulation {simulation:?}"
                 );
             };
-            assert_eq!(shape(a, sid), shape(s, sid), "{a} / {s}");
-            assert_ne!(shape(a, sid).0, "other", "{a}");
+            let request_side = documents
+                .iter()
+                .chain(boundary.iter())
+                .any(|d| d.contains("aws:SourceIp"));
+            if !request_side {
+                assert_eq!(shape(a, sid), shape(s, sid), "{a} / {s}");
+                assert_ne!(shape(a, sid).0, "other", "{a}");
+                continue;
+            }
+            // The request's address is no address. The authorizer meets it at
+            // evaluation; the simulation, handed the address as an entry,
+            // refuses the entry before evaluating anything. Both refuse,
+            // neither allows — each with its own error.
+            assert_eq!(shape(a, sid), ("UnreadableCondition", true), "{a}");
+            assert!(
+                matches!(s, AmiError::InvalidParameter { message } if message.contains("aws:SourceIp")),
+                "{s:?}"
+            );
+
+            // The inverse guard: from an address the conditions can read, both
+            // doors answer, and alike — so a door that stopped refusing fails
+            // the half above, and one that stopped deciding fails this one.
+            let ctx = WamiContext::builder()
+                .instance_id("999")
+                .tenant_path(TenantPath::single(12345678))
+                .caller_arn("arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap())
+                .is_root(false)
+                .source_ip("10.1.2.3")
+                .build()
+                .unwrap();
+            let office = vec![ContextEntry {
+                context_key_name: "aws:SourceIp".to_string(),
+                context_key_values: vec!["10.1.2.3".to_string()],
+                context_key_type: "String".to_string(),
+            }];
+            let authorized = AuthorizationService::new(store.clone())
+                .authorize(&ctx, "iam:GetUser", &resource.parse().unwrap())
+                .await
+                .unwrap()
+                .is_allowed();
+            let simulated = EvaluationService::new(store, "999".to_string())
+                .simulate_principal_policy(principal(documents.clone(), Some(office)))
+                .await
+                .unwrap();
+            assert_eq!(
+                authorized,
+                simulated.evaluation_results[0].eval_decision == "allowed",
+                "{documents:?} (boundary {boundary:?}): {simulated:?}"
+            );
         }
+    }
+
+    // ─── wami 001, review round 2: the simulation's context, typed ──────
+
+    fn entry(key: &str, kind: &str, values: &[&str]) -> ContextEntry {
+        ContextEntry {
+            context_key_name: key.to_string(),
+            context_key_values: values.iter().map(|v| v.to_string()).collect(),
+            context_key_type: kind.to_string(),
+        }
+    }
+
+    fn custom_with(
+        policies: Vec<String>,
+        entries: Vec<ContextEntry>,
+    ) -> SimulateCustomPolicyRequest {
+        SimulateCustomPolicyRequest {
+            policy_input_list: policies,
+            action_names: vec!["iam:GetUser".to_string()],
+            resource_arns: None,
+            context_entries: Some(entries),
+        }
+    }
+
+    #[tokio::test]
+    async fn a_simulated_entry_for_a_declared_key_is_read_as_that_key() {
+        // aws:SecureTransport is a declared key: its entry used to be written
+        // to the custom values, which a declared key is never read from — so
+        // the Deny "over plain HTTP" read an absent key and the Allow won.
+        let policy = doc(&[
+            stmt("AllowAll", "Allow", None),
+            stmt(
+                "PlainHttp",
+                "Deny",
+                Some(r#"{"Bool":{"aws:SecureTransport":"false"}}"#),
+            ),
+        ]);
+        let response = setup_service()
+            .simulate_custom_policy(custom_with(
+                vec![policy],
+                vec![entry("aws:SecureTransport", "Boolean", &["false"])],
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "denied");
+    }
+
+    #[tokio::test]
+    async fn a_simulated_entry_that_does_not_read_as_its_key_is_refused_naming_it() {
+        // Each used to vanish: the key read as absent, a Deny on it as false.
+        let allow_all = doc(&[stmt("AllowAll", "Allow", None)]);
+        let cases = [
+            entry("wami:SessionAge", "Numeric", &["high-s3cr3t"]),
+            entry("aws:CurrentTime", "String", &["yesterday-s3cr3t"]),
+            entry("aws:MultiFactorAuthPresent", "Boolean", &["yes-s3cr3t"]),
+            entry("aws:SourceIp", "String", &["nowhere-s3cr3t"]),
+            entry("wami:RequestsPerMinute", "Numeric", &["-3s3cr3t"]),
+        ];
+        for bad in cases {
+            let key = bad.context_key_name.clone();
+            let err = setup_service()
+                .simulate_custom_policy(custom_with(vec![allow_all.clone()], vec![bad]))
+                .await
+                .expect_err("an entry that cannot be read as its key must not vanish");
+            let AmiError::InvalidParameter { message } = &err else {
+                panic!("{key}: expected InvalidParameter, got {err:?}");
+            };
+            assert!(message.contains(&key), "{key}: {message}");
+            assert!(!message.contains("s3cr3t"), "{key}: {message}");
+        }
+    }
+
+    #[tokio::test]
+    async fn a_simulated_custom_key_stays_a_string() {
+        // A key nobody declared is compared as a string, whatever type the
+        // entry claims: a "Numeric" entry used to become a number, which no
+        // operator a custom key accepts can compare.
+        let policy = doc(&[
+            stmt("AllowAll", "Allow", None),
+            stmt(
+                "Five",
+                "Deny",
+                Some(r#"{"StringEquals":{"wami:Team":"5"}}"#),
+            ),
+        ]);
+        let response = setup_service()
+            .simulate_custom_policy(custom_with(
+                vec![policy],
+                vec![entry("wami:Team", "Numeric", &["5"])],
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.evaluation_results[0].eval_decision, "denied");
+    }
+
+    #[tokio::test]
+    async fn a_simulated_document_that_is_no_policy_is_refused_without_quoting_it() {
+        let request = SimulateCustomPolicyRequest {
+            policy_input_list: vec![r#"{"Version":"x","Statement":"s3cr3t-statement"}"#.to_string()],
+            action_names: vec!["iam:GetUser".to_string()],
+            resource_arns: None,
+            context_entries: None,
+        };
+        let err = setup_service()
+            .simulate_custom_policy(request)
+            .await
+            .unwrap_err();
+        let message = err.to_string();
+        assert!(!message.contains("s3cr3t"), "{message}");
+        assert!(message.contains("line 1 column"), "{message}");
     }
 }

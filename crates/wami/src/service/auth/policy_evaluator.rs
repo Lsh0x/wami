@@ -45,9 +45,10 @@ pub enum PolicyEffect {
 
 /// The statement that decided a document, and what it decided.
 ///
-/// One per document, not one per matching statement: evaluation stops at the
-/// first match, denies before allows, so a document has exactly one decisive
-/// statement or none at all.
+/// One per document, not one per matching statement: every statement whose
+/// action and resource match is read (wami 001), and the first Deny that
+/// holds — else the first Allow — is kept, so a document has exactly one
+/// decisive statement or none at all.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StatementHit {
     /// What the statement decided — never `NoMatch`.
@@ -145,43 +146,83 @@ pub(crate) fn effect_of(statement: &PolicyStatement) -> Option<PolicyEffect> {
 ///
 /// Every item is named rather than the first, so an operator fixes them all in
 /// one pass and two identical requests name the same documents whatever order
-/// a store returned them in — the caller hands them in its canonical order.
-/// The items of one call are of one kind (all from parse, or all from
-/// evaluation), so the variant is kept; each field lists the items' values in
-/// order, joined by `"; "`.
-pub(crate) fn combine(mut errors: Vec<AmiError>) -> Option<AmiError> {
-    if errors.len() <= 1 {
-        return errors.pop();
+/// a store returned them in — the caller hands them in reading order
+/// ([`in_reading_order`]). Each field lists the items' values in order,
+/// joined by `"; "`.
+///
+/// The variant is chosen from what the items are, never from the first: all
+/// `UnreadableCondition` stay one; anything else unreadable becomes one
+/// `UnreadablePolicy` whose message names every statement. An error that is
+/// no unreadable item is never folded into one — it is returned as it is
+/// (the match lists every variant, so a new one cannot be erased silently).
+pub(crate) fn combine(errors: Vec<AmiError>) -> Option<AmiError> {
+    let mut items = Vec::new();
+    for error in errors {
+        match error {
+            AmiError::UnreadablePolicy { policy, message } => items.push((policy, None, message)),
+            AmiError::UnreadableCondition {
+                policy,
+                statement,
+                message,
+            } => items.push((policy, Some(statement), message)),
+            other @ (AmiError::Provider { .. }
+            | AmiError::Serialization(_)
+            | AmiError::InvalidParameter { .. }
+            | AmiError::OperationNotSupported { .. }
+            | AmiError::ResourceNotFound { .. }
+            | AmiError::PermissionDenied { .. }
+            | AmiError::AccessDenied { .. }
+            | AmiError::ResourceLimitExceeded { .. }
+            | AmiError::ResourceExists { .. }
+            | AmiError::StoreError(_)) => return Some(other),
+        }
     }
-    let join = |field: fn(&AmiError) -> Option<&String>| -> String {
-        errors
-            .iter()
-            .filter_map(field)
-            .map(String::as_str)
-            .collect::<Vec<_>>()
-            .join("; ")
-    };
-    let policy = join(|e| match e {
-        AmiError::UnreadablePolicy { policy, .. }
-        | AmiError::UnreadableCondition { policy, .. } => Some(policy),
-        _ => None,
-    });
-    let message = join(|e| match e {
-        AmiError::UnreadablePolicy { message, .. }
-        | AmiError::UnreadableCondition { message, .. } => Some(message),
-        _ => None,
-    });
-    Some(match &errors[0] {
-        AmiError::UnreadableCondition { .. } => AmiError::UnreadableCondition {
+    let join = |parts: Vec<&str>| parts.join("; ");
+    let policy = join(items.iter().map(|(policy, _, _)| policy.as_str()).collect());
+    match items.as_slice() {
+        [] => None,
+        _ if items.iter().all(|(_, statement, _)| statement.is_some()) => {
+            Some(AmiError::UnreadableCondition {
+                policy,
+                statement: join(
+                    items
+                        .iter()
+                        .filter_map(|(_, statement, _)| statement.as_deref())
+                        .collect(),
+                ),
+                message: join(
+                    items
+                        .iter()
+                        .map(|(_, _, message)| message.as_str())
+                        .collect(),
+                ),
+            })
+        }
+        _ => Some(AmiError::UnreadablePolicy {
             policy,
-            statement: join(|e| match e {
-                AmiError::UnreadableCondition { statement, .. } => Some(statement),
-                _ => None,
-            }),
-            message,
-        },
-        _ => AmiError::UnreadablePolicy { policy, message },
-    })
+            message: items
+                .iter()
+                .map(|(_, statement, message)| match statement {
+                    Some(statement) => format!("statement {statement}: {message}"),
+                    None => message.clone(),
+                })
+                .collect::<Vec<_>>()
+                .join("; "),
+        }),
+    }
+}
+
+/// The order both doors read documents in, and name them in: the identity
+/// documents sorted by their key, then the permissions boundary, LAST, whatever
+/// its key would sort as. One function for both doors, so the authorizer and
+/// the simulation cannot name the same broken documents in two orders.
+pub(crate) fn in_reading_order<K: Ord, D>(
+    mut identity: Vec<(K, D)>,
+    boundary: Option<(K, D)>,
+) -> Vec<(K, D)> {
+    identity.sort_by(|(a, _), (b, _)| a.cmp(b));
+    identity.extend(boundary);
+    identity
 }
 
 /// Check if an action matches any of the policy action patterns.
@@ -368,12 +409,42 @@ pub(crate) fn check_statements(document: &PolicyDocument, policy: &str) -> Resul
 /// when one of its statements has an effect or a condition that cannot be
 /// read.
 pub fn parse_policy_doc(json: &str, policy: &PolicySource) -> Result<PolicyDocument> {
-    let document = serde_json::from_str(json).map_err(|e| AmiError::UnreadablePolicy {
-        policy: policy.to_string(),
-        message: e.to_string(),
-    })?;
-    check_statements(&document, &policy.to_string())?;
+    read_policy_document(json, &policy.to_string())
+}
+
+/// [`parse_policy_doc`] for a document with no [`PolicySource`] yet — one being
+/// WRITTEN (a managed policy at creation). The write paths call this, so a
+/// document is refused at write for exactly what the read refuses: one parser,
+/// two names (wami 001).
+///
+/// # Errors
+///
+/// As [`parse_policy_doc`].
+pub(crate) fn read_policy_document(json: &str, policy: &str) -> Result<PolicyDocument> {
+    let document = decode_policy_document(json, policy)?;
+    check_statements(&document, policy)?;
     Ok(document)
+}
+
+/// JSON into a [`PolicyDocument`] — the one place the auth and policies
+/// services do it (a test counts them).
+///
+/// serde's message quotes the value it choked on — policy text nobody checked
+/// (`invalid type: string "…"`) — so the error says WHERE instead, from serde's
+/// line and column, never serde's text.
+///
+/// # Errors
+///
+/// [`AmiError::UnreadablePolicy`] naming `policy` and the position.
+pub(crate) fn decode_policy_document(json: &str, policy: &str) -> Result<PolicyDocument> {
+    serde_json::from_str(json).map_err(|e| AmiError::UnreadablePolicy {
+        policy: policy.to_string(),
+        message: format!(
+            "cannot be read as a policy document at line {} column {}",
+            e.line(),
+            e.column()
+        ),
+    })
 }
 
 #[cfg(test)]
@@ -918,5 +989,78 @@ mod tests {
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
         let cond_ctx = build_condition_context(&ctx, &resource);
         let _ = cond_ctx;
+    }
+
+    // ─── wami 001, review round 2 ────────────────────────────
+
+    #[test]
+    fn a_document_that_is_no_policy_is_refused_without_quoting_it() {
+        // serde's message quotes the value it choked on — policy text nobody
+        // checked. The error says where instead.
+        for json in [
+            r#"{"Version":"x","Statement":"s3cr3t-statement"}"#,
+            r#"{"Version":"x","Statement":[{"Effect":"Allow","Action":{"k":"s3cr3t"},"Resource":"*"}]}"#,
+            r#"{"Version":"x","Statement":[{"Effect":"Allow","Action":["iam:*"],"Resource":["*"],"Sid":51234}]}"#,
+            r#"{"Version":"x","Statement":[{"Effect":"Allow","Actions":["s3cr3t"],"Resource":["*"]}]}"#,
+        ] {
+            let message = parse_policy_doc(json, &a_policy()).unwrap_err().to_string();
+            assert!(!message.contains("s3cr3t"), "{message}");
+            assert!(!message.contains("51234"), "{message}");
+            assert!(
+                message.contains("cannot be read as a policy document at line 1 column"),
+                "{message}"
+            );
+        }
+    }
+
+    #[test]
+    fn combining_keeps_an_error_that_is_no_unreadable_item() {
+        // Erasing it into an UnreadablePolicy with empty fields would hide it.
+        let err = combine(vec![
+            AmiError::UnreadablePolicy {
+                policy: "A".to_string(),
+                message: "statement S1: broken".to_string(),
+            },
+            AmiError::AccessDenied {
+                message: "store said no".to_string(),
+            },
+        ])
+        .unwrap();
+        assert!(matches!(err, AmiError::AccessDenied { .. }), "{err:?}");
+    }
+
+    #[test]
+    fn combining_both_kinds_names_every_statement() {
+        let err = combine(vec![
+            AmiError::UnreadablePolicy {
+                policy: "A".to_string(),
+                message: "statement S1: broken".to_string(),
+            },
+            AmiError::UnreadableCondition {
+                policy: "B".to_string(),
+                statement: "S2".to_string(),
+                message: "cannot compare".to_string(),
+            },
+        ])
+        .unwrap();
+        assert!(matches!(err, AmiError::UnreadablePolicy { .. }), "{err:?}");
+        let message = err.to_string();
+        for part in ["A", "S1", "B", "statement S2", "cannot compare"] {
+            assert!(message.contains(part), "{part}: {message}");
+        }
+    }
+
+    #[test]
+    fn the_reading_order_puts_the_boundary_last_whatever_its_key() {
+        // Both doors read through this function; the boundary is last even
+        // when its key would sort first, so no derive decides it.
+        let order = in_reading_order(
+            vec![(3, "group"), (1, "user"), (2, "role")],
+            Some((0, "boundary")),
+        );
+        assert_eq!(
+            order.iter().map(|(_, d)| *d).collect::<Vec<_>>(),
+            ["user", "role", "group", "boundary"]
+        );
     }
 }

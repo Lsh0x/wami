@@ -180,16 +180,18 @@ where
         action: &str,
         resource_arn: &WamiArn,
     ) -> Result<Decision> {
-        let (mut documents, boundary) = {
+        let (documents, boundary) = {
             let store = self.store.read().await;
             let documents = Self::identity_documents(&store, context, user_name).await?;
             (documents, Self::boundary_document(&store, user_name).await?)
         };
-        // Canonical order — see the note on this function.
-        documents.sort_by(|(a, _), (b, _)| a.cmp(b));
-        if let Boundary::Present { source, document } = &boundary {
-            documents.push((source.clone(), document.clone()));
-        }
+        // Canonical order — see the note on this function — the boundary
+        // last; the simulation reads in the same order, by the same function.
+        let boundary_document = match &boundary {
+            Boundary::Present { source, document } => Some((source.clone(), document.clone())),
+            Boundary::None | Boundary::Missing { .. } => None,
+        };
+        let documents = policy_evaluator::in_reading_order(documents, boundary_document);
 
         let parsed = Self::read_every_document(&documents)?;
         let mut hits = Self::evaluate_every_document(&parsed, action, resource_arn, context)?;
@@ -2410,5 +2412,40 @@ mod tests {
         let store = alice_with_policies(&ctx, &policies()).await;
         let decision = decide(store, &ctx, "iam:GetUser").await.unwrap();
         assert!(!decision.is_allowed(), "{decision:?}");
+    }
+
+    #[tokio::test]
+    async fn every_statement_that_errs_at_evaluation_is_named_whatever_the_store_order() {
+        let documents = |name: &str| -> (String, String) {
+            let effect = if name == "A" { "Deny" } else { "Allow" };
+            (
+                name.to_string(),
+                document_json(&[statement_json(
+                    &format!("Sid{name}"),
+                    effect,
+                    Some(FROM_THE_OFFICE),
+                )]),
+            )
+        };
+        let mut errors = Vec::new();
+        for order in [["A", "B"], ["B", "A"]] {
+            let ctx = alice_from(Some("not-an-ip"));
+            let policies: Vec<(String, String)> = order.iter().map(|n| documents(n)).collect();
+            let policies: Vec<(&str, String)> = policies
+                .iter()
+                .map(|(n, d)| (n.as_str(), d.clone()))
+                .collect();
+            let store = alice_with_policies(&ctx, &policies).await;
+            errors.push(decide(store, &ctx, "iam:GetUser").await.unwrap_err());
+        }
+        assert_eq!(errors[0].to_string(), errors[1].to_string());
+        let AmiError::UnreadableCondition {
+            policy, statement, ..
+        } = &errors[0]
+        else {
+            panic!("expected UnreadableCondition, got {:?}", errors[0]);
+        };
+        assert_eq!(policy, "user inline policy A; user inline policy B");
+        assert_eq!(statement, "SidA; SidB");
     }
 }
