@@ -1,18 +1,25 @@
 //! Canonical Policy Evaluator
 //!
-//! Single source of truth for IAM policy evaluation logic. Used by both:
-//! - `AuthorizationService` for real-time authorization decisions
-//! - `EvaluationService` for policy simulation (simulate-custom-policy / simulate-principal-policy)
+//! The evaluator `AuthorizationService` decides with. It is not yet the only
+//! one: `EvaluationService` (simulate-custom-policy / simulate-principal-policy)
+//! still walks statements with its own copy of this logic — two evaluators
+//! until wami 003 puts the simulation on this one. Until then, what one does
+//! with a condition the other must do too, and a test holds them to it
+//! (`the_simulation_and_the_authorizer_agree_on_an_unreadable_condition`).
 //!
 //! # Evaluation Rules
 //!
 //! 1. **Deny overrides Allow**: an explicit Deny from ANY statement wins
-//! 2. **Conditions narrow applicability**: a failed condition means NoMatch, not Deny
+//! 2. **Conditions narrow applicability — unreadable is not false**: a FALSE
+//!    condition (well-formed, not met) means NoMatch, not Deny, as in AWS; a
+//!    condition that cannot be READ refuses the decision, naming the policy
+//!    and the statement ([`AmiError::UnreadablePolicy`] at parse,
+//!    [`AmiError::UnreadableCondition`] at evaluation)
 //! 3. **Glob matching**: `*` = single segment, `**` = multi-segment
 //! 4. **Variable substitution**: `${tenant}`, `${principal}`, `${service}` from context
 
 use wami_condition::{
-    evaluate_condition_block, evaluator::parse_condition_block, ConditionContext,
+    evaluate_condition_block, evaluator::parse_condition_block, ConditionContext, ConditionError,
 };
 use wami_core::arn::matching::{glob_match, matches_arn_pattern, MatchContext};
 use wami_core::arn::WamiArn;
@@ -53,12 +60,22 @@ pub struct StatementHit {
 /// Returns the statement that decided, or `None` when the document does not
 /// apply. Which statement decided is what lets a caller write an audit line
 /// naming it — the effect alone cannot be traced back to anything.
+///
+/// `source` names the document in an error: it is what an operator needs to
+/// find the policy to fix.
+///
+/// # Errors
+///
+/// [`AmiError::UnreadableCondition`] when a statement whose action and
+/// resource match carries a condition that cannot be evaluated. The decision
+/// is refused rather than guessed: that statement might have been a Deny.
 pub fn evaluate_policy_document(
     policy: &PolicyDocument,
     action: &str,
     resource_arn: &WamiArn,
     context: &WamiContext,
-) -> Option<StatementHit> {
+    source: &PolicySource,
+) -> Result<Option<StatementHit>> {
     let resource_str = resource_arn.to_string();
     let match_ctx = MatchContext {
         tenant: Some(context.tenant_path().as_string()),
@@ -73,27 +90,32 @@ pub fn evaluate_policy_document(
         index,
     };
 
-    let applies = |statement: &PolicyStatement| {
-        matches_action(&statement.action, action)
-            && matches_resource(&statement.resource, &resource_str, &match_ctx)
-            && matches_condition(statement, &cond_ctx)
+    // The condition is read only once action and resource match, as the
+    // design orders it: a statement about something else cannot decide.
+    let applies = |index: usize, statement: &PolicyStatement| -> Result<bool> {
+        if !(matches_action(&statement.action, action)
+            && matches_resource(&statement.resource, &resource_str, &match_ctx))
+        {
+            return Ok(false);
+        }
+        matches_condition(statement, index, &cond_ctx, source)
     };
 
     // Explicit denies first — a deny anywhere in the document wins over an
     // allow later in it.
     for (index, statement) in policy.statement.iter().enumerate() {
-        if statement.effect.to_lowercase() == "deny" && applies(statement) {
-            return Some(hit(PolicyEffect::Deny, index, statement));
+        if statement.effect.to_lowercase() == "deny" && applies(index, statement)? {
+            return Ok(Some(hit(PolicyEffect::Deny, index, statement)));
         }
     }
 
     for (index, statement) in policy.statement.iter().enumerate() {
-        if statement.effect.to_lowercase() == "allow" && applies(statement) {
-            return Some(hit(PolicyEffect::Allow, index, statement));
+        if statement.effect.to_lowercase() == "allow" && applies(index, statement)? {
+            return Ok(Some(hit(PolicyEffect::Allow, index, statement)));
         }
     }
 
-    None
+    Ok(None)
 }
 
 /// Check if an action matches any of the policy action patterns.
@@ -160,23 +182,81 @@ pub fn build_condition_context(context: &WamiContext, resource_arn: &WamiArn) ->
 
 /// Evaluate the condition block of a policy statement (if present).
 ///
-/// Returns `true` if:
-/// - The statement has no condition (unconditional match), OR
-/// - The condition block evaluates to `true`.
+/// `Ok(true)` when the statement has no condition or its condition holds;
+/// `Ok(false)` when the condition is well-formed and not met — AWS semantics,
+/// a key absent from the request included: the statement does not apply.
 ///
-/// Returns `false` if the condition cannot be parsed or evaluates to `false`.
-pub fn matches_condition(statement: &PolicyStatement, cond_ctx: &ConditionContext) -> bool {
+/// `index` and `source` locate the statement for the error, so an operator
+/// learns which policy and which statement to fix.
+///
+/// # Errors
+///
+/// [`AmiError::UnreadableCondition`] when the condition cannot be parsed or
+/// evaluated. This used to be `false`, so the statement vanished — for a
+/// `Deny`, a fail-open. A document read through [`parse_policy_doc`] has had
+/// every condition parsed already; what still errs here is the request side
+/// (a context value the operator cannot compare) or a document built without
+/// going through it.
+pub fn matches_condition(
+    statement: &PolicyStatement,
+    index: usize,
+    cond_ctx: &ConditionContext,
+    source: &PolicySource,
+) -> Result<bool> {
     let condition_value = match &statement.condition {
         Some(v) if !v.is_null() => v,
-        _ => return true, // No condition → always matches
+        _ => return Ok(true), // No condition → always matches
     };
 
-    let block = match parse_condition_block(condition_value) {
-        Ok(b) => b,
-        Err(_) => return false,
-    };
+    parse_condition_block(condition_value)
+        .and_then(|block| evaluate_condition_block(&block, cond_ctx))
+        .map_err(|e| unreadable_condition(&source.to_string(), statement, index, &e))
+}
 
-    evaluate_condition_block(&block, cond_ctx).unwrap_or_default()
+/// How a statement is named in an error: its `Sid`, else `#` and its index.
+pub(crate) fn statement_name(statement: &PolicyStatement, index: usize) -> String {
+    statement.sid.clone().unwrap_or_else(|| format!("#{index}"))
+}
+
+/// The error for a condition that could not be evaluated.
+///
+/// Shared with the simulation's evaluator (`EvaluationService`, until
+/// wami 003), which must answer with the very same error the authorizer does.
+pub(crate) fn unreadable_condition(
+    policy: &str,
+    statement: &PolicyStatement,
+    index: usize,
+    error: &ConditionError,
+) -> AmiError {
+    AmiError::UnreadableCondition {
+        policy: policy.to_string(),
+        statement: statement_name(statement, index),
+        message: error.to_string(),
+    }
+}
+
+/// Refuse a document one of whose statements carries a condition that cannot
+/// be read — an unknown operator, a value its operator cannot compare.
+///
+/// Run on every document [`parse_policy_doc`] returns, so the refusal is
+/// deterministic: it does not wait for a request whose action happens to
+/// reach the broken statement. Shared with the simulation, which parses its
+/// documents itself (wami 003).
+///
+/// # Errors
+///
+/// [`AmiError::UnreadablePolicy`], `message` naming the statement.
+pub(crate) fn check_conditions(document: &PolicyDocument, policy: &str) -> Result<()> {
+    for (index, statement) in document.statement.iter().enumerate() {
+        let Some(condition) = statement.condition.as_ref().filter(|c| !c.is_null()) else {
+            continue;
+        };
+        parse_condition_block(condition).map_err(|e| AmiError::UnreadablePolicy {
+            policy: policy.to_string(),
+            message: format!("statement {}: {e}", statement_name(statement, index)),
+        })?;
+    }
+    Ok(())
 }
 
 /// Parse a policy document, refusing to guess when it cannot be read.
@@ -193,11 +273,25 @@ pub fn matches_condition(statement: &PolicyStatement, cond_ctx: &ConditionContex
 ///
 /// Refusing to decide is the only safe answer: a document that cannot be read
 /// might have contained a deny, and there is no way to know.
+///
+/// The same story held one level down, for conditions. A statement's
+/// `Condition` that could not be read — `StringEqualz` for `StringEquals`, an
+/// `IpAddress` that is no address — was answered as a false condition, so the
+/// statement vanished and the Deny with it. Every condition is therefore
+/// parsed here too, and a broken one refuses the
+/// document with the statement named, whatever the action asked.
+///
+/// # Errors
+///
+/// [`AmiError::UnreadablePolicy`] when the JSON is not a policy document, or
+/// when one of its statements carries a condition that cannot be read.
 pub fn parse_policy_doc(json: &str, policy: &PolicySource) -> Result<PolicyDocument> {
-    serde_json::from_str(json).map_err(|e| AmiError::UnreadablePolicy {
+    let document = serde_json::from_str(json).map_err(|e| AmiError::UnreadablePolicy {
         policy: policy.to_string(),
         message: e.to_string(),
-    })
+    })?;
+    check_conditions(&document, &policy.to_string())?;
+    Ok(document)
 }
 
 #[cfg(test)]
@@ -365,14 +459,14 @@ mod tests {
     fn matches_condition_no_condition() {
         let stmt = make_statement("Allow", &["iam:*"], &["*"], None);
         let cond_ctx = ConditionContext::builder().build();
-        assert!(matches_condition(&stmt, &cond_ctx));
+        assert!(matches_condition(&stmt, 0, &cond_ctx, &a_policy()).unwrap());
     }
 
     #[test]
     fn matches_condition_null_condition() {
         let stmt = make_statement("Allow", &["iam:*"], &["*"], Some(serde_json::Value::Null));
         let cond_ctx = ConditionContext::builder().build();
-        assert!(matches_condition(&stmt, &cond_ctx));
+        assert!(matches_condition(&stmt, 0, &cond_ctx, &a_policy()).unwrap());
     }
 
     #[test]
@@ -385,7 +479,12 @@ mod tests {
             Some(serde_json::json!("not a condition")),
         );
         let cond_ctx = ConditionContext::builder().build();
-        assert!(!matches_condition(&stmt, &cond_ctx));
+        // Unreadable is not false (wami 001): it used to be `false`.
+        let err = matches_condition(&stmt, 0, &cond_ctx, &a_policy()).unwrap_err();
+        assert!(
+            matches!(err, AmiError::UnreadableCondition { .. }),
+            "{err:?}"
+        );
     }
 
     // ─── parse_policy_doc ─────────────────────────────────────
@@ -453,7 +552,9 @@ mod tests {
         let policy = make_policy("Allow", &["iam:GetUser"], &["*"]);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
         assert_eq!(
-            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx).map(|hit| hit.effect),
+            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx, &a_policy())
+                .unwrap()
+                .map(|hit| hit.effect),
             Some(PolicyEffect::Allow)
         );
     }
@@ -470,7 +571,8 @@ mod tests {
         };
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
         assert_eq!(
-            evaluate_policy_document(&policy, "iam:DeleteUser", &resource, &ctx)
+            evaluate_policy_document(&policy, "iam:DeleteUser", &resource, &ctx, &a_policy())
+                .unwrap()
                 .map(|hit| hit.effect),
             Some(PolicyEffect::Deny)
         );
@@ -481,7 +583,11 @@ mod tests {
         let ctx = make_context();
         let policy = make_policy("Allow", &["sts:AssumeRole"], &["*"]);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
-        assert!(evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx).is_none());
+        assert!(
+            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx, &a_policy())
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
@@ -490,7 +596,9 @@ mod tests {
         let policy = make_policy("Deny", &["iam:*"], &["*"]);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
         assert_eq!(
-            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx).map(|hit| hit.effect),
+            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx, &a_policy())
+                .unwrap()
+                .map(|hit| hit.effect),
             Some(PolicyEffect::Deny)
         );
     }
@@ -503,7 +611,11 @@ mod tests {
             statement: vec![],
         };
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
-        assert!(evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx).is_none());
+        assert!(
+            evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx, &a_policy())
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
@@ -512,10 +624,159 @@ mod tests {
         let policy = make_policy("Allow", &["*"], &["*"]);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
         assert_eq!(
-            evaluate_policy_document(&policy, "anything:Here", &resource, &ctx)
+            evaluate_policy_document(&policy, "anything:Here", &resource, &ctx, &a_policy())
+                .unwrap()
                 .map(|hit| hit.effect),
             Some(PolicyEffect::Allow)
         );
+    }
+
+    // ─── wami 001: unreadable is not false ────────────────────
+
+    fn bob() -> WamiArn {
+        "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap()
+    }
+
+    /// An Allow on `iam:*` and a Deny `BlockAll` on `iam:*` carrying `cond`,
+    /// built by hand — as a document from a store that bypassed
+    /// [`parse_policy_doc`] would reach evaluation.
+    fn allow_and_deny_when(cond: serde_json::Value) -> PolicyDocument {
+        let mut deny = make_statement("Deny", &["iam:*"], &["*"], Some(cond));
+        deny.sid = Some("BlockAll".to_string());
+        PolicyDocument {
+            version: "2012-10-17".to_string(),
+            statement: vec![make_statement("Allow", &["iam:*"], &["*"], None), deny],
+        }
+    }
+
+    #[test]
+    fn a_deny_with_an_unknown_operator_is_refused_at_parse_with_the_statement_named() {
+        let named = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["iam:*"],"Resource":["*"]},{"Sid":"BlockAll","Effect":"Deny","Action":["iam:*"],"Resource":["*"],"Condition":{"StringEqualz":{"aws:username":"alice"}}}]}"#;
+        let err = parse_policy_doc(named, &a_policy()).unwrap_err();
+        assert!(matches!(err, AmiError::UnreadablePolicy { .. }), "{err:?}");
+        let message = err.to_string();
+        assert!(message.contains("user inline policy p"), "{message}");
+        assert!(message.contains("statement BlockAll"), "{message}");
+
+        // Without a Sid, the statement is named by its index.
+        let anonymous = named.replace(r#""Sid":"BlockAll","#, "");
+        let message = parse_policy_doc(&anonymous, &a_policy())
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("statement #1"), "{message}");
+    }
+
+    #[test]
+    fn a_deny_with_an_unknown_operator_refuses_the_evaluation() {
+        // The bug itself: this answered `Some(Allow)` — the Deny's condition
+        // read as false, the Deny vanished, the Allow won.
+        let policy =
+            allow_and_deny_when(serde_json::json!({"StringEqualz": {"aws:username": "alice"}}));
+        let err =
+            evaluate_policy_document(&policy, "iam:GetUser", &bob(), &make_context(), &a_policy())
+                .unwrap_err();
+        let AmiError::UnreadableCondition {
+            policy, statement, ..
+        } = &err
+        else {
+            panic!("expected UnreadableCondition, got {err:?}");
+        };
+        assert_eq!(policy, "user inline policy p");
+        assert_eq!(statement, "BlockAll");
+    }
+
+    #[test]
+    fn a_deny_whose_condition_is_false_lets_the_allow_through() {
+        // The regression guard: a FALSE condition is NoMatch, as in AWS. A
+        // Deny "for mallory" does not apply to alice.
+        let policy =
+            allow_and_deny_when(serde_json::json!({"StringEquals": {"aws:username": "mallory"}}));
+        let effect =
+            evaluate_policy_document(&policy, "iam:GetUser", &bob(), &make_context(), &a_policy())
+                .unwrap()
+                .map(|hit| hit.effect);
+        assert_eq!(effect, Some(PolicyEffect::Allow));
+    }
+
+    #[test]
+    fn an_unreadable_condition_on_a_lone_allow_is_an_error_not_a_silent_none() {
+        // Not a deny this time, and still not a quiet "nothing applies": the
+        // operator must learn the policy is broken.
+        let mut allow = make_statement(
+            "Allow",
+            &["iam:*"],
+            &["*"],
+            Some(serde_json::json!({"Bool": {"aws:SecureTransport": "yes"}})),
+        );
+        allow.sid = Some("Reads".to_string());
+        let policy = PolicyDocument {
+            version: "2012-10-17".to_string(),
+            statement: vec![allow],
+        };
+        let err =
+            evaluate_policy_document(&policy, "iam:GetUser", &bob(), &make_context(), &a_policy())
+                .unwrap_err();
+        assert!(
+            matches!(err, AmiError::UnreadableCondition { .. }),
+            "{err:?}"
+        );
+    }
+
+    #[test]
+    fn a_context_value_the_condition_cannot_compare_is_an_error_at_evaluation() {
+        // Parses — "5" is a number — but the request's username is "alice".
+        // This is the error parse cannot catch, since it depends on the request.
+        let json = r#"{"Version":"2012-10-17","Statement":[{"Sid":"Few","Effect":"Allow","Action":["iam:*"],"Resource":["*"],"Condition":{"NumericLessThan":{"aws:username":"5"}}}]}"#;
+        let policy = parse_policy_doc(json, &a_policy()).unwrap();
+        let err =
+            evaluate_policy_document(&policy, "iam:GetUser", &bob(), &make_context(), &a_policy())
+                .unwrap_err();
+        assert!(err.to_string().contains("statement Few"), "{err}");
+    }
+
+    #[test]
+    fn a_missing_context_key_is_a_false_condition() {
+        // As read in wami-condition: `get_context_value` has no error path, an
+        // absent key reaches the operator as `None`, and `StringEquals` on
+        // `None` is false. So a Deny keyed on the source IP does not apply to
+        // a request that carries none — AWS semantics.
+        let policy =
+            allow_and_deny_when(serde_json::json!({"StringEquals": {"aws:SourceIp": "10.0.0.1"}}));
+        let effect =
+            evaluate_policy_document(&policy, "iam:GetUser", &bob(), &make_context(), &a_policy())
+                .unwrap()
+                .map(|hit| hit.effect);
+        assert_eq!(effect, Some(PolicyEffect::Allow));
+        assert!(!matches_condition(
+            &policy.statement[1],
+            1,
+            &ConditionContext::builder().build(),
+            &a_policy()
+        )
+        .unwrap());
+    }
+
+    #[test]
+    fn a_statement_about_another_action_is_not_read_for_its_condition() {
+        // Action and resource are checked before the condition, as the design
+        // orders it: a broken statement that cannot decide this request does
+        // not refuse it. (`parse_policy_doc` refuses the document anyway.)
+        let mut deny = make_statement(
+            "Deny",
+            &["s3:*"],
+            &["*"],
+            Some(serde_json::json!({"StringEqualz": {"aws:username": "alice"}})),
+        );
+        deny.sid = Some("Elsewhere".to_string());
+        let policy = PolicyDocument {
+            version: "2012-10-17".to_string(),
+            statement: vec![make_statement("Allow", &["iam:*"], &["*"], None), deny],
+        };
+        let effect =
+            evaluate_policy_document(&policy, "iam:GetUser", &bob(), &make_context(), &a_policy())
+                .unwrap()
+                .map(|hit| hit.effect);
+        assert_eq!(effect, Some(PolicyEffect::Allow));
     }
 
     // ─── build_condition_context ──────────────────────────────

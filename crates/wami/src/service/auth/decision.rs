@@ -126,10 +126,12 @@ pub enum PolicySource {
     /// The permissions boundary itself.
     ///
     /// Not a source of permissions — a ceiling on them. It appears here so
-    /// [`AmiError::UnreadablePolicy`] can say *which* document failed to parse,
-    /// the boundary being read on a different path from the identity policies.
+    /// [`AmiError::UnreadablePolicy`] and [`AmiError::UnreadableCondition`] can
+    /// say *which* document could not be read, the boundary being read on a
+    /// different path from the identity policies.
     ///
     /// [`AmiError::UnreadablePolicy`]: wami_core::error::AmiError::UnreadablePolicy
+    /// [`AmiError::UnreadableCondition`]: wami_core::error::AmiError::UnreadableCondition
     PermissionsBoundary {
         /// The boundary policy's ARN.
         arn: String,

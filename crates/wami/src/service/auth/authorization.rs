@@ -85,8 +85,10 @@ where
     ///
     /// # Errors
     ///
-    /// Returns an error if there's a problem accessing the store or
-    /// evaluating policies.
+    /// Returns an error if there's a problem accessing the store, and
+    /// [`AmiError::UnreadablePolicy`] or [`AmiError::UnreadableCondition`] when
+    /// a document or a statement's condition cannot be read: the decision is
+    /// refused rather than guessed, the policy and the statement named.
     pub async fn authorize(
         &self,
         context: &WamiContext,
@@ -159,9 +161,13 @@ where
         // skipped: it might have held a deny, and there is no way to know.
         let mut consider = |document: &str, source: PolicySource| -> Result<()> {
             let parsed = policy_evaluator::parse_policy_doc(document, &source)?;
-            if let Some(hit) =
-                policy_evaluator::evaluate_policy_document(&parsed, action, resource_arn, context)
-            {
+            if let Some(hit) = policy_evaluator::evaluate_policy_document(
+                &parsed,
+                action,
+                resource_arn,
+                context,
+                &source,
+            )? {
                 hits.push((source, hit));
             }
             Ok(())
@@ -302,7 +308,8 @@ where
             action,
             resource_arn,
             context,
-        );
+            &boundary_source,
+        )?;
 
         match boundary_hit {
             Some(hit) if hit.effect == PolicyEffect::Allow => {
@@ -530,8 +537,14 @@ mod tests {
 
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
         let ctx = dummy_context();
-        let effect =
-            policy_evaluator::evaluate_policy_document(&policy, "iam:DeleteUser", &resource, &ctx);
+        let effect = policy_evaluator::evaluate_policy_document(
+            &policy,
+            "iam:DeleteUser",
+            &resource,
+            &ctx,
+            &a_source(),
+        )
+        .unwrap();
 
         // Deny should override Allow
         assert_eq!(effect.map(|hit| hit.effect), Some(PolicyEffect::Deny));
@@ -552,8 +565,14 @@ mod tests {
 
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
         let ctx = dummy_context();
-        let effect =
-            policy_evaluator::evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx);
+        let effect = policy_evaluator::evaluate_policy_document(
+            &policy,
+            "iam:GetUser",
+            &resource,
+            &ctx,
+            &a_source(),
+        )
+        .unwrap();
 
         assert!(effect.is_none());
     }
@@ -573,10 +592,23 @@ mod tests {
 
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
         let ctx = dummy_context();
-        let effect =
-            policy_evaluator::evaluate_policy_document(&policy, "iam:GetUser", &resource, &ctx);
+        let effect = policy_evaluator::evaluate_policy_document(
+            &policy,
+            "iam:GetUser",
+            &resource,
+            &ctx,
+            &a_source(),
+        )
+        .unwrap();
 
         assert_eq!(effect.map(|hit| hit.effect), Some(PolicyEffect::Deny));
+    }
+
+    /// Helper: the source unit tests name a document by.
+    fn a_source() -> PolicySource {
+        PolicySource::UserInline {
+            name: "p".to_string(),
+        }
     }
 
     /// Helper: minimal WamiContext for unit tests that only call evaluate_policy_document
@@ -1140,8 +1172,14 @@ mod tests {
             .build()
             .unwrap();
 
-        let effect =
-            policy_evaluator::evaluate_policy_document(&doc, "iam:GetUser", &resource, &ctx);
+        let effect = policy_evaluator::evaluate_policy_document(
+            &doc,
+            "iam:GetUser",
+            &resource,
+            &ctx,
+            &a_source(),
+        )
+        .unwrap();
         assert_eq!(
             effect.map(|hit| hit.effect),
             Some(PolicyEffect::Allow),
@@ -1173,8 +1211,14 @@ mod tests {
             .build()
             .unwrap();
 
-        let effect =
-            policy_evaluator::evaluate_policy_document(&doc, "iam:GetUser", &resource, &ctx);
+        let effect = policy_evaluator::evaluate_policy_document(
+            &doc,
+            "iam:GetUser",
+            &resource,
+            &ctx,
+            &a_source(),
+        )
+        .unwrap();
         assert!(
             effect.is_none(),
             "IP 192.168.1.1 should NOT match 10.0.0.0/8 → NoMatch"
@@ -1205,8 +1249,14 @@ mod tests {
             .build()
             .unwrap();
 
-        let effect =
-            policy_evaluator::evaluate_policy_document(&doc, "iam:DeleteUser", &resource, &ctx);
+        let effect = policy_evaluator::evaluate_policy_document(
+            &doc,
+            "iam:DeleteUser",
+            &resource,
+            &ctx,
+            &a_source(),
+        )
+        .unwrap();
         assert_eq!(
             effect.map(|hit| hit.effect),
             Some(PolicyEffect::Allow),
@@ -1238,8 +1288,14 @@ mod tests {
             .build()
             .unwrap();
 
-        let effect =
-            policy_evaluator::evaluate_policy_document(&doc, "iam:DeleteUser", &resource, &ctx);
+        let effect = policy_evaluator::evaluate_policy_document(
+            &doc,
+            "iam:DeleteUser",
+            &resource,
+            &ctx,
+            &a_source(),
+        )
+        .unwrap();
         assert!(effect.is_none(), "MFA absent → condition fails → NoMatch");
     }
 
@@ -1260,8 +1316,14 @@ mod tests {
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
         let ctx = dummy_context();
 
-        let effect =
-            policy_evaluator::evaluate_policy_document(&doc, "iam:GetUser", &resource, &ctx);
+        let effect = policy_evaluator::evaluate_policy_document(
+            &doc,
+            "iam:GetUser",
+            &resource,
+            &ctx,
+            &a_source(),
+        )
+        .unwrap();
         assert_eq!(
             effect.map(|hit| hit.effect),
             Some(PolicyEffect::Allow),
@@ -1918,5 +1980,117 @@ mod tests {
             .await
             .unwrap()
             .is_allowed());
+    }
+
+    // ─── wami 001: an unreadable condition is an error, not a false one ──
+
+    /// A Deny on `iam:*` whose condition is `cond`, written straight to the
+    /// store beside an Allow on `iam:*` — as a third-party backend or a row
+    /// written before the parse check would hold it.
+    async fn alice_with_conditional_deny(
+        ctx: &WamiContext,
+        cond: &str,
+    ) -> Arc<RwLock<InMemoryWamiStore>> {
+        let store = setup_store_with_user(ctx).await;
+        {
+            let mut s = store.write().await;
+            s.put_user_policy("alice", "Allow", allow_policy_json(&["iam:*"], &["*"]))
+                .await
+                .unwrap();
+            s.put_user_policy(
+                "alice",
+                "ConditionalDeny",
+                format!(
+                    r#"{{"Version":"2012-10-17","Statement":[{{"Sid":"BlockAll","Effect":"Deny","Action":["iam:*"],"Resource":["*"],"Condition":{cond}}}]}}"#
+                ),
+            )
+            .await
+            .unwrap();
+        }
+        store
+    }
+
+    #[tokio::test]
+    async fn a_deny_with_an_unknown_operator_refuses_the_decision() {
+        // `StringEqualz`: one letter. The condition used to read as false, the
+        // Deny vanished, and the Allow beside it won.
+        let ctx = test_context();
+        let store =
+            alice_with_conditional_deny(&ctx, r#"{"StringEqualz":{"aws:username":"alice"}}"#).await;
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+
+        let outcome = AuthorizationService::new(store)
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await;
+        let err = outcome.expect_err("an unreadable condition must not yield a decision");
+        assert!(
+            matches!(
+                err,
+                AmiError::UnreadablePolicy { .. } | AmiError::UnreadableCondition { .. }
+            ),
+            "{err:?}"
+        );
+        // Never disguised as an ordinary refusal, and the operator is told
+        // which policy and which statement to go fix.
+        assert!(!matches!(err, AmiError::AccessDenied { .. }));
+        let message = err.to_string();
+        assert!(message.contains("ConditionalDeny"), "{message}");
+        assert!(message.contains("BlockAll"), "{message}");
+    }
+
+    #[tokio::test]
+    async fn a_context_value_the_condition_cannot_compare_refuses_the_decision() {
+        // A well-formed policy value, but `aws:username` is a name: comparing
+        // it numerically cannot be done. Reachable at evaluation whatever
+        // parse checks, since it depends on the request.
+        let ctx = test_context();
+        let store =
+            alice_with_conditional_deny(&ctx, r#"{"NumericLessThan":{"aws:username":"5"}}"#).await;
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+
+        let err = AuthorizationService::new(store)
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .expect_err("an evaluation error must not yield a decision");
+        let message = err.to_string();
+        assert!(
+            matches!(err, AmiError::UnreadableCondition { .. }),
+            "{err:?}"
+        );
+        assert!(message.contains("ConditionalDeny"), "{message}");
+        assert!(message.contains("BlockAll"), "{message}");
+    }
+
+    #[tokio::test]
+    async fn a_deny_whose_condition_is_false_still_lets_the_allow_through() {
+        // The regression guard: a FALSE condition is NoMatch (AWS semantics).
+        // A Deny "for mallory" must not apply to alice.
+        let ctx = test_context();
+        let store =
+            alice_with_conditional_deny(&ctx, r#"{"StringEquals":{"aws:username":"mallory"}}"#)
+                .await;
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+
+        let decision = AuthorizationService::new(store)
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .unwrap();
+        assert!(decision.is_allowed(), "{decision:?}");
+    }
+
+    #[tokio::test]
+    async fn a_boundary_with_an_unreadable_condition_refuses_the_decision() {
+        let ctx = test_context();
+        let boundary = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["iam:*"],"Resource":["*"]},{"Sid":"Fence","Effect":"Deny","Action":["iam:*"],"Resource":["*"],"Condition":{"StringEqualz":{"aws:username":"alice"}}}]}"#;
+        let store = alice_with_boundary(&ctx, boundary).await;
+        let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
+
+        let err = AuthorizationService::new(store)
+            .authorize(&ctx, "iam:GetUser", &resource)
+            .await
+            .expect_err("a boundary that cannot be read must not be honoured as read");
+        let message = err.to_string();
+        assert!(message.contains("permissions boundary"), "{message}");
+        assert!(message.contains("Fence"), "{message}");
     }
 }

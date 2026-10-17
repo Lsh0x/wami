@@ -66,6 +66,30 @@ pub enum AmiError {
         /// What the parser objected to.
         message: String,
     },
+
+    /// A statement's condition could not be evaluated, so no decision can be
+    /// made from the policy that carries it.
+    ///
+    /// Deliberately an error and not a `false`. A false condition means "the
+    /// statement does not apply here"; an unreadable one means "whether it
+    /// applies cannot be known" — and answering that as `false` made the
+    /// statement vanish, so a `Deny` carrying it stopped denying. As with
+    /// [`AmiError::UnreadablePolicy`], it is not folded into `AccessDenied`
+    /// either: the policy is broken, and the operator must be told which one.
+    ///
+    /// What still reaches evaluation after the parse check is the context
+    /// side — a request value the operator cannot compare, such as
+    /// `NumericLessThan` on `aws:username` — or a document that did not go
+    /// through `parse_policy_doc`.
+    #[error("condition cannot be read ({policy}, statement {statement}): {message}")]
+    UnreadableCondition {
+        /// Which policy holds the statement.
+        policy: String,
+        /// The statement: its `Sid`, else `#` and its index in the document.
+        statement: String,
+        /// What the evaluation objected to.
+        message: String,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, AmiError>;

@@ -323,10 +323,21 @@ fn get_context_value(key: &str, context: &ConditionContext) -> Result<Option<Con
 - **Without IfExists**: Missing value → condition fails → statement doesn't apply
 - **With IfExists**: Missing value → condition passes → statement can apply
 
-### Invalid Operators
+### Unreadable Conditions — unreadable is not false (wami 001)
 
-- Unknown operator → return error
-- Type mismatch → condition fails
+A condition that cannot be read is an error, never a failed condition: answered
+as `false`, it made the statement vanish, so a `Deny` carrying a typo stopped
+denying.
+
+- Unknown operator, or a policy value its operator cannot read (an `IpAddress`
+  that is no address, a `Bool` that is not `true`/`false`, a list where the
+  operator reads one value) → refused at parse; the authorizer refuses the
+  whole document with the statement named (`AmiError::UnreadablePolicy`)
+- A request value the operator cannot compare (`NumericLessThan` on
+  `aws:username`) → error at evaluation; the decision is refused
+  (`AmiError::UnreadableCondition`, policy and statement named)
+- A false condition — well-formed, not met, a missing key included — still
+  means the statement does not apply
 
 ### Invalid Keys
 
