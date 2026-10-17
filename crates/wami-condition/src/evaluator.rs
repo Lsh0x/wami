@@ -46,6 +46,15 @@ pub enum ConditionError {
         /// What the operator reads.
         expected: String,
     },
+    /// An operator no key can feed: the `ForAllValues`/`ForAnyValue` forms of
+    /// `Numeric*`, `Date*` and `IpAddress` compare a LIST of numbers, dates or
+    /// addresses, and no declared key holds one (`keys::KeyType` has no such
+    /// type; custom keys are compared as strings). Refused at parse rather
+    /// than kept as a path no parsed policy reaches (wami 001).
+    OperatorWithoutKey {
+        /// The operator as written in the condition.
+        operator: String,
+    },
     /// An operator that cannot compare the type of the key it is given — a
     /// string operator on the Boolean `aws:SecureTransport`, a numeric one on
     /// a key nobody declared (compared as a string). Refused at parse: it used
@@ -91,6 +100,10 @@ impl std::fmt::Display for ConditionError {
                 }
                 write!(f, ": expected {expected}")
             }
+            ConditionError::OperatorWithoutKey { operator } => write!(
+                f,
+                "{operator} cannot be used: no key of that kind holds a list"
+            ),
             ConditionError::OperatorKeyMismatch {
                 operator,
                 key,

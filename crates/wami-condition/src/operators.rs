@@ -359,21 +359,11 @@ pub fn evaluate_operator(
         ConditionOperator::ForAllValuesArnLike => {
             set_string_like(Quantifier::All, actual, expected)
         }
-        ConditionOperator::ForAllValuesNumericLessThan => {
-            set_numeric_less_than(Quantifier::All, actual, expected)
-        }
-        ConditionOperator::ForAllValuesNumericGreaterThan => {
-            set_numeric_greater_than(Quantifier::All, actual, expected)
-        }
-        ConditionOperator::ForAllValuesIpAddress => {
-            set_ip_address(Quantifier::All, actual, expected)
-        }
-        ConditionOperator::ForAllValuesDateLessThan => {
-            set_date_less_than(Quantifier::All, actual, expected)
-        }
-        ConditionOperator::ForAllValuesDateGreaterThan => {
-            set_date_greater_than(Quantifier::All, actual, expected)
-        }
+        ConditionOperator::ForAllValuesNumericLessThan => without_key(operator),
+        ConditionOperator::ForAllValuesNumericGreaterThan => without_key(operator),
+        ConditionOperator::ForAllValuesIpAddress => without_key(operator),
+        ConditionOperator::ForAllValuesDateLessThan => without_key(operator),
+        ConditionOperator::ForAllValuesDateGreaterThan => without_key(operator),
 
         // Set operators - ForAnyValue
         ConditionOperator::ForAnyValueStringEquals => {
@@ -392,21 +382,11 @@ pub fn evaluate_operator(
             set_string_equals(Quantifier::Any, actual, expected)
         }
         ConditionOperator::ForAnyValueArnLike => set_string_like(Quantifier::Any, actual, expected),
-        ConditionOperator::ForAnyValueNumericLessThan => {
-            set_numeric_less_than(Quantifier::Any, actual, expected)
-        }
-        ConditionOperator::ForAnyValueNumericGreaterThan => {
-            set_numeric_greater_than(Quantifier::Any, actual, expected)
-        }
-        ConditionOperator::ForAnyValueIpAddress => {
-            set_ip_address(Quantifier::Any, actual, expected)
-        }
-        ConditionOperator::ForAnyValueDateLessThan => {
-            set_date_less_than(Quantifier::Any, actual, expected)
-        }
-        ConditionOperator::ForAnyValueDateGreaterThan => {
-            set_date_greater_than(Quantifier::Any, actual, expected)
-        }
+        ConditionOperator::ForAnyValueNumericLessThan => without_key(operator),
+        ConditionOperator::ForAnyValueNumericGreaterThan => without_key(operator),
+        ConditionOperator::ForAnyValueIpAddress => without_key(operator),
+        ConditionOperator::ForAnyValueDateLessThan => without_key(operator),
+        ConditionOperator::ForAnyValueDateGreaterThan => without_key(operator),
     }
 }
 
@@ -903,10 +883,9 @@ fn evaluate_null(
 
 // Set operator implementations — ForAllValues / ForAnyValue
 //
-// One body per comparison, the quantifier passed in. Every element of the
-// request is read before any is compared: an element that cannot be read is
-// an error whatever its position, never a `false` that `all` or `any` might
-// reach first or skip (wami 001).
+// One body per comparison, the quantifier passed in. Only the string and ARN
+// forms have a body: the numeric, date and address forms compare a list no
+// key holds, so parse refuses them and they have no evaluator (wami 001).
 
 /// How a set operator combines its per-element results.
 #[derive(Clone, Copy)]
@@ -939,41 +918,6 @@ fn request_values(actual: ConditionValue) -> Result<Vec<String>, ConditionError>
         ConditionValue::String(value) => Ok(vec![value]),
         other => Err(other.mismatch("a String or an Array of Strings")),
     }
-}
-
-fn element_mismatch(expected: &str, index: usize) -> ConditionError {
-    ConditionError::TypeMismatch {
-        expected: format!("{expected} at element {index}"),
-        actual: "String".to_string(),
-    }
-}
-
-/// The request's numbers — a declared Number key included, as a list of one.
-fn request_numbers(actual: ConditionValue) -> Result<Vec<f64>, ConditionError> {
-    if let ConditionValue::Number(_) = actual {
-        return Ok(vec![actual.as_number()?]);
-    }
-    request_values(actual)?
-        .into_iter()
-        .enumerate()
-        .map(|(index, value)| {
-            ConditionValue::String(value)
-                .as_number()
-                .map_err(|_| element_mismatch("a finite Number", index))
-        })
-        .collect()
-}
-
-fn request_dates(
-    actual: ConditionValue,
-) -> Result<Vec<chrono::DateTime<chrono::Utc>>, ConditionError> {
-    request_values(actual)?
-        .iter()
-        .enumerate()
-        .map(|(index, value)| {
-            parse_rfc3339(value).map_err(|_| element_mismatch("an RFC 3339 date", index))
-        })
-        .collect()
 }
 
 fn set_string_equals(
@@ -1012,96 +956,12 @@ fn set_string_like(
     }))
 }
 
-fn set_numeric(
-    quantifier: Quantifier,
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-    holds: fn(f64, f64) -> bool,
-) -> Result<bool, ConditionError> {
-    let Some(actual) = actual else {
-        return Ok(quantifier.on_nothing());
-    };
-    let numbers = request_numbers(actual)?;
-    if numbers.is_empty() {
-        return Ok(quantifier.on_nothing());
-    }
-    let expected = expected.as_number()?;
-    Ok(quantifier.over(&numbers, |number| holds(*number, expected)))
-}
-
-fn set_numeric_less_than(
-    quantifier: Quantifier,
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    set_numeric(quantifier, actual, expected, |a, e| a < e)
-}
-
-fn set_numeric_greater_than(
-    quantifier: Quantifier,
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    set_numeric(quantifier, actual, expected, |a, e| a > e)
-}
-
-fn set_ip_address(
-    quantifier: Quantifier,
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    let Some(actual) = actual else {
-        return Ok(quantifier.on_nothing());
-    };
-    let addresses = request_values(actual)?;
-    for (index, address) in addresses.iter().enumerate() {
-        check_address(address, Some(index))?;
-    }
-    if addresses.is_empty() {
-        return Ok(quantifier.on_nothing());
-    }
-    let networks = expected.as_array()?;
-    for (index, network) in networks.iter().enumerate() {
-        check_ip_or_cidr(network, Some(index))?;
-    }
-    Ok(quantifier.over(&addresses, |address| {
-        networks
-            .iter()
-            .any(|network| ip_matches_cidr(address, network))
-    }))
-}
-
-type Instant = chrono::DateTime<chrono::Utc>;
-
-fn set_date(
-    quantifier: Quantifier,
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-    holds: fn(&Instant, &Instant) -> bool,
-) -> Result<bool, ConditionError> {
-    let Some(actual) = actual else {
-        return Ok(quantifier.on_nothing());
-    };
-    let dates = request_dates(actual)?;
-    if dates.is_empty() {
-        return Ok(quantifier.on_nothing());
-    }
-    let expected = parse_rfc3339(&expected.as_string()?)?;
-    Ok(quantifier.over(&dates, |date| holds(date, &expected)))
-}
-
-fn set_date_less_than(
-    quantifier: Quantifier,
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    set_date(quantifier, actual, expected, |a, e| a < e)
-}
-
-fn set_date_greater_than(
-    quantifier: Quantifier,
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    set_date(quantifier, actual, expected, |a, e| a > e)
+/// A hand-built block reaching an operator no key can feed: refused as parse
+/// refuses it — the operator has no evaluator (wami 001).
+fn without_key(operator: ConditionOperator) -> Result<bool, ConditionError> {
+    Err(ConditionError::OperatorWithoutKey {
+        operator: crate::validate::without_key(operator)
+            .unwrap_or("a set operator")
+            .to_string(),
+    })
 }

@@ -105,11 +105,11 @@ Implement AWS-compatible condition evaluation + WAMI extensions:
 ```json
 {
   "Condition": {
-    "NumericGreaterThan": {
-      "wami:AuthenticationStrength": "70"
+    "NumericLessThan": {
+      "wami:SessionRiskScore": "30"
     },
     "Bool": {
-      "wami:TorExitNode": "false"
+      "wami:VpnDetected": "false"
     }
   }
 }
@@ -215,7 +215,7 @@ Implement AWS-compatible condition evaluation + WAMI extensions:
   "Resource": "*",
   "Condition": {
     "NumericGreaterThan": {"wami:SessionRiskScore": "80"},
-    "Bool": {"wami:TorExitNode": "true"}
+    "Bool": {"wami:ProxyDetected": "true"}
   }
 }
 ```
@@ -240,7 +240,7 @@ Implement AWS-compatible condition evaluation + WAMI extensions:
   "Action": ["ec2:RunInstances", "rds:CreateDBInstance"],
   "Resource": "*",
   "Condition": {
-    "NumericLessThan": {"wami:BudgetRemaining": "100"}
+    "NumericLessThan": {"wami:QuotaRemaining": "100"}
   }
 }
 ```

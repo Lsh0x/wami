@@ -17,127 +17,6 @@ fn test_ip_address_ipv6_fallback_exact_match() {
 }
 
 #[test]
-fn test_forallvalues_numeric_less_than_empty_actual() {
-    // Empty actual array => vacuous truth (true)
-    let context = ConditionContext::builder()
-        .custom_value("numeric:values", crate::ConditionValue::Array(vec![]))
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAllValues:NumericLessThan": {"numeric:values": "500"}
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result);
-}
-
-#[test]
-fn test_forallvalues_numeric_greater_than_non_numeric_member() {
-    // Non-numeric in actual array should cause overall false (not error)
-    let context = ConditionContext::builder()
-        .custom_value(
-            "numeric:values",
-            crate::ConditionValue::Array(vec!["abc".to_string()]),
-        )
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAllValues:NumericGreaterThan": {"numeric:values": "50"}
-        }"#,
-    );
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_foranyvalue_numeric_less_than_empty_actual() {
-    // Empty actual array => false for ForAnyValue
-    let context = ConditionContext::builder()
-        .custom_value("numeric:values", crate::ConditionValue::Array(vec![]))
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:NumericLessThan": {"numeric:values": "10"}
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(!result);
-}
-
-#[test]
-fn test_foranyvalue_numeric_less_than_single_string_actual() {
-    // Single string actual coerced to number and compared
-    let context = ConditionContext::builder().username("100").build();
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:NumericLessThan": {"aws:username": "150"}
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result);
-}
-
-#[test]
-fn test_forallvalues_ip_address_missing_key_passes() {
-    // Missing key with ForAllValues => true (vacuous truth)
-    let context = ConditionContext::builder().build();
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "ForAllValues:IpAddress": {"aws:SourceIp": ["10.0.0.0/24"]}
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result);
-}
-
-#[test]
-fn test_foranyvalue_ip_address_missing_key_fails() {
-    // Missing key with ForAnyValue => false
-    let context = ConditionContext::builder().build();
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "ForAnyValue:IpAddress": {"aws:SourceIp": ["10.0.0.0/24"]}
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(!result);
-}
-
-#[test]
-fn test_foranyvalue_date_less_than_missing_key_fails() {
-    let future = (chrono::Utc::now() + chrono::Duration::hours(1)).to_rfc3339();
-    let context = ConditionContext::builder().build();
-    let condition = parse_condition_block_from_string(format!(
-        r#"{{
-            "ForAnyValue:DateLessThan": {{
-                "aws:TokenIssueTime": "{}"
-            }}
-        }}"#,
-        future
-    ));
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(!result);
-}
-
-#[test]
-fn test_foranyvalue_date_greater_than_single_string_actual() {
-    // Single date string actual (CurrentTime) compared to earlier timestamp
-    let now = chrono::Utc::now();
-    let past = (now - chrono::Duration::hours(1)).to_rfc3339();
-    let context = ConditionContext::builder().current_time(now).build();
-    let condition = parse_condition_block_from_string(format!(
-        r#"{{
-            "ForAnyValue:DateGreaterThan": {{
-                "aws:CurrentTime": "{}"
-            }}
-        }}"#,
-        past
-    ));
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result);
-}
-
-#[test]
 fn test_string_like_missing_key_returns_false() {
     let context = ConditionContext::builder().build();
     let condition = parse_condition_block_from_json(
@@ -177,20 +56,6 @@ fn test_forallvalues_string_like_empty_actual_true() {
 }
 
 #[test]
-fn test_forallvalues_ip_address_empty_actual_true() {
-    let context = ConditionContext::builder()
-        .custom_value("ip:vals", crate::ConditionValue::Array(vec![]))
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAllValues:IpAddress": {"ip:vals": ["10.0.0.0/24"]}
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result);
-}
-
-#[test]
 fn test_foranyvalue_string_equals_empty_actual_false() {
     let context = ConditionContext::builder()
         .custom_value("str:vals", crate::ConditionValue::Array(vec![]))
@@ -216,81 +81,12 @@ fn test_foranyvalue_string_like_missing_key_false() {
     assert!(!result);
 }
 
-#[test]
-fn test_foranyvalue_numeric_greater_than_empty_actual_false() {
-    let context = ConditionContext::builder()
-        .custom_value("num:vals", crate::ConditionValue::Array(vec![]))
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:NumericGreaterThan": {"num:vals": "10"}
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(!result);
-}
-
-#[test]
-fn test_foranyvalue_numeric_less_than_non_numeric_member_false() {
-    let context = ConditionContext::builder()
-        .custom_value(
-            "num:vals",
-            crate::ConditionValue::Array(vec!["abc".to_string()]),
-        )
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:NumericLessThan": {"num:vals": "10"}
-        }"#,
-    );
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_foranyvalue_numeric_greater_than_single_string_actual() {
-    let context = ConditionContext::builder().username("200").build();
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:NumericGreaterThan": {"aws:username": "150"}
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result);
-}
-
-#[test]
-fn test_foranyvalue_ip_address_empty_actual_false() {
-    let context = ConditionContext::builder()
-        .custom_value("ip:vals", crate::ConditionValue::Array(vec![]))
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:IpAddress": {"ip:vals": ["10.0.0.0/24"]}
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(!result);
-}
-
-#[test]
-fn test_foranyvalue_date_greater_than_missing_key_false() {
-    let context = ConditionContext::builder().build();
-    let condition = parse_condition_block_from_string(format!(
-        r#"{{
-            "ForAnyValue:DateGreaterThan": {{"aws:TokenIssueTime": "{}"}}
-        }}"#,
-        chrono::Utc::now().to_rfc3339()
-    ));
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(!result);
-}
-
 // Comprehensive Test Suite for Condition Key Evaluation
 //
 // This test suite follows TDD principles - tests are written before implementation.
 // It covers all operators, condition keys, edge cases, and corner cases.
 
+use crate::ConditionError;
 use crate::{
     evaluate_condition_block, evaluator::parse_condition_block, get_context_value, ConditionBlock,
     ConditionContext, ConditionValue,
@@ -925,7 +721,13 @@ fn test_ip_address_invalid_ip() {
     );
 
     let result = evaluate_condition_block(&condition, &context);
-    assert!(result.is_err() || !result.unwrap());
+    assert_eq!(
+        result,
+        Err(ConditionError::TypeMismatch {
+            expected: "an IP address".to_string(),
+            actual: "String".to_string()
+        })
+    );
 }
 
 #[test]
@@ -1356,7 +1158,13 @@ fn test_condition_type_mismatch() {
 
     // Should fail - can't compare string as number
     let result = evaluate_condition_block(&condition, &context);
-    assert!(result.is_err() || !result.unwrap());
+    assert_eq!(
+        result,
+        Err(ConditionError::TypeMismatch {
+            expected: "a finite Number".to_string(),
+            actual: "String".to_string()
+        })
+    );
 }
 
 #[test]
@@ -1375,7 +1183,12 @@ fn test_condition_invalid_operator() {
         )]),
     );
     let result = evaluate_condition_block(&condition, &create_test_context());
-    assert!(result.is_err());
+    assert_eq!(
+        result,
+        Err(ConditionError::UnknownOperator(
+            "InvalidOperator".to_string()
+        ))
+    );
 }
 
 #[test]
@@ -1740,7 +1553,7 @@ fn test_condition_arithmetic_overflow_prevention() {
 
     let result = evaluate_condition_block(&condition, &context);
     // Should handle without overflow
-    assert!(result.is_ok() || result.is_err());
+    assert_eq!(result, Ok(false));
 }
 
 #[test]
@@ -1848,13 +1661,25 @@ fn test_condition_type_coercion_security() {
     let context2 = ConditionContext::builder().username("alice").build();
     let result2 = evaluate_condition_block(&condition, &context2);
     // Should error when trying to parse "alice" as number, or return false
-    assert!(result2.is_err() || !result2.unwrap()); // "alice" should not match numeric 0
+    assert_eq!(
+        result2,
+        Err(ConditionError::TypeMismatch {
+            expected: "a finite Number".to_string(),
+            actual: "String".to_string()
+        })
+    );
 
     // Test 3: Invalid numeric string should fail
     let context3 = ConditionContext::builder().username("not-a-number").build();
     let result3 = evaluate_condition_block(&condition, &context3);
     // Should either error or return false for invalid numeric string
-    assert!(result3.is_err() || !result3.unwrap());
+    assert_eq!(
+        result3,
+        Err(ConditionError::TypeMismatch {
+            expected: "a finite Number".to_string(),
+            actual: "String".to_string()
+        })
+    );
 }
 
 #[test]
@@ -2266,8 +2091,15 @@ fn test_condition_parse_invalid_structure() {
         let value_result: Result<Value, _> = serde_json::from_str(invalid_json);
         if let Ok(value) = value_result {
             let result = parse_condition_block(&value);
-            // Should either parse or reject gracefully
-            assert!(result.is_ok() || result.is_err());
+            // Each is refused for its structure or its value (wami 001).
+            assert!(
+                matches!(
+                    result,
+                    Err(ConditionError::InvalidConditionStructure(_)
+                        | ConditionError::InvalidConditionValue { .. })
+                ),
+                "{invalid_json}: {result:?}"
+            );
         }
     }
 }
@@ -2973,8 +2805,11 @@ fn test_condition_parse_error_handling() {
 
     for invalid_value in invalid_cases {
         let result = parse_condition_block(&invalid_value);
-        // Should either parse (if valid structure) or return error
-        assert!(result.is_ok() || result.is_err());
+        // Each is refused for its structure (wami 001).
+        assert!(
+            matches!(result, Err(ConditionError::InvalidConditionStructure(_))),
+            "{invalid_value}: {result:?}"
+        );
     }
 }
 
@@ -3451,25 +3286,12 @@ fn test_all_forallvalues_operators() {
             r#"{"ForAllValues:ArnLike": {"aws:TagKeys": ["arn:aws:iam::*:user/*"]}}"#,
             false,
         ),
-        (
-            r#"{"ForAllValues:NumericLessThan": {"aws:TagKeys": "500"}}"#,
-            false,
-        ), // TagKeys is array of strings, not numbers
-        (
-            r#"{"ForAllValues:NumericGreaterThan": {"aws:TagKeys": "100"}}"#,
-            false,
-        ),
-        (
-            r#"{"ForAllValues:IpAddress": {"aws:TagKeys": ["203.0.113.0/24"]}}"#,
-            false,
-        ), // TagKeys is array of strings, not IPs
     ];
 
-    for (json, _expected) in test_cases {
-        let condition = unchecked(json);
+    for (json, expected) in test_cases {
+        let condition = parse_condition_block_from_json(json);
         let result = evaluate_condition_block(&condition, &context);
-        // Most will fail due to type mismatch, which is expected
-        assert!(result.is_ok() || result.is_err());
+        assert_eq!(result, Ok(expected), "{json}");
     }
 }
 
@@ -3486,8 +3308,9 @@ fn test_all_foranyvalue_operators() {
     let test_cases = vec![
         (
             r#"{"ForAnyValue:StringNotEquals": {"aws:TagKeys": ["Project", "Team"]}}"#,
-            false,
-        ), // None match
+            true,
+        ), // No value is in the list, so it is not true that one is: the table
+        // said false, never asserted until wami 001 tightened the loop
         (
             r#"{"ForAnyValue:StringLike": {"aws:TagKeys": ["Env*", "Pro*"]}}"#,
             true,
@@ -3504,25 +3327,12 @@ fn test_all_foranyvalue_operators() {
             r#"{"ForAnyValue:ArnLike": {"aws:TagKeys": ["arn:aws:iam::*:user/*"]}}"#,
             false,
         ),
-        (
-            r#"{"ForAnyValue:NumericLessThan": {"aws:TagKeys": "500"}}"#,
-            false,
-        ),
-        (
-            r#"{"ForAnyValue:NumericGreaterThan": {"aws:TagKeys": "100"}}"#,
-            false,
-        ),
-        (
-            r#"{"ForAnyValue:IpAddress": {"aws:TagKeys": ["203.0.113.0/24"]}}"#,
-            false,
-        ),
     ];
 
-    for (json, _expected) in test_cases {
-        let condition = unchecked(json);
+    for (json, expected) in test_cases {
+        let condition = parse_condition_block_from_json(json);
         let result = evaluate_condition_block(&condition, &context);
-        // Most will fail due to type mismatch, which is expected
-        assert!(result.is_ok() || result.is_err());
+        assert_eq!(result, Ok(expected), "{json}");
     }
 }
 
@@ -3653,10 +3463,27 @@ fn test_operator_evaluation_error_paths() {
         ), // Expected should be array but is number
     ];
 
-    for (op, actual, expected) in test_cases {
-        let result = evaluate_operator(op, actual, &expected);
-        // Should either return false (type mismatch handled gracefully) or error
-        assert!(result.is_ok() || result.is_err());
+    // Each is an error, and the one its parser gives (wami 001).
+    let errors = [
+        ConditionError::TypeMismatch {
+            expected: "a finite Number".to_string(),
+            actual: "String".to_string(),
+        },
+        ConditionError::InvalidDate {
+            error: "input contains invalid characters".to_string(),
+        },
+        ConditionError::InvalidBooleanValue,
+        ConditionError::TypeMismatch {
+            expected: "Array".to_string(),
+            actual: "Number".to_string(),
+        },
+    ];
+    for ((op, actual, expected), error) in test_cases.into_iter().zip(errors) {
+        assert_eq!(
+            evaluate_operator(op, actual, &expected),
+            Err(error),
+            "{op:?}"
+        );
     }
 }
 
@@ -3775,7 +3602,13 @@ fn test_ip_address_actual_not_string() {
         }"#,
     );
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "an IP address".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 }
 
 #[test]
@@ -3809,373 +3642,6 @@ fn test_forallvalues_string_equals_missing_key() {
 }
 
 #[test]
-fn test_forallvalues_numeric_greater_than_empty_array() {
-    // Line 963: empty array => Ok(true)
-    let context = ConditionContext::builder()
-        .custom_value("nums", crate::ConditionValue::Array(vec![]))
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAllValues:NumericGreaterThan": {
-                "nums": "100"
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result);
-}
-
-#[test]
-fn test_forallvalues_numeric_greater_than_string_actual_error() {
-    // Lines 974-983: String actual with parse error
-    let context = ConditionContext::builder()
-        .custom_value(
-            "nums",
-            crate::ConditionValue::String("not-a-number".to_string()),
-        )
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAllValues:NumericGreaterThan": {
-                "nums": "100"
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context);
-    // Should error on parse failure
-    assert!(result.is_err() || !result.unwrap());
-}
-
-#[test]
-fn test_forallvalues_ip_address_actual_not_string_or_array() {
-    // Once `_ => Ok(false)`; an error since wami 001.
-    let context = ConditionContext::builder()
-        .custom_value("ip:key", crate::ConditionValue::Number(123.0))
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAllValues:IpAddress": {
-                "ip:key": ["127.0.0.1"]
-            }
-        }"#,
-    );
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_forallvalues_date_less_than_empty_array() {
-    // Line 1024: empty array => Ok(true)
-    let context = ConditionContext::builder()
-        .custom_value("dates", crate::ConditionValue::Array(vec![]))
-        .build();
-    let future = (chrono::Utc::now() + chrono::Duration::hours(1)).to_rfc3339();
-    let condition = unchecked_string(format!(
-        r#"{{
-            "ForAllValues:DateLessThan": {{
-                "dates": "{}"
-            }}
-        }}"#,
-        future
-    ));
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result);
-}
-
-#[test]
-fn test_forallvalues_date_greater_than_empty_array() {
-    // Line 1050: empty array => Ok(true)
-    let context = ConditionContext::builder()
-        .custom_value("dates", crate::ConditionValue::Array(vec![]))
-        .build();
-    let past = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
-    let condition = unchecked_string(format!(
-        r#"{{
-            "ForAllValues:DateGreaterThan": {{
-                "dates": "{}"
-            }}
-        }}"#,
-        past
-    ));
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result);
-}
-
-#[test]
-fn test_forallvalues_date_greater_than_string_actual() {
-    // Lines 1059-1064: String actual case
-    let now = chrono::Utc::now();
-    let past = now - chrono::Duration::hours(1);
-    let context = ConditionContext::builder()
-        .custom_value("date:key", crate::ConditionValue::String(now.to_rfc3339()))
-        .build();
-    let condition = unchecked_string(format!(
-        r#"{{
-            "ForAllValues:DateGreaterThan": {{
-                "date:key": "{}"
-            }}
-        }}"#,
-        past.to_rfc3339()
-    ));
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result);
-}
-
-#[test]
-fn test_foranyvalue_numeric_less_than_empty_array() {
-    // Line 1103: empty array => Ok(false) - already covered but ensuring it's tested
-    let context = ConditionContext::builder()
-        .custom_value("nums", crate::ConditionValue::Array(vec![]))
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:NumericLessThan": {
-                "nums": "100"
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(!result);
-}
-
-#[test]
-fn test_foranyvalue_numeric_greater_than_non_numeric_member() {
-    // Line 1185: non-numeric member in array => false
-    let context = ConditionContext::builder()
-        .custom_value(
-            "nums",
-            crate::ConditionValue::Array(vec!["abc".to_string(), "xyz".to_string()]),
-        )
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:NumericGreaterThan": {
-                "nums": "100"
-            }
-        }"#,
-    );
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_foranyvalue_numeric_greater_than_string_actual_error() {
-    // Lines 1194-1195: String actual with parse error
-    let context = ConditionContext::builder()
-        .custom_value(
-            "nums",
-            crate::ConditionValue::String("not-a-number".to_string()),
-        )
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:NumericGreaterThan": {
-                "nums": "100"
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context);
-    // Should error on parse failure
-    assert!(result.is_err() || !result.unwrap());
-}
-
-#[test]
-fn test_foranyvalue_ip_address_actual_not_string_or_array() {
-    // Once `_ => Ok(false)`; an error since wami 001.
-    let context = ConditionContext::builder()
-        .custom_value("ip:key", crate::ConditionValue::Number(123.0))
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:IpAddress": {
-                "ip:key": ["127.0.0.1"]
-            }
-        }"#,
-    );
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_foranyvalue_date_greater_than_empty_array() {
-    // Line 1265: empty array => Ok(false)
-    let context = ConditionContext::builder()
-        .custom_value("dates", crate::ConditionValue::Array(vec![]))
-        .build();
-    let past = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
-    let condition = unchecked_string(format!(
-        r#"{{
-            "ForAnyValue:DateGreaterThan": {{
-                "dates": "{}"
-            }}
-        }}"#,
-        past
-    ));
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(!result);
-}
-
-#[test]
-fn test_forallvalues_date_less_than_string_actual() {
-    // Test String actual case for ForAllValues:DateLessThan
-    let now = chrono::Utc::now();
-    let future = now + chrono::Duration::hours(1);
-    let context = ConditionContext::builder()
-        .custom_value("date:key", crate::ConditionValue::String(now.to_rfc3339()))
-        .build();
-    let condition = unchecked_string(format!(
-        r#"{{
-            "ForAllValues:DateLessThan": {{
-                "date:key": "{}"
-            }}
-        }}"#,
-        future.to_rfc3339()
-    ));
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result);
-}
-
-#[test]
-fn test_foranyvalue_date_less_than_string_actual() {
-    // Test String actual case for ForAnyValue:DateLessThan
-    let now = chrono::Utc::now();
-    let future = now + chrono::Duration::hours(1);
-    let context = ConditionContext::builder()
-        .custom_value("date:key", crate::ConditionValue::String(now.to_rfc3339()))
-        .build();
-    let condition = unchecked_string(format!(
-        r#"{{
-            "ForAnyValue:DateLessThan": {{
-                "date:key": "{}"
-            }}
-        }}"#,
-        future.to_rfc3339()
-    ));
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result);
-}
-
-#[test]
-fn test_foranyvalue_date_greater_than_string_actual() {
-    // Test String actual case for ForAnyValue:DateGreaterThan
-    let now = chrono::Utc::now();
-    let past = now - chrono::Duration::hours(1);
-    let context = ConditionContext::builder()
-        .custom_value("date:key", crate::ConditionValue::String(now.to_rfc3339()))
-        .build();
-    let condition = unchecked_string(format!(
-        r#"{{
-            "ForAnyValue:DateGreaterThan": {{
-                "date:key": "{}"
-            }}
-        }}"#,
-        past.to_rfc3339()
-    ));
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result);
-}
-
-#[test]
-fn test_forallvalues_date_less_than_array_with_invalid_dates() {
-    // Test array with some invalid dates (parse_rfc3339 fails)
-    let context = ConditionContext::builder()
-        .custom_value(
-            "dates",
-            crate::ConditionValue::Array(vec![
-                "invalid-date".to_string(),
-                "also-invalid".to_string(),
-            ]),
-        )
-        .build();
-    let future = (chrono::Utc::now() + chrono::Duration::hours(1)).to_rfc3339();
-    let condition = unchecked_string(format!(
-        r#"{{
-            "ForAllValues:DateLessThan": {{
-                "dates": "{}"
-            }}
-        }}"#,
-        future
-    ));
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_forallvalues_date_greater_than_array_with_invalid_dates() {
-    // Test array with some invalid dates
-    let context = ConditionContext::builder()
-        .custom_value(
-            "dates",
-            crate::ConditionValue::Array(vec![
-                "invalid-date".to_string(),
-                "also-invalid".to_string(),
-            ]),
-        )
-        .build();
-    let past = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
-    let condition = unchecked_string(format!(
-        r#"{{
-            "ForAllValues:DateGreaterThan": {{
-                "dates": "{}"
-            }}
-        }}"#,
-        past
-    ));
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_foranyvalue_date_less_than_array_with_invalid_dates() {
-    // Test array with invalid dates
-    let context = ConditionContext::builder()
-        .custom_value(
-            "dates",
-            crate::ConditionValue::Array(vec![
-                "invalid-date".to_string(),
-                "also-invalid".to_string(),
-            ]),
-        )
-        .build();
-    let future = (chrono::Utc::now() + chrono::Duration::hours(1)).to_rfc3339();
-    let condition = unchecked_string(format!(
-        r#"{{
-            "ForAnyValue:DateLessThan": {{
-                "dates": "{}"
-            }}
-        }}"#,
-        future
-    ));
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_foranyvalue_date_greater_than_array_with_invalid_dates() {
-    // Test array with invalid dates
-    let context = ConditionContext::builder()
-        .custom_value(
-            "dates",
-            crate::ConditionValue::Array(vec![
-                "invalid-date".to_string(),
-                "also-invalid".to_string(),
-            ]),
-        )
-        .build();
-    let past = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
-    let condition = unchecked_string(format!(
-        r#"{{
-            "ForAnyValue:DateGreaterThan": {{
-                "dates": "{}"
-            }}
-        }}"#,
-        past
-    ));
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
 fn test_ip_address_cidr_parse_failure() {
     // Test CIDR parsing failure (invalid prefix length)
     // An invalid prefix used to fail to match; refused at parse (wami 001).
@@ -4194,7 +3660,13 @@ fn test_ip_address_ipv4_parse_failure() {
         }"#,
     );
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "an IP address".to_string(),
+            actual: "String".to_string()
+        })
+    );
 }
 
 #[test]
@@ -4254,157 +3726,6 @@ fn test_ip_address_ipv6_prefix_len_edge_case() {
     ));
     let result = evaluate_condition_block(&condition, &context).unwrap();
     assert!(result);
-}
-
-#[test]
-fn test_forallvalues_numeric_less_than_string_actual() {
-    // Test String actual case for ForAllValues:NumericLessThan
-    let context = ConditionContext::builder()
-        .custom_value("nums", crate::ConditionValue::String("50".to_string()))
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAllValues:NumericLessThan": {
-                "nums": "100"
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result);
-}
-
-#[test]
-fn test_forallvalues_numeric_less_than_string_actual_error() {
-    // Test String actual with parse error for ForAllValues:NumericLessThan
-    let context = ConditionContext::builder()
-        .custom_value(
-            "nums",
-            crate::ConditionValue::String("not-a-number".to_string()),
-        )
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAllValues:NumericLessThan": {
-                "nums": "100"
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context);
-    // Should error on parse failure
-    assert!(result.is_err() || !result.unwrap());
-}
-
-#[test]
-fn test_foranyvalue_numeric_less_than_string_actual_error() {
-    // Test String actual with parse error for ForAnyValue:NumericLessThan
-    let context = ConditionContext::builder()
-        .custom_value(
-            "nums",
-            crate::ConditionValue::String("not-a-number".to_string()),
-        )
-        .build();
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:NumericLessThan": {
-                "nums": "100"
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context);
-    // Should error on parse failure
-    assert!(result.is_err() || !result.unwrap());
-}
-
-#[test]
-fn test_forallvalues_date_less_than_string_actual_error() {
-    // Test String actual with parse error for ForAllValues:DateLessThan
-    let context = ConditionContext::builder()
-        .custom_value(
-            "date:key",
-            crate::ConditionValue::String("invalid-date".to_string()),
-        )
-        .build();
-    let future = (chrono::Utc::now() + chrono::Duration::hours(1)).to_rfc3339();
-    let condition = unchecked_string(format!(
-        r#"{{
-            "ForAllValues:DateLessThan": {{
-                "date:key": "{}"
-            }}
-        }}"#,
-        future
-    ));
-    let result = evaluate_condition_block(&condition, &context);
-    // Should error on parse failure
-    assert!(result.is_err() || !result.unwrap());
-}
-
-#[test]
-fn test_foranyvalue_date_less_than_string_actual_error() {
-    // Test String actual with parse error for ForAnyValue:DateLessThan
-    let context = ConditionContext::builder()
-        .custom_value(
-            "date:key",
-            crate::ConditionValue::String("invalid-date".to_string()),
-        )
-        .build();
-    let future = (chrono::Utc::now() + chrono::Duration::hours(1)).to_rfc3339();
-    let condition = unchecked_string(format!(
-        r#"{{
-            "ForAnyValue:DateLessThan": {{
-                "date:key": "{}"
-            }}
-        }}"#,
-        future
-    ));
-    let result = evaluate_condition_block(&condition, &context);
-    // Should error on parse failure
-    assert!(result.is_err() || !result.unwrap());
-}
-
-#[test]
-fn test_forallvalues_date_greater_than_string_actual_error() {
-    // Test String actual with parse error for ForAllValues:DateGreaterThan
-    let context = ConditionContext::builder()
-        .custom_value(
-            "date:key",
-            crate::ConditionValue::String("invalid-date".to_string()),
-        )
-        .build();
-    let past = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
-    let condition = unchecked_string(format!(
-        r#"{{
-            "ForAllValues:DateGreaterThan": {{
-                "date:key": "{}"
-            }}
-        }}"#,
-        past
-    ));
-    let result = evaluate_condition_block(&condition, &context);
-    // Should error on parse failure
-    assert!(result.is_err() || !result.unwrap());
-}
-
-#[test]
-fn test_foranyvalue_date_greater_than_string_actual_error() {
-    // Test String actual with parse error for ForAnyValue:DateGreaterThan
-    let context = ConditionContext::builder()
-        .custom_value(
-            "date:key",
-            crate::ConditionValue::String("invalid-date".to_string()),
-        )
-        .build();
-    let past = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
-    let condition = unchecked_string(format!(
-        r#"{{
-            "ForAnyValue:DateGreaterThan": {{
-                "date:key": "{}"
-            }}
-        }}"#,
-        past
-    ));
-    let result = evaluate_condition_block(&condition, &context);
-    // Should error on parse failure
-    assert!(result.is_err() || !result.unwrap());
 }
 
 // ============================================================================
@@ -4779,142 +4100,6 @@ fn test_date_operator_error_paths() {
 }
 
 #[test]
-fn test_forallvalues_numeric_operators() {
-    // Test ForAllValues:NumericLessThan and ForAllValues:NumericGreaterThan
-    let context = ConditionContext::builder()
-        .tag_keys(vec![
-            "100".to_string(),
-            "200".to_string(),
-            "300".to_string(),
-        ])
-        .build();
-
-    // Note: TagKeys are strings, so we need to test with actual numeric context
-    // Let's test with mfa_age which is numeric
-    let _context_numeric = ConditionContext::builder().mfa_age(300).build();
-
-    // ForAllValues with numeric - test error path (TagKeys is string array, not numeric)
-    let condition1 = unchecked(
-        r#"{
-            "ForAllValues:NumericLessThan": {
-                "aws:TagKeys": "500"
-            }
-        }"#,
-    );
-    let result1 = evaluate_condition_block(&condition1, &context);
-    // Should fail due to type mismatch
-    assert!(result1.is_ok() || result1.is_err());
-
-    // Test with actual numeric array in custom value
-    let context_custom = ConditionContext::builder()
-        .custom_value(
-            "numeric:values",
-            crate::ConditionValue::Array(vec!["100".to_string(), "200".to_string()]),
-        )
-        .build();
-
-    let condition2 = unchecked(
-        r#"{
-            "ForAllValues:NumericLessThan": {
-                "numeric:values": "500"
-            }
-        }"#,
-    );
-    let result2 = evaluate_condition_block(&condition2, &context_custom).unwrap();
-    assert!(result2); // 100 < 500 and 200 < 500
-
-    let condition3 = unchecked(
-        r#"{
-            "ForAllValues:NumericGreaterThan": {
-                "numeric:values": "50"
-            }
-        }"#,
-    );
-    let result3 = evaluate_condition_block(&condition3, &context_custom).unwrap();
-    assert!(result3); // 100 > 50 and 200 > 50
-}
-
-#[test]
-fn test_forallvalues_date_operators() {
-    // Test ForAllValues:DateLessThan and ForAllValues:DateGreaterThan
-    let now = chrono::Utc::now();
-    let past = now - chrono::Duration::hours(2);
-    let future = now + chrono::Duration::hours(2);
-
-    let context = ConditionContext::builder()
-        .custom_value(
-            "date:values",
-            crate::ConditionValue::Array(vec![past.to_rfc3339(), now.to_rfc3339()]),
-        )
-        .build();
-
-    let future_str = future.to_rfc3339();
-    let condition1_json = format!(
-        r#"{{
-            "ForAllValues:DateLessThan": {{
-                "date:values": "{}"
-            }}
-        }}"#,
-        future_str
-    );
-    let condition1 = unchecked_string(condition1_json);
-    let result1 = evaluate_condition_block(&condition1, &context).unwrap();
-    assert!(result1); // Both past and now are < future
-
-    let earlier = past - chrono::Duration::hours(1);
-    let condition2_json = format!(
-        r#"{{
-            "ForAllValues:DateGreaterThan": {{
-                "date:values": "{}"
-            }}
-        }}"#,
-        earlier.to_rfc3339()
-    );
-    let condition2 = unchecked_string(condition2_json);
-    let result2 = evaluate_condition_block(&condition2, &context).unwrap();
-    assert!(result2); // Both past and now are > earlier
-}
-
-#[test]
-fn test_forallvalues_ip_address() {
-    // Test ForAllValues:IpAddress
-    let context = ConditionContext::builder()
-        .custom_value(
-            "ip:values",
-            crate::ConditionValue::Array(vec![
-                "203.0.113.42".to_string(),
-                "203.0.113.43".to_string(),
-            ]),
-        )
-        .build();
-
-    let condition = unchecked(
-        r#"{
-            "ForAllValues:IpAddress": {
-                "ip:values": ["203.0.113.0/24"]
-            }
-        }"#,
-    );
-
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result); // Both IPs are in the CIDR
-
-    // Test with IPs outside CIDR
-    let context2 = ConditionContext::builder()
-        .custom_value(
-            "ip:values",
-            crate::ConditionValue::Array(vec![
-                "203.0.113.42".to_string(),
-                "198.51.100.42".to_string(), // Outside CIDR
-            ]),
-        )
-        .build();
-
-    let result2 = evaluate_condition_block(&condition, &context2).unwrap();
-    assert!(!result2); // One IP is outside CIDR
-}
-
-#[test]
 fn test_forallvalues_string_single_value() {
     // Test ForAllValues with single string value (line 871-874)
     let context = ConditionContext::builder().username("alice").build();
@@ -4996,153 +4181,6 @@ fn test_forallvalues_arn_single_value() {
     );
     let result2 = evaluate_condition_block(&condition2, &context).unwrap();
     assert!(result2); // ARN matches first pattern
-}
-
-#[test]
-fn test_foranyvalue_numeric_operators() {
-    // Test ForAnyValue:NumericLessThan and ForAnyValue:NumericGreaterThan
-    let context = ConditionContext::builder()
-        .custom_value(
-            "numeric:values",
-            crate::ConditionValue::Array(vec![
-                "100".to_string(),
-                "200".to_string(),
-                "300".to_string(),
-            ]),
-        )
-        .build();
-
-    let condition1 = unchecked(
-        r#"{
-            "ForAnyValue:NumericLessThan": {
-                "numeric:values": "250"
-            }
-        }"#,
-    );
-    let result1 = evaluate_condition_block(&condition1, &context).unwrap();
-    assert!(result1); // 100 < 250 and 200 < 250 (at least one)
-
-    let condition2 = unchecked(
-        r#"{
-            "ForAnyValue:NumericLessThan": {
-                "numeric:values": "50"
-            }
-        }"#,
-    );
-    let result2 = evaluate_condition_block(&condition2, &context).unwrap();
-    assert!(!result2); // None are < 50
-
-    let condition3 = unchecked(
-        r#"{
-            "ForAnyValue:NumericGreaterThan": {
-                "numeric:values": "150"
-            }
-        }"#,
-    );
-    let result3 = evaluate_condition_block(&condition3, &context).unwrap();
-    assert!(result3); // 200 > 150 and 300 > 150 (at least one)
-
-    // Test with single value
-    let _context_single = ConditionContext::builder().mfa_age(300).build();
-    // Note: mfa_age is a number, not an array, so ForAnyValue won't work correctly
-    // This tests the error path where actual is not array/string
-}
-
-#[test]
-fn test_foranyvalue_ip_address() {
-    // Test ForAnyValue:IpAddress
-    let context = ConditionContext::builder()
-        .custom_value(
-            "ip:values",
-            crate::ConditionValue::Array(vec![
-                "203.0.113.42".to_string(),
-                "198.51.100.42".to_string(),
-            ]),
-        )
-        .build();
-
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:IpAddress": {
-                "ip:values": ["203.0.113.0/24", "198.51.100.0/24"]
-            }
-        }"#,
-    );
-
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result); // At least one IP matches a CIDR
-
-    // Test with single IP
-    let context_single = ConditionContext::builder()
-        .source_ip("203.0.113.42")
-        .build();
-    let condition2 = unchecked(
-        r#"{
-            "ForAnyValue:IpAddress": {
-                "aws:SourceIp": ["203.0.113.0/24"]
-            }
-        }"#,
-    );
-    let result2 = evaluate_condition_block(&condition2, &context_single).unwrap();
-    assert!(result2); // IP matches CIDR
-}
-
-#[test]
-fn test_foranyvalue_date_operators() {
-    // Test ForAnyValue:DateLessThan and ForAnyValue:DateGreaterThan
-    let now = chrono::Utc::now();
-    let past = now - chrono::Duration::hours(2);
-    let future = now + chrono::Duration::hours(2);
-
-    let context = ConditionContext::builder()
-        .custom_value(
-            "date:values",
-            crate::ConditionValue::Array(vec![
-                past.to_rfc3339(),
-                now.to_rfc3339(),
-                future.to_rfc3339(),
-            ]),
-        )
-        .build();
-
-    let _future_str = future.to_rfc3339();
-    let condition1_json = format!(
-        r#"{{
-            "ForAnyValue:DateLessThan": {{
-                "date:values": "{}"
-            }}
-        }}"#,
-        now.to_rfc3339()
-    );
-    let condition1 = unchecked_string(condition1_json);
-    let result1 = evaluate_condition_block(&condition1, &context).unwrap();
-    assert!(result1); // past < now (at least one)
-
-    let condition2_json = format!(
-        r#"{{
-            "ForAnyValue:DateGreaterThan": {{
-                "date:values": "{}"
-            }}
-        }}"#,
-        now.to_rfc3339()
-    );
-    let condition2 = unchecked_string(condition2_json);
-    let result2 = evaluate_condition_block(&condition2, &context).unwrap();
-    assert!(result2); // future > now (at least one)
-
-    // Test with single date value
-    let context_single = ConditionContext::builder().current_time(now).build();
-    let condition3_json = format!(
-        r#"{{
-            "ForAnyValue:DateLessThan": {{
-                "aws:CurrentTime": "{}"
-            }}
-        }}"#,
-        future.to_rfc3339()
-    );
-    let condition3 = unchecked_string(condition3_json);
-    let result3 = evaluate_condition_block(&condition3, &context_single).unwrap();
-    assert!(result3); // now < future
 }
 
 #[test]
@@ -5295,18 +4333,6 @@ fn test_forallvalues_empty_actual_edge_cases() {
             r#"{"ForAllValues:ArnLike": {"aws:TagKeys": ["arn:aws:iam::*:user/*"]}}"#,
             true,
         ),
-        (
-            r#"{"ForAllValues:NumericLessThan": {"aws:TagKeys": "500"}}"#,
-            true,
-        ),
-        (
-            r#"{"ForAllValues:NumericGreaterThan": {"aws:TagKeys": "100"}}"#,
-            true,
-        ),
-        (
-            r#"{"ForAllValues:IpAddress": {"aws:TagKeys": ["203.0.113.0/24"]}}"#,
-            true,
-        ),
     ];
 
     for (json, expected) in test_cases {
@@ -5340,18 +4366,6 @@ fn test_foranyvalue_empty_actual_edge_cases() {
             r#"{"ForAnyValue:ArnLike": {"aws:TagKeys": ["arn:aws:iam::*:user/*"]}}"#,
             false,
         ),
-        (
-            r#"{"ForAnyValue:NumericLessThan": {"aws:TagKeys": "500"}}"#,
-            false,
-        ),
-        (
-            r#"{"ForAnyValue:NumericGreaterThan": {"aws:TagKeys": "100"}}"#,
-            false,
-        ),
-        (
-            r#"{"ForAnyValue:IpAddress": {"aws:TagKeys": ["203.0.113.0/24"]}}"#,
-            false,
-        ),
     ];
 
     for (json, expected) in test_cases {
@@ -5378,7 +4392,13 @@ fn test_forallvalues_type_mismatch_paths() {
         }"#,
     );
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition2, &context2).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition2, &context2),
+        Err(ConditionError::TypeMismatch {
+            expected: "a String or an Array of Strings".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 }
 
 #[test]
@@ -5398,7 +4418,13 @@ fn test_foranyvalue_type_mismatch_paths() {
         }"#,
     );
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition2, &context2).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition2, &context2),
+        Err(ConditionError::TypeMismatch {
+            expected: "a String or an Array of Strings".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 }
 
 #[test]
@@ -5418,7 +4444,13 @@ fn test_string_operator_error_paths() {
         }"#,
     );
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition1, &context1).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition1, &context1),
+        Err(ConditionError::TypeMismatch {
+            expected: "String".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 
     // StringLike with non-string actual
     let condition2 = unchecked(
@@ -5429,7 +4461,13 @@ fn test_string_operator_error_paths() {
         }"#,
     );
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition2, &context1).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition2, &context1),
+        Err(ConditionError::TypeMismatch {
+            expected: "String".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 
     // StringEqualsIgnoreCase with non-string actual
     let condition3 = unchecked(
@@ -5440,7 +4478,13 @@ fn test_string_operator_error_paths() {
         }"#,
     );
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition3, &context1).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition3, &context1),
+        Err(ConditionError::TypeMismatch {
+            expected: "String".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 }
 
 #[test]
@@ -5693,335 +4737,6 @@ fn test_keys_tag_keys_non_empty() {
 
     let result = evaluate_condition_block(&condition, &context).unwrap();
     assert!(result);
-}
-
-#[test]
-fn test_forallvalues_numeric_with_arrays() {
-    // Test ForAllValues numeric operators with actual arrays
-    let context = ConditionContext::builder()
-        .custom_value(
-            "nums",
-            crate::ConditionValue::Array(vec![
-                "100".to_string(),
-                "200".to_string(),
-                "300".to_string(),
-            ]),
-        )
-        .build();
-
-    // All values < 400
-    let condition1 = unchecked(
-        r#"{
-            "ForAllValues:NumericLessThan": {
-                "nums": "400"
-            }
-        }"#,
-    );
-    let result1 = evaluate_condition_block(&condition1, &context).unwrap();
-    assert!(result1);
-
-    // Not all values < 200
-    let condition2 = unchecked(
-        r#"{
-            "ForAllValues:NumericLessThan": {
-                "nums": "200"
-            }
-        }"#,
-    );
-    let result2 = evaluate_condition_block(&condition2, &context).unwrap();
-    assert!(!result2); // 300 is not < 200
-
-    // All values > 50
-    let condition3 = unchecked(
-        r#"{
-            "ForAllValues:NumericGreaterThan": {
-                "nums": "50"
-            }
-        }"#,
-    );
-    let result3 = evaluate_condition_block(&condition3, &context).unwrap();
-    assert!(result3);
-}
-
-#[test]
-fn test_foranyvalue_numeric_with_arrays() {
-    // Test ForAnyValue numeric operators with actual arrays
-    let context = ConditionContext::builder()
-        .custom_value(
-            "nums",
-            crate::ConditionValue::Array(vec![
-                "100".to_string(),
-                "200".to_string(),
-                "300".to_string(),
-            ]),
-        )
-        .build();
-
-    // At least one value < 250
-    let condition1 = unchecked(
-        r#"{
-            "ForAnyValue:NumericLessThan": {
-                "nums": "250"
-            }
-        }"#,
-    );
-    let result1 = evaluate_condition_block(&condition1, &context).unwrap();
-    assert!(result1); // 100 < 250 and 200 < 250
-
-    // No values < 50
-    let condition2 = unchecked(
-        r#"{
-            "ForAnyValue:NumericLessThan": {
-                "nums": "50"
-            }
-        }"#,
-    );
-    let result2 = evaluate_condition_block(&condition2, &context).unwrap();
-    assert!(!result2);
-
-    // At least one value > 250
-    let condition3 = unchecked(
-        r#"{
-            "ForAnyValue:NumericGreaterThan": {
-                "nums": "250"
-            }
-        }"#,
-    );
-    let result3 = evaluate_condition_block(&condition3, &context).unwrap();
-    assert!(result3); // 300 > 250
-}
-
-#[test]
-fn test_forallvalues_date_with_arrays() {
-    // Test ForAllValues date operators with actual arrays
-    let now = chrono::Utc::now();
-    let past1 = now - chrono::Duration::hours(2);
-    let past2 = now - chrono::Duration::hours(1);
-    let future = now + chrono::Duration::hours(1);
-
-    let context = ConditionContext::builder()
-        .custom_value(
-            "dates",
-            crate::ConditionValue::Array(vec![past1.to_rfc3339(), past2.to_rfc3339()]),
-        )
-        .build();
-
-    // All dates < future
-    let condition1_json = format!(
-        r#"{{
-            "ForAllValues:DateLessThan": {{
-                "dates": "{}"
-            }}
-        }}"#,
-        future.to_rfc3339()
-    );
-    let condition1 = unchecked_string(condition1_json);
-    let result1 = evaluate_condition_block(&condition1, &context).unwrap();
-    assert!(result1);
-
-    // All dates > (past1 - 1 hour)
-    let earlier = past1 - chrono::Duration::hours(1);
-    let condition2_json = format!(
-        r#"{{
-            "ForAllValues:DateGreaterThan": {{
-                "dates": "{}"
-            }}
-        }}"#,
-        earlier.to_rfc3339()
-    );
-    let condition2 = unchecked_string(condition2_json);
-    let result2 = evaluate_condition_block(&condition2, &context).unwrap();
-    assert!(result2);
-}
-
-#[test]
-fn test_foranyvalue_date_with_arrays() {
-    // Test ForAnyValue date operators with actual arrays
-    let now = chrono::Utc::now();
-    let past = now - chrono::Duration::hours(2);
-    let future = now + chrono::Duration::hours(2);
-
-    let context = ConditionContext::builder()
-        .custom_value(
-            "dates",
-            crate::ConditionValue::Array(vec![
-                past.to_rfc3339(),
-                now.to_rfc3339(),
-                future.to_rfc3339(),
-            ]),
-        )
-        .build();
-
-    // At least one date < now
-    let condition1_json = format!(
-        r#"{{
-            "ForAnyValue:DateLessThan": {{
-                "dates": "{}"
-            }}
-        }}"#,
-        now.to_rfc3339()
-    );
-    let condition1 = unchecked_string(condition1_json);
-    let result1 = evaluate_condition_block(&condition1, &context).unwrap();
-    assert!(result1); // past < now
-
-    // At least one date > now
-    let condition2_json = format!(
-        r#"{{
-            "ForAnyValue:DateGreaterThan": {{
-                "dates": "{}"
-            }}
-        }}"#,
-        now.to_rfc3339()
-    );
-    let condition2 = unchecked_string(condition2_json);
-    let result2 = evaluate_condition_block(&condition2, &context).unwrap();
-    assert!(result2); // future > now
-}
-
-#[test]
-fn test_forallvalues_date_invalid_dates() {
-    // Test ForAllValues date operators with invalid dates in array
-    let context = ConditionContext::builder()
-        .custom_value(
-            "dates",
-            crate::ConditionValue::Array(vec![
-                "invalid-date".to_string(),
-                "also-invalid".to_string(),
-            ]),
-        )
-        .build();
-
-    let now = chrono::Utc::now();
-    let condition_json = format!(
-        r#"{{
-            "ForAllValues:DateLessThan": {{
-                "dates": "{}"
-            }}
-        }}"#,
-        now.to_rfc3339()
-    );
-    let condition = unchecked_string(condition_json);
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_foranyvalue_date_invalid_dates() {
-    // Test ForAnyValue date operators with invalid dates in array
-    let context = ConditionContext::builder()
-        .custom_value(
-            "dates",
-            crate::ConditionValue::Array(vec![
-                "invalid-date".to_string(),
-                "also-invalid".to_string(),
-            ]),
-        )
-        .build();
-
-    let now = chrono::Utc::now();
-    let condition_json = format!(
-        r#"{{
-            "ForAnyValue:DateLessThan": {{
-                "dates": "{}"
-            }}
-        }}"#,
-        now.to_rfc3339()
-    );
-    let condition = unchecked_string(condition_json);
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_forallvalues_numeric_invalid_numbers() {
-    // Test ForAllValues numeric operators with invalid numbers in array
-    let context = ConditionContext::builder()
-        .custom_value(
-            "nums",
-            crate::ConditionValue::Array(vec![
-                "100".to_string(),
-                "not-a-number".to_string(),
-                "200".to_string(),
-            ]),
-        )
-        .build();
-
-    let condition = unchecked(
-        r#"{
-            "ForAllValues:NumericLessThan": {
-                "nums": "500"
-            }
-        }"#,
-    );
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_foranyvalue_numeric_invalid_numbers() {
-    // Test ForAnyValue numeric operators with invalid numbers in array
-    let context = ConditionContext::builder()
-        .custom_value(
-            "nums",
-            crate::ConditionValue::Array(vec![
-                "not-a-number".to_string(),
-                "also-invalid".to_string(),
-            ]),
-        )
-        .build();
-
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:NumericLessThan": {
-                "nums": "500"
-            }
-        }"#,
-    );
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_forallvalues_ip_invalid_ips() {
-    // Test ForAllValues:IpAddress with invalid IPs in array
-    let context = ConditionContext::builder()
-        .custom_value(
-            "ips",
-            crate::ConditionValue::Array(vec!["203.0.113.42".to_string(), "not-an-ip".to_string()]),
-        )
-        .build();
-
-    let condition = unchecked(
-        r#"{
-            "ForAllValues:IpAddress": {
-                "ips": ["203.0.113.0/24"]
-            }
-        }"#,
-    );
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_foranyvalue_ip_invalid_ips() {
-    // Test ForAnyValue:IpAddress with invalid IPs in array
-    let context = ConditionContext::builder()
-        .custom_value(
-            "ips",
-            crate::ConditionValue::Array(vec!["not-an-ip".to_string(), "also-invalid".to_string()]),
-        )
-        .build();
-
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:IpAddress": {
-                "ips": ["203.0.113.0/24"]
-            }
-        }"#,
-    );
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
 }
 
 #[test]
@@ -6292,7 +5007,13 @@ fn test_binary_equals_error_paths() {
         }"#,
     );
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context1).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition, &context1),
+        Err(ConditionError::TypeMismatch {
+            expected: "String".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 }
 
 #[test]
@@ -6348,122 +5069,6 @@ fn test_foranyvalue_with_none_actual() {
 
     let result = evaluate_condition_block(&condition, &context).unwrap();
     assert!(!result); // None = no match
-}
-
-#[test]
-fn test_forallvalues_numeric_single_string() {
-    // Test ForAllValues:NumericLessThan with single string value
-    let context = ConditionContext::builder()
-        .username("300") // String "300"
-        .build();
-
-    let condition = unchecked(
-        r#"{
-            "ForAllValues:NumericLessThan": {
-                "aws:username": "400"
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result); // "300" parsed as 300 < 400
-}
-
-#[test]
-fn test_foranyvalue_numeric_single_string() {
-    // Test ForAnyValue:NumericLessThan with single string value
-    let context = ConditionContext::builder()
-        .username("300") // String "300"
-        .build();
-
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:NumericLessThan": {
-                "aws:username": "400"
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result); // "300" parsed as 300 < 400
-}
-
-#[test]
-fn test_forallvalues_date_single_string() {
-    // Test ForAllValues:DateLessThan with single string value
-    let now = chrono::Utc::now();
-    let future = now + chrono::Duration::hours(1);
-    let context = ConditionContext::builder()
-        .username(now.to_rfc3339()) // String date
-        .build();
-
-    let condition_json = format!(
-        r#"{{
-            "ForAllValues:DateLessThan": {{
-                "aws:username": "{}"
-            }}
-        }}"#,
-        future.to_rfc3339()
-    );
-    let condition = unchecked_string(condition_json);
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result); // now < future
-}
-
-#[test]
-fn test_foranyvalue_date_single_string() {
-    // Test ForAnyValue:DateLessThan with single string value
-    let now = chrono::Utc::now();
-    let future = now + chrono::Duration::hours(1);
-    let context = ConditionContext::builder()
-        .username(now.to_rfc3339()) // String date
-        .build();
-
-    let condition_json = format!(
-        r#"{{
-            "ForAnyValue:DateLessThan": {{
-                "aws:username": "{}"
-            }}
-        }}"#,
-        future.to_rfc3339()
-    );
-    let condition = unchecked_string(condition_json);
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result); // now < future
-}
-
-#[test]
-fn test_forallvalues_ip_single_string() {
-    // Test ForAllValues:IpAddress with single string value
-    let context = ConditionContext::builder()
-        .source_ip("203.0.113.42")
-        .build();
-
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "ForAllValues:IpAddress": {
-                "aws:SourceIp": ["203.0.113.0/24"]
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result); // IP matches CIDR
-}
-
-#[test]
-fn test_foranyvalue_ip_single_string() {
-    // Test ForAnyValue:IpAddress with single string value
-    let context = ConditionContext::builder()
-        .source_ip("203.0.113.42")
-        .build();
-
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "ForAnyValue:IpAddress": {
-                "aws:SourceIp": ["203.0.113.0/24"]
-            }
-        }"#,
-    );
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result); // IP matches CIDR
 }
 
 // ============================================================================
@@ -6666,7 +5271,13 @@ fn test_ip_address_type_mismatch() {
     );
 
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "an IP address".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 }
 
 #[test]
@@ -6685,75 +5296,13 @@ fn test_forallvalues_type_mismatch_non_array_string() {
     );
 
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_forallvalues_numeric_type_mismatch() {
-    // Test ForAllValues numeric with type mismatch (line 929, 945-946, 952, 963, 970, 974-976, 978-980, 982-983, 986)
-    let context = ConditionContext::builder()
-        .username("not-a-number") // String that can't be parsed as number
-        .build();
-
-    let condition = unchecked(
-        r#"{
-            "ForAllValues:NumericLessThan": {
-                "aws:username": "500"
-            }
-        }"#,
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "a String or an Array of Strings".to_string(),
+            actual: "Number".to_string()
+        })
     );
-    // This will try to parse "not-a-number" as f64, which will fail
-    // The single string path will error, so condition fails
-    let result = evaluate_condition_block(&condition, &context);
-    assert!(result.is_err() || !result.unwrap()); // Should error or fail
-}
-
-#[test]
-fn test_forallvalues_numeric_array_invalid_numbers() {
-    // Test ForAllValues numeric with array containing invalid numbers (line 929, 945-946, 952)
-    let context = ConditionContext::builder()
-        .custom_value(
-            "nums",
-            crate::ConditionValue::Array(vec![
-                "100".to_string(),
-                "not-a-number".to_string(),
-                "200".to_string(),
-            ]),
-        )
-        .build();
-
-    let condition = unchecked(
-        r#"{
-            "ForAllValues:NumericLessThan": {
-                "nums": "500"
-            }
-        }"#,
-    );
-
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_forallvalues_date_type_mismatch() {
-    // Test ForAllValues date with type mismatch (line 997, 1013, 1024, 1038-1039, 1050, 1059-1062, 1064-1065)
-    let context = ConditionContext::builder()
-        .mfa_age(300) // Number, not date string
-        .build();
-
-    let now = chrono::Utc::now();
-    let condition_json = format!(
-        r#"{{
-            "ForAllValues:DateLessThan": {{
-                "aws:MultiFactorAuthAge": "{}"
-            }}
-        }}"#,
-        now.to_rfc3339()
-    );
-
-    let condition = unchecked_string(condition_json);
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
 }
 
 #[test]
@@ -6772,185 +5321,13 @@ fn test_foranyvalue_type_mismatch_non_array_string() {
     );
 
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_foranyvalue_numeric_type_mismatch() {
-    // Test ForAnyValue numeric with type mismatch (line 1144, 1160-1161, 1167, 1178, 1185, 1189-1191, 1193-1195, 1197-1198, 1201)
-    let context = ConditionContext::builder()
-        .username("not-a-number") // String that can't be parsed as number
-        .build();
-
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:NumericLessThan": {
-                "aws:username": "500"
-            }
-        }"#,
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "a String or an Array of Strings".to_string(),
+            actual: "Number".to_string()
+        })
     );
-    // This will try to parse "not-a-number" as f64, which will fail
-    let result = evaluate_condition_block(&condition, &context);
-    assert!(result.is_err() || !result.unwrap()); // Should error or fail
-}
-
-#[test]
-fn test_foranyvalue_numeric_array_invalid_numbers() {
-    // Test ForAnyValue numeric with array containing invalid numbers
-    let context = ConditionContext::builder()
-        .custom_value(
-            "nums",
-            crate::ConditionValue::Array(vec![
-                "not-a-number".to_string(),
-                "also-invalid".to_string(),
-            ]),
-        )
-        .build();
-
-    let condition = unchecked(
-        r#"{
-            "ForAnyValue:NumericLessThan": {
-                "nums": "500"
-            }
-        }"#,
-    );
-
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_foranyvalue_date_type_mismatch() {
-    // Test ForAnyValue date with type mismatch (line 1212, 1228, 1239, 1253-1254, 1265, 1274-1277, 1279-1280)
-    let context = ConditionContext::builder()
-        .mfa_age(300) // Number, not date string
-        .build();
-
-    let now = chrono::Utc::now();
-    let condition_json = format!(
-        r#"{{
-            "ForAnyValue:DateLessThan": {{
-                "aws:MultiFactorAuthAge": "{}"
-            }}
-        }}"#,
-        now.to_rfc3339()
-    );
-
-    let condition = unchecked_string(condition_json);
-    // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_foranyvalue_date_missing_key() {
-    // Test ForAnyValue date with missing key (None => Ok(false) paths)
-    // Note: current_time has a default, so we test with a custom key
-    let context = ConditionContext::builder()
-        .custom_value("date:key", crate::ConditionValue::Array(vec![])) // Empty array
-        .build();
-
-    let now = chrono::Utc::now();
-    let condition_json = format!(
-        r#"{{
-            "ForAnyValue:DateLessThan": {{
-                "date:key": "{}"
-            }}
-        }}"#,
-        now.to_rfc3339()
-    );
-
-    let condition = unchecked_string(condition_json);
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(!result); // Empty array = false for ForAnyValue
-}
-
-#[test]
-fn test_forallvalues_date_missing_key() {
-    // Test ForAllValues date with missing key (None => Ok(true) - vacuous truth)
-    // Note: current_time has a default, so we test with a custom key that's missing
-    let context = ConditionContext::builder().build(); // No custom date key
-
-    let now = chrono::Utc::now();
-    let condition_json = format!(
-        r#"{{
-            "ForAllValues:DateLessThan": {{
-                "date:missing": "{}"
-            }}
-        }}"#,
-        now.to_rfc3339()
-    );
-
-    let condition = unchecked_string(condition_json);
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result); // Missing key = vacuous truth for ForAllValues
-}
-
-#[test]
-fn test_forallvalues_ip_missing_key() {
-    // Test ForAllValues:IpAddress with missing key (None => Ok(true) - vacuous truth)
-    let context = ConditionContext::builder().build(); // No source_ip
-
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "ForAllValues:IpAddress": {
-                "aws:SourceIp": ["203.0.113.0/24"]
-            }
-        }"#,
-    );
-
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result); // Missing key = vacuous truth for ForAllValues
-}
-
-#[test]
-fn test_foranyvalue_ip_missing_key() {
-    // Test ForAnyValue:IpAddress with missing key (None => Ok(false))
-    let context = ConditionContext::builder().build(); // No source_ip
-
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "ForAnyValue:IpAddress": {
-                "aws:SourceIp": ["203.0.113.0/24"]
-            }
-        }"#,
-    );
-
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(!result); // Missing key = false for ForAnyValue
-}
-
-#[test]
-fn test_forallvalues_numeric_missing_key() {
-    // Test ForAllValues numeric with missing key (None => Ok(true) - vacuous truth)
-    let context = ConditionContext::builder().build(); // No mfa_age
-
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "ForAllValues:NumericLessThan": {
-                "aws:MultiFactorAuthAge": "500"
-            }
-        }"#,
-    );
-
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(result); // Missing key = vacuous truth for ForAllValues
-}
-
-#[test]
-fn test_foranyvalue_numeric_missing_key() {
-    // Test ForAnyValue numeric with missing key (None => Ok(false))
-    let context = ConditionContext::builder().build(); // No mfa_age
-
-    let condition = parse_condition_block_from_json(
-        r#"{
-            "ForAnyValue:NumericLessThan": {
-                "aws:MultiFactorAuthAge": "500"
-            }
-        }"#,
-    );
-
-    let result = evaluate_condition_block(&condition, &context).unwrap();
-    assert!(!result); // Missing key = false for ForAnyValue
 }
 
 #[test]
@@ -7041,7 +5418,13 @@ fn test_string_like_type_mismatch_boolean() {
     );
 
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "String".to_string(),
+            actual: "Boolean".to_string()
+        })
+    );
 }
 
 #[test]
@@ -7087,7 +5470,13 @@ fn test_date_operators_type_mismatch_number() {
     for (json, _answered_false) in test_cases {
         let condition = unchecked_string(json);
         let outcome = evaluate_condition_block(&condition, &context);
-        assert!(outcome.is_err(), "{outcome:?}");
+        assert_eq!(
+            outcome,
+            Err(ConditionError::TypeMismatch {
+                expected: "String".to_string(),
+                actual: "Number".to_string()
+            })
+        );
     }
 }
 
@@ -7107,7 +5496,13 @@ fn test_ip_address_type_mismatch_boolean() {
     );
 
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "an IP address".to_string(),
+            actual: "Boolean".to_string()
+        })
+    );
 }
 
 #[test]
@@ -7126,7 +5521,13 @@ fn test_arn_equals_type_mismatch_number() {
     );
 
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "String".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 }
 
 #[test]
@@ -7145,7 +5546,13 @@ fn test_arn_like_type_mismatch_number() {
     );
 
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "String".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 }
 
 #[test]
@@ -7164,7 +5571,13 @@ fn test_binary_equals_type_mismatch_boolean() {
     );
 
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "String".to_string(),
+            actual: "Boolean".to_string()
+        })
+    );
 }
 
 #[test]
@@ -7183,7 +5596,13 @@ fn test_forallvalues_string_type_mismatch_number() {
     );
 
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "a String or an Array of Strings".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 }
 
 #[test]
@@ -7202,7 +5621,13 @@ fn test_forallvalues_string_like_type_mismatch_number() {
     );
 
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "a String or an Array of Strings".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 }
 
 #[test]
@@ -7221,66 +5646,13 @@ fn test_forallvalues_arn_type_mismatch_number() {
     );
 
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_forallvalues_numeric_type_mismatch_boolean() {
-    // Test ForAllValues numeric with Boolean actual (line 929, 952, 963, 970, 974-976, 978-980, 982-983, 986: once `_ => Ok(false)`, an error since wami 001)
-    let context = ConditionContext::builder()
-        .mfa_present(true) // Boolean, not array/string
-        .build();
-
-    let test_cases = vec![
-        (
-            r#"{"ForAllValues:NumericLessThan": {"aws:MultiFactorAuthPresent": "500"}}"#,
-            false,
-        ),
-        (
-            r#"{"ForAllValues:NumericGreaterThan": {"aws:MultiFactorAuthPresent": "100"}}"#,
-            false,
-        ),
-    ];
-
-    // Each was answered `false`; a type mismatch is an error (wami 001).
-    for (json, _answered_false) in test_cases {
-        let condition = unchecked(json);
-        let outcome = evaluate_condition_block(&condition, &context);
-        assert!(outcome.is_err(), "{outcome:?}");
-    }
-}
-
-#[test]
-fn test_forallvalues_date_type_mismatch_boolean() {
-    // Test ForAllValues date with Boolean actual (line 997, 1013, 1024, 1050, 1059-1062, 1064-1065: once `_ => Ok(false)`, an error since wami 001)
-    let context = ConditionContext::builder()
-        .mfa_present(true) // Boolean, not date string
-        .build();
-
-    let now = chrono::Utc::now();
-    let test_cases = vec![
-        (
-            format!(
-                r#"{{"ForAllValues:DateLessThan": {{"aws:MultiFactorAuthPresent": "{}"}}}}"#,
-                now.to_rfc3339()
-            ),
-            false,
-        ),
-        (
-            format!(
-                r#"{{"ForAllValues:DateGreaterThan": {{"aws:MultiFactorAuthPresent": "{}"}}}}"#,
-                now.to_rfc3339()
-            ),
-            false,
-        ),
-    ];
-
-    // Each was answered `false`; a type mismatch is an error (wami 001).
-    for (json, _answered_false) in test_cases {
-        let condition = unchecked_string(json);
-        let outcome = evaluate_condition_block(&condition, &context);
-        assert!(outcome.is_err(), "{outcome:?}");
-    }
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "a String or an Array of Strings".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 }
 
 #[test]
@@ -7299,7 +5671,13 @@ fn test_foranyvalue_string_type_mismatch_number() {
     );
 
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "a String or an Array of Strings".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 }
 
 #[test]
@@ -7318,7 +5696,13 @@ fn test_foranyvalue_string_like_type_mismatch_number() {
     );
 
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "a String or an Array of Strings".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 }
 
 #[test]
@@ -7337,66 +5721,13 @@ fn test_foranyvalue_arn_type_mismatch_number() {
     );
 
     // A type mismatch is an error, never `false` (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
-}
-
-#[test]
-fn test_foranyvalue_numeric_type_mismatch_boolean() {
-    // Test ForAnyValue numeric with Boolean actual (line 1144, 1167, 1178, 1185, 1189-1191, 1193-1195, 1197-1198, 1201: once `_ => Ok(false)`, an error since wami 001)
-    let context = ConditionContext::builder()
-        .mfa_present(true) // Boolean, not array/string
-        .build();
-
-    let test_cases = vec![
-        (
-            r#"{"ForAnyValue:NumericLessThan": {"aws:MultiFactorAuthPresent": "500"}}"#,
-            false,
-        ),
-        (
-            r#"{"ForAnyValue:NumericGreaterThan": {"aws:MultiFactorAuthPresent": "100"}}"#,
-            false,
-        ),
-    ];
-
-    // Each was answered `false`; a type mismatch is an error (wami 001).
-    for (json, _answered_false) in test_cases {
-        let condition = unchecked(json);
-        let outcome = evaluate_condition_block(&condition, &context);
-        assert!(outcome.is_err(), "{outcome:?}");
-    }
-}
-
-#[test]
-fn test_foranyvalue_date_type_mismatch_boolean() {
-    // Test ForAnyValue date with Boolean actual (line 1212, 1228, 1253, 1265, 1274-1277, 1279-1280: once `_ => Ok(false)`, an error since wami 001)
-    let context = ConditionContext::builder()
-        .mfa_present(true) // Boolean, not date string
-        .build();
-
-    let now = chrono::Utc::now();
-    let test_cases = vec![
-        (
-            format!(
-                r#"{{"ForAnyValue:DateLessThan": {{"aws:MultiFactorAuthPresent": "{}"}}}}"#,
-                now.to_rfc3339()
-            ),
-            false,
-        ),
-        (
-            format!(
-                r#"{{"ForAnyValue:DateGreaterThan": {{"aws:MultiFactorAuthPresent": "{}"}}}}"#,
-                now.to_rfc3339()
-            ),
-            false,
-        ),
-    ];
-
-    // Each was answered `false`; a type mismatch is an error (wami 001).
-    for (json, _answered_false) in test_cases {
-        let condition = unchecked_string(json);
-        let outcome = evaluate_condition_block(&condition, &context);
-        assert!(outcome.is_err(), "{outcome:?}");
-    }
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "a String or an Array of Strings".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 }
 
 #[test]
@@ -7416,7 +5747,13 @@ fn test_not_ip_address_ifexists_type_mismatch() {
 
     // It used to read `false`, so NotIpAddress answered TRUE: a type mismatch
     // is an error (wami 001).
-    assert!(evaluate_condition_block(&condition, &context).is_err());
+    assert_eq!(
+        evaluate_condition_block(&condition, &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "an IP address".to_string(),
+            actual: "Number".to_string()
+        })
+    );
 }
 
 // ============================================================================
@@ -8053,16 +6390,6 @@ fn a_malformed_value_is_refused_at_parse_for_every_operator_family() {
             "aws:TagKeys",
         ),
         // ... and their numeric and date forms read only a scalar.
-        (
-            r#"{"ForAllValues:NumericLessThan":{"wami:Custom":["1"]}}"#,
-            "ForAllValues:NumericLessThan",
-            "wami:Custom",
-        ),
-        (
-            r#"{"ForAnyValue:DateGreaterThan":{"wami:Custom":"soon"}}"#,
-            "ForAnyValue:DateGreaterThan",
-            "wami:Custom",
-        ),
     ];
     for (json, operator, key) in cases {
         let message = parse_err(json);
@@ -8114,9 +6441,6 @@ fn every_readable_form_still_parses() {
         r#"{"Null":{"aws:SourceIp":"true"}}"#,
         r#"{"ArnLike":{"aws:PrincipalArn":"arn:wami:iam:*"}}"#,
         r#"{"ForAnyValue:StringEquals":{"aws:TagKeys":["env","team"]}}"#,
-        r#"{"ForAllValues:IpAddress":{"aws:SourceIp":["10.0.0.0/8"]}}"#,
-        r#"{"ForAllValues:NumericLessThan":{"wami:SessionAge":"10"}}"#,
-        r#"{"ForAnyValue:DateLessThan":{"aws:CurrentTime":"2020-01-01T00:00:00Z"}}"#,
         r#"{"StringEquals":{}}"#,
         r#"{}"#,
     ] {
@@ -8147,8 +6471,12 @@ fn a_context_value_its_operator_cannot_read_is_an_error_not_false() {
     let json = r#"{"NumericLessThan":{"aws:username":"5"}}"#;
     parse_err(json);
     let context = ConditionContext::builder().username("alice").build();
-    assert!(
-        evaluate_condition_block(&unchecked(json), &context).is_err(),
+    assert_eq!(
+        evaluate_condition_block(&unchecked(json), &context),
+        Err(ConditionError::TypeMismatch {
+            expected: "a finite Number".to_string(),
+            actual: "String".to_string(),
+        }),
         "an evaluation error must not be answered as false"
     );
 }
@@ -8167,7 +6495,10 @@ fn an_unreadable_value_that_bypassed_parse_is_an_error_at_evaluation() {
         )]),
     );
     let context = ConditionContext::builder().secure_transport(true).build();
-    assert!(evaluate_condition_block(&block, &context).is_err());
+    assert_eq!(
+        evaluate_condition_block(&block, &context),
+        Err(ConditionError::InvalidBooleanValue)
+    );
 }
 
 // ============================================================================
@@ -8271,16 +6602,6 @@ fn an_operator_of_another_type_than_its_key_is_refused_at_parse() {
             "wami:Team",
         ),
         (
-            r#"{"ForAllValues:NumericLessThan":{"wami:Team":"5"}}"#,
-            "ForAllValues:NumericLessThan",
-            "wami:Team",
-        ),
-        (
-            r#"{"ForAnyValue:IpAddress":{"aws:username":["10.0.0.1"]}}"#,
-            "ForAnyValue:IpAddress",
-            "aws:username",
-        ),
-        (
             r#"{"ForAllValues:StringEquals":{"aws:SecureTransport":["true"]}}"#,
             "ForAllValues:StringEquals",
             "aws:SecureTransport",
@@ -8311,9 +6632,6 @@ fn well_typed_operators_parse_on_every_kind_of_key() {
         r#"{"IpAddress":{"aws:SourceIp":"10.0.0.0/8"}}"#,
         r#"{"ForAnyValue:StringEquals":{"aws:TagKeys":["env"]}}"#,
         r#"{"ForAllValues:StringLike":{"aws:username":["a*"]}}"#,
-        r#"{"ForAllValues:NumericLessThan":{"wami:SessionAge":"10"}}"#,
-        r#"{"ForAnyValue:DateLessThan":{"aws:TokenIssueTime":"2020-01-01T00:00:00Z"}}"#,
-        r#"{"ForAllValues:IpAddress":{"aws:SourceIp":["10.0.0.0/8"]}}"#,
         r#"{"Null":{"aws:SecureTransport":"true"}}"#,
         r#"{"Null":{"aws:TagKeys":"false"}}"#,
         r#"{"NullIfExists":{"wami:Team":"true"}}"#,
@@ -8347,7 +6665,11 @@ fn a_context_value_of_another_type_is_an_error_for_every_string_operator() {
     ] {
         let block = parse_condition_block_from_json(json);
         let outcome = evaluate_condition_block(&block, &context);
-        assert!(outcome.is_err(), "{json}: {outcome:?}");
+        // A type mismatch, not any error: a misspelt operator would err too.
+        assert!(
+            matches!(outcome, Err(ConditionError::TypeMismatch { .. })),
+            "{json}: {outcome:?}"
+        );
     }
 }
 
@@ -8383,38 +6705,14 @@ fn a_context_value_of_another_type_is_an_error_for_every_other_operator() {
         r#"{"Bool":{"wami:Flag":"true"}}"#,
         // An element that cannot be read is an error whatever the order — the
         // first element alone would already decide `any` and `all` here.
-        r#"{"ForAnyValue:NumericLessThan":{"wami:Numbers":"5"}}"#,
-        r#"{"ForAllValues:NumericGreaterThan":{"wami:Numbers":"5"}}"#,
-        r#"{"ForAllValues:NumericLessThan":{"wami:Numbers":"5"}}"#,
-        r#"{"ForAnyValue:NumericGreaterThan":{"wami:Numbers":"0"}}"#,
-        r#"{"ForAnyValue:DateLessThan":{"wami:Dates":"2030-01-01T00:00:00Z"}}"#,
-        r#"{"ForAllValues:DateGreaterThan":{"wami:Dates":"2030-01-01T00:00:00Z"}}"#,
-        r#"{"ForAllValues:DateLessThan":{"wami:Dates":"2030-01-01T00:00:00Z"}}"#,
-        r#"{"ForAnyValue:DateGreaterThan":{"wami:Dates":"2000-01-01T00:00:00Z"}}"#,
-        r#"{"ForAnyValue:IpAddress":{"wami:Ips":["10.0.0.0/8"]}}"#,
-        r#"{"ForAllValues:IpAddress":{"wami:Ips":["10.0.0.0/8"]}}"#,
-        r#"{"ForAllValues:NumericLessThan":{"wami:Where":"5"}}"#,
-        r#"{"ForAnyValue:DateLessThan":{"wami:Where":"2030-01-01T00:00:00Z"}}"#,
-        r#"{"ForAllValues:IpAddress":{"wami:When":["10.0.0.0/8"]}}"#,
     ] {
         let outcome = evaluate_condition_block(&unchecked(json), &context);
-        assert!(outcome.is_err(), "{json}: {outcome:?}");
+        // A type mismatch, not any error: a misspelt operator would err too.
+        assert!(
+            matches!(outcome, Err(ConditionError::TypeMismatch { .. })),
+            "{json}: {outcome:?}"
+        );
     }
-}
-
-#[test]
-fn a_for_all_numeric_operator_reads_a_numeric_key_as_one_value() {
-    // A declared Number key reaches the set operators as one number; read as
-    // a list of one, as a single string already is. It used to be `false`.
-    let context = ConditionContext::builder().mfa_age(300).build();
-    let block = parse_condition_block_from_json(
-        r#"{"ForAllValues:NumericLessThan":{"aws:MultiFactorAuthAge":"600"}}"#,
-    );
-    assert_eq!(evaluate_condition_block(&block, &context), Ok(true));
-    let block = parse_condition_block_from_json(
-        r#"{"ForAnyValue:NumericGreaterThan":{"aws:MultiFactorAuthAge":"600"}}"#,
-    );
-    assert_eq!(evaluate_condition_block(&block, &context), Ok(false));
 }
 
 #[test]
@@ -8438,7 +6736,6 @@ fn an_empty_list_is_refused_where_a_list_is_read() {
         r#"{"IpAddress":{"aws:SourceIp":[]}}"#,
         r#"{"NotIpAddress":{"aws:SourceIp":[]}}"#,
         r#"{"ForAllValues:StringEquals":{"aws:TagKeys":[]}}"#,
-        r#"{"ForAnyValue:IpAddress":{"aws:SourceIp":[]}}"#,
     ] {
         parse_err(json);
     }
@@ -8447,8 +6744,6 @@ fn an_empty_list_is_refused_where_a_list_is_read() {
 #[test]
 fn malformed_set_and_if_exists_forms_are_refused_at_parse() {
     for json in [
-        r#"{"ForAllValues:IpAddress":{"aws:SourceIp":"10.0.0.1"}}"#,
-        r#"{"ForAnyValue:IpAddress":{"aws:SourceIp":["10.0.0.1","nope"]}}"#,
         r#"{"DateEqualsIfExists":{"aws:CurrentTime":"soon"}}"#,
         r#"{"BoolIfExists":{"aws:SecureTransport":"yes"}}"#,
         r#"{"NullIfExists":{"aws:SourceIp":"maybe"}}"#,
@@ -8658,8 +6953,9 @@ fn whatever_parse_lets_through_evaluates_without_an_error() {
             }
         }
     }
-    // Every operator accepted at least one candidate, so none was skipped.
-    assert!(accepted >= EVERY_OPERATOR.len(), "{accepted}");
+    // Every operator accepted at least one candidate, so none was skipped —
+    // but the ten no key can feed, which accept none (wami 001, Δ13).
+    assert!(accepted >= EVERY_OPERATOR.len() - 10, "{accepted}");
 }
 
 #[test]
@@ -8769,4 +7065,52 @@ fn every_declared_key_resolves_to_the_type_it_declares() {
     // Tag keys are declared by prefix; anything else is undeclared.
     assert_eq!(key_type("aws:PrincipalTag/team"), Some(KeyType::String));
     assert_eq!(key_type("wami:Team"), None);
+}
+
+#[test]
+fn the_set_operators_no_key_can_feed_are_refused_at_parse() {
+    // ForAllValues/ForAnyValue over numbers, dates or addresses compare a LIST
+    // of them, and no declared key holds one: they used to take a one-value
+    // key and quietly act as scalar operators that pass on an absent key.
+    let cases = [
+        r#"{"ForAllValues:NumericLessThan":{"wami:SessionAge":"10"}}"#,
+        r#"{"ForAllValues:NumericGreaterThan":{"aws:MultiFactorAuthAge":"1"}}"#,
+        r#"{"ForAnyValue:NumericLessThan":{"aws:TagKeys":"5"}}"#,
+        r#"{"ForAnyValue:NumericGreaterThan":{"aws:EpochTime":"1"}}"#,
+        r#"{"ForAllValues:DateLessThan":{"aws:CurrentTime":"2020-01-01T00:00:00Z"}}"#,
+        r#"{"ForAllValues:DateGreaterThan":{"aws:TokenIssueTime":"2020-01-01T00:00:00Z"}}"#,
+        r#"{"ForAnyValue:DateLessThan":{"aws:CurrentTime":"2020-01-01T00:00:00Z"}}"#,
+        r#"{"ForAnyValue:DateGreaterThan":{"aws:CurrentTime":"2020-01-01T00:00:00Z"}}"#,
+        r#"{"ForAllValues:IpAddress":{"aws:SourceIp":["10.0.0.0/8"]}}"#,
+        r#"{"ForAnyValue:IpAddress":{"aws:SourceIp":["10.0.0.0/8"]}}"#,
+    ];
+    for json in cases {
+        let message = parse_err(json);
+        assert!(
+            message.contains("no key of that kind holds a list"),
+            "{json}: {message}"
+        );
+        let operator = json.split('"').nth(1).unwrap();
+        assert!(message.contains(operator), "{json}: {message}");
+    }
+    // ... because the table has one list key, and it holds strings.
+    let lists: Vec<_> = crate::keys::declared_keys()
+        .filter(|(_, t)| *t == crate::keys::KeyType::StringList)
+        .map(|(key, _)| key)
+        .collect();
+    assert_eq!(lists, ["aws:TagKeys"]);
+}
+
+#[test]
+fn a_hand_built_block_cannot_reach_a_set_operator_no_key_can_feed() {
+    // No evaluator is left behind the parse guard: a block built by hand gets
+    // the same refusal, never an answer.
+    let context = ConditionContext::builder().mfa_age(300).build();
+    let block = unchecked(r#"{"ForAllValues:NumericLessThan":{"aws:MultiFactorAuthAge":"600"}}"#);
+    assert_eq!(
+        evaluate_condition_block(&block, &context),
+        Err(ConditionError::OperatorWithoutKey {
+            operator: "ForAllValues:NumericLessThan".to_string(),
+        })
+    );
 }

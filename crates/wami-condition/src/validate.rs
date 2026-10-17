@@ -23,8 +23,10 @@
 //! | address | `operators::check_ip_or_cidr` | an IPv4/IPv6 address, or one with a prefix (≤ 32 / ≤ 128) |
 //!
 //! A list is accepted only where the evaluator reads one: the `IpAddress`
-//! family (`String` or `Array`), and the string, ARN and address forms of
+//! family (`String` or `Array`), and the string and ARN forms of
 //! `ForAllValues`/`ForAnyValue`, which read nothing but a list (`as_array`).
+//! Their numeric, date and address forms are refused outright: no key holds
+//! a list of those (`without_key`).
 //! An empty list is refused there (`NotIpAddress []` was always true). A list
 //! element must be a string, because `ConditionValue::from` keeps only the
 //! strings of a JSON array and drops the rest without a word.
@@ -188,6 +190,28 @@ fn compares(operator: ConditionOperator, key_type: Option<KeyType>) -> bool {
     }
 }
 
+/// The set operators no key can feed, by the name a policy writes: they
+/// compare a list of numbers, dates or addresses, and the key table has no
+/// such list — its one list type, `KeyType::StringList`, holds strings
+/// (`aws:TagKeys`). A key of that kind would need a new `KeyType`, which is
+/// where this list is revisited.
+pub(crate) fn without_key(operator: ConditionOperator) -> Option<&'static str> {
+    use ConditionOperator as O;
+    Some(match operator {
+        O::ForAllValuesNumericLessThan => "ForAllValues:NumericLessThan",
+        O::ForAllValuesNumericGreaterThan => "ForAllValues:NumericGreaterThan",
+        O::ForAllValuesDateLessThan => "ForAllValues:DateLessThan",
+        O::ForAllValuesDateGreaterThan => "ForAllValues:DateGreaterThan",
+        O::ForAllValuesIpAddress => "ForAllValues:IpAddress",
+        O::ForAnyValueNumericLessThan => "ForAnyValue:NumericLessThan",
+        O::ForAnyValueNumericGreaterThan => "ForAnyValue:NumericGreaterThan",
+        O::ForAnyValueDateLessThan => "ForAnyValue:DateLessThan",
+        O::ForAnyValueDateGreaterThan => "ForAnyValue:DateGreaterThan",
+        O::ForAnyValueIpAddress => "ForAnyValue:IpAddress",
+        _ => return None,
+    })
+}
+
 fn is_null(operator: ConditionOperator) -> bool {
     matches!(
         operator,
@@ -203,6 +227,11 @@ pub(crate) fn check_value(
     key: &str,
     value: &Value,
 ) -> Result<(), ConditionError> {
+    if let Some(name) = without_key(operator) {
+        return Err(ConditionError::OperatorWithoutKey {
+            operator: name.to_string(),
+        });
+    }
     let declared = key_type(key);
     if !compares(operator, declared) {
         return Err(ConditionError::OperatorKeyMismatch {

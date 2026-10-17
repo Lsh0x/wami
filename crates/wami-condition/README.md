@@ -32,7 +32,9 @@ A condition block maps an operator to the keys it constrains:
 [`ConditionContext`]. Every operator family from the AWS condition grammar is
 implemented — `String*`, `Numeric*`, `Date*`, `Bool`, `IpAddress`, `Arn*`,
 `Binary*` — each with its `Not` and `IfExists` variants, and `ForAllValues` /
-`ForAnyValue` set qualifiers.
+`ForAnyValue` set qualifiers over strings and ARNs. Their numeric, date and
+address forms are refused at parse: no key holds a list of numbers, dates or
+addresses (the one list key, `aws:TagKeys`, holds strings).
 
 ## The part that is easy to get wrong
 
