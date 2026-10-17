@@ -439,12 +439,29 @@ pub(crate) fn read_policy_document(json: &str, policy: &str) -> Result<PolicyDoc
 pub(crate) fn decode_policy_document(json: &str, policy: &str) -> Result<PolicyDocument> {
     serde_json::from_str(json).map_err(|e| AmiError::UnreadablePolicy {
         policy: policy.to_string(),
-        message: format!(
-            "cannot be read as a policy document at line {} column {}",
-            e.line(),
-            e.column()
-        ),
+        message: match unknown_field(&e) {
+            // A field nobody reads (wami-core refuses them): the author's key
+            // is what they must fix, so it is named — on one line, escaped.
+            Some(field) => format!(
+                "unknown field {field:?} at line {} column {}",
+                e.line(),
+                e.column()
+            ),
+            None => format!(
+                "cannot be read as a policy document at line {} column {}",
+                e.line(),
+                e.column()
+            ),
+        },
     })
+}
+
+/// The field serde refused as unknown, read from its message — the one part
+/// of serde's text that is a key the author wrote, never a value.
+fn unknown_field(error: &serde_json::Error) -> Option<String> {
+    let text = error.to_string();
+    let rest = text.strip_prefix("unknown field `")?;
+    Some(rest[..rest.find('`')?].to_string())
 }
 
 #[cfg(test)]
@@ -1001,7 +1018,6 @@ mod tests {
             r#"{"Version":"x","Statement":"s3cr3t-statement"}"#,
             r#"{"Version":"x","Statement":[{"Effect":"Allow","Action":{"k":"s3cr3t"},"Resource":"*"}]}"#,
             r#"{"Version":"x","Statement":[{"Effect":"Allow","Action":["iam:*"],"Resource":["*"],"Sid":51234}]}"#,
-            r#"{"Version":"x","Statement":[{"Effect":"Allow","Actions":["s3cr3t"],"Resource":["*"]}]}"#,
         ] {
             let message = parse_policy_doc(json, &a_policy()).unwrap_err().to_string();
             assert!(!message.contains("s3cr3t"), "{message}");
@@ -1062,5 +1078,29 @@ mod tests {
             order.iter().map(|(_, d)| *d).collect::<Vec<_>>(),
             ["user", "role", "group", "boundary"]
         );
+    }
+
+    #[test]
+    fn a_plural_field_is_refused_as_unknown_not_as_missing() {
+        // "Actions" for "Action": named, as the author wrote it.
+        let json = r#"{"Version":"x","Statement":[{"Effect":"Allow","Actions":["s3cr3t"],"Resource":["*"]}]}"#;
+        let message = parse_policy_doc(json, &a_policy()).unwrap_err().to_string();
+        assert!(
+            message.contains("unknown field \"Actions\" at line 1 column"),
+            "{message}"
+        );
+        assert!(!message.contains("s3cr3t"), "{message}");
+    }
+
+    #[test]
+    fn a_misspelt_field_is_refused_naming_the_field() {
+        // "Conditon" used to be dropped: the Allow carrying it granted
+        // everywhere. Refused, with the field named — the author's key, what
+        // they must fix — and still no value quoted.
+        let json = r#"{"Version":"2012-10-17","Statement":[{"Sid":"Reads","Effect":"Allow","Action":["iam:*"],"Resource":["*"],"Conditon":{"Bool":{"aws:SecureTransport":"s3cr3t"}}}]}"#;
+        let message = parse_policy_doc(json, &a_policy()).unwrap_err().to_string();
+        assert!(message.contains("unknown field \"Conditon\""), "{message}");
+        assert!(message.contains("line 1 column"), "{message}");
+        assert!(!message.contains("s3cr3t"), "{message}");
     }
 }
