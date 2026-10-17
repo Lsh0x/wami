@@ -10,6 +10,11 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 /// Error types for condition evaluation
+///
+/// An error names what the policy's author wrote and must fix — the operator,
+/// the key, the position of an element — and the KIND of a value, never the
+/// value itself, neither the policy's nor the request's: a caller logging the
+/// error must not echo text it has not checked (wami 001).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConditionError {
     UnknownOperator(String),
@@ -17,9 +22,11 @@ pub enum ConditionError {
         expected: String,
         actual: String,
     },
-    InvalidBooleanValue(String),
+    /// A string that is neither `true` nor `false` where a boolean is read.
+    InvalidBooleanValue,
+    /// A string that is not an RFC 3339 date where a date is read.
     InvalidDate {
-        value: String,
+        /// What the date parser objected to — never the input.
         error: String,
     },
     MissingContextKey(String),
@@ -28,8 +35,7 @@ pub enum ConditionError {
     ///
     /// It names where the value sits — operator, key, and the element when the
     /// value is a list — and what the operator reads, but never the value
-    /// itself: a caller logging the error must not echo policy text it has
-    /// not checked.
+    /// itself.
     InvalidConditionValue {
         /// The operator as written in the condition.
         operator: String,
@@ -40,6 +46,18 @@ pub enum ConditionError {
         /// What the operator reads.
         expected: String,
     },
+    /// An operator that cannot compare the type of the key it is given — a
+    /// string operator on the Boolean `aws:SecureTransport`, a numeric one on
+    /// a key nobody declared (compared as a string). Refused at parse: it used
+    /// to evaluate to `false`, so a Deny carrying it vanished.
+    OperatorKeyMismatch {
+        /// The operator as written in the condition.
+        operator: String,
+        /// The condition key.
+        key: String,
+        /// The key's declared type, or that it is undeclared.
+        key_type: String,
+    },
 }
 
 impl std::fmt::Display for ConditionError {
@@ -49,15 +67,11 @@ impl std::fmt::Display for ConditionError {
             ConditionError::TypeMismatch { expected, actual } => {
                 write!(f, "Type mismatch: expected {}, got {}", expected, actual)
             }
-            ConditionError::InvalidBooleanValue(val) => {
-                write!(
-                    f,
-                    "Invalid boolean value: {} (must be 'true' or 'false')",
-                    val
-                )
+            ConditionError::InvalidBooleanValue => {
+                write!(f, "Invalid boolean value: must be 'true' or 'false'")
             }
-            ConditionError::InvalidDate { value, error } => {
-                write!(f, "Invalid date value: {} - {}", value, error)
+            ConditionError::InvalidDate { error } => {
+                write!(f, "Invalid date value: {error}")
             }
             ConditionError::MissingContextKey(key) => {
                 write!(f, "Missing context key: {}", key)
@@ -77,6 +91,14 @@ impl std::fmt::Display for ConditionError {
                 }
                 write!(f, ": expected {expected}")
             }
+            ConditionError::OperatorKeyMismatch {
+                operator,
+                key,
+                key_type,
+            } => write!(
+                f,
+                "{operator} cannot compare key {key}, which is {key_type}"
+            ),
         }
     }
 }
@@ -133,10 +155,11 @@ fn evaluate_operator_block(
             .map_err(|e| ConditionError::MissingContextKey(format!("{}: {}", key, e)))?;
         // An error is not a `false`: answering it as one made the statement
         // vanish, and a vanished Deny is a fail-open. `parse_condition_block`
-        // refuses every policy-side value an operator cannot read, so what
-        // still errs here is the CONTEXT side — a key whose value the operator
-        // cannot compare (`NumericLessThan` on `aws:username`) — or a block
-        // built by hand without going through parse.
+        // refuses every policy-side value an operator cannot read and every
+        // operator its key's declared type rules out, so what still errs here
+        // is the CONTEXT side — a custom key holding a value of another type,
+        // an `aws:SourceIp` that is no address, an unreadable element of a
+        // request list — or a block built by hand without going through parse.
         if !super::operators::evaluate_operator(operator, actual_value, expected_value)? {
             return Ok(false);
         }
@@ -148,14 +171,16 @@ fn evaluate_operator_block(
 /// Parse a condition block from JSON Value
 ///
 /// Refuses, rather than defers to evaluation, everything evaluation could not
-/// read: a block that is not an object, an operator nobody defined, and a
-/// value its operator cannot compare (the table in `validate.rs`). Each used to
-/// evaluate to `false`, which made the statement carrying it vanish.
+/// read: a block that is not an object, an operator nobody defined, an
+/// operator that cannot compare its key's declared type, and a value its
+/// operator cannot compare (the table in `validate.rs`). Each used to evaluate
+/// to `false`, which made the statement carrying it vanish.
 ///
 /// # Errors
 ///
 /// [`ConditionError::InvalidConditionStructure`] for the shape,
-/// [`ConditionError::UnknownOperator`] for a misspelt operator, and
+/// [`ConditionError::UnknownOperator`] for a misspelt operator,
+/// [`ConditionError::OperatorKeyMismatch`] for an operator its key rules out, and
 /// [`ConditionError::InvalidConditionValue`] for a value its operator cannot
 /// read — including a list where the operator reads one value (wami 002).
 pub fn parse_condition_block(value: &Value) -> Result<ConditionBlock, ConditionError> {

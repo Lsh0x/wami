@@ -36,54 +36,86 @@ pub enum ConditionValue {
 }
 
 impl ConditionValue {
+    /// The variant's name — what an error says in place of the value, so a
+    /// request value or a policy value never reaches a log (wami 001).
+    pub fn kind(&self) -> &'static str {
+        match self {
+            ConditionValue::String(_) => "String",
+            ConditionValue::Number(_) => "Number",
+            ConditionValue::Boolean(_) => "Boolean",
+            ConditionValue::Array(_) => "Array",
+        }
+    }
+
+    fn mismatch(&self, expected: &str) -> ConditionError {
+        ConditionError::TypeMismatch {
+            expected: expected.to_string(),
+            actual: self.kind().to_string(),
+        }
+    }
+
+    /// The value as text: a string, or a number or boolean written out.
+    ///
+    /// # Errors
+    ///
+    /// [`ConditionError::TypeMismatch`] for a list.
     pub fn as_string(&self) -> Result<String, ConditionError> {
         match self {
             ConditionValue::String(s) => Ok(s.clone()),
             ConditionValue::Number(n) => Ok(n.to_string()),
             ConditionValue::Boolean(b) => Ok(b.to_string()),
-            ConditionValue::Array(_) => Err(ConditionError::TypeMismatch {
-                expected: "String".to_string(),
-                actual: "Array".to_string(),
-            }),
+            ConditionValue::Array(_) => Err(self.mismatch("String")),
         }
     }
 
+    /// The value as a finite number.
+    ///
+    /// Parse reads a policy's numbers through this very function, so what it
+    /// refuses is refused at parse too. `"NaN"` and `"inf"` are refused: they
+    /// read as `f64`, and a comparison with them is never met.
+    ///
+    /// # Errors
+    ///
+    /// [`ConditionError::TypeMismatch`] for anything else.
     pub fn as_number(&self) -> Result<f64, ConditionError> {
         match self {
-            ConditionValue::Number(n) => Ok(*n),
-            ConditionValue::String(s) => s.parse().map_err(|_| ConditionError::TypeMismatch {
-                expected: "Number".to_string(),
-                actual: "String".to_string(),
-            }),
-            _ => Err(ConditionError::TypeMismatch {
-                expected: "Number".to_string(),
-                actual: format!("{:?}", self),
-            }),
+            ConditionValue::Number(n) if n.is_finite() => Ok(*n),
+            ConditionValue::String(s) => s
+                .parse::<f64>()
+                .ok()
+                .filter(|n| n.is_finite())
+                .ok_or_else(|| self.mismatch("a finite Number")),
+            _ => Err(self.mismatch("a finite Number")),
         }
     }
 
+    /// The value as a boolean: `true`/`false`, as such or as a string.
+    ///
+    /// # Errors
+    ///
+    /// [`ConditionError::InvalidBooleanValue`] for any other string,
+    /// [`ConditionError::TypeMismatch`] for a number or a list.
     pub fn as_boolean(&self) -> Result<bool, ConditionError> {
         match self {
             ConditionValue::Boolean(b) => Ok(*b),
             ConditionValue::String(s) => match s.as_str() {
                 "true" => Ok(true),
                 "false" => Ok(false),
-                _ => Err(ConditionError::InvalidBooleanValue(s.clone())),
+                _ => Err(ConditionError::InvalidBooleanValue),
             },
-            _ => Err(ConditionError::TypeMismatch {
-                expected: "Boolean".to_string(),
-                actual: format!("{:?}", self),
-            }),
+            _ => Err(self.mismatch("Boolean")),
         }
     }
 
+    /// The value as a list of strings.
+    ///
+    /// # Errors
+    ///
+    /// [`ConditionError::TypeMismatch`] for a scalar.
     pub fn as_array(&self) -> Result<&Vec<String>, ConditionError> {
         match self {
             ConditionValue::Array(arr) => Ok(arr),
-            _ => Err(ConditionError::TypeMismatch {
-                expected: "Array".to_string(),
-                actual: format!("{:?}", self),
-            }),
+            _ => Err(self.mismatch("Array")),
         }
     }
 }

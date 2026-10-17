@@ -724,13 +724,27 @@ mod tests {
 
     #[test]
     fn a_context_value_the_condition_cannot_compare_is_an_error_at_evaluation() {
-        // Parses — "5" is a number — but the request's username is "alice".
-        // This is the error parse cannot catch, since it depends on the request.
-        let json = r#"{"Version":"2012-10-17","Statement":[{"Sid":"Few","Effect":"Allow","Action":["iam:*"],"Resource":["*"],"Condition":{"NumericLessThan":{"aws:username":"5"}}}]}"#;
+        // Parses — a network on an address key — but the request's source
+        // address is no address. This is the error parse cannot catch, since
+        // it depends on the request.
+        let json = r#"{"Version":"2012-10-17","Statement":[{"Sid":"Few","Effect":"Allow","Action":["iam:*"],"Resource":["*"],"Condition":{"IpAddress":{"aws:SourceIp":"10.0.0.0/8"}}}]}"#;
         let policy = parse_policy_doc(json, &a_policy()).unwrap();
+        let arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
+        let from_nowhere = WamiContext::builder()
+            .instance_id("999")
+            .tenant_path(TenantPath::single(12345678))
+            .caller_arn(arn)
+            .is_root(false)
+            .source_ip("not-an-ip")
+            .build()
+            .unwrap();
         let err =
-            evaluate_policy_document(&policy, "iam:GetUser", &bob(), &make_context(), &a_policy())
+            evaluate_policy_document(&policy, "iam:GetUser", &bob(), &from_nowhere, &a_policy())
                 .unwrap_err();
+        assert!(
+            matches!(err, AmiError::UnreadableCondition { .. }),
+            "{err:?}"
+        );
         assert!(err.to_string().contains("statement Few"), "{err}");
     }
 
@@ -741,7 +755,7 @@ mod tests {
         // `None` is false. So a Deny keyed on the source IP does not apply to
         // a request that carries none — AWS semantics.
         let policy =
-            allow_and_deny_when(serde_json::json!({"StringEquals": {"aws:SourceIp": "10.0.0.1"}}));
+            allow_and_deny_when(serde_json::json!({"IpAddress": {"aws:SourceIp": "10.0.0.1"}}));
         let effect =
             evaluate_policy_document(&policy, "iam:GetUser", &bob(), &make_context(), &a_policy())
                 .unwrap()

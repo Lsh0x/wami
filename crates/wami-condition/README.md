@@ -44,23 +44,35 @@ permits it. The distinction is implemented, and tested.
 Likewise an absent key under a plain operator makes the condition **false**,
 not true — as in AWS, a key the request does not carry is not met.
 
-An **unreadable** condition is not a false one. An operator nobody defined
-(`StringEqualz`), a value its operator cannot read (an `IpAddress` that is no
-address, a `Bool` that is neither `true` nor `false`, a list where the operator
-reads one value) is refused by `parse_condition_block`, and an evaluation that
-cannot be carried out — a context value the operator cannot compare — is an
-`Err` from `evaluate_condition_block`, never a `false`. Answered as `false`,
-it made the statement carrying it vanish: for a `Deny`, the rule meant to block
-an action stopped applying.
+An **unreadable** condition is not a false one, and a type mismatch is never
+`false`. `parse_condition_block` refuses an operator nobody defined
+(`StringEqualz`); an operator that cannot compare its key's declared type
+(`StringEquals` on the Boolean `aws:SecureTransport`, a numeric operator on a
+key nobody declared — compared as a string); a value its operator cannot read
+(an `IpAddress` that is no address, a `Bool` that is neither `true` nor
+`false`, `"NaN"` where a number is read, a list where the operator reads one
+value, an empty list where it reads a list). Values are read through the
+evaluator's own parsers, so parse and evaluation cannot disagree. An
+evaluation that cannot be carried out — a request value of another type than
+the operator compares, an element of a request list it cannot read, whatever
+its position — is an `Err` from `evaluate_condition_block`, never a `false`.
+Answered as `false`, it made the statement carrying it vanish: for a `Deny`,
+the rule meant to block an action stopped applying.
+
+An error names what the policy's author wrote and must fix — the operator, the
+key, an element's position — and the kind of a value, never the value itself,
+neither the policy's nor the request's.
 
 ## Context keys
 
 The `aws:` keys are recognised natively — `PrincipalArn`, `PrincipalAccount`,
 `PrincipalType`, `CurrentTime`, `EpochTime`, `SecureTransport`,
 `MultiFactorAuthPresent`, `MultiFactorAuthAge`, `RequestedRegion`,
-`ResourceArn`, `ResourceAccount`, `Referer` and more. Any key the table does
-not name falls through to `ConditionContext::custom_values`, so your own keys
-work by putting them there — no registration step.
+`ResourceArn`, `ResourceAccount`, `Referer` and more, each with its declared
+type (`keys::key_type`). Any key the table does not name falls through to
+`ConditionContext::custom_values`, so your own keys work by putting them there
+— no registration step; such a key is compared with string operators only,
+since nothing declares what it holds.
 
 ## License
 

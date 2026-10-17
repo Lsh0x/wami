@@ -5,29 +5,35 @@
 //! in reach won. Refusing it here makes the refusal deterministic: it happens
 //! whatever the request, before any context is consulted.
 //!
-//! Every accepted form is derived from the evaluator in [`crate::operators`],
-//! so that parse refuses exactly what evaluation could not have read:
+//! Two checks, both against what evaluation does:
 //!
-//! | shape | evaluator | accepted |
+//! - **the key**: an operator compares one type of key — a string operator
+//!   cannot compare the Boolean `aws:SecureTransport`, a numeric one a key
+//!   nobody declared (it is compared as a string). The declared types are
+//!   `keys::key_type`, the same table `get_context_value` reads from.
+//! - **the value**: read through the evaluator's OWN parsers — never a copy of
+//!   them, so the two cannot drift apart:
+//!
+//! | shape | parser called | accepted |
 //! | --- | --- | --- |
 //! | text | `ConditionValue::as_string` | a string, number or boolean |
-//! | number | `ConditionValue::as_number` | a number, or a string that parses as `f64` |
+//! | number | `ConditionValue::as_number` | a finite number, or a string that reads as one |
 //! | date | `parse_rfc3339` over `as_string` | an RFC 3339 string |
 //! | boolean | `ConditionValue::as_boolean` | `true`/`false`, as JSON or as a string |
-//! | address | `ip_matches_cidr` | an IPv4/IPv6 address, or one with a prefix (≤ 32 / ≤ 128) |
+//! | address | `operators::check_ip_or_cidr` | an IPv4/IPv6 address, or one with a prefix (≤ 32 / ≤ 128) |
 //!
 //! A list is accepted only where the evaluator reads one: the `IpAddress`
 //! family (`String` or `Array`), and the string, ARN and address forms of
 //! `ForAllValues`/`ForAnyValue`, which read nothing but a list (`as_array`).
-//! A list element must be a string, because `ConditionValue::from` keeps only
-//! the strings of a JSON array and drops the rest without a word.
-
-use std::net::Ipv6Addr;
+//! An empty list is refused there (`NotIpAddress []` was always true). A list
+//! element must be a string, because `ConditionValue::from` keeps only the
+//! strings of a JSON array and drops the rest without a word.
 
 use serde_json::Value;
 
-use crate::operators::{parse_ipv4, parse_rfc3339};
-use crate::{ConditionError, ConditionOperator};
+use crate::keys::{key_type, KeyType};
+use crate::operators::{check_ip_or_cidr, parse_rfc3339};
+use crate::{ConditionError, ConditionOperator, ConditionValue};
 
 /// The kind of value an operator compares against.
 #[derive(Clone, Copy)]
@@ -129,57 +135,85 @@ impl Kind {
     fn describe(self) -> &'static str {
         match self {
             Kind::Text => "a string, number or boolean",
-            Kind::Number => "a number",
+            Kind::Number => "a finite number",
             Kind::Date => "an RFC 3339 date",
             Kind::Boolean => "true or false",
             Kind::Address => "an IP address or CIDR",
         }
     }
 
-    /// Whether `value` is one the evaluator for this kind can read.
+    /// Whether `value` is one the evaluator for this kind can read — asked
+    /// of the evaluator's own parsers.
     ///
     /// `in_list` narrows every kind to strings: a JSON array is converted by
-    /// keeping its strings only, so anything else would vanish.
+    /// keeping its strings only, so anything else would vanish. A null or an
+    /// object is no value anybody wrote: `ConditionValue::from` would turn it
+    /// into `""` without a word.
     fn accepts(self, value: &Value, in_list: bool) -> bool {
-        if in_list && !value.is_string() {
+        if (in_list && !value.is_string()) || value.is_null() || value.is_object() {
             return false;
         }
-        match (self, value) {
-            (Kind::Text, Value::String(_) | Value::Number(_) | Value::Bool(_)) => true,
-            (Kind::Number, Value::Number(_)) => true,
-            (Kind::Number, Value::String(s)) => s.parse::<f64>().is_ok(),
-            (Kind::Date, Value::String(s)) => parse_rfc3339(s).is_ok(),
-            (Kind::Boolean, Value::Bool(_)) => true,
-            (Kind::Boolean, Value::String(s)) => s == "true" || s == "false",
-            (Kind::Address, Value::String(s)) => is_address_or_cidr(s),
-            _ => false,
+        let value = ConditionValue::from(value.clone());
+        match self {
+            Kind::Text => value.as_string().is_ok(),
+            Kind::Number => value.as_number().is_ok(),
+            Kind::Date => value
+                .as_string()
+                .and_then(|s| parse_rfc3339(&s).map(|_| ()))
+                .is_ok(),
+            Kind::Boolean => value.as_boolean().is_ok(),
+            Kind::Address => value
+                .as_string()
+                .and_then(|s| check_ip_or_cidr(&s, None))
+                .is_ok(),
         }
     }
 }
 
-/// What `ip_matches_cidr` can ever match: an address alone, or a network with
-/// a prefix it does not ignore (a v4 prefix above 32 never matches anything).
-fn is_address_or_cidr(s: &str) -> bool {
-    let is_v4 = |a: &str| parse_ipv4(a).is_some();
-    let is_v6 = |a: &str| a.parse::<Ipv6Addr>().is_ok();
-    match s.split_once('/') {
-        None => is_v4(s) || is_v6(s),
-        Some((network, prefix)) => match prefix.parse::<u8>() {
-            Ok(p) if is_v4(network) => p <= 32,
-            Ok(p) if is_v6(network) => p <= 128,
-            _ => false,
-        },
+/// Whether `operator` can compare a key of type `key_type` (`None`: a key
+/// nobody declared, compared as a string). The `IfExists` forms follow their
+/// base operator; `Null` asks only whether the key is there, so it takes any.
+fn compares(operator: ConditionOperator, key_type: Option<KeyType>) -> bool {
+    use KeyType as K;
+    let (kind, arity) = shape(operator);
+    let textual = matches!(key_type, None | Some(K::String | K::Arn));
+    match (kind, arity) {
+        _ if is_null(operator) => true,
+        (Kind::Text, Arity::List) => textual || key_type == Some(K::StringList),
+        (Kind::Text, _) => textual,
+        (Kind::Number, _) => key_type == Some(K::Number),
+        (Kind::Date, _) => key_type == Some(K::Date),
+        (Kind::Boolean, _) => key_type == Some(K::Boolean),
+        (Kind::Address, _) => key_type == Some(K::Ip),
     }
 }
 
-/// Refuse a value `operator` could not read, naming the operator, the key and,
-/// for a list, the element — never the value itself.
+fn is_null(operator: ConditionOperator) -> bool {
+    matches!(
+        operator,
+        ConditionOperator::Null | ConditionOperator::NullIfExists
+    )
+}
+
+/// Refuse a key `operator` cannot compare, or a value it could not read, naming
+/// the operator, the key and, for a list, the element — never the value.
 pub(crate) fn check_value(
     operator_name: &str,
     operator: ConditionOperator,
     key: &str,
     value: &Value,
 ) -> Result<(), ConditionError> {
+    let declared = key_type(key);
+    if !compares(operator, declared) {
+        return Err(ConditionError::OperatorKeyMismatch {
+            operator: operator_name.to_string(),
+            key: key.to_string(),
+            key_type: declared.map_or_else(
+                || "not a declared key, so compared as a string".to_string(),
+                |t| format!("{} key", t.describe()),
+            ),
+        });
+    }
     let (kind, arity) = shape(operator);
     let refuse = |position: Option<usize>, expected: String| {
         Err(ConditionError::InvalidConditionValue {
@@ -196,6 +230,10 @@ pub(crate) fn check_value(
                 "{} — a list is not accepted by {operator_name} (wami 002 will read it as OR)",
                 kind.describe()
             ),
+        ),
+        (Value::Array(items), Arity::OneOrList | Arity::List) if items.is_empty() => refuse(
+            None,
+            format!("at least one {} — an empty list", kind.describe()),
         ),
         (Value::Array(items), Arity::OneOrList | Arity::List) => {
             match items.iter().position(|item| !kind.accepts(item, true)) {

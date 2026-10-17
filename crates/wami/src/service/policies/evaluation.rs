@@ -2053,11 +2053,11 @@ mod tests {
     #[tokio::test]
     async fn a_simulated_context_value_the_condition_cannot_compare_is_an_error() {
         let service = setup_service();
-        let policy = allow_and_conditional_deny(r#"{"NumericLessThan":{"wami:Team":"5"}}"#);
+        let policy = allow_and_conditional_deny(r#"{"StringEquals":{"wami:Team":"5"}}"#);
         let entries = vec![ContextEntry {
             context_key_name: "wami:Team".to_string(),
-            context_key_values: vec!["core".to_string()],
-            context_key_type: "String".to_string(),
+            context_key_values: vec!["5".to_string()],
+            context_key_type: "Numeric".to_string(),
         }];
         let err = service
             .simulate_custom_policy(custom(policy, Some(entries)))
@@ -2158,7 +2158,8 @@ mod tests {
                 None,
             ),
             (identity(r#"{"Bool":{"aws:SecureTransport":"yes"}}"#), None),
-            // Context side: the principal's ARN compared as a number.
+            // The principal's ARN compared as a number: refused at parse, keys
+            // having declared types.
             (
                 identity(r#"{"NumericLessThan":{"aws:PrincipalArn":"5"}}"#),
                 None,

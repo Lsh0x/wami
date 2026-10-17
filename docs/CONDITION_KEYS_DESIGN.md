@@ -329,19 +329,26 @@ A condition that cannot be read is an error, never a failed condition: answered
 as `false`, it made the statement vanish, so a `Deny` carrying a typo stopped
 denying.
 
-- Unknown operator, or a policy value its operator cannot read (an `IpAddress`
-  that is no address, a `Bool` that is not `true`/`false`, a list where the
-  operator reads one value) → refused at parse; the authorizer refuses the
-  whole document with the statement named (`AmiError::UnreadablePolicy`)
-- A request value the operator cannot compare (`NumericLessThan` on
-  `aws:username`) → error at evaluation; the decision is refused
-  (`AmiError::UnreadableCondition`, policy and statement named)
+- Unknown operator; an operator that cannot compare its key's declared type
+  (`StringEquals` on the Boolean `aws:SecureTransport`; a numeric operator on
+  an undeclared key, compared as a string); or a policy value its operator
+  cannot read (an `IpAddress` that is no address, a `Bool` that is not
+  `true`/`false`, `"NaN"`, a list where the operator reads one value, an empty
+  list) → refused at parse; the authorizer refuses the whole document with the
+  statement named (`AmiError::UnreadablePolicy`)
+- A request value the operator cannot compare (a custom key holding a number
+  under `StringEquals`, an `aws:SourceIp` that is no address, an unreadable
+  element of a request list) → error at evaluation, never `false`; the
+  decision is refused (`AmiError::UnreadableCondition`, policy and statement
+  named)
 - A false condition — well-formed, not met, a missing key included — still
   means the statement does not apply
 
 ### Invalid Keys
 
-- Unknown key → return error (or treat as missing if IfExists)
+- Unknown key → read from the custom values; absent → a false condition (true
+  under IfExists); compared with string operators only, since nothing declares
+  its type
 
 ## Performance Considerations
 

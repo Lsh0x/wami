@@ -2040,12 +2040,21 @@ mod tests {
 
     #[tokio::test]
     async fn a_context_value_the_condition_cannot_compare_refuses_the_decision() {
-        // A well-formed policy value, but `aws:username` is a name: comparing
-        // it numerically cannot be done. Reachable at evaluation whatever
-        // parse checks, since it depends on the request.
-        let ctx = test_context();
+        // A well-formed policy, but the request's source address is no address:
+        // the comparison cannot be made. Reachable at evaluation whatever parse
+        // checks, since it depends on the request.
+        let arn: Arn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
+        let ctx = WamiContext::builder()
+            .instance_id("999")
+            .tenant_path(TenantPath::single(12345678))
+            .caller_arn(arn)
+            .is_root(false)
+            .source_ip("not-an-ip")
+            .build()
+            .unwrap();
         let store =
-            alice_with_conditional_deny(&ctx, r#"{"NumericLessThan":{"aws:username":"5"}}"#).await;
+            alice_with_conditional_deny(&ctx, r#"{"IpAddress":{"aws:SourceIp":"10.0.0.0/8"}}"#)
+                .await;
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
 
         let err = AuthorizationService::new(store)

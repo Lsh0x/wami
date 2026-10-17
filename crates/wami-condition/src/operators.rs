@@ -342,70 +342,70 @@ pub fn evaluate_operator(
 
         // Set operators - ForAllValues
         ConditionOperator::ForAllValuesStringEquals => {
-            evaluate_for_all_values_string_equals(actual, expected)
+            set_string_equals(Quantifier::All, actual, expected)
         }
         ConditionOperator::ForAllValuesStringNotEquals => {
-            evaluate_for_all_values_string_equals(actual, expected).map(|r| !r)
+            set_string_equals(Quantifier::All, actual, expected).map(|r| !r)
         }
         ConditionOperator::ForAllValuesStringLike => {
-            evaluate_for_all_values_string_like(actual, expected)
+            set_string_like(Quantifier::All, actual, expected)
         }
         ConditionOperator::ForAllValuesStringNotLike => {
-            evaluate_for_all_values_string_like(actual, expected).map(|r| !r)
+            set_string_like(Quantifier::All, actual, expected).map(|r| !r)
         }
         ConditionOperator::ForAllValuesArnEquals => {
-            evaluate_for_all_values_arn_equals(actual, expected)
+            set_string_equals(Quantifier::All, actual, expected)
         }
         ConditionOperator::ForAllValuesArnLike => {
-            evaluate_for_all_values_arn_like(actual, expected)
+            set_string_like(Quantifier::All, actual, expected)
         }
         ConditionOperator::ForAllValuesNumericLessThan => {
-            evaluate_for_all_values_numeric_less_than(actual, expected)
+            set_numeric_less_than(Quantifier::All, actual, expected)
         }
         ConditionOperator::ForAllValuesNumericGreaterThan => {
-            evaluate_for_all_values_numeric_greater_than(actual, expected)
+            set_numeric_greater_than(Quantifier::All, actual, expected)
         }
         ConditionOperator::ForAllValuesIpAddress => {
-            evaluate_for_all_values_ip_address(actual, expected)
+            set_ip_address(Quantifier::All, actual, expected)
         }
         ConditionOperator::ForAllValuesDateLessThan => {
-            evaluate_for_all_values_date_less_than(actual, expected)
+            set_date_less_than(Quantifier::All, actual, expected)
         }
         ConditionOperator::ForAllValuesDateGreaterThan => {
-            evaluate_for_all_values_date_greater_than(actual, expected)
+            set_date_greater_than(Quantifier::All, actual, expected)
         }
 
         // Set operators - ForAnyValue
         ConditionOperator::ForAnyValueStringEquals => {
-            evaluate_for_any_value_string_equals(actual, expected)
+            set_string_equals(Quantifier::Any, actual, expected)
         }
         ConditionOperator::ForAnyValueStringNotEquals => {
-            evaluate_for_any_value_string_equals(actual, expected).map(|r| !r)
+            set_string_equals(Quantifier::Any, actual, expected).map(|r| !r)
         }
         ConditionOperator::ForAnyValueStringLike => {
-            evaluate_for_any_value_string_like(actual, expected)
+            set_string_like(Quantifier::Any, actual, expected)
         }
         ConditionOperator::ForAnyValueStringNotLike => {
-            evaluate_for_any_value_string_like(actual, expected).map(|r| !r)
+            set_string_like(Quantifier::Any, actual, expected).map(|r| !r)
         }
         ConditionOperator::ForAnyValueArnEquals => {
-            evaluate_for_any_value_arn_equals(actual, expected)
+            set_string_equals(Quantifier::Any, actual, expected)
         }
-        ConditionOperator::ForAnyValueArnLike => evaluate_for_any_value_arn_like(actual, expected),
+        ConditionOperator::ForAnyValueArnLike => set_string_like(Quantifier::Any, actual, expected),
         ConditionOperator::ForAnyValueNumericLessThan => {
-            evaluate_for_any_value_numeric_less_than(actual, expected)
+            set_numeric_less_than(Quantifier::Any, actual, expected)
         }
         ConditionOperator::ForAnyValueNumericGreaterThan => {
-            evaluate_for_any_value_numeric_greater_than(actual, expected)
+            set_numeric_greater_than(Quantifier::Any, actual, expected)
         }
         ConditionOperator::ForAnyValueIpAddress => {
-            evaluate_for_any_value_ip_address(actual, expected)
+            set_ip_address(Quantifier::Any, actual, expected)
         }
         ConditionOperator::ForAnyValueDateLessThan => {
-            evaluate_for_any_value_date_less_than(actual, expected)
+            set_date_less_than(Quantifier::Any, actual, expected)
         }
         ConditionOperator::ForAnyValueDateGreaterThan => {
-            evaluate_for_any_value_date_greater_than(actual, expected)
+            set_date_greater_than(Quantifier::Any, actual, expected)
         }
     }
 }
@@ -435,7 +435,7 @@ fn evaluate_string_equals(
             Ok(actual_str == expected_str)
         }
         None => Ok(false), // Missing value = no match
-        _ => Ok(false),    // Type mismatch = no match
+        Some(other) => Err(other.mismatch("String")),
     }
 }
 
@@ -449,7 +449,7 @@ fn evaluate_string_equals_ignore_case(
             Ok(actual_str.eq_ignore_ascii_case(&expected_str))
         }
         None => Ok(false),
-        _ => Ok(false),
+        Some(other) => Err(other.mismatch("String")),
     }
 }
 
@@ -463,7 +463,7 @@ fn evaluate_string_like(
             Ok(matches_wildcard_pattern(&actual_str, &pattern))
         }
         None => Ok(false),
-        _ => Ok(false),
+        Some(other) => Err(other.mismatch("String")),
     }
 }
 
@@ -605,7 +605,7 @@ fn evaluate_date_equals(
             Ok(actual_time == expected_time)
         }
         None => Ok(false),
-        _ => Ok(false),
+        Some(other) => Err(other.mismatch("String")),
     }
 }
 
@@ -621,7 +621,7 @@ fn evaluate_date_less_than(
             Ok(actual_time < expected_time)
         }
         None => Ok(false),
-        _ => Ok(false),
+        Some(other) => Err(other.mismatch("String")),
     }
 }
 
@@ -637,7 +637,7 @@ fn evaluate_date_less_than_equals(
             Ok(actual_time <= expected_time)
         }
         None => Ok(false),
-        _ => Ok(false),
+        Some(other) => Err(other.mismatch("String")),
     }
 }
 
@@ -653,7 +653,7 @@ fn evaluate_date_greater_than(
             Ok(actual_time > expected_time)
         }
         None => Ok(false),
-        _ => Ok(false),
+        Some(other) => Err(other.mismatch("String")),
     }
 }
 
@@ -669,7 +669,7 @@ fn evaluate_date_greater_than_equals(
             Ok(actual_time >= expected_time)
         }
         None => Ok(false),
-        _ => Ok(false),
+        Some(other) => Err(other.mismatch("String")),
     }
 }
 
@@ -677,7 +677,7 @@ pub(crate) fn parse_rfc3339(s: &str) -> Result<chrono::DateTime<chrono::Utc>, Co
     chrono::DateTime::parse_from_rfc3339(s)
         .map(|dt| dt.with_timezone(&chrono::Utc))
         .map_err(|e| ConditionError::InvalidDate {
-            value: s.to_string(),
+            // chrono's message describes the fault, never the input.
             error: e.to_string(),
         })
 }
@@ -689,22 +689,73 @@ fn evaluate_ip_address(
 ) -> Result<bool, ConditionError> {
     match actual {
         Some(ConditionValue::String(actual_ip)) => {
-            // Handle both single IP/CIDR and array of IPs/CIDRs
-            match expected {
-                ConditionValue::String(expected_ip_cidr) => {
-                    Ok(ip_matches_cidr(&actual_ip, expected_ip_cidr))
-                }
-                ConditionValue::Array(expected_ips) => {
-                    // At least one CIDR must match
-                    Ok(expected_ips
-                        .iter()
-                        .any(|cidr| ip_matches_cidr(&actual_ip, cidr)))
-                }
-                _ => Ok(false),
+            check_address(&actual_ip, None)?;
+            // One network, or a list of them: at least one must match.
+            let networks: Vec<&str> = match expected {
+                ConditionValue::String(network) => vec![network.as_str()],
+                ConditionValue::Array(networks) => networks.iter().map(String::as_str).collect(),
+                other => return Err(other.mismatch("an IP address or a list of them")),
+            };
+            for (index, network) in networks.iter().enumerate() {
+                check_ip_or_cidr(
+                    network,
+                    matches!(expected, ConditionValue::Array(_)).then_some(index),
+                )?;
             }
+            Ok(networks
+                .iter()
+                .any(|network| ip_matches_cidr(&actual_ip, network)))
         }
         None => Ok(false),
-        _ => Ok(false),
+        Some(other) => Err(other.mismatch("an IP address")),
+    }
+}
+
+/// Whether `s` is an IP address alone.
+fn is_address(s: &str) -> bool {
+    parse_ipv4(s).is_some() || s.parse::<std::net::Ipv6Addr>().is_ok()
+}
+
+fn not_an_address(expected: &str, position: Option<usize>) -> ConditionError {
+    ConditionError::TypeMismatch {
+        expected: match position {
+            Some(index) => format!("{expected} at element {index}"),
+            None => expected.to_string(),
+        },
+        actual: "String".to_string(),
+    }
+}
+
+/// A request's address: an IP address alone. One that is not used to make
+/// `IpAddress` false and `NotIpAddress` TRUE (wami 001).
+fn check_address(s: &str, position: Option<usize>) -> Result<(), ConditionError> {
+    if is_address(s) {
+        Ok(())
+    } else {
+        Err(not_an_address("an IP address", position))
+    }
+}
+
+/// A policy's network: an address alone, or one with a prefix `ip_matches_cidr`
+/// does not ignore (a v4 prefix above 32 never matches anything).
+///
+/// Parse checks a policy's addresses with this very function, so parse and
+/// evaluation cannot disagree on what an address is (wami 001).
+pub(crate) fn check_ip_or_cidr(s: &str, position: Option<usize>) -> Result<(), ConditionError> {
+    let is_v4 = |a: &str| parse_ipv4(a).is_some();
+    let is_v6 = |a: &str| a.parse::<std::net::Ipv6Addr>().is_ok();
+    let readable = match s.split_once('/') {
+        None => is_address(s),
+        Some((network, prefix)) => match prefix.parse::<u8>() {
+            Ok(p) if is_v4(network) => p <= 32,
+            Ok(p) if is_v6(network) => p <= 128,
+            _ => false,
+        },
+    };
+    if readable {
+        Ok(())
+    } else {
+        Err(not_an_address("an IP address or CIDR", position))
     }
 }
 
@@ -791,7 +842,7 @@ fn evaluate_arn_equals(
             Ok(actual_arn == expected_arn)
         }
         None => Ok(false),
-        _ => Ok(false),
+        Some(other) => Err(other.mismatch("String")),
     }
 }
 
@@ -805,7 +856,7 @@ fn evaluate_arn_like(
             Ok(matches_wildcard_pattern(&actual_arn, &pattern))
         }
         None => Ok(false),
-        _ => Ok(false),
+        Some(other) => Err(other.mismatch("String")),
     }
 }
 
@@ -836,7 +887,7 @@ fn evaluate_binary_equals(
             Ok(actual_base64 == expected_base64)
         }
         None => Ok(false),
-        _ => Ok(false),
+        Some(other) => Err(other.mismatch("String")),
     }
 }
 
@@ -850,433 +901,207 @@ fn evaluate_null(
     Ok(is_null == expected_bool)
 }
 
-// Set operator implementations - ForAllValues
-fn evaluate_for_all_values_string_equals(
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    match actual {
-        Some(ConditionValue::Array(actual_values)) => {
-            if actual_values.is_empty() {
-                return Ok(true); // Vacuous truth - empty request passes
-            }
-            let expected_array = expected.as_array()?;
-            // All values in actual must match at least one in expected
-            Ok(actual_values.iter().all(|actual_val| {
-                expected_array
-                    .iter()
-                    .any(|expected_val| actual_val == expected_val)
-            }))
+// Set operator implementations — ForAllValues / ForAnyValue
+//
+// One body per comparison, the quantifier passed in. Every element of the
+// request is read before any is compared: an element that cannot be read is
+// an error whatever its position, never a `false` that `all` or `any` might
+// reach first or skip (wami 001).
+
+/// How a set operator combines its per-element results.
+#[derive(Clone, Copy)]
+enum Quantifier {
+    /// `ForAllValues`: every request value must match.
+    All,
+    /// `ForAnyValue`: one request value must match.
+    Any,
+}
+
+impl Quantifier {
+    fn over<T>(self, items: &[T], test: impl Fn(&T) -> bool) -> bool {
+        match self {
+            Quantifier::All => items.iter().all(test),
+            Quantifier::Any => items.iter().any(test),
         }
-        Some(ConditionValue::String(actual_val)) => {
-            // Single value treated as array of one
-            let expected_array = expected.as_array()?;
-            Ok(expected_array.contains(&actual_val))
-        }
-        None => Ok(true), // Vacuous truth
-        _ => Ok(false),
+    }
+
+    /// What an absent key, or a request with no values, answers: vacuously
+    /// true for every value, false for any value.
+    fn on_nothing(self) -> bool {
+        matches!(self, Quantifier::All)
     }
 }
 
-fn evaluate_for_all_values_string_like(
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
+/// The request's values: a list, or one string read as a list of one.
+fn request_values(actual: ConditionValue) -> Result<Vec<String>, ConditionError> {
     match actual {
-        Some(ConditionValue::Array(actual_values)) => {
-            if actual_values.is_empty() {
-                return Ok(true);
-            }
-            let expected_array = expected.as_array()?;
-            Ok(actual_values.iter().all(|actual_val| {
-                expected_array
-                    .iter()
-                    .any(|expected_pattern| matches_wildcard_pattern(actual_val, expected_pattern))
-            }))
-        }
-        Some(ConditionValue::String(actual_val)) => {
-            let expected_array = expected.as_array()?;
-            Ok(expected_array
-                .iter()
-                .any(|pattern| matches_wildcard_pattern(&actual_val, pattern)))
-        }
-        None => Ok(true),
-        _ => Ok(false),
+        ConditionValue::Array(values) => Ok(values),
+        ConditionValue::String(value) => Ok(vec![value]),
+        other => Err(other.mismatch("a String or an Array of Strings")),
     }
 }
 
-fn evaluate_for_all_values_arn_equals(
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    evaluate_for_all_values_string_equals(actual, expected)
-}
-
-fn evaluate_for_all_values_arn_like(
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    evaluate_for_all_values_string_like(actual, expected)
-}
-
-fn evaluate_for_all_values_numeric_less_than(
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    match actual {
-        Some(ConditionValue::Array(actual_values)) => {
-            if actual_values.is_empty() {
-                return Ok(true);
-            }
-            let expected_num = expected.as_number()?;
-            Ok(actual_values.iter().all(|actual_str| {
-                if let Ok(actual_num) = actual_str.parse::<f64>() {
-                    actual_num < expected_num
-                } else {
-                    false
-                }
-            }))
-        }
-        Some(ConditionValue::String(actual_str)) => {
-            let actual_num =
-                actual_str
-                    .parse::<f64>()
-                    .map_err(|_| ConditionError::TypeMismatch {
-                        expected: "Number".to_string(),
-                        actual: "String".to_string(),
-                    })?;
-            let expected_num = expected.as_number()?;
-            Ok(actual_num < expected_num)
-        }
-        None => Ok(true),
-        _ => Ok(false),
+fn element_mismatch(expected: &str, index: usize) -> ConditionError {
+    ConditionError::TypeMismatch {
+        expected: format!("{expected} at element {index}"),
+        actual: "String".to_string(),
     }
 }
 
-fn evaluate_for_all_values_numeric_greater_than(
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    match actual {
-        Some(ConditionValue::Array(actual_values)) => {
-            if actual_values.is_empty() {
-                return Ok(true);
-            }
-            let expected_num = expected.as_number()?;
-            Ok(actual_values.iter().all(|actual_str| {
-                if let Ok(actual_num) = actual_str.parse::<f64>() {
-                    actual_num > expected_num
-                } else {
-                    false
-                }
-            }))
-        }
-        Some(ConditionValue::String(actual_str)) => {
-            let actual_num =
-                actual_str
-                    .parse::<f64>()
-                    .map_err(|_| ConditionError::TypeMismatch {
-                        expected: "Number".to_string(),
-                        actual: "String".to_string(),
-                    })?;
-            let expected_num = expected.as_number()?;
-            Ok(actual_num > expected_num)
-        }
-        None => Ok(true),
-        _ => Ok(false),
+/// The request's numbers — a declared Number key included, as a list of one.
+fn request_numbers(actual: ConditionValue) -> Result<Vec<f64>, ConditionError> {
+    if let ConditionValue::Number(_) = actual {
+        return Ok(vec![actual.as_number()?]);
     }
+    request_values(actual)?
+        .into_iter()
+        .enumerate()
+        .map(|(index, value)| {
+            ConditionValue::String(value)
+                .as_number()
+                .map_err(|_| element_mismatch("a finite Number", index))
+        })
+        .collect()
 }
 
-fn evaluate_for_all_values_ip_address(
+fn request_dates(
+    actual: ConditionValue,
+) -> Result<Vec<chrono::DateTime<chrono::Utc>>, ConditionError> {
+    request_values(actual)?
+        .iter()
+        .enumerate()
+        .map(|(index, value)| {
+            parse_rfc3339(value).map_err(|_| element_mismatch("an RFC 3339 date", index))
+        })
+        .collect()
+}
+
+fn set_string_equals(
+    quantifier: Quantifier,
     actual: Option<ConditionValue>,
     expected: &ConditionValue,
 ) -> Result<bool, ConditionError> {
-    match actual {
-        Some(ConditionValue::Array(actual_ips)) => {
-            if actual_ips.is_empty() {
-                return Ok(true);
-            }
-            let expected_array = expected.as_array()?;
-            Ok(actual_ips.iter().all(|actual_ip| {
-                expected_array
-                    .iter()
-                    .any(|expected_cidr| ip_matches_cidr(actual_ip, expected_cidr))
-            }))
-        }
-        Some(ConditionValue::String(actual_ip)) => {
-            let expected_array = expected.as_array()?;
-            Ok(expected_array
-                .iter()
-                .any(|cidr| ip_matches_cidr(&actual_ip, cidr)))
-        }
-        None => Ok(true),
-        _ => Ok(false),
+    let Some(actual) = actual else {
+        return Ok(quantifier.on_nothing());
+    };
+    let values = request_values(actual)?;
+    if values.is_empty() {
+        return Ok(quantifier.on_nothing());
     }
+    let expected = expected.as_array()?;
+    Ok(quantifier.over(&values, |value| expected.contains(value)))
 }
 
-fn evaluate_for_all_values_date_less_than(
+fn set_string_like(
+    quantifier: Quantifier,
     actual: Option<ConditionValue>,
     expected: &ConditionValue,
 ) -> Result<bool, ConditionError> {
-    match actual {
-        Some(ConditionValue::Array(actual_dates)) => {
-            if actual_dates.is_empty() {
-                return Ok(true);
-            }
-            let expected_time = parse_rfc3339(&expected.as_string()?)?;
-            Ok(actual_dates.iter().all(|actual_date_str| {
-                parse_rfc3339(actual_date_str)
-                    .map(|actual_time| actual_time < expected_time)
-                    .unwrap_or(false)
-            }))
-        }
-        Some(ConditionValue::String(actual_date_str)) => {
-            let actual_time = parse_rfc3339(&actual_date_str)?;
-            let expected_time = parse_rfc3339(&expected.as_string()?)?;
-            Ok(actual_time < expected_time)
-        }
-        None => Ok(true),
-        _ => Ok(false),
+    let Some(actual) = actual else {
+        return Ok(quantifier.on_nothing());
+    };
+    let values = request_values(actual)?;
+    if values.is_empty() {
+        return Ok(quantifier.on_nothing());
     }
+    let patterns = expected.as_array()?;
+    Ok(quantifier.over(&values, |value| {
+        patterns
+            .iter()
+            .any(|pattern| matches_wildcard_pattern(value, pattern))
+    }))
 }
 
-fn evaluate_for_all_values_date_greater_than(
+fn set_numeric(
+    quantifier: Quantifier,
     actual: Option<ConditionValue>,
     expected: &ConditionValue,
+    holds: fn(f64, f64) -> bool,
 ) -> Result<bool, ConditionError> {
-    match actual {
-        Some(ConditionValue::Array(actual_dates)) => {
-            if actual_dates.is_empty() {
-                return Ok(true);
-            }
-            let expected_time = parse_rfc3339(&expected.as_string()?)?;
-            Ok(actual_dates.iter().all(|actual_date_str| {
-                parse_rfc3339(actual_date_str)
-                    .map(|actual_time| actual_time > expected_time)
-                    .unwrap_or(false)
-            }))
-        }
-        Some(ConditionValue::String(actual_date_str)) => {
-            let actual_time = parse_rfc3339(&actual_date_str)?;
-            let expected_time = parse_rfc3339(&expected.as_string()?)?;
-            Ok(actual_time > expected_time)
-        }
-        None => Ok(true),
-        _ => Ok(false),
+    let Some(actual) = actual else {
+        return Ok(quantifier.on_nothing());
+    };
+    let numbers = request_numbers(actual)?;
+    if numbers.is_empty() {
+        return Ok(quantifier.on_nothing());
     }
+    let expected = expected.as_number()?;
+    Ok(quantifier.over(&numbers, |number| holds(*number, expected)))
 }
 
-// Set operator implementations - ForAnyValue
-fn evaluate_for_any_value_string_equals(
+fn set_numeric_less_than(
+    quantifier: Quantifier,
     actual: Option<ConditionValue>,
     expected: &ConditionValue,
 ) -> Result<bool, ConditionError> {
-    match actual {
-        Some(ConditionValue::Array(actual_values)) => {
-            if actual_values.is_empty() {
-                return Ok(false); // Empty request = no values match
-            }
-            let expected_array = expected.as_array()?;
-            // At least one value in actual must match at least one in expected
-            Ok(actual_values.iter().any(|actual_val| {
-                expected_array
-                    .iter()
-                    .any(|expected_val| actual_val == expected_val)
-            }))
-        }
-        Some(ConditionValue::String(actual_val)) => {
-            let expected_array = expected.as_array()?;
-            Ok(expected_array.contains(&actual_val))
-        }
-        None => Ok(false), // No value to match
-        _ => Ok(false),
+    set_numeric(quantifier, actual, expected, |a, e| a < e)
+}
+
+fn set_numeric_greater_than(
+    quantifier: Quantifier,
+    actual: Option<ConditionValue>,
+    expected: &ConditionValue,
+) -> Result<bool, ConditionError> {
+    set_numeric(quantifier, actual, expected, |a, e| a > e)
+}
+
+fn set_ip_address(
+    quantifier: Quantifier,
+    actual: Option<ConditionValue>,
+    expected: &ConditionValue,
+) -> Result<bool, ConditionError> {
+    let Some(actual) = actual else {
+        return Ok(quantifier.on_nothing());
+    };
+    let addresses = request_values(actual)?;
+    for (index, address) in addresses.iter().enumerate() {
+        check_address(address, Some(index))?;
     }
-}
-
-fn evaluate_for_any_value_string_like(
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    match actual {
-        Some(ConditionValue::Array(actual_values)) => {
-            if actual_values.is_empty() {
-                return Ok(false);
-            }
-            let expected_array = expected.as_array()?;
-            Ok(actual_values.iter().any(|actual_val| {
-                expected_array
-                    .iter()
-                    .any(|expected_pattern| matches_wildcard_pattern(actual_val, expected_pattern))
-            }))
-        }
-        Some(ConditionValue::String(actual_val)) => {
-            let expected_array = expected.as_array()?;
-            Ok(expected_array
-                .iter()
-                .any(|pattern| matches_wildcard_pattern(&actual_val, pattern)))
-        }
-        None => Ok(false),
-        _ => Ok(false),
+    if addresses.is_empty() {
+        return Ok(quantifier.on_nothing());
     }
-}
-
-fn evaluate_for_any_value_arn_equals(
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    evaluate_for_any_value_string_equals(actual, expected)
-}
-
-fn evaluate_for_any_value_arn_like(
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    evaluate_for_any_value_string_like(actual, expected)
-}
-
-fn evaluate_for_any_value_numeric_less_than(
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    match actual {
-        Some(ConditionValue::Array(actual_values)) => {
-            if actual_values.is_empty() {
-                return Ok(false);
-            }
-            let expected_num = expected.as_number()?;
-            Ok(actual_values.iter().any(|actual_str| {
-                if let Ok(actual_num) = actual_str.parse::<f64>() {
-                    actual_num < expected_num
-                } else {
-                    false
-                }
-            }))
-        }
-        Some(ConditionValue::String(actual_str)) => {
-            let actual_num =
-                actual_str
-                    .parse::<f64>()
-                    .map_err(|_| ConditionError::TypeMismatch {
-                        expected: "Number".to_string(),
-                        actual: "String".to_string(),
-                    })?;
-            let expected_num = expected.as_number()?;
-            Ok(actual_num < expected_num)
-        }
-        None => Ok(false),
-        _ => Ok(false),
+    let networks = expected.as_array()?;
+    for (index, network) in networks.iter().enumerate() {
+        check_ip_or_cidr(network, Some(index))?;
     }
+    Ok(quantifier.over(&addresses, |address| {
+        networks
+            .iter()
+            .any(|network| ip_matches_cidr(address, network))
+    }))
 }
 
-fn evaluate_for_any_value_numeric_greater_than(
+type Instant = chrono::DateTime<chrono::Utc>;
+
+fn set_date(
+    quantifier: Quantifier,
+    actual: Option<ConditionValue>,
+    expected: &ConditionValue,
+    holds: fn(&Instant, &Instant) -> bool,
+) -> Result<bool, ConditionError> {
+    let Some(actual) = actual else {
+        return Ok(quantifier.on_nothing());
+    };
+    let dates = request_dates(actual)?;
+    if dates.is_empty() {
+        return Ok(quantifier.on_nothing());
+    }
+    let expected = parse_rfc3339(&expected.as_string()?)?;
+    Ok(quantifier.over(&dates, |date| holds(date, &expected)))
+}
+
+fn set_date_less_than(
+    quantifier: Quantifier,
     actual: Option<ConditionValue>,
     expected: &ConditionValue,
 ) -> Result<bool, ConditionError> {
-    match actual {
-        Some(ConditionValue::Array(actual_values)) => {
-            if actual_values.is_empty() {
-                return Ok(false);
-            }
-            let expected_num = expected.as_number()?;
-            Ok(actual_values.iter().any(|actual_str| {
-                if let Ok(actual_num) = actual_str.parse::<f64>() {
-                    actual_num > expected_num
-                } else {
-                    false
-                }
-            }))
-        }
-        Some(ConditionValue::String(actual_str)) => {
-            let actual_num =
-                actual_str
-                    .parse::<f64>()
-                    .map_err(|_| ConditionError::TypeMismatch {
-                        expected: "Number".to_string(),
-                        actual: "String".to_string(),
-                    })?;
-            let expected_num = expected.as_number()?;
-            Ok(actual_num > expected_num)
-        }
-        None => Ok(false),
-        _ => Ok(false),
-    }
+    set_date(quantifier, actual, expected, |a, e| a < e)
 }
 
-fn evaluate_for_any_value_ip_address(
+fn set_date_greater_than(
+    quantifier: Quantifier,
     actual: Option<ConditionValue>,
     expected: &ConditionValue,
 ) -> Result<bool, ConditionError> {
-    match actual {
-        Some(ConditionValue::Array(actual_ips)) => {
-            if actual_ips.is_empty() {
-                return Ok(false);
-            }
-            let expected_array = expected.as_array()?;
-            Ok(actual_ips.iter().any(|actual_ip| {
-                expected_array
-                    .iter()
-                    .any(|expected_cidr| ip_matches_cidr(actual_ip, expected_cidr))
-            }))
-        }
-        Some(ConditionValue::String(actual_ip)) => {
-            let expected_array = expected.as_array()?;
-            Ok(expected_array
-                .iter()
-                .any(|cidr| ip_matches_cidr(&actual_ip, cidr)))
-        }
-        None => Ok(false),
-        _ => Ok(false),
-    }
-}
-
-fn evaluate_for_any_value_date_less_than(
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    match actual {
-        Some(ConditionValue::Array(actual_dates)) => {
-            if actual_dates.is_empty() {
-                return Ok(false);
-            }
-            let expected_time = parse_rfc3339(&expected.as_string()?)?;
-            Ok(actual_dates.iter().any(|actual_date_str| {
-                parse_rfc3339(actual_date_str)
-                    .map(|actual_time| actual_time < expected_time)
-                    .unwrap_or(false)
-            }))
-        }
-        Some(ConditionValue::String(actual_date_str)) => {
-            let actual_time = parse_rfc3339(&actual_date_str)?;
-            let expected_time = parse_rfc3339(&expected.as_string()?)?;
-            Ok(actual_time < expected_time)
-        }
-        None => Ok(false),
-        _ => Ok(false),
-    }
-}
-
-fn evaluate_for_any_value_date_greater_than(
-    actual: Option<ConditionValue>,
-    expected: &ConditionValue,
-) -> Result<bool, ConditionError> {
-    match actual {
-        Some(ConditionValue::Array(actual_dates)) => {
-            if actual_dates.is_empty() {
-                return Ok(false);
-            }
-            let expected_time = parse_rfc3339(&expected.as_string()?)?;
-            Ok(actual_dates.iter().any(|actual_date_str| {
-                parse_rfc3339(actual_date_str)
-                    .map(|actual_time| actual_time > expected_time)
-                    .unwrap_or(false)
-            }))
-        }
-        Some(ConditionValue::String(actual_date_str)) => {
-            let actual_time = parse_rfc3339(&actual_date_str)?;
-            let expected_time = parse_rfc3339(&expected.as_string()?)?;
-            Ok(actual_time > expected_time)
-        }
-        None => Ok(false),
-        _ => Ok(false),
-    }
+    set_date(quantifier, actual, expected, |a, e| a > e)
 }
