@@ -31,7 +31,11 @@ fn sources(sub: &str) -> Vec<(String, String)> {
     rust_files(&root.join(sub), &mut files);
     files
         .into_iter()
-        .filter(|p| !p.to_string_lossy().contains("store/conformance"))
+        .filter(|p| {
+            !p.to_string_lossy()
+                .replace('\\', "/")
+                .contains("store/conformance")
+        })
         .map(|p| {
             let text = std::fs::read_to_string(&p).unwrap();
             let rel = p
