@@ -263,6 +263,18 @@ impl TryFrom<WireContext> for WamiContext {
             Some(_) => {}
         }
 
+        // Root is the stored principal at tenant path exactly `0`: a context
+        // arriving with is_root beside any other caller would bypass every
+        // check before a key is read (wami 005, Δ3; 004 removes the flag).
+        if wire.is_root && !wire.caller_arn.is_root_user() {
+            return Err(AmiError::InvalidParameter {
+                message: format!(
+                    "{} is not the root principal: is_root refused",
+                    wire.caller_arn
+                ),
+            });
+        }
+
         // A key of another tenant than the caller's names another principal
         // whatever its record says: refused before anything reads it.
         if let Some(key) = &wire.caller_key {
@@ -551,9 +563,10 @@ impl WamiContextBuilder {
 
     /// Set whether the caller is a root user
     ///
-    /// Leave it unset to derive it from the caller ARN. An explicit value is
-    /// never overridden — in particular `is_root(false)` stays false even for
-    /// a root ARN, which is what makes deliberate privilege dropping possible.
+    /// Leave it unset to derive it from the caller ARN. `is_root(false)` stays
+    /// false even for a root ARN, which is what makes deliberate privilege
+    /// dropping possible; `is_root(true)` for a caller that is not the root
+    /// principal makes [`WamiContextBuilder::build`] fail (wami 005, Δ3).
     pub fn is_root(mut self, is_root: bool) -> Self {
         self.is_root = Some(is_root);
         self
@@ -608,6 +621,14 @@ impl WamiContextBuilder {
             .instance_id
             .unwrap_or_else(|| caller_arn.wami_instance_id.clone());
 
+        // An explicit is_root may drop root, never confer it: root is the
+        // principal at tenant path exactly `0` (wami 005, Δ3).
+        if self.is_root == Some(true) && !caller_arn.is_root_user() {
+            return Err(AmiError::InvalidParameter {
+                message: format!("{caller_arn} is not the root principal: is_root refused"),
+            });
+        }
+
         // Validate that instance_id is not empty
         if instance_id.trim().is_empty() {
             return Err(AmiError::InvalidParameter {
@@ -640,6 +661,67 @@ impl WamiContextBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn root_arn() -> WamiArn {
+        "arn:wami:iam:0:wami:inst:user/root".parse().unwrap()
+    }
+
+    #[test]
+    fn the_wire_refuses_is_root_for_a_caller_that_is_not_root() {
+        // A context deserialises: is_root true beside any caller ARN would be
+        // root itself, before any key is read (wami 005, Δ3, T9).
+        let ctx = WamiContext::builder()
+            .caller_arn(alice_57())
+            .build()
+            .unwrap();
+        let mut json = serde_json::to_value(&ctx).unwrap();
+        json["is_root"] = serde_json::Value::Bool(true);
+        assert!(serde_json::from_value::<WamiContext>(json).is_err());
+        for deep in [
+            "arn:wami:iam:0/7:wami:inst:user/root",
+            "arn:wami:iam:5/7:wami:inst:user/root",
+        ] {
+            let arn: WamiArn = deep.parse().unwrap();
+            let ctx = WamiContext::builder().caller_arn(arn).build().unwrap();
+            let mut json = serde_json::to_value(&ctx).unwrap();
+            json["is_root"] = serde_json::Value::Bool(true);
+            assert!(
+                serde_json::from_value::<WamiContext>(json).is_err(),
+                "{deep} deserialised as root"
+            );
+        }
+    }
+
+    #[test]
+    fn the_wire_keeps_root_for_the_root_principal() {
+        let ctx = WamiContext::builder()
+            .caller_arn(root_arn())
+            .build()
+            .unwrap();
+        assert!(ctx.is_root());
+        let back: WamiContext =
+            serde_json::from_value(serde_json::to_value(&ctx).unwrap()).unwrap();
+        assert!(back.is_root());
+    }
+
+    #[test]
+    fn the_builder_refuses_is_root_for_a_caller_that_is_not_root() {
+        let got = WamiContext::builder()
+            .caller_arn(alice_57())
+            .is_root(true)
+            .build();
+        assert!(
+            got.is_err(),
+            "an explicit is_root made 5/7's alice root: {got:?}"
+        );
+        // Dropping root stays possible.
+        let dropped = WamiContext::builder()
+            .caller_arn(root_arn())
+            .is_root(false)
+            .build()
+            .unwrap();
+        assert!(!dropped.is_root());
+    }
 
     fn alice_57() -> WamiArn {
         "arn:wami:iam:5/7:wami:inst:user/alice-id".parse().unwrap()

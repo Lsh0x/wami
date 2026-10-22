@@ -1228,7 +1228,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_root_bypasses_all() {
-        let root_arn: Arn = "arn:wami:iam:12345678:wami:999:user/root".parse().unwrap();
+        let root_arn: Arn = "arn:wami:iam:0:wami:999:user/root".parse().unwrap();
         let ctx = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
@@ -1917,11 +1917,7 @@ mod tests {
         let ctx = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
-            .caller_arn(
-                "arn:wami:iam:12345678:wami:999:user/root"
-                    .parse::<Arn>()
-                    .unwrap(),
-            )
+            .caller_arn("arn:wami:iam:0:wami:999:user/root".parse::<Arn>().unwrap())
             .is_root(true)
             .build()
             .unwrap();
