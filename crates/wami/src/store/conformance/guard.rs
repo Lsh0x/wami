@@ -90,14 +90,25 @@ async fn principal<S: GuardStore>(
     name: &str,
     resources: &[String],
 ) -> WamiContext {
-    let ctx = caller(tenant, name);
     let mut s = store.write().await;
-    let user = build_user(&key(tenant, name), None, &ctx).expect("a user");
-    s.create_user(user).await.expect("the caller's record");
+    let user = build_user(&key(tenant, name), None, &caller(tenant, name)).expect("a user");
+    s.create_user(user.clone())
+        .await
+        .expect("the caller's record");
     s.put_user_policy(&key(tenant, name), "grant", allow(resources))
         .await
         .expect("the caller's grant");
-    ctx
+    signed_in(&user)
+}
+
+/// The context authentication builds from `user`'s record: its ARN and its
+/// key, read off the same record.
+pub(crate) fn signed_in(user: &crate::wami::identity::User) -> WamiContext {
+    WamiContext::builder()
+        .caller_arn(user.wami_arn.clone())
+        .caller_key(user.key())
+        .build()
+        .expect("a signed-in context")
 }
 
 /// Create `name` in `tenant` with no guard.

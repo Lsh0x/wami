@@ -169,7 +169,13 @@ where
         // tenant_path, instance_id and is_root all come from the ARN now — see
         // WamiContextBuilder::build. Restating them here was how they could
         // disagree with the identity they are supposed to describe.
-        WamiContext::builder().caller_arn(arn.clone()).build()
+        // The key is read off the same record as the ARN: the evaluator finds
+        // the caller's policies by it, and checks it against the ARN at use
+        // (wami 005, (c)).
+        WamiContext::builder()
+            .caller_arn(arn.clone())
+            .caller_key(user.key())
+            .build()
     }
 
     /// Create context for a root user
@@ -209,6 +215,7 @@ where
                 crate::wami::identity::root_user::ROOT_TENANT_ID,
             ))
             .caller_arn(user.wami_arn.clone())
+            .caller_key(user.key())
             .is_root(true)
             .build()
     }

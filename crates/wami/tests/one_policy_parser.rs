@@ -33,6 +33,12 @@ const OTHER: &[(&str, usize, &str)] = &[
         2,
         "the simulation's boundary verdict reads JSON as Value: wami 003",
     ),
+    (
+        "wami/src/store/conformance/caller_key.rs",
+        1,
+        "a context, to prove the wire form refuses a key of another tenant (S15); \
+         test code behind the `conformance` feature",
+    ),
 ];
 
 fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {

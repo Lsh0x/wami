@@ -46,7 +46,7 @@
 //! impersonation. Restating them to repeat what the ARN already says is what
 //! allowed the two to drift apart.
 
-use crate::arn::{TenantPath, WamiArn};
+use crate::arn::{ScopedName, TenantPath, WamiArn};
 use crate::error::{AmiError, Result};
 use serde::{Deserialize, Serialize};
 
@@ -153,6 +153,12 @@ pub struct SessionInfo {
     pub expiration: i64,
     /// Assumed role ARN (if this is an assumed role session)
     pub assumed_role_arn: Option<WamiArn>,
+    /// The assumed role's key — its tenant and its name — read from the
+    /// role's record when the session is opened. The evaluator reads the role
+    /// by it and checks the record's ARN against `assumed_role_arn`: an ARN's
+    /// resource is the role's id, never its name (wami 005, D8).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub assumed_role_key: Option<ScopedName>,
 }
 
 /// WAMI Context - carries authentication and authorization information
@@ -170,6 +176,16 @@ pub struct WamiContext {
 
     /// The ARN of the caller (user or assumed role)
     caller_arn: WamiArn,
+
+    /// The caller's key — its tenant and its name — set from the caller's
+    /// RECORD by whoever built this context from it (wami 005, (c)).
+    ///
+    /// The evaluator reads the caller's policies by this key, and checks it
+    /// at use: the record it names must carry `caller_arn`, or nothing is
+    /// decided. A context deserialises and its builder is public, so no list
+    /// of constructors could vouch for it; the check does.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    caller_key: Option<ScopedName>,
 
     /// How authority reached `caller_arn`, oldest first.
     ///
@@ -213,6 +229,8 @@ struct WireContext {
     tenant_path: TenantPath,
     instance_id: String,
     caller_arn: WamiArn,
+    #[serde(default)]
+    caller_key: Option<ScopedName>,
     provenance: Vec<Step>,
     is_root: bool,
     region: Option<String>,
@@ -245,6 +263,31 @@ impl TryFrom<WireContext> for WamiContext {
             Some(_) => {}
         }
 
+        // A key of another tenant than the caller's names another principal
+        // whatever its record says: refused before anything reads it.
+        if let Some(key) = &wire.caller_key {
+            if key.tenant() != &wire.caller_arn.tenant_path {
+                return Err(AmiError::InvalidParameter {
+                    message: format!(
+                        "the caller key {key} is not of the caller's tenant {}",
+                        wire.caller_arn.tenant_path
+                    ),
+                });
+            }
+        }
+        if let Some(session) = &wire.session_info {
+            if let (Some(key), Some(arn)) = (&session.assumed_role_key, &session.assumed_role_arn) {
+                if key.tenant() != &arn.tenant_path {
+                    return Err(AmiError::InvalidParameter {
+                        message: format!(
+                            "the assumed role key {key} is not of the role's tenant {}",
+                            arn.tenant_path
+                        ),
+                    });
+                }
+            }
+        }
+
         if wire.provenance.len() > MAX_PROVENANCE_DEPTH {
             return Err(AmiError::InvalidParameter {
                 message: format!(
@@ -258,6 +301,7 @@ impl TryFrom<WireContext> for WamiContext {
             tenant_path: wire.tenant_path,
             instance_id: wire.instance_id,
             caller_arn: wire.caller_arn,
+            caller_key: wire.caller_key,
             provenance: wire.provenance,
             is_root: wire.is_root,
             region: wire.region,
@@ -387,7 +431,17 @@ impl WamiContext {
             via,
         });
         next.caller_arn = principal;
+        // The key named the previous caller; the new one has no record read
+        // here, so it has no key until someone reads it.
+        next.caller_key = None;
         Ok(next)
+    }
+
+    /// The caller's key, as the constructor that read the caller's record set
+    /// it — `None` for a context built without one, which the evaluator
+    /// refuses for anyone but root.
+    pub fn caller_key(&self) -> Option<&ScopedName> {
+        self.caller_key.as_ref()
     }
 
     /// Get the tenant path
@@ -457,6 +511,7 @@ pub struct WamiContextBuilder {
     tenant_path: Option<TenantPath>,
     instance_id: Option<String>,
     caller_arn: Option<WamiArn>,
+    caller_key: Option<ScopedName>,
     /// `None` means "derive from the caller ARN"; an explicit value always wins.
     is_root: Option<bool>,
     region: Option<String>,
@@ -482,6 +537,15 @@ impl WamiContextBuilder {
     /// Set the caller ARN
     pub fn caller_arn(mut self, caller_arn: WamiArn) -> Self {
         self.caller_arn = Some(caller_arn);
+        self
+    }
+
+    /// Set the caller's key, read from the caller's record.
+    ///
+    /// Only code holding that record should set it: the evaluator checks
+    /// that the record it names carries the caller ARN, and refuses otherwise.
+    pub fn caller_key(mut self, key: ScopedName) -> Self {
+        self.caller_key = Some(key);
         self
     }
 
@@ -563,6 +627,7 @@ impl WamiContextBuilder {
                 via: Transition::Authenticated,
             }],
             caller_arn,
+            caller_key: self.caller_key,
             region: self.region,
             session_info: self.session_info,
             source_ip: self.source_ip,
@@ -575,6 +640,73 @@ impl WamiContextBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn alice_57() -> WamiArn {
+        "arn:wami:iam:5/7:wami:inst:user/alice-id".parse().unwrap()
+    }
+
+    #[test]
+    fn a_context_carries_the_key_it_was_built_with() {
+        let key = ScopedName::new(TenantPath::new(vec![5, 7]), "alice");
+        let ctx = WamiContext::builder()
+            .caller_arn(alice_57())
+            .caller_key(key.clone())
+            .build()
+            .unwrap();
+        assert_eq!(ctx.caller_key(), Some(&key));
+        let back: WamiContext =
+            serde_json::from_value(serde_json::to_value(&ctx).unwrap()).unwrap();
+        assert_eq!(back.caller_key(), Some(&key), "the key survives the wire");
+    }
+
+    #[test]
+    fn the_wire_refuses_a_key_of_another_tenant_than_the_caller() {
+        let ctx = WamiContext::builder()
+            .caller_arn(alice_57())
+            .caller_key(ScopedName::new(TenantPath::new(vec![5, 7]), "alice"))
+            .build()
+            .unwrap();
+        let mut json = serde_json::to_value(&ctx).unwrap();
+        json["caller_key"] =
+            serde_json::to_value(ScopedName::new(TenantPath::new(vec![6, 7]), "alice")).unwrap();
+        assert!(serde_json::from_value::<WamiContext>(json).is_err());
+    }
+
+    #[test]
+    fn the_wire_refuses_a_role_key_of_another_tenant_than_the_role() {
+        let role: WamiArn = "arn:wami:iam:5/7:wami:inst:role/admin-id".parse().unwrap();
+        let ctx = WamiContext::builder()
+            .caller_arn(alice_57())
+            .session_info(SessionInfo {
+                session_token: "t".to_string(),
+                expiration: i64::MAX,
+                assumed_role_arn: Some(role),
+                assumed_role_key: Some(ScopedName::new(TenantPath::new(vec![6, 7]), "admin")),
+            })
+            .build()
+            .unwrap();
+        let json = serde_json::to_value(&ctx).unwrap();
+        assert!(serde_json::from_value::<WamiContext>(json).is_err());
+    }
+
+    #[test]
+    fn a_change_of_caller_drops_the_key() {
+        let ctx = WamiContext::builder()
+            .caller_arn(alice_57())
+            .caller_key(ScopedName::new(TenantPath::new(vec![5, 7]), "alice"))
+            .build()
+            .unwrap();
+        let role: WamiArn = "arn:wami:iam:5/7:wami:inst:role/admin-id".parse().unwrap();
+        let next = ctx
+            .through(
+                role,
+                Transition::AssumedRole {
+                    session_name: "s".to_string(),
+                },
+            )
+            .unwrap();
+        assert_eq!(next.caller_key(), None, "the key named the previous caller");
+    }
 
     #[test]
     fn test_context_builder() {
@@ -670,6 +802,7 @@ mod tests {
             session_token: "token123".to_string(),
             expiration: future_time,
             assumed_role_arn: None,
+            assumed_role_key: None,
         };
 
         let context = WamiContext::builder()
@@ -694,6 +827,7 @@ mod tests {
             session_token: "token123".to_string(),
             expiration: past_time,
             assumed_role_arn: None,
+            assumed_role_key: None,
         };
 
         let context = WamiContext::builder()
@@ -717,6 +851,7 @@ mod tests {
             session_token: "token123".to_string(),
             expiration: future_time,
             assumed_role_arn: None,
+            assumed_role_key: None,
         };
 
         let context = WamiContext::builder()
@@ -1050,6 +1185,7 @@ mod tests {
                 session_token: "tok".to_string(),
                 expiration: 9_999_999_999,
                 assumed_role_arn: None,
+                assumed_role_key: None,
             })
             .build()
             .unwrap();
@@ -1222,6 +1358,7 @@ mod tests {
                 session_token: "tok".to_string(),
                 expiration: 9_999_999_999,
                 assumed_role_arn: None,
+                assumed_role_key: None,
             })
             .build()
             .unwrap();
@@ -1257,6 +1394,7 @@ mod tests {
                 session_token: "tok".to_string(),
                 expiration: 9_999_999_999,
                 assumed_role_arn: Some(arn_for(12345678, "role")),
+                assumed_role_key: None,
             })
             .source_ip("203.0.113.7")
             .mfa_present(true)

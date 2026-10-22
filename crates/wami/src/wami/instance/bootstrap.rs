@@ -361,6 +361,8 @@ impl InstanceBootstrap {
             .instance_id(instance_id)
             .tenant_path(TenantPath::single(ROOT_TENANT_ID))
             .caller_arn(root_arn)
+            // Root's key, as this module writes root's record (wami 005, (c)).
+            .caller_key(RootUser::for_instance(instance_id).as_user().key())
             .is_root(true)
             .build()?;
 

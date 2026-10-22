@@ -42,6 +42,7 @@ use crate::service::auth::decision::{
 };
 use crate::service::auth::policy_evaluator::{self, PolicyEffect, StatementHit};
 use crate::store::traits::{GroupStore, PolicyStore, RoleStore, UserStore};
+use crate::wami::identity::{Role, User};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_core::arn::{ScopedName, WamiArn};
@@ -75,6 +76,14 @@ enum Boundary {
         /// The stored document, not yet parsed.
         document: String,
     },
+}
+
+/// Whose policies decide, as read by the context's keys.
+enum Principal {
+    /// A user, judged on its own policies and its groups'.
+    User(Box<User>),
+    /// A role session, judged on the role's policies only.
+    Session(Box<Role>),
 }
 
 impl<S> AuthorizationService<S>
@@ -120,10 +129,48 @@ where
             return Ok(Decision::Allow(AllowReason::RootBypass));
         }
 
-        let user = self.extract_user_name_from_arn(context.caller_arn())?;
-
-        self.evaluate_user_policies(context, &user, action, resource_arn)
+        let principal = self.principal(context).await?;
+        self.evaluate_user_policies(context, &principal, action, resource_arn)
             .await
+    }
+
+    /// The principal whose policies decide: the record the context's KEY
+    /// names, checked against the context's ARN (wami 005, (c)).
+    ///
+    /// The key is set by whoever built the context from the caller's record;
+    /// it is checked here, at use, because a context deserialises and its
+    /// builder is public — no list of constructors can vouch for it. An
+    /// absent key, an absent record and a record carrying another ARN are ONE
+    /// refusal, naming the caller ARN only: telling them apart would say which
+    /// keys hold a record. A session is judged on its ROLE, read by the
+    /// session's role key and checked against its role ARN the same way; the
+    /// assuming user's own policies take no part.
+    async fn principal(&self, context: &WamiContext) -> Result<Principal> {
+        let refusal = || AmiError::AccessDenied {
+            message: format!(
+                "{} is not authorized: its context does not name a stored principal \
+                 carrying that ARN",
+                context.caller_arn()
+            ),
+        };
+        let store = self.store.read().await;
+        let key = context.caller_key().ok_or_else(refusal)?;
+        let user = store.get_user(key).await?.ok_or_else(refusal)?;
+        if &user.wami_arn != context.caller_arn() {
+            return Err(refusal());
+        }
+        let assumed = context
+            .session_info()
+            .and_then(|session| session.assumed_role_arn.as_ref().map(|arn| (session, arn)));
+        if let Some((session, role_arn)) = assumed {
+            let role_key = session.assumed_role_key.as_ref().ok_or_else(refusal)?;
+            let role = store.get_role(role_key).await?.ok_or_else(refusal)?;
+            if &role.wami_arn != role_arn {
+                return Err(refusal());
+            }
+            return Ok(Principal::Session(Box::new(role)));
+        }
+        Ok(Principal::User(Box::new(user)))
     }
 
     /// Check if access is denied (returns an error if not authorized)
@@ -176,14 +223,14 @@ where
     async fn evaluate_user_policies(
         &self,
         context: &WamiContext,
-        user: &ScopedName,
+        principal: &Principal,
         action: &str,
         resource_arn: &WamiArn,
     ) -> Result<Decision> {
         let (documents, boundary) = {
             let store = self.store.read().await;
-            let documents = Self::identity_documents(&store, context, user).await?;
-            (documents, Self::boundary_document(&store, user).await?)
+            let documents = Self::identity_documents(&store, principal).await?;
+            (documents, Self::boundary_document(&store, principal).await?)
         };
         // Canonical order — see the note on this function — the boundary
         // last; the simulation reads in the same order, by the same function.
@@ -314,12 +361,14 @@ where
         }
     }
 
-    /// The user's permissions boundary, as stored.
-    async fn boundary_document(store: &S, key: &ScopedName) -> Result<Boundary> {
-        let Some(user) = store.get_user(key).await? else {
-            return Ok(Boundary::None);
+    /// The principal's permissions boundary, as stored: the user's, or for a
+    /// session the role's (A8).
+    async fn boundary_document(store: &S, principal: &Principal) -> Result<Boundary> {
+        let boundary = match principal {
+            Principal::User(user) => user.permissions_boundary.clone(),
+            Principal::Session(role) => role.permissions_boundary.clone(),
         };
-        let Some(arn) = user.permissions_boundary else {
+        let Some(arn) = boundary else {
             return Ok(Boundary::None);
         };
         Ok(match store.get_policy(&arn).await? {
@@ -331,15 +380,21 @@ where
         })
     }
 
-    /// Every identity document that can take part, with its source.
+    /// Every identity document that can take part, with its source: a
+    /// user's own and its groups', or a session's role's — never both.
     async fn identity_documents(
         store: &S,
-        context: &WamiContext,
-        user: &ScopedName,
+        principal: &Principal,
     ) -> Result<Vec<(PolicySource, String)>> {
-        let mut documents = Vec::new();
+        match principal {
+            Principal::User(user) => Self::user_documents(store, &user.key()).await,
+            Principal::Session(role) => Self::role_documents(store, role).await,
+        }
+    }
 
-        // ── 1. User attached managed policies ──────────────────────
+    /// A user's managed and inline policies, and its groups'.
+    async fn user_documents(store: &S, user: &ScopedName) -> Result<Vec<(PolicySource, String)>> {
+        let mut documents = Vec::new();
         for policy_arn in store.list_attached_user_policies(user).await? {
             if let Some(policy) = store.get_policy(&policy_arn).await? {
                 documents.push((
@@ -348,15 +403,11 @@ where
                 ));
             }
         }
-
-        // ── 2. User inline policies ────────────────────────────────
         for policy_name in store.list_user_policies(user).await? {
             if let Some(document) = store.get_user_policy(user, &policy_name).await? {
                 documents.push((PolicySource::UserInline { name: policy_name }, document));
             }
         }
-
-        // ── 3. Group policies (attached + inline) ──────────────────
         for group in store.list_groups_for_user(user).await? {
             let group_name = &group.group_name;
             let group_key = group.key();
@@ -383,68 +434,36 @@ where
                 }
             }
         }
-
-        // ── 4. Assumed role policies (attached + inline) ───────────
-        // TRANSITIONAL (wami 005, until the session carries the role's key):
-        // the role is read off its ARN's resource id, which is its id, not its
-        // name — D8, kept as it was for one commit.
-        let role_key = context
-            .session_info()
-            .and_then(|session| session.assumed_role_arn.as_ref())
-            .filter(|role_arn| role_arn.resource.resource_type == "role")
-            .map(|role_arn| {
-                ScopedName::new(
-                    role_arn.tenant_path.clone(),
-                    role_arn.resource.resource_id.clone(),
-                )
-            });
-        if let Some(role_key) = role_key {
-            let role_name = role_key.name().to_string();
-            for policy_arn in store.list_attached_role_policies(&role_key).await? {
-                if let Some(policy) = store.get_policy(&policy_arn).await? {
-                    documents.push((
-                        PolicySource::RoleManaged {
-                            role: role_name.clone(),
-                            arn: policy_arn,
-                        },
-                        policy.policy_document,
-                    ));
-                }
-            }
-            for policy_name in store.list_role_policies(&role_key).await? {
-                if let Some(document) = store.get_role_policy(&role_key, &policy_name).await? {
-                    documents.push((
-                        PolicySource::RoleInline {
-                            role: role_name.clone(),
-                            name: policy_name,
-                        },
-                        document,
-                    ));
-                }
-            }
-        }
-
         Ok(documents)
     }
-    /// Extract user name from a user ARN
-    ///
-    /// TRANSITIONAL (wami 005, until the context carries the caller's key): the
-    /// key is the ARN's tenant path and resource id, as the name was before.
-    fn extract_user_name_from_arn(&self, arn: &WamiArn) -> Result<ScopedName> {
-        // Check if this is a user resource
-        if arn.resource.resource_type == "user" {
-            // Return the resource ID as user_name
-            // Note: resource_id is the stable user ID, not necessarily the user name
-            // This might need adjustment based on how user_name is mapped
-            Ok(ScopedName::new(
-                arn.tenant_path.clone(),
-                arn.resource.resource_id.clone(),
-            ))
-        } else {
-            Err(AmiError::InvalidParameter {
-                message: "Caller ARN is not a user ARN".to_string(),
-            })
+
+    /// A role's managed and inline policies.
+    async fn role_documents(store: &S, role: &Role) -> Result<Vec<(PolicySource, String)>> {
+        let mut documents = Vec::new();
+        let role_key = role.key();
+        for policy_arn in store.list_attached_role_policies(&role_key).await? {
+            if let Some(policy) = store.get_policy(&policy_arn).await? {
+                documents.push((
+                    PolicySource::RoleManaged {
+                        role: role.role_name.clone(),
+                        arn: policy_arn,
+                    },
+                    policy.policy_document,
+                ));
+            }
         }
+        for policy_name in store.list_role_policies(&role_key).await? {
+            if let Some(document) = store.get_role_policy(&role_key, &policy_name).await? {
+                documents.push((
+                    PolicySource::RoleInline {
+                        role: role.role_name.clone(),
+                        name: policy_name,
+                    },
+                    document,
+                ));
+            }
+        }
+        Ok(documents)
     }
 }
 
@@ -454,6 +473,13 @@ mod tests {
     use crate::store::memory::InMemoryWamiStore;
     use wami_core::arn::matching::MatchContext;
     use wami_core::types::{PolicyDocument, PolicyStatement};
+
+    /// The key a test context names: its ARN's tenant and resource, as the
+    /// test records are written under (test code: production never builds a
+    /// key from an ARN, wami 005).
+    fn keyed(arn: &wami_core::arn::WamiArn) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(arn.tenant_path.clone(), arn.resource.resource_id.clone())
+    }
 
     /// The tenant every test here works in.
     fn tenant() -> wami_core::arn::TenantPath {
@@ -726,6 +752,7 @@ mod tests {
         wami_core::context::WamiContext::builder()
             .instance_id("999")
             .tenant_path(wami_core::arn::TenantPath::single(12345678))
+            .caller_key(keyed(&arn))
             .caller_arn(arn)
             .is_root(false)
             .build()
@@ -747,6 +774,7 @@ mod tests {
         WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&arn))
             .caller_arn(arn)
             .is_root(false)
             .build()
@@ -776,7 +804,8 @@ mod tests {
     /// Helper: set up store with a user named "alice"
     async fn setup_store_with_user(ctx: &WamiContext) -> Arc<RwLock<InMemoryWamiStore>> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        let user = user_builder::build_user(&key("alice"), Some("/".to_string()), ctx).unwrap();
+        let mut user = user_builder::build_user(&key("alice"), Some("/".to_string()), ctx).unwrap();
+        user.wami_arn = ctx.caller_arn().clone();
         store.write().await.create_user(user).await.unwrap();
         store
     }
@@ -931,6 +960,7 @@ mod tests {
         let session = SessionInfo {
             session_token: "tok-123".to_string(),
             expiration: chrono::Utc::now().timestamp() + 3600,
+            assumed_role_key: Some(keyed(&role_arn)),
             assumed_role_arn: Some(role_arn),
         };
 
@@ -939,6 +969,7 @@ mod tests {
         let ctx = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&user_arn))
             .caller_arn(user_arn)
             .is_root(false)
             .session_info(session)
@@ -948,7 +979,7 @@ mod tests {
         let store = setup_store_with_user(&ctx).await;
 
         // Create the role
-        let role = role_builder::build_role(
+        let mut role = role_builder::build_role(
             &key("admin-role"),
             r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             None,
@@ -957,6 +988,10 @@ mod tests {
             &ctx,
         )
         .unwrap();
+        // The record carries the ARN the session names (the key check).
+        if let Some(arn) = ctx.session_info().and_then(|s| s.assumed_role_arn.clone()) {
+            role.wami_arn = arn;
+        }
 
         let policy = policy_builder::build_policy(
             "AdminAccess".to_string(),
@@ -1001,6 +1036,7 @@ mod tests {
         let session = SessionInfo {
             session_token: "tok-456".to_string(),
             expiration: chrono::Utc::now().timestamp() + 3600,
+            assumed_role_key: Some(keyed(&role_arn)),
             assumed_role_arn: Some(role_arn),
         };
 
@@ -1009,6 +1045,7 @@ mod tests {
         let ctx = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&user_arn))
             .caller_arn(user_arn)
             .is_root(false)
             .session_info(session)
@@ -1017,7 +1054,7 @@ mod tests {
 
         let store = setup_store_with_user(&ctx).await;
 
-        let role = role_builder::build_role(
+        let mut role = role_builder::build_role(
             &key("reader-role"),
             r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             None,
@@ -1026,6 +1063,10 @@ mod tests {
             &ctx,
         )
         .unwrap();
+        // The record carries the ARN the session names (the key check).
+        if let Some(arn) = ctx.session_info().and_then(|s| s.assumed_role_arn.clone()) {
+            role.wami_arn = arn;
+        }
 
         {
             let mut s = store.write().await;
@@ -1062,7 +1103,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_assumed_role_deny_overrides_user_and_group_allow() {
+    async fn a_session_is_judged_on_its_role_alone_never_its_assumers_allows() {
         let role_arn: WamiArn = "arn:wami:iam:12345678:wami:999:role/restrictive-role"
             .parse()
             .unwrap();
@@ -1070,6 +1111,7 @@ mod tests {
         let session = SessionInfo {
             session_token: "tok-789".to_string(),
             expiration: chrono::Utc::now().timestamp() + 3600,
+            assumed_role_key: Some(keyed(&role_arn)),
             assumed_role_arn: Some(role_arn),
         };
 
@@ -1078,6 +1120,7 @@ mod tests {
         let ctx = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&user_arn))
             .caller_arn(user_arn)
             .is_root(false)
             .session_info(session)
@@ -1116,7 +1159,7 @@ mod tests {
         }
 
         // Assumed role: deny iam:DeleteUser
-        let role = role_builder::build_role(
+        let mut role = role_builder::build_role(
             &key("restrictive-role"),
             r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             None,
@@ -1125,6 +1168,10 @@ mod tests {
             &ctx,
         )
         .unwrap();
+        // The record carries the ARN the session names (the key check).
+        if let Some(arn) = ctx.session_info().and_then(|s| s.assumed_role_arn.clone()) {
+            role.wami_arn = arn;
+        }
         {
             let mut s = store.write().await;
             s.create_role(role).await.unwrap();
@@ -1150,12 +1197,17 @@ mod tests {
             "Role deny must override user+group allow"
         );
 
-        // Other actions still allowed
-        let allowed = authz
+        // A session is judged on its role ALONE (wami 005, (c)): the assuming
+        // user's and its group's allows take no part, so what the role does not
+        // allow is not allowed.
+        let not_the_assumers = authz
             .authorize(&ctx, "iam:GetUser", &resource)
             .await
             .unwrap();
-        assert!(allowed.is_allowed(), "iam:GetUser should still be allowed");
+        assert!(
+            !not_the_assumers.is_allowed(),
+            "a session was judged on its assumer's allows: {not_the_assumers:?}"
+        );
     }
 
     #[tokio::test]
@@ -1180,6 +1232,7 @@ mod tests {
         let ctx = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&root_arn))
             .caller_arn(root_arn)
             .is_root(true)
             .build()
@@ -1296,6 +1349,7 @@ mod tests {
         let ctx = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&arn))
             .caller_arn(arn)
             .is_root(false)
             .source_ip("10.1.2.3")
@@ -1335,6 +1389,7 @@ mod tests {
         let ctx = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&arn))
             .caller_arn(arn)
             .is_root(false)
             .source_ip("192.168.1.1")
@@ -1373,6 +1428,7 @@ mod tests {
         let ctx = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&arn))
             .caller_arn(arn)
             .is_root(false)
             .mfa_present(true)
@@ -1412,6 +1468,7 @@ mod tests {
         let ctx = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&arn))
             .caller_arn(arn)
             .is_root(false)
             .mfa_present(false)
@@ -1467,6 +1524,7 @@ mod tests {
         let ctx = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&ctx_arn))
             .caller_arn(ctx_arn)
             .is_root(false)
             .source_ip("203.0.113.50")
@@ -2141,9 +2199,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_missing_user_cannot_have_a_boundary_to_apply() {
-        // The caller is authenticated but the user record is gone. There is no
-        // boundary to intersect with, so an allow already found stands.
+    async fn a_missing_user_record_is_refused_not_evaluated() {
+        // The caller's key names no record — deleted since the context was
+        // built, or never there. Its policies are not read and nothing is
+        // decided: the refusal, not an Allow found under a dangling key
+        // (wami 005, S15).
         let ctx = test_context();
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
         store
@@ -2159,11 +2219,8 @@ mod tests {
 
         let authz = AuthorizationService::new(store);
         let resource: WamiArn = "arn:wami:iam:12345678:wami:999:user/bob".parse().unwrap();
-        assert!(authz
-            .authorize(&ctx, "iam:GetUser", &resource)
-            .await
-            .unwrap()
-            .is_allowed());
+        let got = authz.authorize(&ctx, "iam:GetUser", &resource).await;
+        assert!(matches!(got, Err(AmiError::AccessDenied { .. })), "{got:?}");
     }
 
     // ─── wami 001: an unreadable condition is an error, not a false one ──
@@ -2230,6 +2287,7 @@ mod tests {
         let ctx = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&arn))
             .caller_arn(arn)
             .is_root(false)
             .source_ip("not-an-ip")
@@ -2294,6 +2352,7 @@ mod tests {
         let mut builder = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&arn))
             .caller_arn(arn)
             .is_root(false);
         if let Some(ip) = ip {

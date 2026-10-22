@@ -292,9 +292,28 @@ pub async fn a_principals_policies_are_never_found_for_another_tenants_namesake<
         .await
         .expect("group");
     }
+    let signed_in = |user: Option<crate::wami::identity::User>| {
+        super::guard::signed_in(&user.expect("an admin"))
+    };
+    let ctx57 = signed_in(
+        store
+            .read()
+            .await
+            .get_user(&key(&t57(), "admin"))
+            .await
+            .expect("a read"),
+    );
+    let ctx67 = signed_in(
+        store
+            .read()
+            .await
+            .get_user(&key(&t67(), "admin"))
+            .await
+            .expect("a read"),
+    );
     for action in ["iam:GetUser", "iam:ListUsers"] {
         let five = authz
-            .authorize(&caller(&t57(), "admin"), action, &target)
+            .authorize(&ctx57, action, &target)
             .await
             .expect("a decision");
         assert!(
@@ -302,7 +321,7 @@ pub async fn a_principals_policies_are_never_found_for_another_tenants_namesake<
             "arrange: 5/7's admin holds {action}: {five:?}"
         );
         let six = authz
-            .authorize(&caller(&t67(), "admin"), action, &target)
+            .authorize(&ctx67, action, &target)
             .await
             .expect("a decision");
         assert!(

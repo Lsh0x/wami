@@ -17,6 +17,7 @@
 //! Behind the `conformance` feature: it is test code shipped for other
 //! crates' tests, not something a consumer runs.
 
+pub mod caller_key;
 pub mod guard;
 pub mod keys;
 pub mod names;

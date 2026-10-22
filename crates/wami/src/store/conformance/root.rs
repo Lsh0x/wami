@@ -54,11 +54,28 @@ pub async fn only_the_principal_at_path_zero_authenticates_as_root<S: RootStore>
         ctx.caller_arn()
     );
     assert_eq!(ctx.tenant_path(), &TenantPath::single(0));
+    // Its key is the stored root record's (wami 005, S5 and (c)).
+    let root_key = crate::wami::identity::RootUser::for_instance(INSTANCE)
+        .as_user()
+        .key();
+    let stored = store
+        .read()
+        .await
+        .get_user(&root_key)
+        .await
+        .expect("a read")
+        .expect("root's record");
+    assert_eq!(
+        ctx.caller_key(),
+        Some(&stored.key()),
+        "root's context carries another key"
+    );
     let ctx = auth
         .authenticate_root(INSTANCE, &root.access_key_id, &root.secret_access_key)
         .await
         .expect("authenticate_root on root's key");
     assert!(ctx.is_root());
+    assert_eq!(ctx.caller_key(), Some(&stored.key()));
 
     // A user named root at 0/7 — written straight into the store, since the
     // service refuses the name (S4) — whose ARN reads `0/7:…:user/root`:

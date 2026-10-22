@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use wami::store::conformance::{guard, keys, names, root, scope, Shared};
+use wami::store::conformance::{caller_key, guard, keys, names, root, scope, Shared};
 use wami::store::memory::InMemoryWamiStore;
 
 fn fresh() -> Shared<InMemoryWamiStore> {
@@ -47,4 +47,7 @@ conformance!(
     scope::a_principals_policies_are_never_found_for_another_tenants_namesake,
     scope::a_policy_never_crosses_into_another_tenant,
     scope::simulation_and_caller_identity_read_the_named_tenant,
+    caller_key::an_authenticated_principal_finds_its_own_policy_and_only_its_own,
+    caller_key::a_session_is_judged_on_its_roles_policies_only,
+    caller_key::a_forged_caller_key_decides_nothing,
 );

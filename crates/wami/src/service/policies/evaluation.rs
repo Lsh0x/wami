@@ -622,6 +622,13 @@ mod tests {
     use wami_core::arn::{TenantPath, WamiArn};
     use wami_core::context::WamiContext;
 
+    /// The key a test context names: its ARN's tenant and resource, as the
+    /// test records are written under (test code: production never builds a
+    /// key from an ARN, wami 005).
+    fn keyed(arn: &wami_core::arn::WamiArn) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(arn.tenant_path.clone(), arn.resource.resource_id.clone())
+    }
+
     /// The tenant every test here works in.
     fn tenant() -> wami_core::arn::TenantPath {
         wami_core::arn::TenantPath::single(12345678)
@@ -644,6 +651,7 @@ mod tests {
         WamiContext::builder()
             .instance_id("123456789012")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&arn))
             .caller_arn(arn)
             .is_root(false)
             .build()
@@ -771,7 +779,8 @@ mod tests {
         let context = test_context();
 
         // Create a user
-        let user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
+        let mut user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
+        user.wami_arn = context.caller_arn().clone();
 
         service.store.write().await.create_user(user).await.unwrap();
 
@@ -1721,7 +1730,8 @@ mod tests {
     async fn test_build_condition_context_with_principal_arn() {
         // Create a user first so the principal exists
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        let user = build_user(&key("alice"), None, &test_context()).unwrap();
+        let mut user = build_user(&key("alice"), None, &test_context()).unwrap();
+        user.wami_arn = test_context().caller_arn().clone();
         store.write().await.create_user(user).await.unwrap();
 
         let service = EvaluationService::new(store, "123456789012".to_string());
@@ -1954,12 +1964,14 @@ mod tests {
         let ctx = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&arn))
             .caller_arn(arn)
             .is_root(false)
             .build()
             .unwrap();
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
         let mut user = build_user(&key("alice"), Some("/".to_string()), &ctx).unwrap();
+        user.wami_arn = ctx.caller_arn().clone();
         if let Some(document) = boundary {
             let policy = build_policy(
                 "Boundary".to_string(),
@@ -2255,6 +2267,7 @@ mod tests {
             let ctx = WamiContext::builder()
                 .instance_id("999")
                 .tenant_path(TenantPath::single(12345678))
+                .caller_key(keyed(&arn))
                 .caller_arn(arn)
                 .is_root(false)
                 .source_ip("not-an-ip")
@@ -2296,6 +2309,7 @@ mod tests {
             let ctx = WamiContext::builder()
                 .instance_id("999")
                 .tenant_path(TenantPath::single(12345678))
+                .caller_key(key("alice"))
                 .caller_arn("arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap())
                 .is_root(false)
                 .source_ip("10.1.2.3")
