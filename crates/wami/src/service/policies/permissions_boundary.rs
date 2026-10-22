@@ -108,6 +108,7 @@ where
 
         // Validate policy is suitable as a boundary
         operations::validate_boundary_policy(&policy)?;
+        crate::service::policies::attachment::refuse_foreign(&policy, &request.principal)?;
         drop(store);
 
         // Update the principal with the boundary

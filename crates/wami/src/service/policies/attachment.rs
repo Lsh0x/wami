@@ -8,6 +8,7 @@ use crate::wami::policies::attachment::*;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
+use wami_core::arn::ScopedName;
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
 
@@ -84,6 +85,7 @@ where
                 message: format!("Policy {} is not attachable", request.policy_arn),
             });
         }
+        refuse_foreign(&policy, &request.user)?;
 
         // Attach the policy
         store
@@ -231,6 +233,7 @@ where
                 message: format!("Policy {} is not attachable", request.policy_arn),
             });
         }
+        refuse_foreign(&policy, &request.group)?;
 
         // Attach the policy
         store
@@ -378,6 +381,7 @@ where
                 message: format!("Policy {} is not attachable", request.policy_arn),
             });
         }
+        refuse_foreign(&policy, &request.role)?;
 
         // Attach the policy
         store
@@ -483,6 +487,24 @@ where
 
         Ok(ListAttachedRolePoliciesResponse { attached_policies })
     }
+}
+
+/// Refuse a policy whose tenant is not the principal's: a policy never
+/// crosses into another tenant (wami 005, A7). The policy's tenant is the one
+/// its `wami_arn` records; its AWS-format ARN names none (wami 011).
+pub(crate) fn refuse_foreign(
+    policy: &crate::wami::policies::Policy,
+    principal: &ScopedName,
+) -> Result<()> {
+    if &policy.wami_arn.tenant_path == principal.tenant() {
+        return Ok(());
+    }
+    Err(AmiError::InvalidParameter {
+        message: format!(
+            "policy {} belongs to tenant {}, not to {}'s",
+            policy.arn, policy.wami_arn.tenant_path, principal
+        ),
+    })
 }
 
 #[cfg(test)]

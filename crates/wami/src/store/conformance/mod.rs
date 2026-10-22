@@ -21,6 +21,7 @@ pub mod guard;
 pub mod keys;
 pub mod names;
 pub mod root;
+pub mod scope;
 
 use std::sync::Arc;
 use tokio::sync::RwLock;

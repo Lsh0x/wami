@@ -788,3 +788,10 @@ pub async fn a_policy_is_judged_in_its_own_tenant<S: GuardStore>(store: Shared<S
         .await
         .expect("a 5/7 delete");
 }
+
+/// 5/7's `admin`, granted `iam:*` on everything of 5/7 (`**`: a single `*`
+/// stops at a `/`), for the checks of other modules.
+pub(crate) async fn admin57_everything<S: GuardStore>(store: &Shared<S>) -> WamiContext {
+    let all57 = format!("arn:wami:iam:{}:wami:{INSTANCE}:**", t57());
+    principal(store, &t57(), "admin", &[all57]).await
+}
