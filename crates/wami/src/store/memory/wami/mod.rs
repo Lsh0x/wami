@@ -59,7 +59,7 @@ pub struct InMemoryWamiStore {
         HashMap<String, crate::credentials::signing_certificate::SigningCertificate>,
     // STS resources
     pub(super) sessions: HashMap<String, StsSession>,
-    pub(super) identities: HashMap<String, CallerIdentity>,
+    pub(super) identities: HashMap<ScopedName, CallerIdentity>,
     // Tenant resources
     pub(super) tenants: HashMap<TenantId, Tenant>,
     // SSO Admin resources

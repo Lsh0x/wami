@@ -8,6 +8,7 @@ use crate::store::traits::{IdentityStore, SessionStore};
 use crate::wami::sts::identity::CallerIdentity;
 use crate::wami::sts::session::{SessionStatus, StsSession};
 use chrono::{Duration, Utc};
+use wami_core::arn::{ScopedName, TenantPath};
 
 #[test]
 fn test_in_memory_sts_store_new() {
@@ -231,14 +232,17 @@ async fn test_identity_create_and_get() {
         providers: Vec::new(),
     };
 
-    let arn = identity.arn.clone();
+    let alice = key("alice");
 
     // Create identity
-    let created = store.create_identity(identity.clone()).await.unwrap();
+    let created = store
+        .create_identity(&key("alice"), identity.clone())
+        .await
+        .unwrap();
     assert_eq!(created.user_id, "AIDACKCEVSQ6C2EXAMPLE");
 
     // Get identity
-    let retrieved = store.get_identity(&arn).await.unwrap();
+    let retrieved = store.get_identity(&alice).await.unwrap();
     assert!(retrieved.is_some());
     assert_eq!(retrieved.unwrap().user_id, "AIDACKCEVSQ6C2EXAMPLE");
 }
@@ -248,7 +252,7 @@ async fn test_identity_get_nonexistent() {
     let store = InMemoryStsStore::default();
 
     let result = store
-        .get_identity("arn:aws:iam::123:user/nonexistent")
+        .get_identity(&ScopedName::new(TenantPath::single(0), "nonexistent"))
         .await
         .unwrap();
     assert!(result.is_none());
@@ -258,7 +262,7 @@ async fn test_identity_get_nonexistent() {
 async fn test_identity_list_empty() {
     let store = InMemoryStsStore::default();
 
-    let identities = store.list_identities().await.unwrap();
+    let identities = store.list_identities(&TenantPath::single(0)).await.unwrap();
     assert_eq!(identities.len(), 0);
 }
 
@@ -277,10 +281,13 @@ async fn test_identity_list_multiple() {
                 .unwrap(),
             providers: Vec::new(),
         };
-        store.create_identity(identity).await.unwrap();
+        store
+            .create_identity(&key(&format!("user{i}")), identity)
+            .await
+            .unwrap();
     }
 
-    let identities = store.list_identities().await.unwrap();
+    let identities = store.list_identities(&TenantPath::single(0)).await.unwrap();
     assert_eq!(identities.len(), 3);
 }
 
@@ -304,9 +311,12 @@ async fn test_identity_with_providers() {
         providers: vec![provider_config],
     };
 
-    store.create_identity(identity.clone()).await.unwrap();
+    store
+        .create_identity(&key("alice"), identity.clone())
+        .await
+        .unwrap();
 
-    let retrieved = store.get_identity(&identity.arn).await.unwrap().unwrap();
+    let retrieved = store.get_identity(&key("alice")).await.unwrap().unwrap();
     assert_eq!(retrieved.providers.len(), 1);
     assert_eq!(retrieved.providers[0].provider_name, "aws");
 }
@@ -323,7 +333,10 @@ async fn test_identity_update() {
         providers: Vec::new(),
     };
 
-    store.create_identity(identity.clone()).await.unwrap();
+    store
+        .create_identity(&key("test"), identity.clone())
+        .await
+        .unwrap();
 
     // Update (create with same ARN replaces)
     let updated_identity = CallerIdentity {
@@ -334,8 +347,16 @@ async fn test_identity_update() {
         providers: Vec::new(),
     };
 
-    store.create_identity(updated_identity).await.unwrap();
+    store
+        .create_identity(&key("test"), updated_identity)
+        .await
+        .unwrap();
 
-    let retrieved = store.get_identity(&identity.arn).await.unwrap().unwrap();
+    let retrieved = store.get_identity(&key("test")).await.unwrap().unwrap();
     assert_eq!(retrieved.account, "222222222222");
+}
+
+/// `name`'s key in the tenant every identity here is of.
+fn key(name: &str) -> ScopedName {
+    ScopedName::new(TenantPath::single(0), name)
 }
