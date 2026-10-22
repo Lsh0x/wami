@@ -16,6 +16,29 @@
 //!
 //! Behind the `conformance` feature: it is test code shipped for other
 //! crates' tests, not something a consumer runs.
+//!
+//! A backend runs it from its own tests, with `wami = { features =
+//! ["conformance"] }` among its dev-dependencies — one test per check, each
+//! handed a fresh store:
+//!
+//! ```rust,ignore
+//! use wami::store::conformance::{keys, Shared};
+//!
+//! fn fresh() -> Shared<MyStore> {
+//!     std::sync::Arc::new(tokio::sync::RwLock::new(MyStore::empty()))
+//! }
+//!
+//! #[tokio::test]
+//! async fn two_tenants_each_hold_a_user_of_one_name() {
+//!     keys::two_tenants_each_hold_a_user_of_one_name(fresh()).await;
+//! }
+//! ```
+//!
+//! The modules: [`keys`] (S1, S3, a held policy ARN, freed names),
+//! [`guard`] (S2, S11, S12, S13, deletion tasks, policies), [`names`] (S4),
+//! [`root`] (S5), [`scope`] (S6, S10, S13, foreign policies) and
+//! [`caller_key`] (S9, S13 sessions, S15). The source scans (S7, S14) are
+//! wami's own, in `tests/keys_scan.rs`.
 
 pub mod caller_key;
 pub mod guard;
