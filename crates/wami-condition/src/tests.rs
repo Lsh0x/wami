@@ -7183,6 +7183,30 @@ fn every_declared_key_is_written_where_it_is_read() {
 }
 
 #[test]
+fn a_tenant_path_is_read_only_in_its_canonical_form() {
+    // `05/7` and `+5` parse as numbers, and kept raw they never equal the
+    // `5/7` and `5` a principal's tenant renders as: refused at parse
+    // (wami 005, review round 2, low).
+    use crate::keys::assign_context_value;
+    for key in [
+        "wami:TenantId",
+        "wami:PrincipalTenantId",
+        "wami:ResourceTenantId",
+    ] {
+        for raw in ["05/7", "+5", "5/07", "007", "5/+7"] {
+            let mut context = ConditionContext::builder().build();
+            let got = assign_context_value(&mut context, key, &[raw.to_string()]);
+            assert!(got.is_err(), "{key} took {raw}: {got:?}");
+        }
+        for canonical in ["5/7", "0", "12345678/87654321"] {
+            let mut context = ConditionContext::builder().build();
+            let got = assign_context_value(&mut context, key, &[canonical.to_string()]);
+            assert!(got.is_ok(), "{key} refused {canonical}: {got:?}");
+        }
+    }
+}
+
+#[test]
 fn a_value_that_does_not_read_as_its_key_is_refused_without_being_quoted() {
     use crate::keys::assign_context_value;
     let secret = "s3cr3t".to_string();

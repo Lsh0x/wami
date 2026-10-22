@@ -774,13 +774,18 @@ fn number(values: &[String]) -> std::result::Result<f64, ConditionError> {
 }
 
 /// A tenant path: whole numbers joined by `/` (`5/7`) — the FULL path, so
-/// `5/7` and `5/9` stay apart (wami 005, review round 1 Δ11).
+/// `5/7` and `5/9` stay apart (wami 005, review round 1 Δ11). Only the
+/// canonical form is read: `05/7` or `+5` parse as numbers, and kept raw
+/// they never equal the `5/7` or `5` a principal's tenant renders as
+/// (review round 2, low).
 fn tenant_path(values: &[String]) -> std::result::Result<String, ConditionError> {
     let value = one(values)?;
     let readable = !value.is_empty()
-        && value
-            .split('/')
-            .all(|segment| segment.parse::<u64>().is_ok());
+        && value.split('/').all(|segment| {
+            segment
+                .parse::<u64>()
+                .is_ok_and(|number| number.to_string() == segment)
+        });
     if readable {
         Ok(value)
     } else {
