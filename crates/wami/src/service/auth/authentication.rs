@@ -32,7 +32,6 @@
 //! ```
 
 use crate::store::traits::{AccessKeyStore, UserStore};
-use crate::wami::identity::root_user::ROOT_USER_NAME;
 use crate::wami::identity::User;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -187,8 +186,10 @@ where
             .validate_access_key(access_key_id, secret_access_key)
             .await?;
 
-        // Verify this is actually the root user
-        if user.user_name != ROOT_USER_NAME {
+        // Root is decided on the stored RECORD — its ARN at tenant path
+        // exactly `0` — never on its name: any tenant's user named root passed
+        // the name check, and with it every authorization check (D6).
+        if !user.wami_arn.is_root_user() {
             return Err(AmiError::AccessDenied {
                 message: "Not a root user".to_string(),
             });

@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use wami::store::conformance::{guard, keys, names, Shared};
+use wami::store::conformance::{guard, keys, names, root, Shared};
 use wami::store::memory::InMemoryWamiStore;
 
 fn fresh() -> Shared<InMemoryWamiStore> {
@@ -42,4 +42,5 @@ conformance!(
     guard::a_policy_is_judged_in_its_own_tenant,
     names::a_reserved_name_is_refused_at_create_in_every_tenant,
     names::a_reserved_name_is_refused_at_rename,
+    root::only_the_principal_at_path_zero_authenticates_as_root,
 );
