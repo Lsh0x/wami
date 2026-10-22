@@ -2,7 +2,7 @@
 //! policies are never found for another tenant's principal of the same
 //! name, and a policy never crosses into another tenant (S6, S10, S13).
 
-use super::guard::GuardStore;
+use super::conditions::EvaluatorStore;
 use super::{caller, key, t57, t67, Shared, INSTANCE};
 use crate::credentials::server_certificate::requests::{
     ListServerCertificatesRequest, UploadServerCertificateRequest,
@@ -14,6 +14,7 @@ use crate::service::{
     PermissionsBoundaryService, PolicyService, RoleService, ServerCertificateService, UserService,
 };
 use crate::store::traits::IdentityStore;
+use crate::store::traits::ServerCertificateStore;
 use crate::wami::identity::group::requests::{CreateGroupRequest, ListGroupsRequest};
 use crate::wami::identity::role::requests::{CreateRoleRequest, ListRolesRequest};
 use crate::wami::identity::user::requests::{CreateUserRequest, ListUsersRequest};
@@ -71,7 +72,11 @@ fn role(key: ScopedName) -> CreateRoleRequest {
 /// # Panics
 ///
 /// When a list returns another tenant's record, or misses its own.
-pub async fn a_list_returns_exactly_the_tenant_it_names<S: GuardStore>(store: Shared<S>) {
+pub async fn a_list_returns_exactly_the_tenant_it_names<
+    S: EvaluatorStore + ServerCertificateStore,
+>(
+    store: Shared<S>,
+) {
     for (tenant, mine) in [(t57(), "five"), (t67(), "six")] {
         let ctx = caller(&tenant, "seed");
         UserService::new(store.clone())
@@ -247,7 +252,9 @@ pub async fn a_list_returns_exactly_the_tenant_it_names<S: GuardStore>(store: Sh
 ///
 /// When a principal is judged on another tenant's same-named principal's
 /// policies.
-pub async fn a_principals_policies_are_never_found_for_another_tenants_namesake<S: GuardStore>(
+pub async fn a_principals_policies_are_never_found_for_another_tenants_namesake<
+    S: EvaluatorStore,
+>(
     store: Shared<S>,
 ) {
     let authz = AuthorizationService::new(store.clone());
@@ -339,7 +346,7 @@ pub async fn a_principals_policies_are_never_found_for_another_tenants_namesake<
 /// # Panics
 ///
 /// When a policy of one tenant is attached to a principal of another.
-pub async fn a_policy_never_crosses_into_another_tenant<S: GuardStore>(store: Shared<S>) {
+pub async fn a_policy_never_crosses_into_another_tenant<S: EvaluatorStore>(store: Shared<S>) {
     let ctx = caller(&t57(), "seed");
     let theirs = PolicyService::new(store.clone())
         .create_policy(
@@ -472,7 +479,7 @@ pub async fn a_policy_never_crosses_into_another_tenant<S: GuardStore>(store: Sh
 /// When either reads another tenant's same-named principal.
 pub async fn simulation_and_caller_identity_read_the_named_tenant<S>(store: Shared<S>)
 where
-    S: GuardStore + IdentityStore,
+    S: EvaluatorStore + IdentityStore,
 {
     let deny_all = PolicyService::new(store.clone())
         .create_policy(

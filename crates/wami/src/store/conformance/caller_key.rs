@@ -2,11 +2,12 @@
 //! its context carries — set from the record at authentication — and checks
 //! it at use, so a forged or stale key decides nothing (S9, S13, S15).
 
-use super::guard::GuardStore;
+use super::conditions::EvaluatorStore;
 use super::{caller, key, t57, t67, Shared, INSTANCE};
 use crate::credentials::access_key::builder::build_access_key;
 use crate::service::auth::authentication::hash_secret;
 use crate::service::{AuthenticationService, AuthorizationService};
+use crate::store::traits::AccessKeyStore;
 use crate::wami::identity::role::builder::build_role;
 use crate::wami::identity::user::builder::build_user;
 use wami_core::arn::{ScopedName, TenantPath, WamiArn};
@@ -26,7 +27,7 @@ fn anything() -> WamiArn {
 
 /// Store `name` in `tenant`, with an inline policy allowing `action` when
 /// given, and an access key whose secret is `secret`; returns the key id.
-async fn stored<S: GuardStore>(
+async fn stored<S: EvaluatorStore + AccessKeyStore>(
     store: &Shared<S>,
     tenant: &TenantPath,
     name: &str,
@@ -57,7 +58,9 @@ async fn stored<S: GuardStore>(
 /// # Panics
 ///
 /// When a principal's own policy is missed, or found for its namesake.
-pub async fn an_authenticated_principal_finds_its_own_policy_and_only_its_own<S: GuardStore>(
+pub async fn an_authenticated_principal_finds_its_own_policy_and_only_its_own<
+    S: EvaluatorStore + AccessKeyStore,
+>(
     store: Shared<S>,
 ) {
     let mine = stored(&store, &t57(), "alice", Some("iam:GetUser"), "five-secret").await;
@@ -111,7 +114,7 @@ fn session(
 /// # Panics
 ///
 /// When a session is judged on another tenant's role, or on its assumer.
-pub async fn a_session_is_judged_on_its_roles_policies_only<S: GuardStore>(store: Shared<S>) {
+pub async fn a_session_is_judged_on_its_roles_policies_only<S: EvaluatorStore>(store: Shared<S>) {
     let ctx = caller(&t57(), "seed");
     let (bob, r57, r67) = {
         let mut s = store.write().await;
@@ -190,7 +193,9 @@ pub async fn a_session_is_judged_on_its_roles_policies_only<S: GuardStore>(store
 ///
 /// When a forged, absent or dangling key decides anything, or the refusals
 /// differ.
-pub async fn a_forged_caller_key_decides_nothing<S: GuardStore>(store: Shared<S>) {
+pub async fn a_forged_caller_key_decides_nothing<S: EvaluatorStore + AccessKeyStore>(
+    store: Shared<S>,
+) {
     stored(&store, &t57(), "alice", Some("iam:GetUser"), "s1").await;
     stored(&store, &t57(), "admin", Some("iam:*"), "s2").await;
     stored(&store, &t67(), "alice", Some("iam:*"), "s3").await;

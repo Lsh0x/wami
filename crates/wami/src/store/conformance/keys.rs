@@ -4,20 +4,11 @@
 //! next holder.
 
 use super::{caller, key, t57, t67, Shared};
-use crate::service::{
-    AccessKeyService, AttachmentService, GroupService, InlinePolicyService, PolicyService,
-    RoleService, UserService,
-};
+use crate::service::{AccessKeyService, GroupService, PolicyService, RoleService, UserService};
 use crate::store::traits::{AccessKeyStore, GroupStore, PolicyStore, RoleStore, UserStore};
 use crate::wami::identity::group::requests::{CreateGroupRequest, UpdateGroupRequest};
 use crate::wami::identity::role::requests::CreateRoleRequest;
 use crate::wami::identity::user::requests::{CreateUserRequest, UpdateUserRequest};
-use crate::wami::policies::attachment::requests::{
-    AttachGroupPolicyRequest, AttachRolePolicyRequest, AttachUserPolicyRequest,
-};
-use crate::wami::policies::inline::requests::{
-    PutGroupPolicyRequest, PutRolePolicyRequest, PutUserPolicyRequest,
-};
 use crate::wami::policies::policy::requests::CreatePolicyRequest;
 use crate::CreateAccessKeyRequest;
 use wami_core::arn::{ScopedName, TenantPath};
@@ -287,67 +278,33 @@ pub async fn a_create_on_a_held_policy_arn_is_refused<S: PolicyStore + 'static>(
     assert_eq!(now.wami_arn.tenant_path, t57());
 }
 
-/// The store traits the freed-name checks traverse.
-pub trait FreedNameStore:
-    UserStore + GroupStore + RoleStore + PolicyStore + AccessKeyStore + 'static
-{
-}
-impl<T> FreedNameStore for T where
-    T: UserStore + GroupStore + RoleStore + PolicyStore + AccessKeyStore + 'static
-{
-}
+/// The store traits the user freed-name checks traverse: users, policies
+/// and access keys — no group, so a store without groups (anatta-auth's)
+/// runs them (review round 1, Δ9). Memberships have their own check.
+pub trait FreedNameStore: UserStore + PolicyStore + AccessKeyStore + 'static {}
+impl<T> FreedNameStore for T where T: UserStore + PolicyStore + AccessKeyStore + 'static {}
 
-/// Give `holder` (a user of 5/7) an inline policy, an attached policy, a
-/// membership and an access key; returns the attached policy's ARN.
+/// Give `holder` (a user of 5/7) an inline policy, an attached managed
+/// policy of its tenant and an access key; returns the managed policy's ARN.
 async fn endow<S: FreedNameStore>(store: &Shared<S>, holder: &ScopedName) -> String {
     let ctx = caller(&t57(), "x");
-    let admins = key(&t57(), "admins");
-    if GroupService::new(store.clone())
-        .get_group(&ctx, &admins)
+    let ops = PolicyService::new(store.clone())
+        .create_policy(
+            &ctx,
+            policy(&t57(), &format!("ops-{}", holder.name()), allow_all()),
+        )
         .await
-        .expect("a read")
-        .is_none()
+        .expect("the managed policy")
+        .arn;
     {
-        GroupService::new(store.clone())
-            .create_group(&ctx, group(admins.clone()))
+        let mut s = store.write().await;
+        s.put_user_policy(holder, "p", allow_all())
             .await
-            .expect("the group");
+            .expect("an inline policy");
+        s.attach_user_policy(holder, &ops)
+            .await
+            .expect("an attachment");
     }
-    let ops = match PolicyService::new(store.clone())
-        .create_policy(&ctx, policy(&t57(), "ops", allow_all()))
-        .await
-    {
-        Ok(p) => p.arn,
-        Err(AmiError::ResourceExists { .. }) => {
-            format!("arn:aws:iam::{}:policy/ops", super::INSTANCE)
-        }
-        Err(e) => panic!("the managed policy: {e:?}"),
-    };
-    InlinePolicyService::new(store.clone())
-        .put_user_policy(
-            &ctx,
-            PutUserPolicyRequest {
-                user: holder.clone(),
-                policy_name: "p".to_string(),
-                policy_document: allow_all(),
-            },
-        )
-        .await
-        .expect("an inline policy");
-    AttachmentService::new(store.clone())
-        .attach_user_policy(
-            &ctx,
-            AttachUserPolicyRequest {
-                user: holder.clone(),
-                policy_arn: ops.clone(),
-            },
-        )
-        .await
-        .expect("an attachment");
-    GroupService::new(store.clone())
-        .add_user_to_group(&ctx, &admins, holder)
-        .await
-        .expect("a membership");
     AccessKeyService::new(store.clone())
         .create_access_key(
             &ctx,
@@ -360,36 +317,29 @@ async fn endow<S: FreedNameStore>(store: &Shared<S>, holder: &ScopedName) -> Str
     ops
 }
 
-/// Everything `holder` holds: inline names, attached ARNs, group names, and
-/// how many access keys.
+/// Everything `holder` holds: inline names, attached ARNs, and how many
+/// access keys.
 async fn holdings<S: FreedNameStore>(
     store: &Shared<S>,
     holder: &ScopedName,
-) -> (Vec<String>, Vec<String>, Vec<String>, usize) {
+) -> (Vec<String>, Vec<String>, usize) {
     let s = store.read().await;
     let inline = s.list_user_policies(holder).await.expect("inline");
     let attached = s
         .list_attached_user_policies(holder)
         .await
         .expect("attached");
-    let groups = s
-        .list_groups_for_user(holder)
-        .await
-        .expect("groups")
-        .into_iter()
-        .map(|g| g.group_name)
-        .collect();
     let keys = s
         .list_access_keys(holder, None)
         .await
         .expect("keys")
         .0
         .len();
-    (inline, attached, groups, keys)
+    (inline, attached, keys)
 }
 
 /// A deleted user's name hands nothing to its next holder: no policy, no
-/// membership, no credential (wami 005, freed names).
+/// credential (wami 005, freed names).
 ///
 /// # Panics
 ///
@@ -407,8 +357,8 @@ pub async fn a_deleted_users_name_hands_nothing_to_its_next_holder<S: FreedNameS
     endow(&store, &alice).await;
     let before = holdings(&store, &alice).await;
     assert_eq!(
-        (before.0.len(), before.1.len(), before.2.len(), before.3),
-        (1, 1, 1, 1),
+        (before.0.len(), before.1.len(), before.2),
+        (1, 1, 1),
         "arrange: alice holds one of each: {before:?}"
     );
 
@@ -422,13 +372,13 @@ pub async fn a_deleted_users_name_hands_nothing_to_its_next_holder<S: FreedNameS
     let inherited = holdings(&store, &alice).await;
     assert_eq!(
         inherited,
-        (vec![], vec![], vec![], 0),
+        (vec![], vec![], 0),
         "the new alice inherits the deleted alice's {inherited:?}"
     );
 }
 
-/// A renamed user carries its policies, memberships and credentials to its
-/// new name, and leaves nothing on the old one for its next holder.
+/// A renamed user carries its policies and credentials to its new name, and
+/// leaves nothing on the old one for its next holder.
 ///
 /// # Panics
 ///
@@ -465,12 +415,7 @@ pub async fn a_renamed_user_carries_everything_and_leaves_nothing_behind<S: Free
     let carried = holdings(&store, &alicia).await;
     assert_eq!(
         carried,
-        (
-            vec!["p".to_string()],
-            vec![ops],
-            vec!["admins".to_string()],
-            1
-        ),
+        (vec!["p".to_string()], vec![ops], 1),
         "alicia lost what alice held"
     );
     let keys = store
@@ -487,34 +432,32 @@ pub async fn a_renamed_user_carries_everything_and_leaves_nothing_behind<S: Free
         .await
         .expect("the next alice");
     let left = holdings(&store, &alice).await;
-    assert_eq!(
-        left,
-        (vec![], vec![], vec![], 0),
-        "the new alice holds {left:?}"
-    );
+    assert_eq!(left, (vec![], vec![], 0), "the new alice holds {left:?}");
 }
 
-/// A freed group or role name hands nothing to its next holder: a deleted
-/// group's members and policies, a renamed group's, a deleted role's policies.
+/// A freed group name, and a freed member's, hand nothing to their next
+/// holder: a renamed group carries its members and policies, a deleted one
+/// leaves no member to the next group of the name, a renamed member keeps
+/// its memberships and a deleted one leaves none to the next user of the
+/// name.
 ///
 /// # Panics
 ///
-/// When a new group or role inherits anything of the one that held the name.
-pub async fn a_freed_group_or_role_name_hands_nothing_to_its_next_holder<S: FreedNameStore>(
-    store: Shared<S>,
-) {
+/// When a membership or a group policy passes to the next holder of a name.
+pub async fn a_freed_group_or_member_name_hands_nothing_to_its_next_holder<S>(store: Shared<S>)
+where
+    S: UserStore + GroupStore + PolicyStore + 'static,
+{
     let ctx = caller(&t57(), "x");
     let groups = GroupService::new(store.clone());
-    let roles = RoleService::new(store.clone());
-    let inline = InlinePolicyService::new(store.clone());
-    let attach = AttachmentService::new(store.clone());
+    let users = UserService::new(store.clone());
     let ops = PolicyService::new(store.clone())
         .create_policy(&ctx, policy(&t57(), "ops", allow_all()))
         .await
         .expect("ops")
         .arn;
     let bob = key(&t57(), "bob");
-    UserService::new(store.clone())
+    users
         .create_user(&ctx, user(bob.clone()))
         .await
         .expect("bob");
@@ -529,27 +472,15 @@ pub async fn a_freed_group_or_role_name_hands_nothing_to_its_next_holder<S: Free
         .add_user_to_group(&ctx, &devs, &bob)
         .await
         .expect("a member");
-    inline
-        .put_group_policy(
-            &ctx,
-            PutGroupPolicyRequest {
-                group: devs.clone(),
-                policy_name: "p".into(),
-                policy_document: allow_all(),
-            },
-        )
-        .await
-        .expect("an inline group policy");
-    attach
-        .attach_group_policy(
-            &ctx,
-            AttachGroupPolicyRequest {
-                group: devs.clone(),
-                policy_arn: ops.clone(),
-            },
-        )
-        .await
-        .expect("a group attachment");
+    {
+        let mut s = store.write().await;
+        s.put_group_policy(&devs, "p", allow_all())
+            .await
+            .expect("an inline group policy");
+        s.attach_group_policy(&devs, &ops)
+            .await
+            .expect("a group attachment");
+    }
     groups
         .update_group(
             &ctx,
@@ -565,6 +496,7 @@ pub async fn a_freed_group_or_role_name_hands_nothing_to_its_next_holder<S: Free
         .create_group(&ctx, group(devs.clone()))
         .await
         .expect("the next devs");
+    let builders = devs.renamed("builders");
     {
         let s = store.read().await;
         let member_of: Vec<String> = s
@@ -592,7 +524,6 @@ pub async fn a_freed_group_or_role_name_hands_nothing_to_its_next_holder<S: Free
             0,
             "the new devs inherits an attachment"
         );
-        let builders = devs.renamed("builders");
         assert_eq!(
             s.list_group_policies(&builders).await.expect("inline"),
             vec!["p".to_string()]
@@ -605,13 +536,82 @@ pub async fn a_freed_group_or_role_name_hands_nothing_to_its_next_holder<S: Free
         );
     }
 
+    // A member renamed keeps its memberships; a member deleted leaves none.
+    users
+        .update_user(
+            &ctx,
+            UpdateUserRequest {
+                user: bob.clone(),
+                new_user_name: Some("robert".into()),
+                new_path: None,
+            },
+        )
+        .await
+        .expect("bob renamed");
+    let robert = bob.renamed("robert");
+    assert_eq!(
+        store
+            .read()
+            .await
+            .list_groups_for_user(&robert)
+            .await
+            .expect("groups")
+            .len(),
+        1,
+        "robert lost bob's membership"
+    );
+    users
+        .create_user(&ctx, user(bob.clone()))
+        .await
+        .expect("the next bob");
+    assert_eq!(
+        store
+            .read()
+            .await
+            .list_groups_for_user(&bob)
+            .await
+            .expect("groups")
+            .len(),
+        0,
+        "the next bob inherits a membership"
+    );
+    users
+        .delete_user(&ctx, &robert)
+        .await
+        .expect("robert deleted");
+    users
+        .create_user(&ctx, user(robert.clone()))
+        .await
+        .expect("the next robert");
+    assert_eq!(
+        store
+            .read()
+            .await
+            .list_groups_for_user(&robert)
+            .await
+            .expect("groups")
+            .len(),
+        0,
+        "the next robert inherits a membership"
+    );
+
     // A group deleted: its members are no longer members of the next holder.
     groups
-        .delete_group(&ctx, &devs.renamed("builders"))
+        .add_user_to_group(&ctx, &builders, &bob)
+        .await
+        .expect("bob joins builders");
+    {
+        let mut s = store.write().await;
+        s.detach_group_policy(&builders, &ops)
+            .await
+            .expect("detach");
+    }
+    groups
+        .delete_group(&ctx, &builders)
         .await
         .expect("the delete");
     groups
-        .create_group(&ctx, group(devs.renamed("builders")))
+        .create_group(&ctx, group(builders.clone()))
         .await
         .expect("the next builders");
     let member_of = store
@@ -625,34 +625,38 @@ pub async fn a_freed_group_or_role_name_hands_nothing_to_its_next_holder<S: Free
         0,
         "bob is a member of the next builders: {member_of:?}"
     );
+}
 
-    // A role deleted: its policies do not pass to the next role of the name.
+/// A deleted role's policies do not pass to the next role of the name.
+///
+/// # Panics
+///
+/// When the next role of a name inherits a policy.
+pub async fn a_freed_role_name_hands_nothing_to_its_next_holder<S>(store: Shared<S>)
+where
+    S: RoleStore + PolicyStore + 'static,
+{
+    let ctx = caller(&t57(), "x");
+    let roles = RoleService::new(store.clone());
+    let ops = PolicyService::new(store.clone())
+        .create_policy(&ctx, policy(&t57(), "ops", allow_all()))
+        .await
+        .expect("ops")
+        .arn;
     let admin = key(&t57(), "admin");
     roles
         .create_role(&ctx, role(admin.clone()))
         .await
         .expect("admin");
-    inline
-        .put_role_policy(
-            &ctx,
-            PutRolePolicyRequest {
-                role: admin.clone(),
-                policy_name: "p".into(),
-                policy_document: allow_all(),
-            },
-        )
-        .await
-        .expect("an inline role policy");
-    attach
-        .attach_role_policy(
-            &ctx,
-            AttachRolePolicyRequest {
-                role: admin.clone(),
-                policy_arn: ops.clone(),
-            },
-        )
-        .await
-        .expect("a role attachment");
+    {
+        let mut s = store.write().await;
+        s.put_role_policy(&admin, "p", allow_all())
+            .await
+            .expect("an inline role policy");
+        s.attach_role_policy(&admin, &ops)
+            .await
+            .expect("a role attachment");
+    }
     roles.delete_role(&ctx, &admin).await.expect("the delete");
     roles
         .create_role(&ctx, role(admin.clone()))

@@ -8,7 +8,15 @@
 //!
 //! Each check asks only for the store traits it traverses, so a backend that
 //! implements a subset of [`WamiStore`](crate::store::WamiStore) runs the
-//! checks that subset reaches.
+//! checks that subset reaches. A store of exactly `UserStore`, `RoleStore`,
+//! `PolicyStore` and `AccessKeyStore` — no groups, no other credential kind —
+//! runs the user, role and policy key checks, the user and role freed-name
+//! checks, [`names`] and [`root`]: wami's `tests/conformance_minimal.rs`
+//! compiles and passes them against such a store, so the claim is a build,
+//! not a comment. The evaluator's checks ([`conditions`], [`caller_key`],
+//! most of [`guard`], [`policies`], [`scope`]) need its traits —
+//! `UserStore`, `GroupStore`, `RoleStore`, `PolicyStore`
+//! ([`conditions::EvaluatorStore`]) — plus what each names.
 //!
 //! Every check asserts its arrange (both records present, distinct ids)
 //! before its property: a check whose fixture silently failed would pass on
@@ -35,9 +43,12 @@
 //! ```
 //!
 //! The modules: [`keys`] (S1, S3, a held policy ARN, freed names),
-//! [`guard`] (S2, S11, S12, S13, deletion tasks, policies), [`names`] (S4),
-//! [`root`] (S5), [`scope`] (S6, S10, S13, foreign policies) and
-//! [`caller_key`] (S9, S13 sessions, S15). The source scans (S7, S14) are
+//! [`guard`] (S2, S11, S12, S13, deletion tasks, policies, renames, caller
+//! identity, ids judged on owner and record, one instance per store),
+//! [`names`] (S4), [`root`] (S5), [`scope`] (S6, S10, S13, foreign
+//! policies), [`caller_key`] (S9, S13 sessions, S15), [`conditions`]
+//! (aws:username, `${principal}`, tenant keys) and [`policies`] (a policy
+//! decides only its own tenant's principals). The source scans (S7, S14) are
 //! wami's own, in `tests/keys_scan.rs`.
 
 pub mod caller_key;

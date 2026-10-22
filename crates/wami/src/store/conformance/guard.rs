@@ -3,6 +3,7 @@
 //! is read, so the refusal is the same whether the target exists or not
 //! (S2, S11, S12, S13).
 
+use super::conditions::EvaluatorStore;
 use super::{caller, key, t57, t67, Shared, INSTANCE};
 use crate::credentials::login_profile::requests::CreateLoginProfileRequest;
 use crate::credentials::mfa_device::requests::EnableMfaDeviceRequest;
@@ -84,7 +85,7 @@ fn target(tenant: &TenantPath, kind: &str, name: &str) -> String {
 /// Store `name` in `tenant` with an inline policy allowing `iam:*` on
 /// `resources`, written straight into the store (no guard), and return its
 /// context.
-async fn principal<S: GuardStore>(
+async fn principal<S: EvaluatorStore>(
     store: &Shared<S>,
     tenant: &TenantPath,
     name: &str,
@@ -112,7 +113,7 @@ pub(crate) fn signed_in(user: &crate::wami::identity::User) -> WamiContext {
 }
 
 /// Create `name` in `tenant` with no guard.
-async fn plain_user<S: GuardStore>(store: &Shared<S>, tenant: &TenantPath, name: &str) {
+async fn plain_user<S: EvaluatorStore>(store: &Shared<S>, tenant: &TenantPath, name: &str) {
     UserService::new(store.clone())
         .create_user(
             &caller(tenant, "seed"),
@@ -127,7 +128,7 @@ async fn plain_user<S: GuardStore>(store: &Shared<S>, tenant: &TenantPath, name:
         .expect("a seeded user");
 }
 
-fn authz<S: GuardStore>(store: &Shared<S>) -> Arc<dyn Authorizer> {
+fn authz<S: EvaluatorStore>(store: &Shared<S>) -> Arc<dyn Authorizer> {
     into_authorizer(AuthorizationService::new(store.clone()))
 }
 
@@ -147,7 +148,7 @@ fn refused<T: Debug>(what: &str, got: Result<T>, arn: &str) -> String {
 
 /// The caller of S2: tenant 5/7's `admin`, whose ONLY grant is `iam:*` on
 /// 5/7's `user/*` and `credential/*` — never `*`.
-async fn admin57<S: GuardStore>(store: &Shared<S>) -> WamiContext {
+async fn admin57<S: EvaluatorStore>(store: &Shared<S>) -> WamiContext {
     principal(
         store,
         &t57(),
@@ -165,7 +166,11 @@ async fn admin57<S: GuardStore>(store: &Shared<S>) -> WamiContext {
 /// # Panics
 ///
 /// When a verb crosses into another tenant, or refuses inside its own.
-pub async fn a_tenant_admin_is_refused_on_another_tenants_users<S: GuardStore>(store: Shared<S>) {
+pub async fn a_tenant_admin_is_refused_on_another_tenants_users<
+    S: EvaluatorStore + AccessKeyStore,
+>(
+    store: Shared<S>,
+) {
     InstanceBootstrap::initialize_instance(store.clone(), INSTANCE)
         .await
         .expect("bootstrap: root at tenant 0");
@@ -461,7 +466,9 @@ pub async fn a_tenant_admin_is_refused_every_credential_of_another_tenant<S: Gua
 /// # Panics
 ///
 /// When the credential is stamped with the caller's tenant.
-pub async fn a_credential_takes_its_owners_tenant_never_the_callers<S: GuardStore>(
+pub async fn a_credential_takes_its_owners_tenant_never_the_callers<
+    S: EvaluatorStore + AccessKeyStore,
+>(
     store: Shared<S>,
 ) {
     let operator = principal(
@@ -497,7 +504,9 @@ pub async fn a_credential_takes_its_owners_tenant_never_the_callers<S: GuardStor
 /// # Panics
 ///
 /// When the grant on one tenant's alice reaches the other's.
-pub async fn an_allow_on_one_tenants_alice_never_reaches_anothers<S: GuardStore>(store: Shared<S>) {
+pub async fn an_allow_on_one_tenants_alice_never_reaches_anothers<S: EvaluatorStore>(
+    store: Shared<S>,
+) {
     let helper = principal(&store, &t57(), "helper", &[target(&t57(), "user", "alice")]).await;
     plain_user(&store, &t57(), "alice").await;
     plain_user(&store, &t67(), "alice").await;
@@ -522,7 +531,11 @@ pub async fn an_allow_on_one_tenants_alice_never_reaches_anothers<S: GuardStore>
 /// # Panics
 ///
 /// When a verb of one of those families crosses into 6/7.
-pub async fn every_family_refuses_another_tenants_target<S: GuardStore>(store: Shared<S>) {
+pub async fn every_family_refuses_another_tenants_target<
+    S: EvaluatorStore + ServerCertificateStore,
+>(
+    store: Shared<S>,
+) {
     // `**`: a single `*` stops at the `/` of `group/devs`.
     let all57 = format!("arn:wami:iam:{}:wami:{INSTANCE}:**", t57());
     let admin = principal(&store, &t57(), "admin", &[all57]).await;
@@ -672,7 +685,7 @@ fn cert(key: ScopedName) -> UploadServerCertificateRequest {
 /// an existing task from an absent one.
 pub async fn a_deletion_task_is_judged_on_its_roles_tenant<S>(store: Shared<S>)
 where
-    S: GuardStore + ServiceLinkedRoleStore,
+    S: EvaluatorStore + ServiceLinkedRoleStore,
 {
     let task = crate::wami::identity::service_linked_role::builder::build_deletion_task(&key(
         &t57(),
@@ -721,7 +734,7 @@ where
 /// # Panics
 ///
 /// When a policy verb crosses into another tenant, or refuses inside its own.
-pub async fn a_policy_is_judged_in_its_own_tenant<S: GuardStore>(store: Shared<S>) {
+pub async fn a_policy_is_judged_in_its_own_tenant<S: EvaluatorStore>(store: Shared<S>) {
     use crate::service::PolicyService;
     use crate::wami::policies::policy::requests::CreatePolicyRequest;
     let create = |tenant: &TenantPath, name: &str| CreatePolicyRequest {
@@ -802,7 +815,7 @@ pub async fn a_policy_is_judged_in_its_own_tenant<S: GuardStore>(store: Shared<S
 
 /// 5/7's `admin`, granted `iam:*` on everything of 5/7 (`**`: a single `*`
 /// stops at a `/`), for the checks of other modules.
-pub(crate) async fn admin57_everything<S: GuardStore>(store: &Shared<S>) -> WamiContext {
+pub(crate) async fn admin57_everything<S: EvaluatorStore>(store: &Shared<S>) -> WamiContext {
     let all57 = format!("arn:wami:iam:{}:wami:{INSTANCE}:**", t57());
     principal(store, &t57(), "admin", &[all57]).await
 }
@@ -817,7 +830,7 @@ pub(crate) async fn admin57_everything<S: GuardStore>(store: &Shared<S>) -> Wami
 ///
 /// When a rename into a name the caller holds no right on goes through, or
 /// tells a held destination from an absent one.
-pub async fn a_rename_is_judged_on_its_destination<S: GuardStore>(store: Shared<S>) {
+pub async fn a_rename_is_judged_on_its_destination<S: EvaluatorStore>(store: Shared<S>) {
     use crate::wami::identity::group::requests::UpdateGroupRequest;
     plain_user(&store, &t57(), "alice").await;
     plain_user(&store, &t57(), "carol").await;
@@ -921,7 +934,7 @@ pub async fn a_rename_is_judged_on_its_destination<S: GuardStore>(store: Shared<
 /// When it answers for a key that is not the caller's.
 pub async fn caller_identity_answers_the_caller_only<S>(store: Shared<S>)
 where
-    S: GuardStore + crate::store::traits::IdentityStore,
+    S: EvaluatorStore + crate::store::traits::IdentityStore,
 {
     use crate::service::sts::identity::GetCallerIdentityRequest;
     use crate::service::IdentityService;
@@ -1219,7 +1232,9 @@ pub async fn every_credential_verb_refuses_another_tenant<S: GuardStore>(store: 
 ///
 /// When a Deny on `credential/*` is ignored, or a right on the credential
 /// alone stands in for the owner.
-pub async fn a_credential_by_id_is_judged_on_its_owner_and_on_itself<S: GuardStore>(
+pub async fn a_credential_by_id_is_judged_on_its_owner_and_on_itself<
+    S: EvaluatorStore + AccessKeyStore,
+>(
     store: Shared<S>,
 ) {
     plain_user(&store, &t57(), "alice").await;
@@ -1291,7 +1306,11 @@ pub async fn a_credential_by_id_is_judged_on_its_owner_and_on_itself<S: GuardSto
 ///
 /// When a record of another instance is acted on, or refused differently
 /// from an absent one.
-pub async fn a_record_of_another_instance_is_refused_as_absent<S: GuardStore>(store: Shared<S>) {
+pub async fn a_record_of_another_instance_is_refused_as_absent<
+    S: EvaluatorStore + AccessKeyStore,
+>(
+    store: Shared<S>,
+) {
     use crate::service::PolicyService;
     let admin = admin57_everything(&store).await;
     plain_user(&store, &t57(), "alice").await;
