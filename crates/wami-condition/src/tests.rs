@@ -6758,17 +6758,19 @@ fn malformed_set_and_if_exists_forms_are_refused_at_parse() {
 fn an_error_names_where_a_value_sits_never_the_value() {
     use crate::operators::evaluate_operator;
     use crate::ConditionOperator as O;
-    let secret = "s3cr3t-value";
+    // A canary, not a credential: the assertions search for it to prove that
+    // whatever the caller sent is never echoed back in an error.
+    let canary = "canary-value";
 
     // Policy side: what the author must fix is named, the value is not.
     for json in [
-        format!(r#"{{"Bool":{{"aws:SecureTransport":"{secret}"}}}}"#),
-        format!(r#"{{"DateLessThan":{{"aws:CurrentTime":"{secret}"}}}}"#),
-        format!(r#"{{"NumericEquals":{{"wami:SessionAge":"{secret}"}}}}"#),
-        format!(r#"{{"IpAddress":{{"aws:SourceIp":["10.0.0.1","{secret}"]}}}}"#),
+        format!(r#"{{"Bool":{{"aws:SecureTransport":"{canary}"}}}}"#),
+        format!(r#"{{"DateLessThan":{{"aws:CurrentTime":"{canary}"}}}}"#),
+        format!(r#"{{"NumericEquals":{{"wami:SessionAge":"{canary}"}}}}"#),
+        format!(r#"{{"IpAddress":{{"aws:SourceIp":["10.0.0.1","{canary}"]}}}}"#),
     ] {
         let message = parse_err(&json);
-        assert!(!message.contains(secret), "{json}: {message}");
+        assert!(!message.contains(canary), "{json}: {message}");
     }
 
     // Request side: the caller's value never reaches the error.
@@ -6787,23 +6789,23 @@ fn an_error_names_where_a_value_sits_never_the_value() {
     for (operator, expected) in cases {
         let err = evaluate_operator(
             operator,
-            Some(ConditionValue::String(secret.to_string())),
+            Some(ConditionValue::String(canary.to_string())),
             &expected,
         )
         .unwrap_err();
-        assert!(!err.to_string().contains(secret), "{operator:?}: {err}");
+        assert!(!err.to_string().contains(canary), "{operator:?}: {err}");
         assert!(
-            !format!("{err:?}").contains(secret),
+            !format!("{err:?}").contains(canary),
             "{operator:?}: {err:?}"
         );
     }
     let err = evaluate_operator(
         O::StringEquals,
-        Some(ConditionValue::Array(vec![secret.to_string()])),
+        Some(ConditionValue::Array(vec![canary.to_string()])),
         &ConditionValue::String("x".to_string()),
     )
     .unwrap_err();
-    assert!(!format!("{err:?}").contains(secret), "{err:?}");
+    assert!(!format!("{err:?}").contains(canary), "{err:?}");
 }
 
 /// Every operator, by its name as written in a policy.
