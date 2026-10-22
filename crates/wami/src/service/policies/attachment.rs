@@ -2,7 +2,7 @@
 //!
 //! Service for attaching and detaching managed policies to/from users, groups, and roles.
 
-use crate::service::auth::authorizer::{guard, Authorizer};
+use crate::service::auth::authorizer::{guard, in_instance, Authorizer};
 use crate::store::traits::{GroupStore, PolicyStore, RoleStore, UserStore};
 use crate::wami::policies::attachment::*;
 use std::sync::Arc;
@@ -67,6 +67,7 @@ where
         store
             .get_user(&request.user)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("User: {}", request.user),
             })?;
@@ -124,6 +125,7 @@ where
         store
             .get_user(&request.user)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("User: {}", request.user),
             })?;
@@ -169,6 +171,7 @@ where
         store
             .get_user(&request.user)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("User: {}", request.user),
             })?;
@@ -213,6 +216,7 @@ where
         store
             .get_group(&request.group)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("Group: {}", request.group),
             })?;
@@ -270,6 +274,7 @@ where
         store
             .get_group(&request.group)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("Group: {}", request.group),
             })?;
@@ -315,6 +320,7 @@ where
         store
             .get_group(&request.group)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("Group: {}", request.group),
             })?;
@@ -359,6 +365,7 @@ where
         store
             .get_role(&request.role)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("Role: {}", request.role),
             })?;
@@ -416,6 +423,7 @@ where
         store
             .get_role(&request.role)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("Role: {}", request.role),
             })?;
@@ -461,6 +469,7 @@ where
         store
             .get_role(&request.role)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("Role: {}", request.role),
             })?;
@@ -545,6 +554,161 @@ mod tests {
             .is_root(false)
             .build()
             .unwrap()
+    }
+
+    /// A context of another instance, to write its records with.
+    fn elsewhere() -> WamiContext {
+        WamiContext::builder()
+            .caller_arn(
+                WamiArn::builder()
+                    .service(crate::arn::Service::Iam)
+                    .tenant_path(TenantPath::single(0))
+                    .wami_instance("elsewhere")
+                    .resource("user", "admin")
+                    .build()
+                    .unwrap(),
+            )
+            .build()
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn a_principal_of_another_instance_is_absent_to_every_attachment_verb() {
+        // One store, one instance: a record of another, read by its key, is
+        // answered as an absent one (wami 005, R8; review round 2 F3).
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = AttachmentService::new(store.clone());
+        let context = create_test_context().await;
+        let there = elsewhere();
+        let policy = build_policy(
+            "P".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+            None,
+            None,
+            None,
+            &tenant(),
+            &context,
+        )
+        .unwrap();
+        let arn = {
+            let mut s = store.write().await;
+            s.create_user(build_user(&key("alice"), None, &there).unwrap())
+                .await
+                .unwrap();
+            s.create_group(build_group(&key("devs"), None, &there).unwrap())
+                .await
+                .unwrap();
+            let role = build_role(&key("ops"), "{}".to_string(), None, None, None, &there);
+            s.create_role(role.unwrap()).await.unwrap();
+            s.create_policy(policy).await.unwrap().arn
+        };
+        let absent = |what: &str, got: std::result::Result<String, AmiError>| {
+            assert!(
+                matches!(&got, Err(AmiError::ResourceNotFound { .. })),
+                "{what}: {got:?}"
+            );
+        };
+        let (user, group, role) = (key("alice"), key("devs"), key("ops"));
+        let p = || arn.clone();
+        absent(
+            "attach user",
+            service
+                .attach_user_policy(
+                    &context,
+                    AttachUserPolicyRequest {
+                        user: user.clone(),
+                        policy_arn: p(),
+                    },
+                )
+                .await
+                .map(|r| r.message),
+        );
+        absent(
+            "detach user",
+            service
+                .detach_user_policy(
+                    &context,
+                    DetachUserPolicyRequest {
+                        user: user.clone(),
+                        policy_arn: p(),
+                    },
+                )
+                .await
+                .map(|r| r.message),
+        );
+        absent(
+            "list user",
+            service
+                .list_attached_user_policies(&context, ListAttachedUserPoliciesRequest { user })
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "attach group",
+            service
+                .attach_group_policy(
+                    &context,
+                    AttachGroupPolicyRequest {
+                        group: group.clone(),
+                        policy_arn: p(),
+                    },
+                )
+                .await
+                .map(|r| r.message),
+        );
+        absent(
+            "detach group",
+            service
+                .detach_group_policy(
+                    &context,
+                    DetachGroupPolicyRequest {
+                        group: group.clone(),
+                        policy_arn: p(),
+                    },
+                )
+                .await
+                .map(|r| r.message),
+        );
+        absent(
+            "list group",
+            service
+                .list_attached_group_policies(&context, ListAttachedGroupPoliciesRequest { group })
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "attach role",
+            service
+                .attach_role_policy(
+                    &context,
+                    AttachRolePolicyRequest {
+                        role: role.clone(),
+                        policy_arn: p(),
+                    },
+                )
+                .await
+                .map(|r| r.message),
+        );
+        absent(
+            "detach role",
+            service
+                .detach_role_policy(
+                    &context,
+                    DetachRolePolicyRequest {
+                        role: role.clone(),
+                        policy_arn: p(),
+                    },
+                )
+                .await
+                .map(|r| r.message),
+        );
+        absent(
+            "list role",
+            service
+                .list_attached_role_policies(&context, ListAttachedRolePoliciesRequest { role })
+                .await
+                .map(|r| format!("{r:?}")),
+        );
     }
 
     #[tokio::test]

@@ -304,6 +304,13 @@ pub fn confirm(
     })
 }
 
+/// Whether a record read by its key belongs to the context's instance. One
+/// store holds one instance: a record of another is answered as an absent
+/// one, at every by-key read (wami 005, R8; review round 2 F3).
+pub(crate) fn in_instance(context: &WamiContext, record: &WamiArn) -> bool {
+    record.wami_instance_id == context.instance_id()
+}
+
 /// Extension: implement `Authorizer` for the concrete `AuthorizationService<S>`.
 ///
 /// This is done via a blanket impl so any `AuthorizationService<S>` can be

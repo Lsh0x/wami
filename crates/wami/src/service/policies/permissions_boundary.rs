@@ -2,7 +2,7 @@
 //!
 //! Service for managing permissions boundaries on users and roles.
 
-use crate::service::auth::authorizer::{guard, Authorizer};
+use crate::service::auth::authorizer::{guard, in_instance, Authorizer};
 use crate::store::traits::{PolicyStore, RoleStore, UserStore};
 use crate::wami::policies::permissions_boundary::{
     operations, DeletePermissionsBoundaryRequest, PrincipalType, PutPermissionsBoundaryRequest,
@@ -103,11 +103,13 @@ where
         match request.principal_type {
             PrincipalType::User => {
                 let mut store = self.write_store().await;
-                let mut user = store.get_user(&request.principal).await?.ok_or_else(|| {
-                    AmiError::ResourceNotFound {
+                let mut user = store
+                    .get_user(&request.principal)
+                    .await?
+                    .filter(|record| in_instance(context, &record.wami_arn))
+                    .ok_or_else(|| AmiError::ResourceNotFound {
                         resource: format!("User: {}", request.principal),
-                    }
-                })?;
+                    })?;
 
                 // Update user with boundary
                 user.permissions_boundary = Some(request.permissions_boundary);
@@ -115,11 +117,13 @@ where
             }
             PrincipalType::Role => {
                 let mut store = self.write_store().await;
-                let mut role = store.get_role(&request.principal).await?.ok_or_else(|| {
-                    AmiError::ResourceNotFound {
+                let mut role = store
+                    .get_role(&request.principal)
+                    .await?
+                    .filter(|record| in_instance(context, &record.wami_arn))
+                    .ok_or_else(|| AmiError::ResourceNotFound {
                         resource: format!("Role: {}", request.principal),
-                    }
-                })?;
+                    })?;
 
                 // Update role with boundary
                 role.permissions_boundary = Some(request.permissions_boundary);
@@ -165,11 +169,13 @@ where
         match request.principal_type {
             PrincipalType::User => {
                 let mut store = self.write_store().await;
-                let mut user = store.get_user(&request.principal).await?.ok_or_else(|| {
-                    AmiError::ResourceNotFound {
+                let mut user = store
+                    .get_user(&request.principal)
+                    .await?
+                    .filter(|record| in_instance(context, &record.wami_arn))
+                    .ok_or_else(|| AmiError::ResourceNotFound {
                         resource: format!("User: {}", request.principal),
-                    }
-                })?;
+                    })?;
 
                 // Clear the boundary
                 user.permissions_boundary = None;
@@ -177,11 +183,13 @@ where
             }
             PrincipalType::Role => {
                 let mut store = self.write_store().await;
-                let mut role = store.get_role(&request.principal).await?.ok_or_else(|| {
-                    AmiError::ResourceNotFound {
+                let mut role = store
+                    .get_role(&request.principal)
+                    .await?
+                    .filter(|record| in_instance(context, &record.wami_arn))
+                    .ok_or_else(|| AmiError::ResourceNotFound {
                         resource: format!("Role: {}", request.principal),
-                    }
-                })?;
+                    })?;
 
                 // Clear the boundary
                 role.permissions_boundary = None;
@@ -250,6 +258,78 @@ mod tests {
             .is_root(false)
             .build()
             .unwrap()
+    }
+
+    #[tokio::test]
+    async fn a_principal_of_another_instance_is_absent_to_both_boundary_verbs() {
+        // One store, one instance: a record of another, read by its key, is
+        // answered as an absent one (wami 005, R8; review round 2 F3).
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let context = test_context();
+        let service = PermissionsBoundaryService::new(store.clone(), "123456789012".to_string());
+        let there = WamiContext::builder()
+            .caller_arn(
+                "arn:wami:iam:12345678:wami:elsewhere:user/test"
+                    .parse()
+                    .unwrap(),
+            )
+            .build()
+            .unwrap();
+        let policy = build_policy(
+            "Boundary".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":"*"}]}"#
+                .to_string(),
+            Some("/".to_string()),
+            None,
+            None,
+            &tenant(),
+            &context,
+        )
+        .unwrap();
+        let boundary = policy.arn.clone();
+        {
+            let mut s = store.write().await;
+            let mut user = build_user(&key("alice"), None, &there).unwrap();
+            user.permissions_boundary = Some(boundary.clone());
+            s.create_user(user).await.unwrap();
+            let mut role =
+                build_role(&key("ops"), "{}".to_string(), None, None, None, &there).unwrap();
+            role.permissions_boundary = Some(boundary.clone());
+            s.create_role(role).await.unwrap();
+            s.create_policy(policy).await.unwrap();
+        }
+        for (principal_type, principal) in [
+            (PrincipalType::User, key("alice")),
+            (PrincipalType::Role, key("ops")),
+        ] {
+            let put = service
+                .put_permissions_boundary(
+                    &context,
+                    PutPermissionsBoundaryRequest {
+                        principal_type,
+                        principal: principal.clone(),
+                        permissions_boundary: boundary.clone(),
+                    },
+                )
+                .await;
+            assert!(
+                matches!(&put, Err(AmiError::ResourceNotFound { .. })),
+                "put on {principal}: {put:?}"
+            );
+            let delete = service
+                .delete_permissions_boundary(
+                    &context,
+                    DeletePermissionsBoundaryRequest {
+                        principal_type,
+                        principal: principal.clone(),
+                    },
+                )
+                .await;
+            assert!(
+                matches!(&delete, Err(AmiError::ResourceNotFound { .. })),
+                "delete on {principal}: {delete:?}"
+            );
+        }
     }
 
     #[tokio::test]

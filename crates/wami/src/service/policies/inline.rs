@@ -2,7 +2,7 @@
 //!
 //! Service for managing inline policies on users, groups, and roles.
 
-use crate::service::auth::authorizer::{guard, Authorizer};
+use crate::service::auth::authorizer::{guard, in_instance, Authorizer};
 use crate::service::auth::decision::PolicySource;
 use crate::service::auth::policy_evaluator;
 use crate::store::traits::{GroupStore, RoleStore, UserStore};
@@ -68,6 +68,7 @@ where
         store
             .get_user(&request.user)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("User: {}", request.user),
             })?;
@@ -119,6 +120,7 @@ where
         store
             .get_user(&request.user)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("User: {}", request.user),
             })?;
@@ -159,6 +161,7 @@ where
         store
             .get_user(&request.user)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("User: {}", request.user),
             })?;
@@ -197,6 +200,7 @@ where
         store
             .get_user(&request.user)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("User: {}", request.user),
             })?;
@@ -230,6 +234,7 @@ where
         store
             .get_group(&request.group)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("Group: {}", request.group),
             })?;
@@ -286,6 +291,7 @@ where
         store
             .get_group(&request.group)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("Group: {}", request.group),
             })?;
@@ -326,6 +332,7 @@ where
         store
             .get_group(&request.group)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("Group: {}", request.group),
             })?;
@@ -364,6 +371,7 @@ where
         store
             .get_group(&request.group)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("Group: {}", request.group),
             })?;
@@ -397,6 +405,7 @@ where
         store
             .get_role(&request.role)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("Role: {}", request.role),
             })?;
@@ -449,6 +458,7 @@ where
         store
             .get_role(&request.role)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("Role: {}", request.role),
             })?;
@@ -489,6 +499,7 @@ where
         store
             .get_role(&request.role)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("Role: {}", request.role),
             })?;
@@ -527,6 +538,7 @@ where
         store
             .get_role(&request.role)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("Role: {}", request.role),
             })?;
@@ -586,6 +598,201 @@ mod tests {
             .is_root(false)
             .build()
             .unwrap()
+    }
+
+    #[tokio::test]
+    async fn a_principal_of_another_instance_is_absent_to_every_inline_verb() {
+        // One store, one instance: a record of another, read by its key, is
+        // answered as an absent one (wami 005, R8; review round 2 F3).
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = InlinePolicyService::new(store.clone());
+        let context = create_test_context().await;
+        let there = WamiContext::builder()
+            .caller_arn(
+                WamiArn::builder()
+                    .service(crate::arn::Service::Iam)
+                    .tenant_path(TenantPath::single(0))
+                    .wami_instance("elsewhere")
+                    .resource("user", "admin")
+                    .build()
+                    .unwrap(),
+            )
+            .build()
+            .unwrap();
+        let doc = || {
+            r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["iam:GetUser"],"Resource":["*"]}]}"#
+                .to_string()
+        };
+        let (user, group, role) = (key("alice"), key("devs"), key("ops"));
+        {
+            let mut s = store.write().await;
+            s.create_user(build_user(&user, None, &there).unwrap())
+                .await
+                .unwrap();
+            s.create_group(build_group(&group, None, &there).unwrap())
+                .await
+                .unwrap();
+            let built = build_role(&role, "{}".to_string(), None, None, None, &there);
+            s.create_role(built.unwrap()).await.unwrap();
+            // A policy already on each, so a read or a delete has something
+            // to find.
+            s.put_user_policy(&user, "kept", doc()).await.unwrap();
+            s.put_group_policy(&group, "kept", doc()).await.unwrap();
+            s.put_role_policy(&role, "kept", doc()).await.unwrap();
+        }
+        let absent = |what: &str, got: std::result::Result<String, AmiError>| {
+            assert!(
+                matches!(&got, Err(AmiError::ResourceNotFound { .. })),
+                "{what}: {got:?}"
+            );
+        };
+        let n = || "kept".to_string();
+        absent(
+            "put user",
+            service
+                .put_user_policy(
+                    &context,
+                    PutUserPolicyRequest {
+                        user: user.clone(),
+                        policy_name: "new".to_string(),
+                        policy_document: doc(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "get user",
+            service
+                .get_user_policy(
+                    &context,
+                    GetUserPolicyRequest {
+                        user: user.clone(),
+                        policy_name: n(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "list user",
+            service
+                .list_user_policies(&context, ListUserPoliciesRequest { user: user.clone() })
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "delete user",
+            service
+                .delete_user_policy(
+                    &context,
+                    DeleteUserPolicyRequest {
+                        user,
+                        policy_name: n(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "put group",
+            service
+                .put_group_policy(
+                    &context,
+                    PutGroupPolicyRequest {
+                        group: group.clone(),
+                        policy_name: "new".to_string(),
+                        policy_document: doc(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "get group",
+            service
+                .get_group_policy(
+                    &context,
+                    GetGroupPolicyRequest {
+                        group: group.clone(),
+                        policy_name: n(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "list group",
+            service
+                .list_group_policies(
+                    &context,
+                    ListGroupPoliciesRequest {
+                        group: group.clone(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "delete group",
+            service
+                .delete_group_policy(
+                    &context,
+                    DeleteGroupPolicyRequest {
+                        group,
+                        policy_name: n(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "put role",
+            service
+                .put_role_policy(
+                    &context,
+                    PutRolePolicyRequest {
+                        role: role.clone(),
+                        policy_name: "new".to_string(),
+                        policy_document: doc(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "get role",
+            service
+                .get_role_policy(
+                    &context,
+                    GetRolePolicyRequest {
+                        role: role.clone(),
+                        policy_name: n(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "list role",
+            service
+                .list_role_policies(&context, ListRolePoliciesRequest { role: role.clone() })
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "delete role",
+            service
+                .delete_role_policy(
+                    &context,
+                    DeleteRolePolicyRequest {
+                        role,
+                        policy_name: n(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
     }
 
     #[tokio::test]
