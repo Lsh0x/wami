@@ -89,7 +89,9 @@ pub fn evaluate_policy_document(
     let resource_str = resource_arn.to_string();
     let match_ctx = MatchContext {
         tenant: Some(context.tenant_path().as_string()),
-        principal: Some(context.caller_arn().resource.resource_id.clone()),
+        // The caller's NAME, from its key — never the id its ARN carries (D8,
+        // review round 1 Δ2). A context with no key has no name to offer.
+        principal: context.caller_key().map(|key| key.name().to_string()),
         service: Some(context.caller_arn().service.to_string()),
     };
     let cond_ctx = build_condition_context(context, resource_arn);
@@ -261,17 +263,21 @@ pub fn matches_resource(
 pub fn build_condition_context(context: &WamiContext, resource_arn: &WamiArn) -> ConditionContext {
     let mut builder = ConditionContext::builder()
         .principal_arn(context.caller_arn().to_string())
-        .username(context.caller_arn().resource.resource_id.clone())
         .principal_type(context.caller_arn().resource.resource_type.clone())
         .resource_arn(resource_arn.to_string());
+    // aws:username is the caller's NAME, from its key — the ARN's resource is
+    // the principal's stable id (D8, review round 1 Δ2).
+    if let Some(key) = context.caller_key() {
+        builder = builder.username(key.name());
+    }
 
-    // Tenant info
-    if let Some(primary) = context.tenant_path().root_u64() {
-        builder = builder.tenant_id(primary).principal_tenant_id(primary);
-    }
-    if let Some(resource_tenant) = resource_arn.tenant_path.root_u64() {
-        builder = builder.resource_tenant_id(resource_tenant);
-    }
+    // Tenants are FULL paths: `5/7` is not `5/9`, `0/7` is not `0` (review
+    // round 1, Δ11).
+    let tenant = context.tenant_path().as_string();
+    builder = builder
+        .tenant_id(&tenant)
+        .principal_tenant_id(&tenant)
+        .resource_tenant_id(resource_arn.tenant_path.as_string());
 
     // Request metadata (set by HTTP/transport layer)
     if let Some(ip) = context.source_ip() {

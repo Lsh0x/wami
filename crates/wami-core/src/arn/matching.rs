@@ -73,7 +73,8 @@ impl From<&crate::context::WamiContext> for MatchContext {
     fn from(ctx: &crate::context::WamiContext) -> Self {
         Self {
             tenant: Some(ctx.tenant_path().as_string()),
-            principal: Some(ctx.caller_arn().resource.resource_id.clone()),
+            // The caller's NAME, from its key: the ARN's resource is its id.
+            principal: ctx.caller_key().map(|key| key.name().to_string()),
             service: Some(ctx.caller_arn().service.to_string()),
         }
     }

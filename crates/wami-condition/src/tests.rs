@@ -3061,7 +3061,7 @@ fn test_context_builder_all_methods() {
     );
     assert_eq!(context.username, Some("alice".to_string()));
     assert_eq!(context.mfa_present, Some(true));
-    assert_eq!(context.tenant_id, Some(12345));
+    assert_eq!(context.tenant_id.as_deref(), Some("12345"));
 }
 
 #[test]

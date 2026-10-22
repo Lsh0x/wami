@@ -41,6 +41,7 @@
 //! wami's own, in `tests/keys_scan.rs`.
 
 pub mod caller_key;
+pub mod conditions;
 pub mod guard;
 pub mod keys;
 pub mod names;

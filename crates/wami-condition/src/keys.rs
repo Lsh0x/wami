@@ -255,33 +255,27 @@ const KEYS: &[(&str, KeyType, Resolve, Assign)] = &[
     (
         "wami:TenantId",
         KeyType::String,
-        |c| c.tenant_id.map(|id| ConditionValue::String(id.to_string())),
+        |c| c.tenant_id.clone().map(ConditionValue::String),
         |c, v| {
-            c.tenant_id = Some(unsigned(v)?);
+            c.tenant_id = Some(tenant_path(v)?);
             Ok(())
         },
     ),
     (
         "wami:PrincipalTenantId",
         KeyType::String,
-        |c| {
-            c.principal_tenant_id
-                .map(|id| ConditionValue::String(id.to_string()))
-        },
+        |c| c.principal_tenant_id.clone().map(ConditionValue::String),
         |c, v| {
-            c.principal_tenant_id = Some(unsigned(v)?);
+            c.principal_tenant_id = Some(tenant_path(v)?);
             Ok(())
         },
     ),
     (
         "wami:ResourceTenantId",
         KeyType::String,
-        |c| {
-            c.resource_tenant_id
-                .map(|id| ConditionValue::String(id.to_string()))
-        },
+        |c| c.resource_tenant_id.clone().map(ConditionValue::String),
         |c, v| {
-            c.resource_tenant_id = Some(unsigned(v)?);
+            c.resource_tenant_id = Some(tenant_path(v)?);
             Ok(())
         },
     ),
@@ -777,6 +771,21 @@ fn boolean(values: &[String]) -> std::result::Result<bool, ConditionError> {
 
 fn number(values: &[String]) -> std::result::Result<f64, ConditionError> {
     ConditionValue::String(one(values)?).as_number()
+}
+
+/// A tenant path: whole numbers joined by `/` (`5/7`) — the FULL path, so
+/// `5/7` and `5/9` stay apart (wami 005, review round 1 Δ11).
+fn tenant_path(values: &[String]) -> std::result::Result<String, ConditionError> {
+    let value = one(values)?;
+    let readable = !value.is_empty()
+        && value
+            .split('/')
+            .all(|segment| segment.parse::<u64>().is_ok());
+    if readable {
+        Ok(value)
+    } else {
+        Err(not_read_as("a tenant path: whole numbers joined by /"))
+    }
 }
 
 fn unsigned(values: &[String]) -> std::result::Result<u64, ConditionError> {
