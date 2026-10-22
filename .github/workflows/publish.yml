@@ -81,7 +81,10 @@ jobs:
           for crate in wami-core wami-macros wami-condition wami; do
             version=$(grep -m1 '^version' "crates/$crate/Cargo.toml" | cut -d'"' -f2)
             echo "::group::$crate $version"
-            if curl -sf "https://crates.io/api/v1/crates/$crate/$version" >/dev/null 2>&1; then
+            # crates.io refuse les requêtes sans User-Agent, donc le contrôle de
+            # l'existence échouerait sans ceci, et cargo publish échouerait toujours
+            # sur « already exists » même pour les crates non publiées.
+            if curl -sf -A "wami-publish (github.com/Lsh0x/wami)" "https://crates.io/api/v1/crates/$crate/$version" >/dev/null 2>&1; then
               echo "déjà sur crates.io, rien à faire"
               echo "::endgroup::"
               continue
@@ -95,7 +98,7 @@ jobs:
       - name: dire ce qui est en ligne, plutôt que de le supposer
         run: |
           for crate in wami-core wami-macros wami-condition wami; do
-            v=$(curl -s "https://crates.io/api/v1/crates/$crate" \
+            v=$(curl -s -A "wami-publish (github.com/Lsh0x/wami)" "https://crates.io/api/v1/crates/$crate" \
                 | python3 -c "import sys,json;print(json.load(sys.stdin).get('crate',{}).get('max_version','ABSENT'))" 2>/dev/null || echo ABSENT)
             echo "  $crate : $v"
           done
