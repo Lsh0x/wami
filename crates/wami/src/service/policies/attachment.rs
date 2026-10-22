@@ -72,12 +72,11 @@ where
             })?;
 
         // Verify policy exists
-        let policy = store
-            .get_policy(&request.policy_arn)
-            .await?
-            .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Policy: {}", request.policy_arn),
-            })?;
+        let policy = attachable(
+            store.get_policy(&request.policy_arn).await?,
+            &request.policy_arn,
+            &request.user,
+        )?;
 
         // Verify policy is attachable
         if !policy.is_attachable {
@@ -85,7 +84,6 @@ where
                 message: format!("Policy {} is not attachable", request.policy_arn),
             });
         }
-        refuse_foreign(&policy, &request.user)?;
 
         // Attach the policy
         store
@@ -220,12 +218,11 @@ where
             })?;
 
         // Verify policy exists
-        let policy = store
-            .get_policy(&request.policy_arn)
-            .await?
-            .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Policy: {}", request.policy_arn),
-            })?;
+        let policy = attachable(
+            store.get_policy(&request.policy_arn).await?,
+            &request.policy_arn,
+            &request.group,
+        )?;
 
         // Verify policy is attachable
         if !policy.is_attachable {
@@ -233,7 +230,6 @@ where
                 message: format!("Policy {} is not attachable", request.policy_arn),
             });
         }
-        refuse_foreign(&policy, &request.group)?;
 
         // Attach the policy
         store
@@ -368,12 +364,11 @@ where
             })?;
 
         // Verify policy exists
-        let policy = store
-            .get_policy(&request.policy_arn)
-            .await?
-            .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Policy: {}", request.policy_arn),
-            })?;
+        let policy = attachable(
+            store.get_policy(&request.policy_arn).await?,
+            &request.policy_arn,
+            &request.role,
+        )?;
 
         // Verify policy is attachable
         if !policy.is_attachable {
@@ -381,7 +376,6 @@ where
                 message: format!("Policy {} is not attachable", request.policy_arn),
             });
         }
-        refuse_foreign(&policy, &request.role)?;
 
         // Attach the policy
         store
@@ -489,22 +483,27 @@ where
     }
 }
 
-/// Refuse a policy whose tenant is not the principal's: a policy never
-/// crosses into another tenant (wami 005, A7). The policy's tenant is the one
-/// its `wami_arn` records; its AWS-format ARN names none (wami 011).
-pub(crate) fn refuse_foreign(
-    policy: &crate::wami::policies::Policy,
+/// The policy stored under `arn`, if it may be attached to — or be the
+/// boundary of — `principal`: a policy that is not stored and a policy of
+/// another tenant are ONE refusal, naming the ARN the caller gave and no
+/// tenant, so the answer says nothing of what another tenant holds (wami 005,
+/// A7, review round 1 Δ6). The policy's tenant is the one its `wami_arn`
+/// records; its AWS-format ARN names none (wami 011).
+///
+/// # Errors
+///
+/// [`AmiError::ResourceNotFound`] for both.
+pub(crate) fn attachable(
+    policy: Option<crate::wami::policies::Policy>,
+    arn: &str,
     principal: &ScopedName,
-) -> Result<()> {
-    if &policy.wami_arn.tenant_path == principal.tenant() {
-        return Ok(());
+) -> Result<crate::wami::policies::Policy> {
+    match policy {
+        Some(policy) if &policy.wami_arn.tenant_path == principal.tenant() => Ok(policy),
+        _ => Err(AmiError::ResourceNotFound {
+            resource: format!("Policy: {arn}"),
+        }),
     }
-    Err(AmiError::InvalidParameter {
-        message: format!(
-            "policy {} belongs to tenant {}, not to {}'s",
-            policy.arn, policy.wami_arn.tenant_path, principal
-        ),
-    })
 }
 
 #[cfg(test)]

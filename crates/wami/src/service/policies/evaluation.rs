@@ -225,7 +225,16 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
         // identity documents, last, as the authorizer reads it: before any
         // evaluation and whatever the identity verdict.
         let boundary = match principal.boundary {
-            Some(arn) => self.store.read().await.get_policy(&arn).await?,
+            // A boundary of another tenant takes no part (ruling 1).
+            Some(arn) => match self.store.read().await.get_policy(&arn).await? {
+                Some(policy) if &policy.wami_arn.tenant_path != request.principal.tenant() => {
+                    return Err(AmiError::UnreadablePolicy {
+                        policy: format!("permissions boundary {arn}"),
+                        message: "the policy is not of the principal's tenant".to_string(),
+                    });
+                }
+                other => other,
+            },
             None => None,
         };
         let boundary_named = boundary.as_ref().map(|boundary| {

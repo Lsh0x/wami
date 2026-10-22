@@ -45,7 +45,7 @@ use crate::store::traits::{GroupStore, PolicyStore, RoleStore, UserStore};
 use crate::wami::identity::{Role, User};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use wami_core::arn::{ScopedName, WamiArn};
+use wami_core::arn::{ScopedName, TenantPath, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
 use wami_core::types::PolicyDocument;
@@ -84,6 +84,16 @@ enum Principal {
     User(Box<User>),
     /// A role session, judged on the role's policies only.
     Session(Box<Role>),
+}
+
+impl Principal {
+    /// The tenant every policy deciding this principal must be of.
+    fn tenant(&self) -> &TenantPath {
+        match self {
+            Principal::User(user) => &user.wami_arn.tenant_path,
+            Principal::Session(role) => &role.wami_arn.tenant_path,
+        }
+    }
 }
 
 impl<S> AuthorizationService<S>
@@ -227,10 +237,16 @@ where
         action: &str,
         resource_arn: &WamiArn,
     ) -> Result<Decision> {
+        // A document that cannot take part — another tenant's policy, or an
+        // attachment naming nothing — is collected here and refuses the
+        // decision, named, with any document that cannot be read (wami 001's
+        // rule; review round 1, ruling 1).
+        let mut unusable = Vec::new();
         let (documents, boundary) = {
             let store = self.store.read().await;
-            let documents = Self::identity_documents(&store, principal).await?;
-            (documents, Self::boundary_document(&store, principal).await?)
+            let documents = Self::identity_documents(&store, principal, &mut unusable).await?;
+            let boundary = Self::boundary_document(&store, principal, &mut unusable).await?;
+            (documents, boundary)
         };
         // Canonical order — see the note on this function — the boundary
         // last; the simulation reads in the same order, by the same function.
@@ -240,7 +256,7 @@ where
         };
         let documents = policy_evaluator::in_reading_order(documents, boundary_document);
 
-        let parsed = Self::read_every_document(&documents)?;
+        let parsed = Self::read_every_document(&documents, unusable)?;
         let mut hits = Self::evaluate_every_document(&parsed, action, resource_arn, context)?;
         let boundary_hit = match &boundary {
             Boundary::Present { .. } => hits
@@ -253,9 +269,9 @@ where
     /// Parse every document; refuse, naming all of them, if any cannot be read.
     fn read_every_document(
         documents: &[(PolicySource, String)],
+        mut unreadable: Vec<AmiError>,
     ) -> Result<Vec<(PolicySource, PolicyDocument)>> {
         let mut parsed = Vec::new();
-        let mut unreadable = Vec::new();
         for (source, document) in documents {
             match policy_evaluator::parse_policy_doc(document, source) {
                 Ok(document) => parsed.push((source.clone(), document)),
@@ -363,7 +379,11 @@ where
 
     /// The principal's permissions boundary, as stored: the user's, or for a
     /// session the role's (A8).
-    async fn boundary_document(store: &S, principal: &Principal) -> Result<Boundary> {
+    async fn boundary_document(
+        store: &S,
+        principal: &Principal,
+        unusable: &mut Vec<AmiError>,
+    ) -> Result<Boundary> {
         let boundary = match principal {
             Principal::User(user) => user.permissions_boundary.clone(),
             Principal::Session(role) => role.permissions_boundary.clone(),
@@ -372,6 +392,11 @@ where
             return Ok(Boundary::None);
         };
         Ok(match store.get_policy(&arn).await? {
+            Some(policy) if &policy.wami_arn.tenant_path != principal.tenant() => {
+                let source = PolicySource::PermissionsBoundary { arn: arn.clone() };
+                unusable.push(foreign(&source));
+                Boundary::Missing { arn }
+            }
             Some(policy) => Boundary::Present {
                 source: PolicySource::PermissionsBoundary { arn },
                 document: policy.policy_document,
@@ -381,27 +406,58 @@ where
     }
 
     /// Every identity document that can take part, with its source: a
-    /// user's own and its groups', or a session's role's — never both.
+    /// user's own and its groups', or a session's role's — never both. A
+    /// document that cannot take part is pushed to `unusable`, never skipped.
     async fn identity_documents(
         store: &S,
         principal: &Principal,
+        unusable: &mut Vec<AmiError>,
     ) -> Result<Vec<(PolicySource, String)>> {
         match principal {
-            Principal::User(user) => Self::user_documents(store, &user.key()).await,
-            Principal::Session(role) => Self::role_documents(store, role).await,
+            Principal::User(user) => Self::user_documents(store, &user.key(), unusable).await,
+            Principal::Session(role) => Self::role_documents(store, role, unusable).await,
         }
     }
 
-    /// A user's managed and inline policies, and its groups'.
-    async fn user_documents(store: &S, user: &ScopedName) -> Result<Vec<(PolicySource, String)>> {
-        let mut documents = Vec::new();
-        for policy_arn in store.list_attached_user_policies(user).await? {
-            if let Some(policy) = store.get_policy(&policy_arn).await? {
-                documents.push((
-                    PolicySource::UserManaged { arn: policy_arn },
-                    policy.policy_document,
-                ));
+    /// The document of the managed policy `arn` attached as `source`, for a
+    /// principal of `tenant`: used ONLY if a policy is stored under the ARN and
+    /// its recorded tenant is the principal's — the ARN names no tenant (wami
+    /// 011), so a freed name re-created by another tenant, or a row written
+    /// past the services, would otherwise decide this principal (ruling 1).
+    async fn managed(
+        store: &S,
+        arn: &str,
+        source: PolicySource,
+        tenant: &TenantPath,
+        documents: &mut Vec<(PolicySource, String)>,
+        unusable: &mut Vec<AmiError>,
+    ) -> Result<()> {
+        match store.get_policy(arn).await? {
+            Some(policy) if &policy.wami_arn.tenant_path == tenant => {
+                documents.push((source, policy.policy_document));
             }
+            Some(_) => unusable.push(foreign(&source)),
+            None => unusable.push(AmiError::UnreadablePolicy {
+                policy: source.to_string(),
+                message: "no policy is stored under this ARN".to_string(),
+            }),
+        }
+        Ok(())
+    }
+
+    /// A user's managed and inline policies, and its groups'.
+    async fn user_documents(
+        store: &S,
+        user: &ScopedName,
+        unusable: &mut Vec<AmiError>,
+    ) -> Result<Vec<(PolicySource, String)>> {
+        let mut documents = Vec::new();
+        let tenant = user.tenant();
+        for policy_arn in store.list_attached_user_policies(user).await? {
+            let source = PolicySource::UserManaged {
+                arn: policy_arn.clone(),
+            };
+            Self::managed(store, &policy_arn, source, tenant, &mut documents, unusable).await?;
         }
         for policy_name in store.list_user_policies(user).await? {
             if let Some(document) = store.get_user_policy(user, &policy_name).await? {
@@ -411,16 +467,21 @@ where
         for group in store.list_groups_for_user(user).await? {
             let group_name = &group.group_name;
             let group_key = group.key();
+            if group_key.tenant() != tenant {
+                // A membership across tenants, written past the services:
+                // the group's policies would decide another tenant's user.
+                unusable.push(AmiError::UnreadablePolicy {
+                    policy: format!("group {group_name}"),
+                    message: "the group is not of the principal's tenant".to_string(),
+                });
+                continue;
+            }
             for policy_arn in store.list_attached_group_policies(&group_key).await? {
-                if let Some(policy) = store.get_policy(&policy_arn).await? {
-                    documents.push((
-                        PolicySource::GroupManaged {
-                            group: group_name.clone(),
-                            arn: policy_arn,
-                        },
-                        policy.policy_document,
-                    ));
-                }
+                let source = PolicySource::GroupManaged {
+                    group: group_name.clone(),
+                    arn: policy_arn.clone(),
+                };
+                Self::managed(store, &policy_arn, source, tenant, &mut documents, unusable).await?;
             }
             for policy_name in store.list_group_policies(&group_key).await? {
                 if let Some(document) = store.get_group_policy(&group_key, &policy_name).await? {
@@ -438,19 +499,27 @@ where
     }
 
     /// A role's managed and inline policies.
-    async fn role_documents(store: &S, role: &Role) -> Result<Vec<(PolicySource, String)>> {
+    async fn role_documents(
+        store: &S,
+        role: &Role,
+        unusable: &mut Vec<AmiError>,
+    ) -> Result<Vec<(PolicySource, String)>> {
         let mut documents = Vec::new();
         let role_key = role.key();
         for policy_arn in store.list_attached_role_policies(&role_key).await? {
-            if let Some(policy) = store.get_policy(&policy_arn).await? {
-                documents.push((
-                    PolicySource::RoleManaged {
-                        role: role.role_name.clone(),
-                        arn: policy_arn,
-                    },
-                    policy.policy_document,
-                ));
-            }
+            let source = PolicySource::RoleManaged {
+                role: role.role_name.clone(),
+                arn: policy_arn.clone(),
+            };
+            Self::managed(
+                store,
+                &policy_arn,
+                source,
+                role_key.tenant(),
+                &mut documents,
+                unusable,
+            )
+            .await?;
         }
         for policy_name in store.list_role_policies(&role_key).await? {
             if let Some(document) = store.get_role_policy(&role_key, &policy_name).await? {
@@ -464,6 +533,15 @@ where
             }
         }
         Ok(documents)
+    }
+}
+
+/// The error for a policy of another tenant than the principal's: it names
+/// the attachment, never the tenant the policy belongs to.
+fn foreign(source: &PolicySource) -> AmiError {
+    AmiError::UnreadablePolicy {
+        policy: source.to_string(),
+        message: "the policy is not of the principal's tenant".to_string(),
     }
 }
 

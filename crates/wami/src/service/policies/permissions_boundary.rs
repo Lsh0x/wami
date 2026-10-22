@@ -92,24 +92,12 @@ where
         )
         .await?;
 
-        // Validate the boundary ARN format
-        crate::wami::policies::permissions_boundary::PermissionsBoundary::validate_arn(
+        boundary_policy(
+            &*self.read_store().await,
             &request.permissions_boundary,
-        )?;
-
-        // Get the boundary policy to validate it exists and is suitable
-        let store = self.read_store().await;
-        let policy = store
-            .get_policy(&request.permissions_boundary)
-            .await?
-            .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Policy: {}", request.permissions_boundary),
-            })?;
-
-        // Validate policy is suitable as a boundary
-        operations::validate_boundary_policy(&policy)?;
-        crate::service::policies::attachment::refuse_foreign(&policy, &request.principal)?;
-        drop(store);
+            &request.principal,
+        )
+        .await?;
 
         // Update the principal with the boundary
         match request.principal_type {
@@ -203,6 +191,30 @@ where
 
         Ok(())
     }
+}
+
+/// Check `arn` may bound `principal`: a well-formed ARN of a stored policy
+/// of the principal's tenant, suitable as a boundary — the checks every door
+/// setting a boundary runs (`put_permissions_boundary`, and a boundary given
+/// at `create_user` or `create_role`: review round 1, Δ5). A policy of
+/// another tenant and an absent one are one refusal (Δ6).
+///
+/// # Errors
+///
+/// [`AmiError::InvalidParameter`] for a malformed ARN or an unsuitable
+/// policy, [`AmiError::ResourceNotFound`] for an absent or foreign one.
+pub(crate) async fn boundary_policy<S: PolicyStore + ?Sized>(
+    store: &S,
+    arn: &str,
+    principal: &wami_core::arn::ScopedName,
+) -> Result<()> {
+    crate::wami::policies::permissions_boundary::PermissionsBoundary::validate_arn(arn)?;
+    let policy = crate::service::policies::attachment::attachable(
+        store.get_policy(arn).await?,
+        arn,
+        principal,
+    )?;
+    operations::validate_boundary_policy(&policy)
 }
 
 #[cfg(test)]

@@ -32,6 +32,31 @@ impl PolicyStore for InMemoryWamiStore {
     }
 
     async fn delete_policy(&mut self, policy_arn: &str) -> Result<()> {
+        let attached = [
+            &self.user_attached_policies,
+            &self.group_attached_policies,
+            &self.role_attached_policies,
+        ]
+        .iter()
+        .any(|map| {
+            map.values()
+                .any(|arns| arns.iter().any(|a| a == policy_arn))
+        });
+        let bounding = self
+            .users
+            .values()
+            .any(|u| u.permissions_boundary.as_deref() == Some(policy_arn))
+            || self
+                .roles
+                .values()
+                .any(|r| r.permissions_boundary.as_deref() == Some(policy_arn));
+        if attached || bounding {
+            return Err(wami_core::error::AmiError::InvalidParameter {
+                message: format!(
+                    "policy {policy_arn} is attached or bounds a principal: detach it first"
+                ),
+            });
+        }
         self.policies.remove(policy_arn);
         Ok(())
     }

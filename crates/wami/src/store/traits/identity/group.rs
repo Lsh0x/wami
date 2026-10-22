@@ -54,7 +54,16 @@ pub trait GroupStore: Send + Sync {
     /// List the groups the user stored under `user` belongs to
     async fn list_groups_for_user(&self, user: &ScopedName) -> Result<Vec<Group>>;
 
-    /// Add a user to a group
+    /// Add the user stored under `user` to the group stored under `group`.
+    ///
+    /// # Errors
+    ///
+    /// [`AmiError::ResourceNotFound`](wami_core::error::AmiError::ResourceNotFound)
+    /// when either is not stored — a row for an absent party would come alive
+    /// at its create — and
+    /// [`AmiError::InvalidParameter`](wami_core::error::AmiError::InvalidParameter)
+    /// when they are of different tenants: a group's policies decide only its
+    /// own tenant's principals (wami 005, Δ4).
     async fn add_user_to_group(&mut self, group: &ScopedName, user: &ScopedName) -> Result<()>;
 
     /// Remove a user from a group

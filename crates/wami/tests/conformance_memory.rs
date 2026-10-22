@@ -3,7 +3,9 @@
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use wami::store::conformance::{caller_key, conditions, guard, keys, names, root, scope, Shared};
+use wami::store::conformance::{
+    caller_key, conditions, guard, keys, names, policies, root, scope, Shared,
+};
 use wami::store::memory::InMemoryWamiStore;
 
 fn fresh() -> Shared<InMemoryWamiStore> {
@@ -58,4 +60,8 @@ conformance!(
     conditions::aws_username_is_the_callers_name,
     conditions::the_principal_variable_is_the_callers_name,
     conditions::tenant_condition_keys_are_full_paths,
+    policies::a_foreign_or_dangling_policy_takes_no_part_silently,
+    policies::an_attached_policy_is_not_deleted,
+    policies::a_membership_needs_both_parties_in_one_tenant,
+    policies::a_foreign_policy_and_an_absent_one_are_one_refusal,
 );

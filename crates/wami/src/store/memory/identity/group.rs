@@ -92,6 +92,21 @@ impl GroupStore for InMemoryWamiStore {
     }
 
     async fn add_user_to_group(&mut self, group: &ScopedName, user: &ScopedName) -> Result<()> {
+        if !self.groups.contains_key(group) {
+            return Err(wami_core::error::AmiError::ResourceNotFound {
+                resource: format!("group {group}"),
+            });
+        }
+        if !self.users.contains_key(user) {
+            return Err(wami_core::error::AmiError::ResourceNotFound {
+                resource: format!("user {user}"),
+            });
+        }
+        if group.tenant() != user.tenant() {
+            return Err(wami_core::error::AmiError::InvalidParameter {
+                message: format!("{user} cannot join {group}: a group's members are of its tenant"),
+            });
+        }
         let groups = self.user_groups.entry(user.clone()).or_default();
         if !groups.contains(group) {
             groups.push(group.clone());

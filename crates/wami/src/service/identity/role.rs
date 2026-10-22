@@ -3,7 +3,12 @@
 //! Orchestrates role management operations.
 
 use crate::service::auth::authorizer::{confirm, guard, guard_tenant, Authorizer};
-use crate::store::traits::RoleStore;
+use crate::store::traits::{PolicyStore, RoleStore};
+
+/// What the role service reads: the roles, and the policies a boundary
+/// given at create names (review round 1, Δ5).
+pub trait RoleServiceStore: RoleStore + PolicyStore {}
+impl<T> RoleServiceStore for T where T: RoleStore + PolicyStore {}
 use crate::wami::identity::role::{
     builder as role_builder, CreateRoleRequest, ListRolesRequest, Role, UpdateRoleRequest,
 };
@@ -17,13 +22,16 @@ use wami_core::error::Result;
 /// Service for managing IAM roles
 ///
 /// Provides high-level operations for role management.
-#[wami_macros::service(store_trait = "crate::store::traits::RoleStore", generate_new = false)]
+#[wami_macros::service(
+    store_trait = "crate::service::identity::role::RoleServiceStore",
+    generate_new = false
+)]
 pub struct RoleService<S> {
     store: Arc<RwLock<S>>,
     authz: Option<Arc<dyn Authorizer>>,
 }
 
-impl<S: RoleStore> RoleService<S> {
+impl<S: RoleServiceStore> RoleService<S> {
     pub fn new(store: Arc<RwLock<S>>) -> Self {
         Self { store, authz: None }
     }
@@ -60,6 +68,15 @@ impl<S: RoleStore> RoleService<S> {
         )?;
 
         if let Some(boundary_arn) = request.permissions_boundary {
+            // The checks every door setting a boundary runs: a stored policy
+            // of the role's tenant, suitable as a boundary (Δ5); a foreign one
+            // and an absent one answer alike (Δ6).
+            crate::service::policies::permissions_boundary::boundary_policy(
+                &*self.read_store().await,
+                &boundary_arn,
+                &request.role,
+            )
+            .await?;
             role = role_builder::set_permissions_boundary(role, boundary_arn);
         }
 

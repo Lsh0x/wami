@@ -3,7 +3,12 @@
 //! Orchestrates user management operations by combining wami builders with store persistence.
 
 use crate::service::auth::authorizer::{confirm, guard, guard_tenant, Authorizer};
-use crate::store::traits::UserStore;
+use crate::store::traits::{PolicyStore, UserStore};
+
+/// What the user service reads: the users, and the policies a boundary
+/// given at create names (review round 1, Δ5).
+pub trait UserServiceStore: UserStore + PolicyStore {}
+impl<T> UserServiceStore for T where T: UserStore + PolicyStore {}
 use crate::wami::identity::root_user::ROOT_USER_NAME;
 use crate::wami::identity::user::{
     builder as user_builder, CreateUserRequest, ListUsersRequest, UpdateUserRequest, User,
@@ -21,13 +26,16 @@ use wami_core::types::Tag;
 /// Every verb names its target by [`ScopedName`] — the tenant explicitly, never
 /// the caller's by default (wami 005).
 /// Optionally holds an [`Authorizer`] for authorization guards on every method.
-#[wami_macros::service(store_trait = "crate::store::traits::UserStore", generate_new = false)]
+#[wami_macros::service(
+    store_trait = "crate::service::identity::user::UserServiceStore",
+    generate_new = false
+)]
 pub struct UserService<S> {
     store: Arc<RwLock<S>>,
     authz: Option<Arc<dyn Authorizer>>,
 }
 
-impl<S: UserStore> UserService<S> {
+impl<S: UserServiceStore> UserService<S> {
     /// Create a new UserService without authorization guards (backward compatible).
     pub fn new(store: Arc<RwLock<S>>) -> Self {
         Self { store, authz: None }
@@ -63,6 +71,15 @@ impl<S: UserStore> UserService<S> {
 
         let mut user = user_builder::build_user(&request.user, request.path, context)?;
         if let Some(boundary_arn) = request.permissions_boundary {
+            // The checks every door setting a boundary runs: a stored policy
+            // of the user's tenant, suitable as a boundary (Δ5); a foreign one
+            // and an absent one answer alike (Δ6).
+            crate::service::policies::permissions_boundary::boundary_policy(
+                &*self.read_store().await,
+                &boundary_arn,
+                &request.user,
+            )
+            .await?;
             user = user_builder::set_permissions_boundary(user, boundary_arn);
         }
         let user = if let Some(tags) = request.tags {

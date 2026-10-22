@@ -75,7 +75,9 @@ fn policy(tenant: &TenantPath, name: &str, document: String) -> CreatePolicyRequ
 /// # Panics
 ///
 /// When the store hands one tenant's `alice` to the other.
-pub async fn two_tenants_each_hold_a_user_of_one_name<S: UserStore + 'static>(store: Shared<S>) {
+pub async fn two_tenants_each_hold_a_user_of_one_name<S: UserStore + PolicyStore + 'static>(
+    store: Shared<S>,
+) {
     let users = UserService::new(store);
     let a5 = users
         .create_user(&caller(&t57(), "x"), user(key(&t57(), "alice")))
@@ -138,7 +140,9 @@ pub async fn two_tenants_each_hold_a_group_of_one_name<S: GroupStore + 'static>(
 /// # Panics
 ///
 /// When the store hands one tenant's role to the other.
-pub async fn two_tenants_each_hold_a_role_of_one_name<S: RoleStore + 'static>(store: Shared<S>) {
+pub async fn two_tenants_each_hold_a_role_of_one_name<S: RoleStore + PolicyStore + 'static>(
+    store: Shared<S>,
+) {
     let roles = RoleService::new(store);
     let r5 = roles
         .create_role(&caller(&t57(), "x"), role(key(&t57(), "admin")))
@@ -170,7 +174,9 @@ pub async fn two_tenants_each_hold_a_role_of_one_name<S: RoleStore + 'static>(st
 /// # Panics
 ///
 /// When the second create succeeds or rewrites the first record.
-pub async fn a_create_on_a_held_user_key_is_refused<S: UserStore + 'static>(store: Shared<S>) {
+pub async fn a_create_on_a_held_user_key_is_refused<S: UserStore + PolicyStore + 'static>(
+    store: Shared<S>,
+) {
     let users = UserService::new(store);
     let ctx = caller(&t57(), "x");
     let first = users
@@ -225,7 +231,9 @@ pub async fn a_create_on_a_held_group_key_is_refused<S: GroupStore + 'static>(st
 /// # Panics
 ///
 /// When the second create succeeds or rewrites the first record.
-pub async fn a_create_on_a_held_role_key_is_refused<S: RoleStore + 'static>(store: Shared<S>) {
+pub async fn a_create_on_a_held_role_key_is_refused<S: RoleStore + PolicyStore + 'static>(
+    store: Shared<S>,
+) {
     let roles = RoleService::new(store);
     let ctx = caller(&t57(), "x");
     let first = roles

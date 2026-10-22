@@ -3,7 +3,7 @@
 
 use super::{caller, key, t57, Shared};
 use crate::service::UserService;
-use crate::store::traits::UserStore;
+use crate::store::traits::{PolicyStore, UserStore};
 use crate::wami::identity::user::requests::{CreateUserRequest, UpdateUserRequest};
 use wami_core::arn::{ScopedName, TenantPath};
 use wami_core::error::AmiError;
@@ -23,7 +23,9 @@ fn create(user: ScopedName) -> CreateUserRequest {
 /// # Panics
 ///
 /// When a reserved name is created anywhere.
-pub async fn a_reserved_name_is_refused_at_create_in_every_tenant<S: UserStore + 'static>(
+pub async fn a_reserved_name_is_refused_at_create_in_every_tenant<
+    S: UserStore + PolicyStore + 'static,
+>(
     store: Shared<S>,
 ) {
     let users = UserService::new(store.clone());
@@ -61,7 +63,9 @@ pub async fn a_reserved_name_is_refused_at_create_in_every_tenant<S: UserStore +
 /// # Panics
 ///
 /// When a user is renamed to a reserved name.
-pub async fn a_reserved_name_is_refused_at_rename<S: UserStore + 'static>(store: Shared<S>) {
+pub async fn a_reserved_name_is_refused_at_rename<S: UserStore + PolicyStore + 'static>(
+    store: Shared<S>,
+) {
     let users = UserService::new(store.clone());
     let ctx = caller(&t57(), "x");
     let alice = key(&t57(), "alice");

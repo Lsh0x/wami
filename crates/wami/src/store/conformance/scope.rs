@@ -333,7 +333,8 @@ pub async fn a_principals_policies_are_never_found_for_another_tenants_namesake<
 
 /// A policy never crosses into another tenant: a 6/7 managed policy is
 /// refused as an attachment or a permissions boundary on a 5/7 user, group
-/// or role, and a 5/7 policy attaches (A7).
+/// or role — answered as an absent policy is (Δ6) — and a 5/7 policy
+/// attaches (A7).
 ///
 /// # Panics
 ///
@@ -384,7 +385,7 @@ pub async fn a_policy_never_crosses_into_another_tenant<S: GuardStore>(store: Sh
         )
         .await;
     assert!(
-        matches!(got, Err(AmiError::InvalidParameter { .. })),
+        matches!(got, Err(AmiError::ResourceNotFound { .. })),
         "6/7's policy on 5/7's user → {got:?}"
     );
     let got = attach
@@ -397,7 +398,7 @@ pub async fn a_policy_never_crosses_into_another_tenant<S: GuardStore>(store: Sh
         )
         .await;
     assert!(
-        matches!(got, Err(AmiError::InvalidParameter { .. })),
+        matches!(got, Err(AmiError::ResourceNotFound { .. })),
         "6/7's policy on 5/7's group → {got:?}"
     );
     let got = attach
@@ -410,7 +411,7 @@ pub async fn a_policy_never_crosses_into_another_tenant<S: GuardStore>(store: Sh
         )
         .await;
     assert!(
-        matches!(got, Err(AmiError::InvalidParameter { .. })),
+        matches!(got, Err(AmiError::ResourceNotFound { .. })),
         "6/7's policy on 5/7's role → {got:?}"
     );
     let boundary = PermissionsBoundaryService::new(store.clone(), INSTANCE.to_string());
@@ -425,7 +426,7 @@ pub async fn a_policy_never_crosses_into_another_tenant<S: GuardStore>(store: Sh
         )
         .await;
     assert!(
-        matches!(got, Err(AmiError::InvalidParameter { .. })),
+        matches!(got, Err(AmiError::ResourceNotFound { .. })),
         "6/7's policy as 5/7's boundary → {got:?}"
     );
     let s = store.read().await;
