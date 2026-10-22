@@ -275,18 +275,6 @@ impl TryFrom<WireContext> for WamiContext {
             });
         }
 
-        // A key of another tenant than the caller's names another principal
-        // whatever its record says: refused before anything reads it.
-        if let Some(key) = &wire.caller_key {
-            if key.tenant() != &wire.caller_arn.tenant_path {
-                return Err(AmiError::InvalidParameter {
-                    message: format!(
-                        "the caller key {key} is not of the caller's tenant {}",
-                        wire.caller_arn.tenant_path
-                    ),
-                });
-            }
-        }
         if let Some(session) = &wire.session_info {
             if let (Some(key), Some(arn)) = (&session.assumed_role_key, &session.assumed_role_arn) {
                 if key.tenant() != &arn.tenant_path {
@@ -300,7 +288,12 @@ impl TryFrom<WireContext> for WamiContext {
             }
         }
 
-        declared_beside_key(&wire.tenant_path, wire.caller_key.as_ref())?;
+        declared_beside_key(
+            &wire.caller_arn,
+            &wire.tenant_path,
+            &wire.instance_id,
+            wire.caller_key.as_ref(),
+        )?;
 
         if wire.provenance.len() > MAX_PROVENANCE_DEPTH {
             return Err(AmiError::InvalidParameter {
@@ -327,20 +320,50 @@ impl TryFrom<WireContext> for WamiContext {
     }
 }
 
-/// A declared tenant path beside a key of another tenant is refused: the key
-/// names the verified principal, and a second answer to "which tenant" is one
-/// the caller chose (wami 005, review round 2 F1). Widening stays open to a
-/// context with no key — which the evaluator refuses for anyone but root.
+/// Beside a key, the context's scope is the verified caller's, never a value
+/// the caller chose (wami 005, review round 2 F1, round 3 M2 and L3).
+///
+/// The key must be of the caller's own tenant, or it names another principal
+/// whatever its record says. A declared tenant path of another tenant than the
+/// key is a second answer to "which tenant". A declared instance other than the
+/// caller's is the same fault one field over: every guard renders its target
+/// in `instance_id()` and every instance check compares records to it, so a
+/// chosen instance would let the caller pick the value those checks compare
+/// against. Both are checked here, by `build` and by the wire alike. Widening
+/// stays open to a context with no key — which the evaluator refuses for
+/// anyone but root.
 #[allow(clippy::result_large_err)]
-fn declared_beside_key(declared: &TenantPath, key: Option<&ScopedName>) -> Result<()> {
-    match key {
-        Some(key) if key.tenant() != declared => Err(AmiError::InvalidParameter {
+fn declared_beside_key(
+    caller: &WamiArn,
+    tenant: &TenantPath,
+    instance: &str,
+    key: Option<&ScopedName>,
+) -> Result<()> {
+    let Some(key) = key else { return Ok(()) };
+    if key.tenant() != &caller.tenant_path {
+        return Err(AmiError::InvalidParameter {
             message: format!(
-                "the context declares tenant {declared} but its caller key {key} is of another"
+                "the caller key {key} is not of the caller's tenant {}",
+                caller.tenant_path
             ),
-        }),
-        _ => Ok(()),
+        });
     }
+    if key.tenant() != tenant {
+        return Err(AmiError::InvalidParameter {
+            message: format!(
+                "the context declares tenant {tenant} but its caller key {key} is of another"
+            ),
+        });
+    }
+    if instance != caller.wami_instance_id {
+        return Err(AmiError::InvalidParameter {
+            message: format!(
+                "the context declares instance {instance:?} but its caller is of instance {:?}",
+                caller.wami_instance_id
+            ),
+        });
+    }
+    Ok(())
 }
 
 impl WamiContext {
@@ -658,7 +681,12 @@ impl WamiContextBuilder {
             });
         }
 
-        declared_beside_key(&tenant_path, self.caller_key.as_ref())?;
+        declared_beside_key(
+            &caller_arn,
+            &tenant_path,
+            &instance_id,
+            self.caller_key.as_ref(),
+        )?;
 
         // Validate that instance_id is not empty
         if instance_id.trim().is_empty() {
@@ -819,6 +847,49 @@ mod tests {
         let mut json = serde_json::to_value(&ctx).unwrap();
         json["tenant_path"] = serde_json::to_value(TenantPath::new(vec![6, 7])).unwrap();
         assert!(serde_json::from_value::<WamiContext>(json).is_err());
+    }
+
+    #[test]
+    fn a_context_declaring_another_instance_than_its_caller_is_refused_at_build() {
+        // Every guard renders its target in `instance_id()`, and the
+        // instance checks compare records to it: beside a key, a declared
+        // instance is a value the caller chose (wami 005, round 3 M2).
+        let built = WamiContext::builder()
+            .caller_arn(alice_57())
+            .caller_key(ScopedName::new(TenantPath::new(vec![5, 7]), "alice"))
+            .instance_id("elsewhere")
+            .build();
+        assert!(built.is_err(), "another instance built beside a key");
+        let same = WamiContext::builder()
+            .caller_arn(alice_57())
+            .caller_key(ScopedName::new(TenantPath::new(vec![5, 7]), "alice"))
+            .instance_id("inst")
+            .build();
+        assert!(same.is_ok(), "restating the caller's own instance");
+    }
+
+    #[test]
+    fn the_wire_refuses_a_context_declaring_another_instance_than_its_caller() {
+        let ctx = WamiContext::builder()
+            .caller_arn(alice_57())
+            .caller_key(ScopedName::new(TenantPath::new(vec![5, 7]), "alice"))
+            .build()
+            .unwrap();
+        let mut json = serde_json::to_value(&ctx).unwrap();
+        json["instance_id"] = serde_json::Value::String("elsewhere".to_string());
+        assert!(serde_json::from_value::<WamiContext>(json).is_err());
+    }
+
+    #[test]
+    fn a_key_of_another_tenant_than_the_caller_is_refused_at_build() {
+        // Declaring the key's tenant too used to agree with the key and
+        // pass: the key must name the caller's own tenant (round 3 L3).
+        let built = WamiContext::builder()
+            .caller_arn(alice_57())
+            .caller_key(ScopedName::new(TenantPath::new(vec![6, 7]), "alice"))
+            .tenant_path(TenantPath::new(vec![6, 7]))
+            .build();
+        assert!(built.is_err(), "a 6/7 key built beside a 5/7 caller");
     }
 
     #[test]

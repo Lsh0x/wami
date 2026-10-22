@@ -184,10 +184,10 @@ pub async fn a_session_is_judged_on_its_roles_policies_only<S: EvaluatorStore>(s
 }
 
 /// S15: a context whose key names another record than its caller ARN is
-/// refused — forged tenant, forged name, both — and so is one with no key or
-/// a key with no record; every one of them is the SAME refusal. A context
-/// deserialised with a key whose tenant differs from its caller ARN's is
-/// refused at the wire.
+/// refused — a forged name at use, a forged tenant (or both) already at
+/// build — and so is one with no key or a key with no record; every refusal
+/// at use is the SAME refusal. A context deserialised with a key whose tenant
+/// differs from its caller ARN's is refused at the wire.
 ///
 /// # Panics
 ///
@@ -207,7 +207,7 @@ pub async fn a_forged_caller_key_decides_nothing<S: EvaluatorStore + AccessKeySt
         .expect("a read")
         .expect("alice");
     let authz = AuthorizationService::new(store.clone());
-    let with_key = |k: Option<ScopedName>| {
+    let built = |k: Option<ScopedName>| {
         let b = WamiContext::builder().caller_arn(alice.wami_arn.clone());
         match k {
             // The path declared as the key's: beside any other, the build
@@ -217,8 +217,18 @@ pub async fn a_forged_caller_key_decides_nothing<S: EvaluatorStore + AccessKeySt
             None => b,
         }
         .build()
-        .expect("a context")
     };
+    let with_key = |k: Option<ScopedName>| built(k).expect("a context");
+
+    // A key of another tenant than the caller's is not even built (review
+    // round 3 L3), as the wire refuses it below.
+    for (what, k) in [
+        ("forged tenant", key(&t67(), "alice")),
+        ("forged both", key(&t67(), "admin")),
+    ] {
+        let got = built(Some(k));
+        assert!(got.is_err(), "{what}: built {got:?}");
+    }
 
     // The genuine context is allowed: the arrange works.
     let genuine = authz
@@ -232,8 +242,6 @@ pub async fn a_forged_caller_key_decides_nothing<S: EvaluatorStore + AccessKeySt
     let mut refusals = Vec::new();
     for (what, k) in [
         ("forged name", Some(key(&t57(), "admin"))),
-        ("forged tenant", Some(key(&t67(), "alice"))),
-        ("forged both", Some(key(&t67(), "admin"))),
         ("no record", Some(key(&t57(), "ghost"))),
         ("no key", None),
     ] {

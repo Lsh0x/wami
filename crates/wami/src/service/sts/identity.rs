@@ -273,24 +273,24 @@ mod tests {
         assert_eq!(listed.len(), 1, "its own tenant's: {listed:?}");
 
         // A cross-tenant list: alice naming 6/7's bob as her key, declared
-        // in 6/7 so the build lets it through — refused, as no key at all.
+        // in 6/7 — no longer even built (round 3 L3: a key of another tenant
+        // than the caller's is refused at build, as on the wire).
         let forged = WamiContext::builder()
             .caller_arn(callers[0].caller_arn().clone())
             .tenant_path(TenantPath::new(vec![6, 7]))
             .caller_key(callers[1].caller_key().unwrap().clone())
-            .build()
-            .unwrap();
+            .build();
+        assert!(forged.is_err(), "another tenant's key built: {forged:?}");
+        // Without a key, a declared 6/7 is refused at use, as no key at all.
         let keyless = WamiContext::builder()
             .caller_arn(callers[0].caller_arn().clone())
             .tenant_path(TenantPath::new(vec![6, 7]))
             .build()
             .unwrap();
-        for (what, ctx) in [("another tenant's key", forged), ("no key", keyless)] {
-            let got = service.list_identities(&ctx).await;
-            assert!(
-                matches!(&got, Err(AmiError::AccessDenied { .. })),
-                "{what}: {got:?}"
-            );
-        }
+        let got = service.list_identities(&keyless).await;
+        assert!(
+            matches!(&got, Err(AmiError::AccessDenied { .. })),
+            "no key: {got:?}"
+        );
     }
 }

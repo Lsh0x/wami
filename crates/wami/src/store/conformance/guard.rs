@@ -939,6 +939,7 @@ where
     use crate::service::sts::identity::GetCallerIdentityRequest;
     use crate::service::IdentityService;
     plain_user(&store, &t57(), "alice").await;
+    plain_user(&store, &t57(), "bob").await;
     plain_user(&store, &t67(), "alice").await;
     let mine = store
         .read()
@@ -962,12 +963,19 @@ where
         .expect("alice's own identity");
     assert_eq!(own.user_id, mine.user_id);
 
-    // Declared as the key's tenant, or the build refuses it before the
-    // identity's own check is reached (review round 2 F1).
-    let forged = WamiContext::builder()
+    // A key of another tenant than the caller's is not even built (review
+    // round 3 L3) ...
+    let other_tenant = WamiContext::builder()
         .caller_arn(mine.wami_arn.clone())
         .tenant_path(theirs.key().tenant().clone())
         .caller_key(theirs.key())
+        .build();
+    assert!(other_tenant.is_err(), "built: {other_tenant:?}");
+    // ... so the identity's own check is reached by a key of the caller's
+    // tenant naming another principal.
+    let forged = WamiContext::builder()
+        .caller_arn(mine.wami_arn.clone())
+        .caller_key(key(&t57(), "bob"))
         .build()
         .expect("a context");
     let keyless = WamiContext::builder()
