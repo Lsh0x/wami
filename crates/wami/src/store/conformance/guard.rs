@@ -132,6 +132,17 @@ fn authz<S: EvaluatorStore>(store: &Shared<S>) -> Arc<dyn Authorizer> {
     into_authorizer(AuthorizationService::new(store.clone()))
 }
 
+/// What a result that was not a refusal was, WITHOUT printing it: the `Ok`
+/// side of these calls carries a freshly minted secret access key, which must
+/// never reach a panic message (and so a log) whatever the test.
+fn kind<T>(got: &Result<T>) -> &'static str {
+    if got.is_ok() {
+        "Ok"
+    } else {
+        "an error that is not AccessDenied"
+    }
+}
+
 /// The refusal's message, asserting it IS a refusal and names `arn`.
 fn refused<T: Debug>(what: &str, got: Result<T>, arn: &str) -> String {
     match got {
@@ -142,7 +153,10 @@ fn refused<T: Debug>(what: &str, got: Result<T>, arn: &str) -> String {
             );
             message
         }
-        other => panic!("{what}: expected AccessDenied on {arn}, got {other:?}"),
+        other => panic!(
+            "{what}: expected AccessDenied on {arn}, got {}",
+            kind(&other)
+        ),
     }
 }
 
@@ -1073,7 +1087,7 @@ pub async fn every_credential_verb_refuses_another_tenant<S: GuardStore>(store: 
     let arn = target(&t67(), "user", "bob");
     let denied = |what: &str, got: std::result::Result<(), AmiError>| match got {
         Err(AmiError::AccessDenied { .. }) => {}
-        other => panic!("{what}: expected AccessDenied, got {other:?}"),
+        other => panic!("{what}: expected AccessDenied, got {}", kind(&other)),
     };
 
     let keys = AccessKeyService::with_authorizer(store.clone(), a.clone());
