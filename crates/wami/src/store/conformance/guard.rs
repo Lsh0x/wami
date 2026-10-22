@@ -962,8 +962,11 @@ where
         .expect("alice's own identity");
     assert_eq!(own.user_id, mine.user_id);
 
+    // Declared as the key's tenant, or the build refuses it before the
+    // identity's own check is reached (review round 2 F1).
     let forged = WamiContext::builder()
         .caller_arn(mine.wami_arn.clone())
+        .tenant_path(theirs.key().tenant().clone())
         .caller_key(theirs.key())
         .build()
         .expect("a context");

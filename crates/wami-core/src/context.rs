@@ -300,6 +300,8 @@ impl TryFrom<WireContext> for WamiContext {
             }
         }
 
+        declared_beside_key(&wire.tenant_path, wire.caller_key.as_ref())?;
+
         if wire.provenance.len() > MAX_PROVENANCE_DEPTH {
             return Err(AmiError::InvalidParameter {
                 message: format!(
@@ -322,6 +324,22 @@ impl TryFrom<WireContext> for WamiContext {
             mfa_present: wire.mfa_present,
             secure_transport: wire.secure_transport,
         })
+    }
+}
+
+/// A declared tenant path beside a key of another tenant is refused: the key
+/// names the verified principal, and a second answer to "which tenant" is one
+/// the caller chose (wami 005, review round 2 F1). Widening stays open to a
+/// context with no key — which the evaluator refuses for anyone but root.
+#[allow(clippy::result_large_err)]
+fn declared_beside_key(declared: &TenantPath, key: Option<&ScopedName>) -> Result<()> {
+    match key {
+        Some(key) if key.tenant() != declared => Err(AmiError::InvalidParameter {
+            message: format!(
+                "the context declares tenant {declared} but its caller key {key} is of another"
+            ),
+        }),
+        _ => Ok(()),
     }
 }
 
@@ -454,6 +472,17 @@ impl WamiContext {
     /// refuses for anyone but root.
     pub fn caller_key(&self) -> Option<&ScopedName> {
         self.caller_key.as_ref()
+    }
+
+    /// The tenant of the verified principal — its key's, checked against
+    /// its record at use — or `None` for a context built without a key.
+    ///
+    /// The tenant a policy reads (`${tenant}`, `wami:PrincipalTenantId`,
+    /// `wami:TenantId`) is this one, never [`WamiContext::tenant_path`]: that
+    /// one is the caller's to declare, on the wire as at build (wami 005,
+    /// review round 2 F1).
+    pub fn principal_tenant(&self) -> Option<&TenantPath> {
+        self.caller_key.as_ref().map(ScopedName::tenant)
     }
 
     /// Get the tenant path
@@ -629,6 +658,8 @@ impl WamiContextBuilder {
             });
         }
 
+        declared_beside_key(&tenant_path, self.caller_key.as_ref())?;
+
         // Validate that instance_id is not empty
         if instance_id.trim().is_empty() {
             return Err(AmiError::InvalidParameter {
@@ -751,6 +782,42 @@ mod tests {
         let mut json = serde_json::to_value(&ctx).unwrap();
         json["caller_key"] =
             serde_json::to_value(ScopedName::new(TenantPath::new(vec![6, 7]), "alice")).unwrap();
+        assert!(serde_json::from_value::<WamiContext>(json).is_err());
+    }
+
+    #[test]
+    fn a_context_declaring_another_tenant_than_its_key_is_refused_at_build() {
+        // The tenant condition keys and `${tenant}` read the verified
+        // principal's tenant; a declared path beside a key is a second answer
+        // to the same question (wami 005, review round 2 F1).
+        for declared in [vec![6, 7], vec![5], vec![5, 7, 1]] {
+            let built = WamiContext::builder()
+                .caller_arn(alice_57())
+                .caller_key(ScopedName::new(TenantPath::new(vec![5, 7]), "alice"))
+                .tenant_path(TenantPath::new(declared.clone()))
+                .build();
+            assert!(built.is_err(), "{declared:?} built beside a 5/7 key");
+        }
+        let same = WamiContext::builder()
+            .caller_arn(alice_57())
+            .caller_key(ScopedName::new(TenantPath::new(vec![5, 7]), "alice"))
+            .tenant_path(TenantPath::new(vec![5, 7]))
+            .build();
+        assert!(
+            same.is_ok(),
+            "restating the key's own tenant is no widening"
+        );
+    }
+
+    #[test]
+    fn the_wire_refuses_a_context_declaring_another_tenant_than_its_key() {
+        let ctx = WamiContext::builder()
+            .caller_arn(alice_57())
+            .caller_key(ScopedName::new(TenantPath::new(vec![5, 7]), "alice"))
+            .build()
+            .unwrap();
+        let mut json = serde_json::to_value(&ctx).unwrap();
+        json["tenant_path"] = serde_json::to_value(TenantPath::new(vec![6, 7])).unwrap();
         assert!(serde_json::from_value::<WamiContext>(json).is_err());
     }
 

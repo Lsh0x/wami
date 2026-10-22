@@ -1307,9 +1307,10 @@ mod tests {
     #[tokio::test]
     async fn test_root_bypasses_all() {
         let root_arn: Arn = "arn:wami:iam:0:wami:999:user/root".parse().unwrap();
+        // Root's own tenant: a declared 12345678 beside root's key is refused
+        // at build (review round 2 F1); the bypass reaches 12345678 anyway.
         let ctx = WamiContext::builder()
             .instance_id("999")
-            .tenant_path(TenantPath::single(12345678))
             .caller_key(keyed(&root_arn))
             .caller_arn(root_arn)
             .is_root(true)

@@ -210,7 +210,10 @@ pub async fn a_forged_caller_key_decides_nothing<S: EvaluatorStore + AccessKeySt
     let with_key = |k: Option<ScopedName>| {
         let b = WamiContext::builder().caller_arn(alice.wami_arn.clone());
         match k {
-            Some(k) => b.caller_key(k),
+            // The path declared as the key's: beside any other, the build
+            // refuses a forged tenant before the check at use is reached
+            // (review round 2 F1), and this test is about that check.
+            Some(k) => b.tenant_path(k.tenant().clone()).caller_key(k),
             None => b,
         }
         .build()
