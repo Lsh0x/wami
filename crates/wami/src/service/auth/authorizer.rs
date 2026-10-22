@@ -193,8 +193,10 @@ pub struct Found {
 ///
 /// # Errors
 ///
-/// [`AmiError::AccessDenied`] naming `what` and `id`; any other error of the
-/// authorizer as it came.
+/// [`AmiError::AccessDenied`] naming `what` and `id` — for an absent id, a
+/// refusal, and any error reached only through the record. An error reading
+/// the caller's own set (a store that fails, a document that cannot be read)
+/// comes as it came, for a present and an absent id alike.
 pub async fn guard_by_id(
     authz: Option<&Arc<dyn Authorizer>>,
     context: &WamiContext,
@@ -213,19 +215,35 @@ pub async fn guard_by_id(
             action.as_str()
         ),
     };
-    let Some(found) = found.filter(|found| found.instance == context.instance_id()) else {
-        return Err(refusal());
-    };
+    // The caller's own set is read FIRST, on a target the record does not
+    // choose: a failing store or a document that cannot be read answers the
+    // same for a present and an absent id (review round 2 F2).
+    // A caller refused outright (no key, a forged one) gets the one refusal.
     match authz
-        .check_or_deny(context, action.as_str(), &found.owner)
+        .authorize(context, action.as_str(), context.caller_arn())
         .await
     {
         Err(AmiError::AccessDenied { .. }) => return Err(refusal()),
-        other => other?,
+        Err(unreadable) => return Err(unreadable),
+        Ok(_) => {}
+    }
+    let Some(found) = found.filter(|found| found.instance == context.instance_id()) else {
+        return Err(refusal());
+    };
+    // From here an error is reached only through the record — a condition
+    // read against its owner or itself. Told apart from the refusal, it
+    // would say the id exists (A1): it IS the refusal.
+    if authz
+        .check_or_deny(context, action.as_str(), &found.owner)
+        .await
+        .is_err()
+    {
+        return Err(refusal());
     }
     if let Some(itself) = &found.itself {
-        if explicitly_denied(&authz.authorize(context, action.as_str(), itself).await?) {
-            return Err(refusal());
+        match authz.authorize(context, action.as_str(), itself).await {
+            Ok(decision) if !explicitly_denied(&decision) => {}
+            _ => return Err(refusal()),
         }
     }
     Ok(())
@@ -528,5 +546,97 @@ mod tests {
             "Expected AccessDenied, got: {:?}",
             err
         );
+    }
+
+    // ---- guard_by_id: one answer for a present and an absent id (F2) ----
+
+    /// An authorizer whose store fails on every read of the caller's set.
+    struct FailingStore;
+
+    #[async_trait::async_trait]
+    impl Authorizer for FailingStore {
+        async fn authorize(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> Result<Decision> {
+            Err(AmiError::StoreError(
+                "the caller's policies: disk".to_string(),
+            ))
+        }
+    }
+
+    /// An authorizer allowing everything but one ARN, whose statement carries
+    /// a condition the request cannot be read against — an error reached
+    /// only through that target, i.e. only when the record exists.
+    struct UnreadableOn(WamiArn);
+
+    #[async_trait::async_trait]
+    impl Authorizer for UnreadableOn {
+        async fn authorize(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            resource_arn: &WamiArn,
+        ) -> Result<Decision> {
+            if resource_arn == &self.0 {
+                return Err(AmiError::UnreadableCondition {
+                    policy: "owner-only".to_string(),
+                    statement: "#0".to_string(),
+                    message: "aws:SourceIp is no address".to_string(),
+                });
+            }
+            Ok(Decision::Allow(AllowReason::RootBypass))
+        }
+    }
+
+    /// `guard_by_id`'s answer for `found`, as the caller sees it.
+    async fn answer(authz: Arc<dyn Authorizer>, found: Option<Found>) -> String {
+        let got = guard_by_id(
+            Some(&authz),
+            &make_context(),
+            WamiAction::IamManageCredentials,
+            "access key",
+            "AKIAEXAMPLE",
+            found,
+        )
+        .await;
+        format!("{got:?}")
+    }
+
+    fn bobs_key(ctx: &WamiContext) -> Found {
+        credential_found(ctx, &key("bob"), "AKIAEXAMPLE", "999")
+    }
+
+    #[tokio::test]
+    async fn a_failing_store_answers_alike_for_a_present_and_an_absent_id() {
+        let ctx = make_context();
+        let authz: Arc<dyn Authorizer> = Arc::new(FailingStore);
+        let present = answer(authz.clone(), Some(bobs_key(&ctx))).await;
+        let absent = answer(authz.clone(), None).await;
+        let elsewhere = Found {
+            instance: "another".to_string(),
+            ..bobs_key(&ctx)
+        };
+        let foreign = answer(authz, Some(elsewhere)).await;
+        assert_eq!(present, absent, "the id's existence is observable");
+        assert_eq!(present, foreign, "another instance's record is observable");
+        assert!(present.contains("StoreError"), "the store error: {present}");
+    }
+
+    #[tokio::test]
+    async fn an_error_reached_only_through_the_record_answers_as_the_refusal() {
+        let ctx = make_context();
+        let found = bobs_key(&ctx);
+        for (what, on) in [
+            ("its owner", found.owner.clone()),
+            ("itself", found.itself.clone().unwrap()),
+        ] {
+            let authz: Arc<dyn Authorizer> = Arc::new(UnreadableOn(on));
+            let present = answer(authz.clone(), Some(bobs_key(&ctx))).await;
+            let absent = answer(authz, None).await;
+            assert_eq!(present, absent, "an error on {what} told the id exists");
+        }
     }
 }
