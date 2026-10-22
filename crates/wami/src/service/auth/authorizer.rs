@@ -17,6 +17,13 @@ use super::decision::{Decision, DenyReason};
 /// Services hold an `Option<Arc<dyn Authorizer>>` and call [`Authorizer::check_or_deny`]
 /// at the top of each method. When `None`, no authorization check is performed
 /// (backward compatibility with existing callers).
+///
+/// The check AT USE of the caller's key — the record it names must carry the
+/// caller ARN, a session's role likewise, policies only of the principal's
+/// tenant (wami 005) — lives in wami's implementation,
+/// `AuthorizationService::authorize`, which holds the store; the trait and
+/// the guards get no store handle. An implementation of this trait of one's
+/// own decides without those checks unless it makes them.
 #[async_trait]
 pub trait Authorizer: Send + Sync {
     /// Decide whether `context` may perform `action` on `resource_arn`.
