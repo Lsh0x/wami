@@ -114,6 +114,21 @@ impl<S: UserStore> UserService<S> {
         )
         .await?;
 
+        // A rename has two targets: the destination is judged too, before
+        // anything about it is read (wami 005, review round 1 Δ7).
+        if let Some(new_name) = &request.new_user_name {
+            if new_name != request.user.name() {
+                guard(
+                    self.authz.as_ref(),
+                    context,
+                    WamiAction::IamUpdateUser,
+                    "user",
+                    &request.user.renamed(new_name.clone()),
+                )
+                .await?;
+            }
+        }
+
         // Protect root user from being renamed
         if request.user.name() == ROOT_USER_NAME {
             if let Some(ref new_name) = request.new_user_name {

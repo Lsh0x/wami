@@ -97,6 +97,19 @@ impl<S: GroupStore> GroupService<S> {
             &request.group,
         )
         .await?;
+        // The destination of a rename is judged too, before it is read (Δ7).
+        if let Some(new_name) = &request.new_group_name {
+            if new_name != request.group.name() {
+                guard(
+                    self.authz.as_ref(),
+                    context,
+                    WamiAction::IamUpdateUser,
+                    "group",
+                    &request.group.renamed(new_name.clone()),
+                )
+                .await?;
+            }
+        }
 
         let mut group = self
             .read_store()

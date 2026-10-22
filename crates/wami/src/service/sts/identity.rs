@@ -7,7 +7,7 @@ use crate::store::traits::{IdentityStore, UserStore};
 use crate::wami::sts::CallerIdentity;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use wami_core::arn::ScopedName;
+use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
 
 pub trait StsIdentityServiceStore: IdentityStore + UserStore {}
@@ -58,22 +58,29 @@ impl<S: StsIdentityServiceStore> IdentityService<S> {
         }
     }
 
-    /// Get the identity of the caller stored under `caller`.
-    ///
-    /// The caller is named by its key: a name parsed out of an AWS-format ARN
-    /// named a user in every tenant at once (wami 005).
+    /// Get the identity of the CALLER: the principal the context's key names.
     pub async fn get_caller_identity(
         &self,
         _request: GetCallerIdentityRequest,
-        caller: &ScopedName,
+        context: &WamiContext,
     ) -> Result<GetCallerIdentityResponse> {
+        // A caller reads its OWN identity only: the record its key names must
+        // carry its ARN. No key, no record and another principal's record are
+        // one refusal, as the evaluator gives it (wami 005, review round 1 Δ8).
+        let refusal = || AmiError::AccessDenied {
+            message: format!(
+                "{} is not authorized: its context does not name a stored principal \
+                 carrying that ARN",
+                context.caller_arn()
+            ),
+        };
+        let caller = context.caller_key().ok_or_else(refusal)?;
         let user = {
             let store_guard = self.store.read().await;
             store_guard.get_user(caller).await?
         }
-        .ok_or_else(|| AmiError::ResourceNotFound {
-            resource: format!("Identity for {caller}"),
-        })?;
+        .filter(|user| &user.wami_arn == context.caller_arn())
+        .ok_or_else(refusal)?;
 
         // Answered from the record read by the key, never from the identity
         // store: that store is keyed by the AWS-format `arn`, which names no
@@ -148,7 +155,11 @@ mod tests {
         // Create a user
         let user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
 
-        let caller = user.key();
+        let caller = WamiContext::builder()
+            .caller_arn(user.wami_arn.clone())
+            .caller_key(user.key())
+            .build()
+            .unwrap();
 
         service.store.write().await.create_user(user).await.unwrap();
 
@@ -169,7 +180,11 @@ mod tests {
         for i in 0..3 {
             let user =
                 build_user(&key(format!("user{}", i)), Some("/".to_string()), &context).unwrap();
-            let caller = user.key();
+            let caller = WamiContext::builder()
+                .caller_arn(user.wami_arn.clone())
+                .caller_key(user.key())
+                .build()
+                .unwrap();
 
             service.store.write().await.create_user(user).await.unwrap();
 

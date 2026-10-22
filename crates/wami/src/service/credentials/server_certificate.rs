@@ -110,6 +110,19 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
             &request.server_certificate,
         )
         .await?;
+        // The destination of a rename is judged too, before it is read (Δ7).
+        if let Some(new_name) = &request.new_server_certificate_name {
+            if new_name != request.server_certificate.name() {
+                guard(
+                    self.authz.as_ref(),
+                    context,
+                    WamiAction::IamManageCredentials,
+                    "credential",
+                    &request.server_certificate.renamed(new_name.clone()),
+                )
+                .await?;
+            }
+        }
 
         // Get existing certificate
         let mut certificate = self

@@ -517,7 +517,7 @@ where
         "6/7's admin was simulated under 5/7's boundary"
     );
 
-    UserService::new(store.clone())
+    let five_alice = UserService::new(store.clone())
         .create_user(&caller(&t57(), "seed"), user(key(&t57(), "alice")))
         .await
         .expect("5/7's alice");
@@ -526,7 +526,10 @@ where
         .await
         .expect("6/7's alice");
     let me = IdentityService::new(store.clone(), INSTANCE.to_string())
-        .get_caller_identity(GetCallerIdentityRequest {}, &key(&t57(), "alice"))
+        .get_caller_identity(
+            GetCallerIdentityRequest {},
+            &super::guard::signed_in(&five_alice),
+        )
         .await
         .expect("5/7's alice's identity");
     assert_ne!(

@@ -806,3 +806,167 @@ pub(crate) async fn admin57_everything<S: GuardStore>(store: &Shared<S>) -> Wami
     let all57 = format!("arn:wami:iam:{}:wami:{INSTANCE}:**", t57());
     principal(store, &t57(), "admin", &[all57]).await
 }
+
+/// T7 (Δ7): a rename has two targets and the DESTINATION is judged too,
+/// before anything about it is read: a caller whose only right is on 5/7's
+/// `user/alice` (or `group/devs`) is refused renaming into `bob` (absent) and
+/// into `carol` (held) — the same refusal, naming the destination, never
+/// ResourceExists.
+///
+/// # Panics
+///
+/// When a rename into a name the caller holds no right on goes through, or
+/// tells a held destination from an absent one.
+pub async fn a_rename_is_judged_on_its_destination<S: GuardStore>(store: Shared<S>) {
+    use crate::wami::identity::group::requests::UpdateGroupRequest;
+    plain_user(&store, &t57(), "alice").await;
+    plain_user(&store, &t57(), "carol").await;
+    let ctx = caller(&t57(), "seed");
+    for name in ["devs", "ops"] {
+        GroupService::new(store.clone())
+            .create_group(
+                &ctx,
+                CreateGroupRequest {
+                    group: key(&t57(), name),
+                    path: None,
+                    tags: None,
+                },
+            )
+            .await
+            .expect("a group");
+    }
+    let helper = principal(
+        &store,
+        &t57(),
+        "helper",
+        &[
+            target(&t57(), "user", "alice"),
+            target(&t57(), "group", "devs"),
+        ],
+    )
+    .await;
+    let a = authz(&store);
+    let users = UserService::with_authorizer(store.clone(), a.clone());
+    let rename = |to: &str| UpdateUserRequest {
+        user: key(&t57(), "alice"),
+        new_user_name: Some(to.to_string()),
+        new_path: None,
+    };
+    let absent = refused(
+        "rename into bob",
+        users.update_user(&helper, rename("bob")).await,
+        &target(&t57(), "user", "bob"),
+    );
+    let held = refused(
+        "rename into carol",
+        users.update_user(&helper, rename("carol")).await,
+        &target(&t57(), "user", "carol"),
+    );
+    assert_eq!(
+        absent.replace("bob", "carol"),
+        held,
+        "a held destination is told from an absent one"
+    );
+    let still = store
+        .read()
+        .await
+        .get_user(&key(&t57(), "alice"))
+        .await
+        .expect("a read");
+    assert!(still.is_some(), "alice was renamed");
+
+    let groups = GroupService::with_authorizer(store.clone(), a);
+    let regroup = |to: &str| UpdateGroupRequest {
+        group: key(&t57(), "devs"),
+        new_group_name: Some(to.to_string()),
+        new_path: None,
+    };
+    let absent = refused(
+        "rename devs into builders",
+        groups.update_group(&helper, regroup("builders")).await,
+        &target(&t57(), "group", "builders"),
+    );
+    let held = refused(
+        "rename devs into ops",
+        groups.update_group(&helper, regroup("ops")).await,
+        &target(&t57(), "group", "ops"),
+    );
+    assert_eq!(
+        absent.replace("builders", "ops"),
+        held,
+        "a held group destination is told from an absent one"
+    );
+
+    // The pair: a path change (no new name) needs the source only.
+    users
+        .update_user(
+            &helper,
+            UpdateUserRequest {
+                user: key(&t57(), "alice"),
+                new_user_name: None,
+                new_path: Some("/x/".into()),
+            },
+        )
+        .await
+        .expect("a path change on alice");
+}
+
+/// T8 (Δ8): `get_caller_identity` answers the CONTEXT's caller and nobody
+/// else: a context whose key names another principal than its ARN, or no
+/// key at all, gets the one refusal; the genuine context gets its own
+/// identity.
+///
+/// # Panics
+///
+/// When it answers for a key that is not the caller's.
+pub async fn caller_identity_answers_the_caller_only<S>(store: Shared<S>)
+where
+    S: GuardStore + crate::store::traits::IdentityStore,
+{
+    use crate::service::sts::identity::GetCallerIdentityRequest;
+    use crate::service::IdentityService;
+    plain_user(&store, &t57(), "alice").await;
+    plain_user(&store, &t67(), "alice").await;
+    let mine = store
+        .read()
+        .await
+        .get_user(&key(&t57(), "alice"))
+        .await
+        .expect("a read")
+        .expect("5/7's alice");
+    let theirs = store
+        .read()
+        .await
+        .get_user(&key(&t67(), "alice"))
+        .await
+        .expect("a read")
+        .expect("6/7's alice");
+    let identity = IdentityService::new(store.clone(), INSTANCE.to_string());
+
+    let own = identity
+        .get_caller_identity(GetCallerIdentityRequest {}, &signed_in(&mine))
+        .await
+        .expect("alice's own identity");
+    assert_eq!(own.user_id, mine.user_id);
+
+    let forged = WamiContext::builder()
+        .caller_arn(mine.wami_arn.clone())
+        .caller_key(theirs.key())
+        .build()
+        .expect("a context");
+    let keyless = WamiContext::builder()
+        .caller_arn(mine.wami_arn.clone())
+        .build()
+        .expect("a context");
+    let mut refusals = Vec::new();
+    for (what, ctx) in [("another principal's key", forged), ("no key", keyless)] {
+        match identity
+            .get_caller_identity(GetCallerIdentityRequest {}, &ctx)
+            .await
+        {
+            Err(AmiError::AccessDenied { message }) => refusals.push(message),
+            other => panic!("{what}: expected the refusal, got {other:?}"),
+        }
+    }
+    assert_eq!(refusals[0], refusals[1], "the refusals differ");
+}
