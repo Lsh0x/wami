@@ -93,116 +93,139 @@ fn signatures(text: &str) -> Vec<String> {
     out
 }
 
-/// The bare-name parameters this task leaves, by file and function — the
+/// The bare-name parameters this task leaves, by file, function and
+/// PARAMETER (so a new bare-name parameter of a listed function is red too:
+/// review round 1, T11) — the
 /// OAuth and GDPR families, which address a user by `user_name` (GDPR with a
 /// `tenant_id` beside it, as two strings). Re-keying them is wami 012
 /// ("OAuth and GDPR address a user by (tenant, name)"), with the token `sub`
 /// for its own design round. Anything else is red (orchestrator ruling on
 /// S7, process #13333).
-const WAMI_012: &[(&str, &str, &str)] = &[
+const WAMI_012: &[(&str, &str, &str, &str)] = &[
     (
         "store/traits/oauth/mod.rs",
         "revoke_refresh_chain",
+        "user_name",
         "a refresh chain by client and bare user name: wami 012",
     ),
     (
         "store/traits/oauth/mod.rs",
         "get_consent",
+        "user_name",
         "a consent by client and bare user name: wami 012",
     ),
     (
         "store/traits/oauth/mod.rs",
         "revoke_consent",
+        "user_name",
         "a consent by client and bare user name: wami 012",
     ),
     (
         "store/traits/gdpr/consent.rs",
         "get_active_consent",
+        "user_name",
         "(tenant_id, user_name) as two strings: wami 012",
     ),
     (
         "store/traits/gdpr/consent.rs",
         "list_user_consents",
+        "user_name",
         "(tenant_id, user_name) as two strings: wami 012",
     ),
     (
         "store/traits/gdpr/consent.rs",
         "revoke_all_user_consents",
+        "user_name",
         "(tenant_id, user_name) as two strings: wami 012",
     ),
     (
         "store/traits/gdpr/consent.rs",
         "list_user_erasure_certificates",
+        "user_name",
         "(tenant_id, user_name) as two strings: wami 012",
     ),
     (
         "store/traits/gdpr/consent.rs",
         "export_user_data",
+        "user_name",
         "(tenant_id, user_name) as two strings: wami 012",
     ),
     (
         "service/oauth/oidc.rs",
         "claims_for",
+        "user_name",
         "OIDC claims by bare user name (UserClaimsSource): wami 012",
     ),
     (
         "service/oauth/oidc.rs",
         "grant_consent",
+        "user_name",
         "a consent by client and bare user name: wami 012",
     ),
     (
         "service/oauth/oidc.rs",
         "withdraw_consent",
+        "user_name",
         "a consent by client and bare user name: wami 012",
     ),
     (
         "service/oauth/oidc.rs",
         "profile_of",
+        "user_name",
         "OIDC profile by bare user name: wami 012",
     ),
     (
         "service/oauth/oidc.rs",
         "mint",
+        "user_name",
         "a token whose sub is a bare user name: wami 012",
     ),
     (
         "service/gdpr/mod.rs",
         "grant_consent",
+        "user_name",
         "(tenant_id, user_name) as two strings: wami 012",
     ),
     (
         "service/gdpr/mod.rs",
         "revoke_consent",
+        "user_name",
         "(tenant_id, user_name) as two strings: wami 012",
     ),
     (
         "service/gdpr/mod.rs",
         "revoke_all_consents",
+        "user_name",
         "(tenant_id, user_name) as two strings: wami 012",
     ),
     (
         "service/gdpr/mod.rs",
         "list_user_consents",
+        "user_name",
         "(tenant_id, user_name) as two strings: wami 012",
     ),
     (
         "service/gdpr/mod.rs",
         "is_processing_allowed",
+        "user_name",
         "(tenant_id, user_name) as two strings: wami 012",
     ),
     (
         "service/gdpr/mod.rs",
         "request_erasure",
+        "user_name",
         "(tenant_id, user_name) as two strings: wami 012",
     ),
     (
         "service/gdpr/mod.rs",
         "export_user_data",
+        "user_name",
         "(tenant_id, user_name) as two strings: wami 012",
     ),
     (
         "service/gdpr/mod.rs",
         "compute_verification_hash",
+        "user_name",
         "hashes the name it is given; follows wami 012",
     ),
 ];
@@ -226,9 +249,9 @@ fn no_trait_or_service_method_takes_a_bare_name() {
                 for name in IDENTIFIERS {
                     for ty in ["&str", "String", "Option<&str>", "Option<String>"] {
                         if sig.contains(&format!("{name}: {ty}"))
-                            && !WAMI_012
-                                .iter()
-                                .any(|(f, func, _)| *f == file && *func == fn_name(&sig))
+                            && !WAMI_012.iter().any(|(f, func, param, _)| {
+                                *f == file && *func == fn_name(&sig) && param == name
+                            })
                         {
                             bare.push(format!("{file}: {sig}"));
                         }
@@ -328,7 +351,7 @@ fn the_caller_key_is_set_only_by_the_constructors_holding_the_record() {
 #[test]
 fn every_wami_012_exception_still_exists() {
     let mut gone = Vec::new();
-    for (file, func, _) in WAMI_012 {
+    for (file, func, param, _) in WAMI_012 {
         let sub = if file.starts_with("store/") {
             "store/traits"
         } else {
@@ -338,10 +361,95 @@ fn every_wami_012_exception_still_exists() {
             .into_iter()
             .filter(|(f, _)| f == file)
             .flat_map(|(_, text)| signatures(&text))
-            .any(|sig| fn_name(&sig) == *func && sig.contains("user_name: &str"));
+            .any(|sig| fn_name(&sig) == *func && sig.contains(&format!("{param}: &str")));
         if !held {
             gone.push(format!("{file}: {func}"));
         }
     }
     assert_eq!(gone, Vec::<String>::new(), "exceptions with no site left");
+}
+
+/// Production source of every crate of the workspace that holds a context or
+/// a guard: wami and wami-core, test modules left out.
+fn all_production() -> Vec<(String, String)> {
+    let mut out = sources("");
+    let core = Path::new(env!("CARGO_MANIFEST_DIR")).join("../wami-core/src");
+    let mut files = Vec::new();
+    rust_files(&core, &mut files);
+    for p in files {
+        let text = std::fs::read_to_string(&p).unwrap();
+        let rel = format!(
+            "wami-core/{}",
+            p.strip_prefix(&core)
+                .unwrap()
+                .to_string_lossy()
+                .replace('\\', "/")
+        );
+        out.push((rel, production(&text).to_string()));
+    }
+    out
+}
+
+/// T10: no production code writes a session's role key — `SessionInfo` is a
+/// public struct, so a field set by literal escapes S14's `.caller_key(`
+/// scan; a role key is built by whoever holds the role's RECORD, and inside
+/// wami nobody opens a session.
+#[test]
+fn no_production_code_writes_a_role_key() {
+    let mut written = Vec::new();
+    for (file, text) in all_production() {
+        for line in text.lines() {
+            let line = line.trim();
+            if line.contains("assumed_role_key:")
+                && !line.starts_with("pub ")
+                && !line.starts_with("///")
+                && !line.starts_with("//")
+            {
+                written.push(format!("{file}: {line}"));
+            }
+        }
+    }
+    assert_eq!(
+        written,
+        Vec::<String>::new(),
+        "a role key written in production code"
+    );
+}
+
+/// T13: no service keeps a private guard or renders a guarded ARN from the
+/// caller's tenant — every guard is the shared one in
+/// service/auth/authorizer.rs, and that one renders the TARGET's tenant.
+#[test]
+fn no_private_guard_and_no_caller_tenant_arn_returns() {
+    let mut found = Vec::new();
+    for (file, text) in sources("service") {
+        let flat: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
+        if file != "service/auth/authorizer.rs" {
+            for pattern in ["fn guard(", "fn guard<", "fn guard_", "iam_resource_arn"] {
+                if flat.contains(pattern) {
+                    found.push(format!("{file}: defines `{pattern}`"));
+                }
+            }
+        }
+        if !file.starts_with("service/auth/") && flat.contains("check_or_deny(") {
+            found.push(format!("{file}: calls check_or_deny past the shared guard"));
+        }
+        if file == "service/auth/authorizer.rs" {
+            for pattern in [
+                "iam_arn(context, context.tenant_path()",
+                "tenant_path: context.tenant_path()",
+            ] {
+                if flat.contains(pattern) {
+                    found.push(format!(
+                        "{file}: renders a guarded ARN from the caller's tenant ({pattern})"
+                    ));
+                }
+            }
+        }
+    }
+    assert_eq!(
+        found,
+        Vec::<String>::new(),
+        "a private guard or a caller-tenant ARN"
+    );
 }
