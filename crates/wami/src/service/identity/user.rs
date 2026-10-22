@@ -59,6 +59,7 @@ impl<S: UserStore> UserService<S> {
             &request.user,
         )
         .await?;
+        refuse_reserved(request.user.name())?;
 
         let mut user = user_builder::build_user(&request.user, request.path, context)?;
         if let Some(boundary_arn) = request.permissions_boundary {
@@ -141,6 +142,9 @@ impl<S: UserStore> UserService<S> {
         )?;
 
         if let Some(new_user_name) = request.new_user_name {
+            if new_user_name != user.user_name {
+                refuse_reserved(&new_user_name)?;
+            }
             user = user_builder::update_user_name(user, new_user_name);
         }
         if let Some(new_path) = request.new_path {
@@ -250,6 +254,20 @@ impl<S: UserStore> UserService<S> {
         .await?;
         self.write_store().await.untag_user(user, tag_keys).await
     }
+}
+
+/// Refuse a name reserved for the instance's root principal, in any case.
+///
+/// `root` names the one principal at tenant path `0`; a tenant user of that
+/// name — `Root` included, the same confusion in an audit line — is refused
+/// at create and rename in every tenant (wami 005, D4, A3).
+fn refuse_reserved(name: &str) -> Result<()> {
+    if name.eq_ignore_ascii_case(ROOT_USER_NAME) {
+        return Err(AmiError::InvalidParameter {
+            message: format!("the user name {name:?} is reserved"),
+        });
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -575,7 +593,12 @@ mod tests {
             permissions_boundary: None,
             tags: None,
         };
-        service.create_user(&context, request).await.unwrap();
+        // The service refuses the reserved name at create (S4): root is
+        // written as bootstrap writes it, straight into the store.
+        let root =
+            crate::wami::identity::user::builder::build_user(&request.user, request.path, &context)
+                .unwrap();
+        service.store.write().await.create_user(root).await.unwrap();
 
         // Try to rename root
         let update_request = UpdateUserRequest {
@@ -601,7 +624,12 @@ mod tests {
             permissions_boundary: None,
             tags: None,
         };
-        service.create_user(&context, request).await.unwrap();
+        // The service refuses the reserved name at create (S4): root is
+        // written as bootstrap writes it, straight into the store.
+        let root =
+            crate::wami::identity::user::builder::build_user(&request.user, request.path, &context)
+                .unwrap();
+        service.store.write().await.create_user(root).await.unwrap();
 
         // Changing path (not name) should be allowed
         let update_request = UpdateUserRequest {

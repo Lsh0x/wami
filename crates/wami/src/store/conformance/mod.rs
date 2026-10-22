@@ -19,6 +19,7 @@
 
 pub mod guard;
 pub mod keys;
+pub mod names;
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
