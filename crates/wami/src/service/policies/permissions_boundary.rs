@@ -94,6 +94,7 @@ where
 
         boundary_policy(
             &*self.read_store().await,
+            context,
             &request.permissions_boundary,
             &request.principal,
         )
@@ -202,10 +203,11 @@ where
 }
 
 /// Check `arn` may bound `principal`: a well-formed ARN of a stored policy
-/// of the principal's tenant, suitable as a boundary — the checks every door
-/// setting a boundary runs (`put_permissions_boundary`, and a boundary given
-/// at `create_user` or `create_role`: review round 1, Δ5). A policy of
-/// another tenant and an absent one are one refusal (Δ6).
+/// of the principal's tenant and the context's instance, suitable as a
+/// boundary — the checks every door setting a boundary runs
+/// (`put_permissions_boundary`, and a boundary given at `create_user` or
+/// `create_role`: review round 1, Δ5). A policy of another tenant or another
+/// instance and an absent one are one refusal (Δ6; round 3 M1).
 ///
 /// # Errors
 ///
@@ -213,11 +215,13 @@ where
 /// policy, [`AmiError::ResourceNotFound`] for an absent or foreign one.
 pub(crate) async fn boundary_policy<S: PolicyStore + ?Sized>(
     store: &S,
+    context: &WamiContext,
     arn: &str,
     principal: &wami_core::arn::ScopedName,
 ) -> Result<()> {
     crate::wami::policies::permissions_boundary::PermissionsBoundary::validate_arn(arn)?;
     let policy = crate::service::policies::attachment::attachable(
+        context,
         store.get_policy(arn).await?,
         arn,
         principal,
@@ -330,6 +334,85 @@ mod tests {
                 "delete on {principal}: {delete:?}"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn a_policy_of_another_instance_is_absent_to_every_boundary_door() {
+        // The boundary's key is an ARN string whose account field the caller
+        // writes: another instance's policy, found by key, was set as a
+        // boundary (round 3 M1). Put, and a boundary given at create.
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
+        let context = test_context();
+        let service = PermissionsBoundaryService::new(store.clone(), "123456789012".to_string());
+        let there = WamiContext::builder()
+            .caller_arn(
+                "arn:wami:iam:12345678:wami:elsewhere:user/test"
+                    .parse()
+                    .unwrap(),
+            )
+            .build()
+            .unwrap();
+        let policy = build_policy(
+            "Boundary".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":"*"}]}"#
+                .to_string(),
+            Some("/".to_string()),
+            None,
+            None,
+            &tenant(),
+            &there,
+        )
+        .unwrap();
+        let boundary = policy.arn.clone();
+        {
+            let mut s = store.write().await;
+            s.create_user(build_user(&key("alice"), None, &context).unwrap())
+                .await
+                .unwrap();
+            let role = build_role(&key("ops"), "{}".to_string(), None, None, None, &context);
+            s.create_role(role.unwrap()).await.unwrap();
+            s.create_policy(policy).await.unwrap();
+        }
+        for (principal_type, principal) in [
+            (PrincipalType::User, key("alice")),
+            (PrincipalType::Role, key("ops")),
+        ] {
+            let put = service
+                .put_permissions_boundary(
+                    &context,
+                    PutPermissionsBoundaryRequest {
+                        principal_type,
+                        principal: principal.clone(),
+                        permissions_boundary: boundary.clone(),
+                    },
+                )
+                .await;
+            assert!(
+                matches!(&put, Err(AmiError::ResourceNotFound { .. })),
+                "put on {principal}: {put:?}"
+            );
+        }
+        let s = store.read().await;
+        let user = s.get_user(&key("alice")).await.unwrap().unwrap();
+        assert_eq!(user.permissions_boundary, None, "alice's boundary was set");
+        let role = s.get_role(&key("ops")).await.unwrap().unwrap();
+        assert_eq!(role.permissions_boundary, None, "ops's boundary was set");
+        drop(s);
+        let created = crate::service::identity::user::UserService::new(store.clone())
+            .create_user(
+                &context,
+                crate::wami::identity::user::requests::CreateUserRequest {
+                    user: key("bob"),
+                    path: None,
+                    permissions_boundary: Some(boundary.clone()),
+                    tags: None,
+                },
+            )
+            .await;
+        assert!(
+            matches!(&created, Err(AmiError::ResourceNotFound { .. })),
+            "create with it: {created:?}"
+        );
     }
 
     #[tokio::test]

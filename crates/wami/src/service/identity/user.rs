@@ -76,6 +76,7 @@ impl<S: UserServiceStore> UserService<S> {
             // and an absent one answer alike (Δ6).
             crate::service::policies::permissions_boundary::boundary_policy(
                 &*self.read_store().await,
+                context,
                 &boundary_arn,
                 &request.user,
             )

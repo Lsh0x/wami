@@ -74,6 +74,7 @@ where
 
         // Verify policy exists
         let policy = attachable(
+            context,
             store.get_policy(&request.policy_arn).await?,
             &request.policy_arn,
             &request.user,
@@ -130,17 +131,14 @@ where
                 resource: format!("User: {}", request.user),
             })?;
 
-        // Detach the policy
+        let held = store
+            .list_attached_user_policies(&request.user)
+            .await?
+            .contains(&request.policy_arn);
         store
             .detach_user_policy(&request.user, &request.policy_arn)
             .await?;
-
-        // Update policy attachment count
-        if let Some(policy) = store.get_policy(&request.policy_arn).await? {
-            let mut updated_policy = policy.clone();
-            updated_policy.attachment_count = updated_policy.attachment_count.saturating_sub(1);
-            store.update_policy(updated_policy).await?;
-        }
+        release(&mut *store, context, held, &request.policy_arn).await?;
 
         Ok(DetachUserPolicyResponse {
             message: format!(
@@ -223,6 +221,7 @@ where
 
         // Verify policy exists
         let policy = attachable(
+            context,
             store.get_policy(&request.policy_arn).await?,
             &request.policy_arn,
             &request.group,
@@ -279,17 +278,14 @@ where
                 resource: format!("Group: {}", request.group),
             })?;
 
-        // Detach the policy
+        let held = store
+            .list_attached_group_policies(&request.group)
+            .await?
+            .contains(&request.policy_arn);
         store
             .detach_group_policy(&request.group, &request.policy_arn)
             .await?;
-
-        // Update policy attachment count
-        if let Some(policy) = store.get_policy(&request.policy_arn).await? {
-            let mut updated_policy = policy.clone();
-            updated_policy.attachment_count = updated_policy.attachment_count.saturating_sub(1);
-            store.update_policy(updated_policy).await?;
-        }
+        release(&mut *store, context, held, &request.policy_arn).await?;
 
         Ok(DetachGroupPolicyResponse {
             message: format!(
@@ -372,6 +368,7 @@ where
 
         // Verify policy exists
         let policy = attachable(
+            context,
             store.get_policy(&request.policy_arn).await?,
             &request.policy_arn,
             &request.role,
@@ -428,17 +425,14 @@ where
                 resource: format!("Role: {}", request.role),
             })?;
 
-        // Detach the policy
+        let held = store
+            .list_attached_role_policies(&request.role)
+            .await?
+            .contains(&request.policy_arn);
         store
             .detach_role_policy(&request.role, &request.policy_arn)
             .await?;
-
-        // Update policy attachment count
-        if let Some(policy) = store.get_policy(&request.policy_arn).await? {
-            let mut updated_policy = policy.clone();
-            updated_policy.attachment_count = updated_policy.attachment_count.saturating_sub(1);
-            store.update_policy(updated_policy).await?;
-        }
+        release(&mut *store, context, held, &request.policy_arn).await?;
 
         Ok(DetachRolePolicyResponse {
             message: format!(
@@ -493,8 +487,10 @@ where
 }
 
 /// The policy stored under `arn`, if it may be attached to — or be the
-/// boundary of — `principal`: a policy that is not stored and a policy of
-/// another tenant are ONE refusal, naming the ARN the caller gave and no
+/// boundary of — `principal`: a policy that is not stored, a policy of
+/// another tenant and a policy of another instance (round 3 M1: the key is
+/// the caller's ARN string, whose account field is an instance the caller
+/// writes, so the context's VERIFIED instance decides) are ONE refusal, naming the ARN the caller gave and no
 /// tenant, so the answer says nothing of what another tenant holds (wami 005,
 /// A7, review round 1 Δ6). The policy's tenant is the one its `wami_arn`
 /// records; its AWS-format ARN names none (wami 011).
@@ -503,16 +499,49 @@ where
 ///
 /// [`AmiError::ResourceNotFound`] for both.
 pub(crate) fn attachable(
+    context: &WamiContext,
     policy: Option<crate::wami::policies::Policy>,
     arn: &str,
     principal: &ScopedName,
 ) -> Result<crate::wami::policies::Policy> {
     match policy {
-        Some(policy) if &policy.wami_arn.tenant_path == principal.tenant() => Ok(policy),
+        Some(policy)
+            if in_instance(context, &policy.wami_arn)
+                && &policy.wami_arn.tenant_path == principal.tenant() =>
+        {
+            Ok(policy)
+        }
         _ => Err(AmiError::ResourceNotFound {
             resource: format!("Policy: {arn}"),
         }),
     }
+}
+
+/// Moves down the count of the policy under `arn` once `principal` no longer
+/// holds it — only when it `held` it, and only for a policy of the context's
+/// instance; any other is answered as an absent one and its count never
+/// moves (wami 005, round 3 M1). A detach of a policy the principal never
+/// held used to decrement all the same: repeated, it brought a still-attached
+/// policy's count to zero.
+///
+/// # Errors
+///
+/// The store's, on the read or the write.
+async fn release<S: PolicyStore + ?Sized>(
+    store: &mut S,
+    context: &WamiContext,
+    held: bool,
+    arn: &str,
+) -> Result<()> {
+    if !held {
+        return Ok(());
+    }
+    let found = store.get_policy(arn).await?;
+    if let Some(mut policy) = found.filter(|p| in_instance(context, &p.wami_arn)) {
+        policy.attachment_count = policy.attachment_count.saturating_sub(1);
+        store.update_policy(policy).await?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -708,6 +737,214 @@ mod tests {
                 .list_attached_role_policies(&context, ListAttachedRolePoliciesRequest { role })
                 .await
                 .map(|r| format!("{r:?}")),
+        );
+    }
+
+    /// Another instance's policy `P`, stored with `count` attachments, and
+    /// the caller's own alice, devs and ops — every one of them holding it
+    /// in its attached list, as a store written before this check would.
+    async fn a_foreign_policy_held_by_own_principals(
+        store: &Arc<RwLock<InMemoryWamiStore>>,
+        context: &WamiContext,
+        count: i32,
+    ) -> String {
+        let mut policy = build_policy(
+            "P".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+            None,
+            None,
+            None,
+            &tenant(),
+            &elsewhere(),
+        )
+        .unwrap();
+        policy.attachment_count = count;
+        let mut s = store.write().await;
+        let arn = s.create_policy(policy).await.unwrap().arn;
+        s.create_user(build_user(&key("alice"), None, context).unwrap())
+            .await
+            .unwrap();
+        s.create_group(build_group(&key("devs"), None, context).unwrap())
+            .await
+            .unwrap();
+        let role = build_role(&key("ops"), "{}".to_string(), None, None, None, context);
+        s.create_role(role.unwrap()).await.unwrap();
+        arn
+    }
+
+    async fn count_of(store: &Arc<RwLock<InMemoryWamiStore>>, arn: &str) -> i32 {
+        store
+            .read()
+            .await
+            .get_policy(arn)
+            .await
+            .unwrap()
+            .unwrap()
+            .attachment_count
+    }
+
+    #[tokio::test]
+    async fn a_policy_of_another_instance_is_absent_to_every_attach() {
+        // The policy key is the caller's ARN string, whose account field is
+        // an instance the caller writes: found by key, another instance's
+        // policy was attached and its count moved (round 3 M1).
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = AttachmentService::new(store.clone());
+        let context = create_test_context().await;
+        let arn = a_foreign_policy_held_by_own_principals(&store, &context, 0).await;
+        let absent = |what: &str, got: std::result::Result<String, AmiError>| {
+            assert!(
+                matches!(&got, Err(AmiError::ResourceNotFound { .. })),
+                "{what}: {got:?}"
+            );
+        };
+        let (user, group, role) = (key("alice"), key("devs"), key("ops"));
+        let policy_arn = arn.clone();
+        absent(
+            "attach user",
+            service
+                .attach_user_policy(&context, AttachUserPolicyRequest { user, policy_arn })
+                .await
+                .map(|r| r.message),
+        );
+        let policy_arn = arn.clone();
+        absent(
+            "attach group",
+            service
+                .attach_group_policy(&context, AttachGroupPolicyRequest { group, policy_arn })
+                .await
+                .map(|r| r.message),
+        );
+        let policy_arn = arn.clone();
+        absent(
+            "attach role",
+            service
+                .attach_role_policy(&context, AttachRolePolicyRequest { role, policy_arn })
+                .await
+                .map(|r| r.message),
+        );
+        assert_eq!(count_of(&store, &arn).await, 0, "its count moved");
+    }
+
+    #[tokio::test]
+    async fn a_policy_of_another_instance_is_absent_to_every_detach() {
+        // The detach answers as for an absent policy, and the foreign
+        // policy's count — read by key — never moves (round 3 M1).
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = AttachmentService::new(store.clone());
+        let context = create_test_context().await;
+        let arn = a_foreign_policy_held_by_own_principals(&store, &context, 3).await;
+        let never = "arn:aws:iam::123456789012:policy/never-stored".to_string();
+        {
+            let mut s = store.write().await;
+            for p in [&arn, &never] {
+                s.attach_user_policy(&key("alice"), p).await.unwrap();
+                s.attach_group_policy(&key("devs"), p).await.unwrap();
+                s.attach_role_policy(&key("ops"), p).await.unwrap();
+            }
+        }
+        for policy_arn in [arn.clone(), never.clone()] {
+            let (user, group, role) = (key("alice"), key("devs"), key("ops"));
+            let p = policy_arn.clone();
+            let answers = [
+                service
+                    .detach_user_policy(
+                        &context,
+                        DetachUserPolicyRequest {
+                            user,
+                            policy_arn: p,
+                        },
+                    )
+                    .await
+                    .is_ok(),
+                service
+                    .detach_group_policy(
+                        &context,
+                        DetachGroupPolicyRequest {
+                            group,
+                            policy_arn: policy_arn.clone(),
+                        },
+                    )
+                    .await
+                    .is_ok(),
+                service
+                    .detach_role_policy(
+                        &context,
+                        DetachRolePolicyRequest {
+                            role,
+                            policy_arn: policy_arn.clone(),
+                        },
+                    )
+                    .await
+                    .is_ok(),
+            ];
+            assert_eq!(answers, [true; 3], "{policy_arn}: the absent answer");
+        }
+        assert_eq!(count_of(&store, &arn).await, 3, "its count moved");
+    }
+
+    #[tokio::test]
+    async fn no_detach_sequence_brings_an_attached_policys_count_to_zero() {
+        // A detach from a principal that never held the policy decremented
+        // its count all the same: repeated, it reached zero while the policy
+        // was still attached elsewhere (round 3, deep #14350).
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = AttachmentService::new(store.clone());
+        let policies = crate::service::policies::policy::PolicyService::new(store.clone());
+        let context = create_test_context().await;
+        let policy = build_policy(
+            "P".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+            None,
+            None,
+            None,
+            &tenant(),
+            &context,
+        )
+        .unwrap();
+        let arn = {
+            let mut s = store.write().await;
+            for name in ["alice", "bob"] {
+                s.create_user(build_user(&key(name), None, &context).unwrap())
+                    .await
+                    .unwrap();
+            }
+            s.create_group(build_group(&key("devs"), None, &context).unwrap())
+                .await
+                .unwrap();
+            let role = build_role(&key("ops"), "{}".to_string(), None, None, None, &context);
+            s.create_role(role.unwrap()).await.unwrap();
+            s.create_policy(policy).await.unwrap().arn
+        };
+        service
+            .attach_user_policy(
+                &context,
+                AttachUserPolicyRequest {
+                    user: key("alice"),
+                    policy_arn: arn.clone(),
+                },
+            )
+            .await
+            .unwrap();
+        for _ in 0..3 {
+            let policy_arn = arn.clone();
+            let user = key("bob");
+            let _ = service
+                .detach_user_policy(&context, DetachUserPolicyRequest { user, policy_arn })
+                .await;
+            let (group, policy_arn) = (key("devs"), arn.clone());
+            let _ = service
+                .detach_group_policy(&context, DetachGroupPolicyRequest { group, policy_arn })
+                .await;
+            let (role, policy_arn) = (key("ops"), arn.clone());
+            let _ = service
+                .detach_role_policy(&context, DetachRolePolicyRequest { role, policy_arn })
+                .await;
+        }
+        assert_eq!(count_of(&store, &arn).await, 1, "alice still holds it");
+        assert!(
+            policies.delete_policy(&context, &arn).await.is_err(),
+            "deleted while attached"
         );
     }
 
