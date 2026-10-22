@@ -2,7 +2,7 @@
 //!
 //! Service for managing permissions boundaries on users and roles.
 
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
+use crate::service::auth::authorizer::{guard, Authorizer};
 use crate::store::traits::{PolicyStore, RoleStore, UserStore};
 use crate::wami::policies::permissions_boundary::{
     operations, DeletePermissionsBoundaryRequest, PrincipalType, PutPermissionsBoundaryRequest,
@@ -56,21 +56,6 @@ where
         }
     }
 
-    /// Internal: check authorization if an authorizer is set.
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     /// Attach a permissions boundary to a user or role
     ///
     /// # Arguments
@@ -98,11 +83,12 @@ where
             PrincipalType::User => "user",
             PrincipalType::Role => "role",
         };
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamSetBoundary,
             resource_type,
-            request.principal.name(),
+            &request.principal,
         )
         .await?;
 
@@ -178,11 +164,12 @@ where
             PrincipalType::User => "user",
             PrincipalType::Role => "role",
         };
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamSetBoundary,
             resource_type,
-            request.principal.name(),
+            &request.principal,
         )
         .await?;
 

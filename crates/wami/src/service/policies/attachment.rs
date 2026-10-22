@@ -2,7 +2,7 @@
 //!
 //! Service for attaching and detaching managed policies to/from users, groups, and roles.
 
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
+use crate::service::auth::authorizer::{guard, Authorizer};
 use crate::store::traits::{GroupStore, PolicyStore, RoleStore, UserStore};
 use crate::wami::policies::attachment::*;
 use std::sync::Arc;
@@ -43,21 +43,6 @@ where
         }
     }
 
-    /// Internal: check authorization if an authorizer is set.
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     // User policy attachment methods
 
     /// Attach a managed policy to a user
@@ -66,11 +51,12 @@ where
         context: &WamiContext,
         request: AttachUserPolicyRequest,
     ) -> Result<AttachUserPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamAttachPolicy,
             "user",
-            request.user.name(),
+            &request.user,
         )
         .await?;
 
@@ -123,11 +109,12 @@ where
         context: &WamiContext,
         request: DetachUserPolicyRequest,
     ) -> Result<DetachUserPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamDetachPolicy,
             "user",
-            request.user.name(),
+            &request.user,
         )
         .await?;
 
@@ -167,11 +154,12 @@ where
         context: &WamiContext,
         request: ListAttachedUserPoliciesRequest,
     ) -> Result<ListAttachedUserPoliciesResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "user",
-            request.user.name(),
+            &request.user,
         )
         .await?;
 
@@ -210,11 +198,12 @@ where
         context: &WamiContext,
         request: AttachGroupPolicyRequest,
     ) -> Result<AttachGroupPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamAttachPolicy,
             "group",
-            request.group.name(),
+            &request.group,
         )
         .await?;
 
@@ -267,11 +256,12 @@ where
         context: &WamiContext,
         request: DetachGroupPolicyRequest,
     ) -> Result<DetachGroupPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamDetachPolicy,
             "group",
-            request.group.name(),
+            &request.group,
         )
         .await?;
 
@@ -311,11 +301,12 @@ where
         context: &WamiContext,
         request: ListAttachedGroupPoliciesRequest,
     ) -> Result<ListAttachedGroupPoliciesResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "group",
-            request.group.name(),
+            &request.group,
         )
         .await?;
 
@@ -354,11 +345,12 @@ where
         context: &WamiContext,
         request: AttachRolePolicyRequest,
     ) -> Result<AttachRolePolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamAttachPolicy,
             "role",
-            request.role.name(),
+            &request.role,
         )
         .await?;
 
@@ -411,11 +403,12 @@ where
         context: &WamiContext,
         request: DetachRolePolicyRequest,
     ) -> Result<DetachRolePolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamDetachPolicy,
             "role",
-            request.role.name(),
+            &request.role,
         )
         .await?;
 
@@ -455,11 +448,12 @@ where
         context: &WamiContext,
         request: ListAttachedRolePoliciesRequest,
     ) -> Result<ListAttachedRolePoliciesResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "role",
-            request.role.name(),
+            &request.role,
         )
         .await?;
 

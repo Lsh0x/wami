@@ -758,7 +758,7 @@ async fn test_service_linked_role_deletion_task() {
     let mut store = InMemoryWamiStore::new();
     let _context = test_context();
 
-    let task = slr_builder::build_deletion_task("test-service-role".to_string());
+    let task = slr_builder::build_deletion_task(&key("test-service-role"));
 
     let task_id = task.deletion_task_id.clone();
 
@@ -774,7 +774,7 @@ async fn test_service_linked_role_deletion_task() {
         .await
         .unwrap();
     assert!(retrieved.is_some());
-    assert_eq!(retrieved.unwrap().role_name, "test-service-role");
+    assert_eq!(retrieved.unwrap().role, key("test-service-role"));
 }
 
 #[tokio::test]

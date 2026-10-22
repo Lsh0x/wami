@@ -2,7 +2,7 @@
 //!
 //! Orchestrates user management operations by combining wami builders with store persistence.
 
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
+use crate::service::auth::authorizer::{confirm, guard, guard_tenant, Authorizer};
 use crate::store::traits::UserStore;
 use crate::wami::identity::root_user::ROOT_USER_NAME;
 use crate::wami::identity::user::{
@@ -41,21 +41,6 @@ impl<S: UserStore> UserService<S> {
         }
     }
 
-    /// Internal: check authorization if an authorizer is set.
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     /// Create a new user under `request.user`.
     ///
     /// # Errors
@@ -66,11 +51,12 @@ impl<S: UserStore> UserService<S> {
         context: &WamiContext,
         request: CreateUserRequest,
     ) -> Result<User> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreateUser,
             "user",
-            request.user.name(),
+            &request.user,
         )
         .await?;
 
@@ -89,9 +75,25 @@ impl<S: UserStore> UserService<S> {
 
     /// Get the user stored under `user`
     pub async fn get_user(&self, context: &WamiContext, user: &ScopedName) -> Result<Option<User>> {
-        self.guard(context, WamiAction::IamReadUser, "user", user.name())
-            .await?;
-        self.read_store().await.get_user(user).await
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamReadUser,
+            "user",
+            user,
+        )
+        .await?;
+        let found = self.read_store().await.get_user(user).await?;
+        if let Some(found) = &found {
+            confirm(
+                context,
+                "user",
+                user,
+                &found.key(),
+                &found.wami_arn.wami_instance_id,
+            )?;
+        }
+        Ok(found)
     }
 
     /// Update a user
@@ -102,11 +104,12 @@ impl<S: UserStore> UserService<S> {
         context: &WamiContext,
         request: UpdateUserRequest,
     ) -> Result<User> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamUpdateUser,
             "user",
-            request.user.name(),
+            &request.user,
         )
         .await?;
 
@@ -129,6 +132,13 @@ impl<S: UserStore> UserService<S> {
             .ok_or_else(|| AmiError::ResourceNotFound {
                 resource: format!("User: {}", request.user),
             })?;
+        confirm(
+            context,
+            "user",
+            &request.user,
+            &user.key(),
+            &user.wami_arn.wami_instance_id,
+        )?;
 
         if let Some(new_user_name) = request.new_user_name {
             user = user_builder::update_user_name(user, new_user_name);
@@ -146,14 +156,21 @@ impl<S: UserStore> UserService<S> {
     ///
     /// The root user cannot be deleted.
     pub async fn delete_user(&self, context: &WamiContext, user: &ScopedName) -> Result<()> {
+        // The guard first: a caller with no right on the target learns nothing
+        // from the answer, not even that the name is root's.
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamDeleteUser,
+            "user",
+            user,
+        )
+        .await?;
         if user.name() == ROOT_USER_NAME {
             return Err(AmiError::InvalidParameter {
                 message: "Cannot delete the root user".to_string(),
             });
         }
-
-        self.guard(context, WamiAction::IamDeleteUser, "user", user.name())
-            .await?;
         self.write_store().await.delete_user(user).await
     }
 
@@ -163,8 +180,14 @@ impl<S: UserStore> UserService<S> {
         context: &WamiContext,
         request: ListUsersRequest,
     ) -> Result<(Vec<User>, bool, Option<String>)> {
-        self.guard(context, WamiAction::IamListUsers, "user", "*")
-            .await?;
+        guard_tenant(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamListUsers,
+            "user",
+            &request.tenant,
+        )
+        .await?;
         self.read_store()
             .await
             .list_users(
@@ -182,8 +205,14 @@ impl<S: UserStore> UserService<S> {
         user: &ScopedName,
         tags: Vec<Tag>,
     ) -> Result<()> {
-        self.guard(context, WamiAction::IamUpdateUser, "user", user.name())
-            .await?;
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamUpdateUser,
+            "user",
+            user,
+        )
+        .await?;
         self.write_store().await.tag_user(user, tags).await
     }
 
@@ -193,8 +222,14 @@ impl<S: UserStore> UserService<S> {
         context: &WamiContext,
         user: &ScopedName,
     ) -> Result<Vec<Tag>> {
-        self.guard(context, WamiAction::IamReadUser, "user", user.name())
-            .await?;
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamReadUser,
+            "user",
+            user,
+        )
+        .await?;
         self.read_store().await.list_user_tags(user).await
     }
 
@@ -205,8 +240,14 @@ impl<S: UserStore> UserService<S> {
         user: &ScopedName,
         tag_keys: Vec<String>,
     ) -> Result<()> {
-        self.guard(context, WamiAction::IamUpdateUser, "user", user.name())
-            .await?;
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamUpdateUser,
+            "user",
+            user,
+        )
+        .await?;
         self.write_store().await.untag_user(user, tag_keys).await
     }
 }

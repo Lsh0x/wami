@@ -6,20 +6,25 @@ use crate::credentials::signing_certificate::{
     builder as cert_builder, DeleteSigningCertificateRequest, ListSigningCertificatesRequest,
     SigningCertificate, UpdateSigningCertificateRequest, UploadSigningCertificateRequest,
 };
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
-use crate::store::traits::SigningCertificateStore;
+use crate::service::auth::authorizer::{guard, guard_by_id, guard_tenant, target_arn, Authorizer};
+use crate::store::traits::{SigningCertificateStore, UserStore};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
-use wami_core::error::Result;
+use wami_core::error::{AmiError, Result};
+
+/// What the signing certificate service reads: the certificates, and their
+/// owners.
+pub trait SigningCertificateServiceStore: SigningCertificateStore + UserStore {}
+impl<T> SigningCertificateServiceStore for T where T: SigningCertificateStore + UserStore {}
 
 /// Service for managing IAM signing certificates
 ///
 /// Provides high-level operations for X.509 certificate management.
 /// Optionally holds an [`Authorizer`] for authorization guards on every method.
 #[wami_macros::service(
-    store_trait = "crate::store::traits::SigningCertificateStore",
+    store_trait = "crate::service::credentials::signing_certificate::SigningCertificateServiceStore",
     generate_new = false
 )]
 pub struct SigningCertificateService<S> {
@@ -27,7 +32,7 @@ pub struct SigningCertificateService<S> {
     authz: Option<Arc<dyn Authorizer>>,
 }
 
-impl<S: SigningCertificateStore> SigningCertificateService<S> {
+impl<S: SigningCertificateServiceStore> SigningCertificateService<S> {
     /// Create a new SigningCertificateService without authorization guards (backward compatible).
     pub fn new(store: Arc<RwLock<S>>) -> Self {
         Self { store, authz: None }
@@ -41,42 +46,23 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
         }
     }
 
-    /// Internal: check authorization if an authorizer is set.
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     /// Upload a new signing certificate
     pub async fn upload_signing_certificate(
         &self,
         context: &WamiContext,
         request: UploadSigningCertificateRequest,
     ) -> Result<SigningCertificate> {
-        // Authorization guard
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageCredentials,
             "user",
-            request.user.name(),
+            &request.user,
         )
         .await?;
-
-        // Use wami builder to create certificate
-        let certificate = cert_builder::build_signing_certificate(
-            &request.user,
-            request.certificate_body,
-            context,
-        )?;
+        let owner = super::read_owner(&*self.read_store().await, context, &request.user).await?;
+        let certificate =
+            cert_builder::build_signing_certificate(&owner, request.certificate_body, context)?;
 
         // Store it
         self.write_store()
@@ -91,17 +77,45 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
         context: &WamiContext,
         certificate_id: &str,
     ) -> Result<Option<SigningCertificate>> {
-        self.guard(
-            context,
-            WamiAction::IamManageCredentials,
-            "credential",
-            certificate_id,
-        )
-        .await?;
-        self.read_store()
+        self.read_judged(context, certificate_id, None).await
+    }
+
+    /// Read the certificate stored under `certificate_id`, then judge its
+    /// OWNER; an absent id and a denied owner are one refusal (A1). When the
+    /// request names a user, the stored owner must be that user.
+    async fn read_judged(
+        &self,
+        context: &WamiContext,
+        certificate_id: &str,
+        named: Option<&wami_core::arn::ScopedName>,
+    ) -> Result<Option<SigningCertificate>> {
+        let certificate = self
+            .read_store()
             .await
             .get_signing_certificate(certificate_id)
-            .await
+            .await?;
+        let owner = certificate
+            .as_ref()
+            .map(|c| target_arn(context, "user", &c.owner));
+        guard_by_id(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamManageCredentials,
+            "signing certificate",
+            certificate_id,
+            owner,
+        )
+        .await?;
+        if let (Some(certificate), Some(named)) = (&certificate, named) {
+            if &certificate.owner != named {
+                return Err(AmiError::InvalidParameter {
+                    message: format!(
+                        "signing certificate {certificate_id} does not belong to {named}"
+                    ),
+                });
+            }
+        }
+        Ok(certificate)
     }
 
     /// Update a signing certificate (change status)
@@ -110,19 +124,8 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
         context: &WamiContext,
         request: UpdateSigningCertificateRequest,
     ) -> Result<SigningCertificate> {
-        self.guard(
-            context,
-            WamiAction::IamManageCredentials,
-            "user",
-            request.user.name(),
-        )
-        .await?;
-
-        // Get existing certificate
         let mut certificate = self
-            .read_store()
-            .await
-            .get_signing_certificate(&request.certificate_id)
+            .read_judged(context, &request.certificate_id, Some(&request.user))
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
                 resource: format!("SigningCertificate: {}", request.certificate_id),
@@ -144,13 +147,8 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
         context: &WamiContext,
         request: DeleteSigningCertificateRequest,
     ) -> Result<()> {
-        self.guard(
-            context,
-            WamiAction::IamManageCredentials,
-            "user",
-            request.user.name(),
-        )
-        .await?;
+        self.read_judged(context, &request.certificate_id, Some(&request.user))
+            .await?;
         self.write_store()
             .await
             .delete_signing_certificate(&request.certificate_id)
@@ -163,9 +161,33 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
         context: &WamiContext,
         request: ListSigningCertificatesRequest,
     ) -> Result<Vec<SigningCertificate>> {
-        let name = request.user.as_ref().map_or("*", |user| user.name());
-        self.guard(context, WamiAction::IamManageCredentials, "user", name)
-            .await?;
+        match &request.user {
+            Some(user) => {
+                if user.tenant() != &request.tenant {
+                    return Err(AmiError::InvalidParameter {
+                        message: format!("{user} is not of tenant {}", request.tenant),
+                    });
+                }
+                guard(
+                    self.authz.as_ref(),
+                    context,
+                    WamiAction::IamManageCredentials,
+                    "user",
+                    user,
+                )
+                .await?;
+            }
+            None => {
+                guard_tenant(
+                    self.authz.as_ref(),
+                    context,
+                    WamiAction::IamManageCredentials,
+                    "user",
+                    &request.tenant,
+                )
+                .await?;
+            }
+        }
         self.read_store()
             .await
             .list_signing_certificates(&request.tenant, request.user.as_ref())
@@ -190,9 +212,18 @@ mod tests {
         wami_core::arn::ScopedName::new(tenant(), name.as_ref())
     }
 
-    fn setup_service() -> SigningCertificateService<InMemoryWamiStore> {
-        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        SigningCertificateService::new(store)
+    /// A service over a store holding the users the tests mint credentials
+    /// for: a credential is only ever minted for a user that is there.
+    async fn setup_service() -> SigningCertificateService<InMemoryWamiStore> {
+        use crate::store::traits::UserStore;
+        let mut seeded = InMemoryWamiStore::default();
+        for name in ["alice", "bob", "charlie", "david"] {
+            let user =
+                crate::wami::identity::user::builder::build_user(&key(name), None, &test_context())
+                    .unwrap();
+            seeded.create_user(user).await.unwrap();
+        }
+        SigningCertificateService::new(Arc::new(RwLock::new(seeded)))
     }
 
     fn test_context() -> WamiContext {
@@ -216,7 +247,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_upload_and_get_signing_certificate() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         let request = UploadSigningCertificateRequest {
@@ -242,7 +273,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_signing_certificate_status() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         let upload_req = UploadSigningCertificateRequest {
@@ -269,7 +300,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_signing_certificate() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         let upload_req = UploadSigningCertificateRequest {
@@ -300,7 +331,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_list_signing_certificates() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         // Upload multiple certificates for same user

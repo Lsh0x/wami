@@ -58,7 +58,10 @@ pub mod policy_evaluator;
 
 pub use authentication::{hash_secret, verify_secret, AuthenticationService};
 pub use authorization::AuthorizationService;
-pub use authorizer::{iam_resource_arn, into_authorizer, Authorizer};
+pub use authorizer::{
+    confirm, guard, guard_arn, guard_by_id, guard_tenant, into_authorizer, target_arn, tenant_arn,
+    Authorizer,
+};
 pub use decision::{AllowReason, Decision, DenyReason, NonEmpty, PolicySource, StatementRef};
 pub use policy_evaluator::{
     build_condition_context, evaluate_policy_document, matches_action, matches_condition,

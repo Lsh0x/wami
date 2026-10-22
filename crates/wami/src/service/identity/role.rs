@@ -2,7 +2,7 @@
 //!
 //! Orchestrates role management operations.
 
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
+use crate::service::auth::authorizer::{confirm, guard, guard_tenant, Authorizer};
 use crate::store::traits::RoleStore;
 use crate::wami::identity::role::{
     builder as role_builder, CreateRoleRequest, ListRolesRequest, Role, UpdateRoleRequest,
@@ -35,31 +35,18 @@ impl<S: RoleStore> RoleService<S> {
         }
     }
 
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     /// Create a new role
     pub async fn create_role(
         &self,
         context: &WamiContext,
         request: CreateRoleRequest,
     ) -> Result<Role> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreateRole,
             "role",
-            request.role.name(),
+            &request.role,
         )
         .await?;
 
@@ -87,9 +74,25 @@ impl<S: RoleStore> RoleService<S> {
 
     /// Get a role by name
     pub async fn get_role(&self, context: &WamiContext, role: &ScopedName) -> Result<Option<Role>> {
-        self.guard(context, WamiAction::IamReadRole, "role", role.name())
-            .await?;
-        self.read_store().await.get_role(role).await
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamReadRole,
+            "role",
+            role,
+        )
+        .await?;
+        let found = self.read_store().await.get_role(role).await?;
+        if let Some(found) = &found {
+            confirm(
+                context,
+                "role",
+                role,
+                &found.key(),
+                &found.wami_arn.wami_instance_id,
+            )?;
+        }
+        Ok(found)
     }
 
     /// Update a role
@@ -98,11 +101,12 @@ impl<S: RoleStore> RoleService<S> {
         context: &WamiContext,
         request: UpdateRoleRequest,
     ) -> Result<Role> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreateRole,
             "role",
-            request.role.name(),
+            &request.role,
         )
         .await?;
 
@@ -115,6 +119,13 @@ impl<S: RoleStore> RoleService<S> {
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
                 resource: format!("Role: {}", request.role),
             })?;
+        confirm(
+            context,
+            "role",
+            &request.role,
+            &role.key(),
+            &role.wami_arn.wami_instance_id,
+        )?;
 
         if let Some(description) = request.description {
             role = role_builder::update_description(role, Some(description));
@@ -129,8 +140,14 @@ impl<S: RoleStore> RoleService<S> {
 
     /// Delete a role
     pub async fn delete_role(&self, context: &WamiContext, role: &ScopedName) -> Result<()> {
-        self.guard(context, WamiAction::IamDeleteRole, "role", role.name())
-            .await?;
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamDeleteRole,
+            "role",
+            role,
+        )
+        .await?;
         self.write_store().await.delete_role(role).await
     }
 
@@ -140,8 +157,14 @@ impl<S: RoleStore> RoleService<S> {
         context: &WamiContext,
         request: ListRolesRequest,
     ) -> Result<(Vec<Role>, bool, Option<String>)> {
-        self.guard(context, WamiAction::IamReadRole, "role", "*")
-            .await?;
+        guard_tenant(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamReadRole,
+            "role",
+            &request.tenant,
+        )
+        .await?;
         self.store
             .read()
             .await

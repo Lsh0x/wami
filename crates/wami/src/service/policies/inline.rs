@@ -2,7 +2,7 @@
 //!
 //! Service for managing inline policies on users, groups, and roles.
 
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
+use crate::service::auth::authorizer::{guard, Authorizer};
 use crate::service::auth::decision::PolicySource;
 use crate::service::auth::policy_evaluator;
 use crate::store::traits::{GroupStore, RoleStore, UserStore};
@@ -45,21 +45,6 @@ where
         }
     }
 
-    /// Internal: check authorization if an authorizer is set.
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     // User inline policy methods
 
     /// Put an inline policy on a user
@@ -68,11 +53,12 @@ where
         context: &WamiContext,
         request: PutUserPolicyRequest,
     ) -> Result<PutUserPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreatePolicy,
             "user",
-            request.user.name(),
+            &request.user,
         )
         .await?;
 
@@ -118,11 +104,12 @@ where
         context: &WamiContext,
         request: GetUserPolicyRequest,
     ) -> Result<GetUserPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "user",
-            request.user.name(),
+            &request.user,
         )
         .await?;
 
@@ -157,11 +144,12 @@ where
         context: &WamiContext,
         request: DeleteUserPolicyRequest,
     ) -> Result<DeleteUserPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamDeletePolicy,
             "user",
-            request.user.name(),
+            &request.user,
         )
         .await?;
 
@@ -194,11 +182,12 @@ where
         context: &WamiContext,
         request: ListUserPoliciesRequest,
     ) -> Result<ListUserPoliciesResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "user",
-            request.user.name(),
+            &request.user,
         )
         .await?;
 
@@ -226,11 +215,12 @@ where
         context: &WamiContext,
         request: PutGroupPolicyRequest,
     ) -> Result<PutGroupPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreatePolicy,
             "group",
-            request.group.name(),
+            &request.group,
         )
         .await?;
 
@@ -281,11 +271,12 @@ where
         context: &WamiContext,
         request: GetGroupPolicyRequest,
     ) -> Result<GetGroupPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "group",
-            request.group.name(),
+            &request.group,
         )
         .await?;
 
@@ -320,11 +311,12 @@ where
         context: &WamiContext,
         request: DeleteGroupPolicyRequest,
     ) -> Result<DeleteGroupPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamDeletePolicy,
             "group",
-            request.group.name(),
+            &request.group,
         )
         .await?;
 
@@ -357,11 +349,12 @@ where
         context: &WamiContext,
         request: ListGroupPoliciesRequest,
     ) -> Result<ListGroupPoliciesResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "group",
-            request.group.name(),
+            &request.group,
         )
         .await?;
 
@@ -389,11 +382,12 @@ where
         context: &WamiContext,
         request: PutRolePolicyRequest,
     ) -> Result<PutRolePolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreatePolicy,
             "role",
-            request.role.name(),
+            &request.role,
         )
         .await?;
 
@@ -440,11 +434,12 @@ where
         context: &WamiContext,
         request: GetRolePolicyRequest,
     ) -> Result<GetRolePolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "role",
-            request.role.name(),
+            &request.role,
         )
         .await?;
 
@@ -479,11 +474,12 @@ where
         context: &WamiContext,
         request: DeleteRolePolicyRequest,
     ) -> Result<DeleteRolePolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamDeletePolicy,
             "role",
-            request.role.name(),
+            &request.role,
         )
         .await?;
 
@@ -516,11 +512,12 @@ where
         context: &WamiContext,
         request: ListRolePoliciesRequest,
     ) -> Result<ListRolePoliciesResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "role",
-            request.role.name(),
+            &request.role,
         )
         .await?;
 

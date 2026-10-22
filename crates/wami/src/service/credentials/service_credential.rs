@@ -7,20 +7,25 @@ use crate::credentials::service_credential::{
     DeleteServiceSpecificCredentialRequest, ListServiceSpecificCredentialsRequest,
     ServiceSpecificCredential, UpdateServiceSpecificCredentialRequest,
 };
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
-use crate::store::traits::ServiceCredentialStore;
+use crate::service::auth::authorizer::{guard, guard_by_id, guard_tenant, target_arn, Authorizer};
+use crate::store::traits::{ServiceCredentialStore, UserStore};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
-use wami_core::error::Result;
+use wami_core::error::{AmiError, Result};
+
+/// What the service credential service reads: the credentials, and their
+/// owners.
+pub trait ServiceCredentialServiceStore: ServiceCredentialStore + UserStore {}
+impl<T> ServiceCredentialServiceStore for T where T: ServiceCredentialStore + UserStore {}
 
 /// Service for managing IAM service-specific credentials
 ///
 /// Provides high-level operations for AWS service credentials (e.g., CodeCommit).
 /// Optionally holds an [`Authorizer`] for authorization guards on every method.
 #[wami_macros::service(
-    store_trait = "crate::store::traits::ServiceCredentialStore",
+    store_trait = "crate::service::credentials::service_credential::ServiceCredentialServiceStore",
     generate_new = false
 )]
 pub struct ServiceCredentialService<S> {
@@ -28,7 +33,7 @@ pub struct ServiceCredentialService<S> {
     authz: Option<Arc<dyn Authorizer>>,
 }
 
-impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
+impl<S: ServiceCredentialServiceStore> ServiceCredentialService<S> {
     /// Create a new ServiceCredentialService without authorization guards (backward compatible).
     pub fn new(store: Arc<RwLock<S>>) -> Self {
         Self { store, authz: None }
@@ -42,39 +47,23 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
         }
     }
 
-    /// Internal: check authorization if an authorizer is set.
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     /// Create a new service-specific credential
     pub async fn create_service_specific_credential(
         &self,
         context: &WamiContext,
         request: CreateServiceSpecificCredentialRequest,
     ) -> Result<ServiceSpecificCredential> {
-        // Authorization guard
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageCredentials,
             "user",
-            request.user.name(),
+            &request.user,
         )
         .await?;
-
-        // Use wami builder to create credential
+        let owner = super::read_owner(&*self.read_store().await, context, &request.user).await?;
         let credential =
-            cred_builder::build_service_credential(&request.user, request.service_name, context)?;
+            cred_builder::build_service_credential(&owner, request.service_name, context)?;
 
         // Store it
         self.write_store()
@@ -89,17 +78,45 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
         context: &WamiContext,
         credential_id: &str,
     ) -> Result<Option<ServiceSpecificCredential>> {
-        self.guard(
-            context,
-            WamiAction::IamManageCredentials,
-            "credential",
-            credential_id,
-        )
-        .await?;
-        self.read_store()
+        self.read_judged(context, credential_id, None).await
+    }
+
+    /// Read the credential stored under `credential_id`, then judge its
+    /// OWNER; an absent id and a denied owner are one refusal (A1). When the
+    /// request names a user, the stored owner must be that user.
+    async fn read_judged(
+        &self,
+        context: &WamiContext,
+        credential_id: &str,
+        named: Option<&wami_core::arn::ScopedName>,
+    ) -> Result<Option<ServiceSpecificCredential>> {
+        let credential = self
+            .read_store()
             .await
             .get_service_specific_credential(credential_id)
-            .await
+            .await?;
+        let owner = credential
+            .as_ref()
+            .map(|c| target_arn(context, "user", &c.owner));
+        guard_by_id(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamManageCredentials,
+            "service credential",
+            credential_id,
+            owner,
+        )
+        .await?;
+        if let (Some(credential), Some(named)) = (&credential, named) {
+            if &credential.owner != named {
+                return Err(AmiError::InvalidParameter {
+                    message: format!(
+                        "service credential {credential_id} does not belong to {named}"
+                    ),
+                });
+            }
+        }
+        Ok(credential)
     }
 
     /// Update a service-specific credential status
@@ -108,19 +125,12 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
         context: &WamiContext,
         request: UpdateServiceSpecificCredentialRequest,
     ) -> Result<ServiceSpecificCredential> {
-        self.guard(
-            context,
-            WamiAction::IamManageCredentials,
-            "user",
-            request.user.name(),
-        )
-        .await?;
-
-        // Get existing credential
         let mut credential = self
-            .read_store()
-            .await
-            .get_service_specific_credential(&request.service_specific_credential_id)
+            .read_judged(
+                context,
+                &request.service_specific_credential_id,
+                Some(&request.user),
+            )
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
                 resource: format!(
@@ -145,11 +155,10 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
         context: &WamiContext,
         request: DeleteServiceSpecificCredentialRequest,
     ) -> Result<()> {
-        self.guard(
+        self.read_judged(
             context,
-            WamiAction::IamManageCredentials,
-            "user",
-            request.user.name(),
+            &request.service_specific_credential_id,
+            Some(&request.user),
         )
         .await?;
         self.write_store()
@@ -164,9 +173,33 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
         context: &WamiContext,
         request: ListServiceSpecificCredentialsRequest,
     ) -> Result<Vec<ServiceSpecificCredential>> {
-        let name = request.user.as_ref().map_or("*", |user| user.name());
-        self.guard(context, WamiAction::IamManageCredentials, "user", name)
-            .await?;
+        match &request.user {
+            Some(user) => {
+                if user.tenant() != &request.tenant {
+                    return Err(AmiError::InvalidParameter {
+                        message: format!("{user} is not of tenant {}", request.tenant),
+                    });
+                }
+                guard(
+                    self.authz.as_ref(),
+                    context,
+                    WamiAction::IamManageCredentials,
+                    "user",
+                    user,
+                )
+                .await?;
+            }
+            None => {
+                guard_tenant(
+                    self.authz.as_ref(),
+                    context,
+                    WamiAction::IamManageCredentials,
+                    "user",
+                    &request.tenant,
+                )
+                .await?;
+            }
+        }
         self.read_store()
             .await
             .list_service_specific_credentials(&request.tenant, request.user.as_ref())
@@ -191,9 +224,18 @@ mod tests {
         wami_core::arn::ScopedName::new(tenant(), name.as_ref())
     }
 
-    fn setup_service() -> ServiceCredentialService<InMemoryWamiStore> {
-        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        ServiceCredentialService::new(store)
+    /// A service over a store holding the users the tests mint credentials
+    /// for: a credential is only ever minted for a user that is there.
+    async fn setup_service() -> ServiceCredentialService<InMemoryWamiStore> {
+        use crate::store::traits::UserStore;
+        let mut seeded = InMemoryWamiStore::default();
+        for name in ["alice", "bob", "charlie", "david"] {
+            let user =
+                crate::wami::identity::user::builder::build_user(&key(name), None, &test_context())
+                    .unwrap();
+            seeded.create_user(user).await.unwrap();
+        }
+        ServiceCredentialService::new(Arc::new(RwLock::new(seeded)))
     }
 
     fn test_context() -> WamiContext {
@@ -211,7 +253,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_and_get_service_credential() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         let request = CreateServiceSpecificCredentialRequest {
@@ -236,7 +278,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_service_credential_status() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         let create_req = CreateServiceSpecificCredentialRequest {
@@ -262,7 +304,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_service_credential() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         let create_req = CreateServiceSpecificCredentialRequest {
@@ -292,7 +334,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_list_service_credentials() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         // Create multiple credentials for same user

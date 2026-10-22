@@ -6,7 +6,7 @@ use crate::credentials::server_certificate::{
     builder as cert_builder, ListServerCertificatesRequest, ServerCertificateMetadata,
     UpdateServerCertificateRequest, UploadServerCertificateRequest,
 };
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
+use crate::service::auth::authorizer::{guard, guard_tenant, Authorizer};
 use crate::store::traits::ServerCertificateStore;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -43,21 +43,6 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         }
     }
 
-    /// Internal: check authorization if an authorizer is set.
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     /// Upload a new server certificate
     pub async fn upload_server_certificate(
         &self,
@@ -65,11 +50,12 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         request: UploadServerCertificateRequest,
     ) -> Result<ServerCertificateMetadata> {
         // Authorization guard
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageCredentials,
             "credential",
-            request.server_certificate.name(),
+            &request.server_certificate,
         )
         .await?;
 
@@ -96,11 +82,12 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         context: &WamiContext,
         certificate: &ScopedName,
     ) -> Result<Option<ServerCertificateMetadata>> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageCredentials,
             "credential",
-            certificate.name(),
+            certificate,
         )
         .await?;
         self.read_store()
@@ -115,11 +102,12 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         context: &WamiContext,
         request: UpdateServerCertificateRequest,
     ) -> Result<ServerCertificateMetadata> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageCredentials,
             "credential",
-            request.server_certificate.name(),
+            &request.server_certificate,
         )
         .await?;
 
@@ -155,11 +143,12 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         context: &WamiContext,
         certificate: &ScopedName,
     ) -> Result<()> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageCredentials,
             "credential",
-            certificate.name(),
+            certificate,
         )
         .await?;
         self.write_store()
@@ -174,8 +163,14 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         context: &WamiContext,
         request: ListServerCertificatesRequest,
     ) -> Result<(Vec<ServerCertificateMetadata>, bool, Option<String>)> {
-        self.guard(context, WamiAction::IamManageCredentials, "credential", "*")
-            .await?;
+        guard_tenant(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamManageCredentials,
+            "credential",
+            &request.tenant,
+        )
+        .await?;
 
         let pagination = if request.marker.is_some() || request.max_items.is_some() {
             Some(PaginationParams {

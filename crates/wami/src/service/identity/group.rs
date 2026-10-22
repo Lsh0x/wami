@@ -2,7 +2,7 @@
 //!
 //! Orchestrates group management operations including membership management.
 
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
+use crate::service::auth::authorizer::{confirm, guard, guard_tenant, Authorizer};
 use crate::store::traits::GroupStore;
 use crate::wami::identity::group::{
     builder as group_builder, CreateGroupRequest, Group, ListGroupsRequest, UpdateGroupRequest,
@@ -37,31 +37,18 @@ impl<S: GroupStore> GroupService<S> {
         }
     }
 
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     /// Create a new group
     pub async fn create_group(
         &self,
         context: &WamiContext,
         request: CreateGroupRequest,
     ) -> Result<Group> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreateGroup,
             "group",
-            request.group.name(),
+            &request.group,
         )
         .await?;
 
@@ -75,9 +62,25 @@ impl<S: GroupStore> GroupService<S> {
         context: &WamiContext,
         group: &ScopedName,
     ) -> Result<Option<Group>> {
-        self.guard(context, WamiAction::IamReadRole, "group", group.name())
-            .await?;
-        self.read_store().await.get_group(group).await
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamReadRole,
+            "group",
+            group,
+        )
+        .await?;
+        let found = self.read_store().await.get_group(group).await?;
+        if let Some(found) = &found {
+            confirm(
+                context,
+                "group",
+                group,
+                &found.key(),
+                &found.wami_arn.wami_instance_id,
+            )?;
+        }
+        Ok(found)
     }
 
     /// Update a group
@@ -86,11 +89,12 @@ impl<S: GroupStore> GroupService<S> {
         context: &WamiContext,
         request: UpdateGroupRequest,
     ) -> Result<Group> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamUpdateUser,
             "group",
-            request.group.name(),
+            &request.group,
         )
         .await?;
 
@@ -102,6 +106,13 @@ impl<S: GroupStore> GroupService<S> {
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
                 resource: format!("Group: {}", request.group),
             })?;
+        confirm(
+            context,
+            "group",
+            &request.group,
+            &group.key(),
+            &group.wami_arn.wami_instance_id,
+        )?;
 
         if let Some(new_group_name) = request.new_group_name {
             group = group_builder::update_group_name(group, new_group_name);
@@ -116,8 +127,14 @@ impl<S: GroupStore> GroupService<S> {
 
     /// Delete a group
     pub async fn delete_group(&self, context: &WamiContext, group: &ScopedName) -> Result<()> {
-        self.guard(context, WamiAction::IamDeleteGroup, "group", group.name())
-            .await?;
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamDeleteGroup,
+            "group",
+            group,
+        )
+        .await?;
         self.write_store().await.delete_group(group).await
     }
 
@@ -127,8 +144,14 @@ impl<S: GroupStore> GroupService<S> {
         context: &WamiContext,
         request: ListGroupsRequest,
     ) -> Result<(Vec<Group>, bool, Option<String>)> {
-        self.guard(context, WamiAction::IamListUsers, "group", "*")
-            .await?;
+        guard_tenant(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamListUsers,
+            "group",
+            &request.tenant,
+        )
+        .await?;
         self.read_store()
             .await
             .list_groups(
@@ -146,11 +169,22 @@ impl<S: GroupStore> GroupService<S> {
         group: &ScopedName,
         user: &ScopedName,
     ) -> Result<()> {
-        self.guard(
+        // A membership acts on two targets: the group and the user, each
+        // judged in its own tenant (A4).
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageGroupMembers,
             "group",
-            group.name(),
+            group,
+        )
+        .await?;
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamManageGroupMembers,
+            "user",
+            user,
         )
         .await?;
         self.write_store()
@@ -166,11 +200,22 @@ impl<S: GroupStore> GroupService<S> {
         group: &ScopedName,
         user: &ScopedName,
     ) -> Result<()> {
-        self.guard(
+        // A membership acts on two targets: the group and the user, each
+        // judged in its own tenant (A4).
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageGroupMembers,
             "group",
-            group.name(),
+            group,
+        )
+        .await?;
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamManageGroupMembers,
+            "user",
+            user,
         )
         .await?;
         self.write_store()
@@ -185,8 +230,14 @@ impl<S: GroupStore> GroupService<S> {
         context: &WamiContext,
         user: &ScopedName,
     ) -> Result<Vec<Group>> {
-        self.guard(context, WamiAction::IamReadUser, "user", user.name())
-            .await?;
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamReadUser,
+            "user",
+            user,
+        )
+        .await?;
         self.read_store().await.list_groups_for_user(user).await
     }
 }

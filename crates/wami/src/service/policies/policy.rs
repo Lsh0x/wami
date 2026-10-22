@@ -2,7 +2,7 @@
 //!
 //! Orchestrates policy management operations.
 
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
+use crate::service::auth::authorizer::{guard, guard_by_id, guard_tenant, iam_arn, Authorizer};
 use crate::store::traits::PolicyStore;
 use crate::wami::policies::policy::{
     builder as policy_builder, CreatePolicyRequest, ListPoliciesRequest, Policy,
@@ -11,6 +11,7 @@ use crate::wami::policies::policy::{
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
+use wami_core::arn::ScopedName;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
 
@@ -41,33 +42,20 @@ impl<S: PolicyStore> PolicyService<S> {
         }
     }
 
-    /// Internal: check authorization if an authorizer is set.
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     /// Create a new policy
     pub async fn create_policy(
         &self,
         context: &WamiContext,
         request: CreatePolicyRequest,
     ) -> Result<Policy> {
-        // Authorization guard
-        self.guard(
+        // Judged in the tenant the request names, never the caller's.
+        let target = ScopedName::new(request.tenant.clone(), request.policy_name.clone());
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreatePolicy,
             "policy",
-            &request.policy_name,
+            &target,
         )
         .await?;
 
@@ -98,9 +86,35 @@ impl<S: PolicyStore> PolicyService<S> {
         context: &WamiContext,
         policy_arn: &str,
     ) -> Result<Option<Policy>> {
-        self.guard(context, WamiAction::IamReadPolicy, "policy", policy_arn)
-            .await?;
-        self.read_store().await.get_policy(policy_arn).await
+        self.read_judged(context, WamiAction::IamReadPolicy, policy_arn)
+            .await
+    }
+
+    /// Read the policy stored under `policy_arn`, then judge `action` on it in
+    /// ITS tenant — the one its `wami_arn` records. The ARN names no tenant
+    /// (wami 011), so the policy is read before it can be judged; an absent
+    /// ARN and a denied one are one refusal (A1). The resource stays
+    /// `policy/<the ARN>` as it was (wami 007 decides its id).
+    async fn read_judged(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        policy_arn: &str,
+    ) -> Result<Option<Policy>> {
+        let policy = self.read_store().await.get_policy(policy_arn).await?;
+        let stored = policy
+            .as_ref()
+            .map(|p| iam_arn(context, &p.wami_arn.tenant_path, "policy", policy_arn));
+        guard_by_id(
+            self.authz.as_ref(),
+            context,
+            action,
+            "policy",
+            policy_arn,
+            stored,
+        )
+        .await?;
+        Ok(policy)
     }
 
     /// Update a policy
@@ -109,20 +123,8 @@ impl<S: PolicyStore> PolicyService<S> {
         context: &WamiContext,
         request: UpdatePolicyRequest,
     ) -> Result<Policy> {
-        self.guard(
-            context,
-            WamiAction::IamCreatePolicy,
-            "policy",
-            &request.policy_arn,
-        )
-        .await?;
-
-        // Get existing policy
         let policy = self
-            .store
-            .read()
-            .await
-            .get_policy(&request.policy_arn)
+            .read_judged(context, WamiAction::IamCreatePolicy, &request.policy_arn)
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
                 resource: format!("Policy: {}", request.policy_arn),
@@ -138,7 +140,7 @@ impl<S: PolicyStore> PolicyService<S> {
 
     /// Delete a policy
     pub async fn delete_policy(&self, context: &WamiContext, policy_arn: &str) -> Result<()> {
-        self.guard(context, WamiAction::IamDeletePolicy, "policy", policy_arn)
+        self.read_judged(context, WamiAction::IamDeletePolicy, policy_arn)
             .await?;
         self.write_store().await.delete_policy(policy_arn).await
     }
@@ -149,8 +151,14 @@ impl<S: PolicyStore> PolicyService<S> {
         context: &WamiContext,
         request: ListPoliciesRequest,
     ) -> Result<(Vec<Policy>, bool, Option<String>)> {
-        self.guard(context, WamiAction::IamReadPolicy, "policy", "*")
-            .await?;
+        guard_tenant(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamReadPolicy,
+            "policy",
+            &request.tenant,
+        )
+        .await?;
         self.store
             .read()
             .await

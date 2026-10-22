@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use wami::store::conformance::{keys, Shared};
+use wami::store::conformance::{guard, keys, Shared};
 use wami::store::memory::InMemoryWamiStore;
 
 fn fresh() -> Shared<InMemoryWamiStore> {
@@ -33,4 +33,11 @@ conformance!(
     keys::a_deleted_users_name_hands_nothing_to_its_next_holder,
     keys::a_renamed_user_carries_everything_and_leaves_nothing_behind,
     keys::a_freed_group_or_role_name_hands_nothing_to_its_next_holder,
+    guard::a_tenant_admin_is_refused_on_another_tenants_users,
+    guard::a_tenant_admin_is_refused_every_credential_of_another_tenant,
+    guard::a_credential_takes_its_owners_tenant_never_the_callers,
+    guard::an_allow_on_one_tenants_alice_never_reaches_anothers,
+    guard::every_family_refuses_another_tenants_target,
+    guard::a_deletion_task_is_judged_on_its_roles_tenant,
+    guard::a_policy_is_judged_in_its_own_tenant,
 );
