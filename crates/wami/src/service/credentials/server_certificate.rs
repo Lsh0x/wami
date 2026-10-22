@@ -11,6 +11,7 @@ use crate::store::traits::ServerCertificateStore;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
+use wami_core::arn::ScopedName;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
 use wami_core::types::PaginationParams;
@@ -68,13 +69,13 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
             context,
             WamiAction::IamManageCredentials,
             "credential",
-            &request.server_certificate_name,
+            request.server_certificate.name(),
         )
         .await?;
 
         // Use wami builder to create certificate
         let certificate = cert_builder::build_server_certificate(
-            request.server_certificate_name,
+            &request.server_certificate,
             request.certificate_body,
             request.certificate_chain,
             request.path.unwrap_or_else(|| "/".to_string()),
@@ -93,18 +94,18 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
     pub async fn get_server_certificate(
         &self,
         context: &WamiContext,
-        certificate_name: &str,
+        certificate: &ScopedName,
     ) -> Result<Option<ServerCertificateMetadata>> {
         self.guard(
             context,
             WamiAction::IamManageCredentials,
             "credential",
-            certificate_name,
+            certificate.name(),
         )
         .await?;
         self.read_store()
             .await
-            .get_server_certificate(certificate_name)
+            .get_server_certificate(certificate)
             .await
     }
 
@@ -118,7 +119,7 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
             context,
             WamiAction::IamManageCredentials,
             "credential",
-            &request.server_certificate_name,
+            request.server_certificate.name(),
         )
         .await?;
 
@@ -126,10 +127,10 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
         let mut certificate = self
             .read_store()
             .await
-            .get_server_certificate(&request.server_certificate_name)
+            .get_server_certificate(&request.server_certificate)
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
-                resource: format!("ServerCertificate: {}", request.server_certificate_name),
+                resource: format!("ServerCertificate: {}", request.server_certificate),
             })?;
 
         // Apply updates
@@ -152,18 +153,18 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
     pub async fn delete_server_certificate(
         &self,
         context: &WamiContext,
-        certificate_name: &str,
+        certificate: &ScopedName,
     ) -> Result<()> {
         self.guard(
             context,
             WamiAction::IamManageCredentials,
             "credential",
-            certificate_name,
+            certificate.name(),
         )
         .await?;
         self.write_store()
             .await
-            .delete_server_certificate(certificate_name)
+            .delete_server_certificate(certificate)
             .await
     }
 
@@ -187,7 +188,11 @@ impl<S: ServerCertificateStore> ServerCertificateService<S> {
 
         self.read_store()
             .await
-            .list_server_certificates(request.path_prefix.as_deref(), pagination.as_ref())
+            .list_server_certificates(
+                &request.tenant,
+                request.path_prefix.as_deref(),
+                pagination.as_ref(),
+            )
             .await
     }
 }
@@ -197,6 +202,16 @@ mod tests {
     use super::*;
     use crate::service::auth::decision::{Decision, DenyReason};
     use crate::store::memory::InMemoryWamiStore;
+
+    /// The tenant every test here works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(0)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
 
     fn setup_service() -> ServerCertificateService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
@@ -228,7 +243,7 @@ mod tests {
         let context = test_context();
 
         let request = UploadServerCertificateRequest {
-            server_certificate_name: "test-cert".to_string(),
+            server_certificate: key("test-cert"),
             certificate_body: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"
                 .to_string(),
             private_key: "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----"
@@ -246,7 +261,7 @@ mod tests {
         assert_eq!(metadata.path, "/certs/");
 
         let retrieved = service
-            .get_server_certificate(&context, "test-cert")
+            .get_server_certificate(&context, &key("test-cert"))
             .await
             .unwrap();
         assert!(retrieved.is_some());
@@ -262,7 +277,7 @@ mod tests {
             .upload_server_certificate(
                 &context,
                 UploadServerCertificateRequest {
-                    server_certificate_name: "test-cert".to_string(),
+                    server_certificate: key("test-cert"),
                     certificate_body:
                         "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----".to_string(),
                     private_key:
@@ -283,7 +298,7 @@ mod tests {
             .update_server_certificate(
                 &context,
                 UpdateServerCertificateRequest {
-                    server_certificate_name: "test-cert".to_string(),
+                    server_certificate: key("test-cert"),
                     new_server_certificate_name: None,
                     new_path: Some("/renamed/".to_string()),
                 },
@@ -304,7 +319,7 @@ mod tests {
             .update_server_certificate(
                 &context,
                 UpdateServerCertificateRequest {
-                    server_certificate_name: "missing".to_string(),
+                    server_certificate: key("missing"),
                     new_server_certificate_name: None,
                     new_path: None,
                 },
@@ -320,7 +335,7 @@ mod tests {
         let context = test_context();
 
         let request = UploadServerCertificateRequest {
-            server_certificate_name: "delete-me".to_string(),
+            server_certificate: key("delete-me"),
             certificate_body: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"
                 .to_string(),
             private_key: "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----"
@@ -335,12 +350,12 @@ mod tests {
             .unwrap();
 
         service
-            .delete_server_certificate(&context, "delete-me")
+            .delete_server_certificate(&context, &key("delete-me"))
             .await
             .unwrap();
 
         let retrieved = service
-            .get_server_certificate(&context, "delete-me")
+            .get_server_certificate(&context, &key("delete-me"))
             .await
             .unwrap();
         assert!(retrieved.is_none());
@@ -354,7 +369,7 @@ mod tests {
         // Upload multiple certificates
         for i in 0..3 {
             let request = UploadServerCertificateRequest {
-                server_certificate_name: format!("cert{}", i),
+                server_certificate: key(format!("cert{}", i)),
                 certificate_body: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"
                     .to_string(),
                 private_key: "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----"
@@ -370,6 +385,7 @@ mod tests {
         }
 
         let list_request = ListServerCertificatesRequest {
+            tenant: tenant(),
             path_prefix: Some("/test/".to_string()),
             marker: None,
             max_items: None,
@@ -408,7 +424,7 @@ mod tests {
         let context = test_context();
 
         let request = UploadServerCertificateRequest {
-            server_certificate_name: "test-cert".to_string(),
+            server_certificate: key("test-cert"),
             certificate_body: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"
                 .to_string(),
             private_key: "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----"
@@ -431,7 +447,9 @@ mod tests {
         let service = ServerCertificateService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
 
-        let result = service.get_server_certificate(&context, "test-cert").await;
+        let result = service
+            .get_server_certificate(&context, &key("test-cert"))
+            .await;
         assert!(matches!(
             result,
             Err(wami_core::error::AmiError::AccessDenied { .. })
@@ -445,7 +463,7 @@ mod tests {
         let context = test_context();
 
         let request = UpdateServerCertificateRequest {
-            server_certificate_name: "test-cert".to_string(),
+            server_certificate: key("test-cert"),
             new_server_certificate_name: None,
             new_path: None,
         };
@@ -464,7 +482,7 @@ mod tests {
         let context = test_context();
 
         let result = service
-            .delete_server_certificate(&context, "test-cert")
+            .delete_server_certificate(&context, &key("test-cert"))
             .await;
         assert!(matches!(
             result,
@@ -479,6 +497,7 @@ mod tests {
         let context = test_context();
 
         let request = ListServerCertificatesRequest {
+            tenant: tenant(),
             path_prefix: None,
             marker: None,
             max_items: None,

@@ -66,12 +66,12 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            request.user.name(),
         )
         .await?;
 
         // Use wami builder to create access key
-        let access_key = access_key_builder::build_access_key(request.user_name, context)?;
+        let access_key = access_key_builder::build_access_key(&request.user, context)?;
 
         // Store it
         self.write_store().await.create_access_key(access_key).await
@@ -103,7 +103,7 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &access_key.user_name,
+            access_key.owner.name(),
         )
         .await?;
         self.write_store().await.update_access_key(access_key).await
@@ -138,12 +138,12 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            request.user.name(),
         )
         .await?;
         self.read_store()
             .await
-            .list_access_keys(&request.user_name, request.pagination.as_ref())
+            .list_access_keys(&request.user, request.pagination.as_ref())
             .await
     }
 }
@@ -154,6 +154,16 @@ mod tests {
     use crate::service::auth::decision::{Decision, DenyReason};
     use crate::store::memory::InMemoryWamiStore;
     use wami_core::arn::{TenantPath, WamiArn};
+
+    /// The tenant every test here works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
 
     fn setup_service() -> AccessKeyService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
@@ -178,12 +188,10 @@ mod tests {
         let service = setup_service();
         let context = test_context();
 
-        let request = CreateAccessKeyRequest {
-            user_name: "alice".to_string(),
-        };
+        let request = CreateAccessKeyRequest { user: key("alice") };
 
         let access_key = service.create_access_key(&context, request).await.unwrap();
-        assert_eq!(access_key.user_name, "alice");
+        assert_eq!(access_key.owner.name(), "alice");
         assert!(!access_key.access_key_id.is_empty());
         assert!(access_key.secret_access_key.is_some());
 
@@ -192,7 +200,7 @@ mod tests {
             .await
             .unwrap();
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().user_name, "alice");
+        assert_eq!(retrieved.unwrap().owner.name(), "alice");
     }
 
     #[tokio::test]
@@ -200,9 +208,7 @@ mod tests {
         let service = setup_service();
         let context = test_context();
 
-        let request = CreateAccessKeyRequest {
-            user_name: "bob".to_string(),
-        };
+        let request = CreateAccessKeyRequest { user: key("bob") };
         let access_key = service.create_access_key(&context, request).await.unwrap();
 
         service
@@ -225,13 +231,13 @@ mod tests {
         // Create multiple access keys for same user
         for _ in 0..3 {
             let request = CreateAccessKeyRequest {
-                user_name: "charlie".to_string(),
+                user: key("charlie"),
             };
             service.create_access_key(&context, request).await.unwrap();
         }
 
         let list_request = ListAccessKeysRequest {
-            user_name: "charlie".to_string(),
+            user: key("charlie"),
             pagination: None,
         };
         let (keys, _, _) = service
@@ -271,7 +277,7 @@ mod tests {
         let context = test_context();
 
         let request = ListAccessKeysRequest {
-            user_name: "nonexistent".to_string(),
+            user: key("nonexistent"),
             pagination: None,
         };
 
@@ -286,7 +292,7 @@ mod tests {
 
         // Update is idempotent - creates/updates even if access key doesn't exist
         use crate::credentials::build_access_key;
-        let access_key = build_access_key("alice".to_string(), &context).unwrap();
+        let access_key = build_access_key(&key("alice"), &context).unwrap();
         let mut nonexistent_key = access_key;
         nonexistent_key.access_key_id = "nonexistent-key-id".to_string();
 
@@ -319,9 +325,7 @@ mod tests {
         let service = AccessKeyService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
 
-        let request = CreateAccessKeyRequest {
-            user_name: "alice".to_string(),
-        };
+        let request = CreateAccessKeyRequest { user: key("alice") };
 
         let result = service.create_access_key(&context, request).await;
         assert!(matches!(
@@ -349,8 +353,7 @@ mod tests {
         let service = AccessKeyService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
 
-        let access_key =
-            crate::credentials::build_access_key("alice".to_string(), &context).unwrap();
+        let access_key = crate::credentials::build_access_key(&key("alice"), &context).unwrap();
 
         let result = service.update_access_key(&context, access_key).await;
         assert!(matches!(
@@ -379,7 +382,7 @@ mod tests {
         let context = test_context();
 
         let request = ListAccessKeysRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             pagination: None,
         };
 

@@ -16,6 +16,7 @@ use crate::wami::sso_admin::{
 use crate::wami::sts::{CallerIdentity, StsSession};
 use crate::wami::tenant::{Tenant, TenantId};
 use std::collections::HashMap;
+use wami_core::arn::ScopedName;
 
 /// In-memory implementation of WAMI store
 ///
@@ -36,17 +37,18 @@ use std::collections::HashMap;
 /// - `LoginProfileStore` → `memory/credentials/login_profile.rs` (TODO)
 #[derive(Debug, Clone, Default)]
 pub struct InMemoryWamiStore {
-    pub(super) users: HashMap<String, User>,
+    // Principals, groups and certificates are keyed by ScopedName — the
+    // tenant path and the name — never the bare name (wami 005).
+    pub(super) users: HashMap<ScopedName, User>,
     pub(super) access_keys: HashMap<String, AccessKey>,
-    pub(super) groups: HashMap<String, Group>,
-    pub(super) roles: HashMap<String, Role>,
+    pub(super) groups: HashMap<ScopedName, Group>,
+    pub(super) roles: HashMap<ScopedName, Role>,
     pub(super) policies: HashMap<String, Policy>,
     pub(super) mfa_devices: HashMap<String, MfaDevice>,
-    pub(super) login_profiles: HashMap<String, LoginProfile>,
-    pub(super) user_groups: HashMap<String, Vec<String>>, // user_name -> group_names
+    pub(super) login_profiles: HashMap<ScopedName, LoginProfile>,
+    pub(super) user_groups: HashMap<ScopedName, Vec<ScopedName>>, // user -> groups
     pub(super) credential_report: Option<crate::wami::reports::credential_report::CredentialReport>,
-    #[allow(dead_code)]
-    pub(super) server_certificates: HashMap<String, crate::credentials::ServerCertificate>,
+    pub(super) server_certificates: HashMap<ScopedName, crate::credentials::ServerCertificate>,
     #[allow(dead_code)]
     pub(super) service_specific_credentials:
         HashMap<String, crate::credentials::service_credential::ServiceSpecificCredential>,
@@ -71,13 +73,13 @@ pub struct InMemoryWamiStore {
     pub(super) oidc_providers: HashMap<String, OidcProvider>,
     // Policy attachment resources
     // Managed policy attachments (policy ARN strings)
-    pub(super) user_attached_policies: HashMap<String, Vec<String>>, // user_name -> [policy_arns]
-    pub(super) group_attached_policies: HashMap<String, Vec<String>>, // group_name -> [policy_arns]
-    pub(super) role_attached_policies: HashMap<String, Vec<String>>, // role_name -> [policy_arns]
+    pub(super) user_attached_policies: HashMap<ScopedName, Vec<String>>, // user -> [policy_arns]
+    pub(super) group_attached_policies: HashMap<ScopedName, Vec<String>>, // group -> [policy_arns]
+    pub(super) role_attached_policies: HashMap<ScopedName, Vec<String>>, // role -> [policy_arns]
     // Inline policies (policy_name -> policy_document JSON)
-    pub(super) user_inline_policies: HashMap<String, HashMap<String, String>>, // user_name -> {policy_name -> document}
-    pub(super) group_inline_policies: HashMap<String, HashMap<String, String>>, // group_name -> {policy_name -> document}
-    pub(super) role_inline_policies: HashMap<String, HashMap<String, String>>, // role_name -> {policy_name -> document}
+    pub(super) user_inline_policies: HashMap<ScopedName, HashMap<String, String>>, // user -> {policy_name -> document}
+    pub(super) group_inline_policies: HashMap<ScopedName, HashMap<String, String>>, // group -> {policy_name -> document}
+    pub(super) role_inline_policies: HashMap<ScopedName, HashMap<String, String>>, // role -> {policy_name -> document}
 }
 
 impl InMemoryWamiStore {

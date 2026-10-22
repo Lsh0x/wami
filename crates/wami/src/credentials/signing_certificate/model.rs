@@ -2,7 +2,7 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use wami_core::arn::WamiArn;
+use wami_core::arn::{ScopedName, WamiArn};
 
 /// Signing certificate status
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -16,9 +16,9 @@ pub enum CertificateStatus {
 /// Signing certificate information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SigningCertificate {
-    /// The name of the user the signing certificate is associated with
-    #[serde(rename = "UserName")]
-    pub user_name: String,
+    /// The key of the user who owns the certificate — its tenant and its name
+    #[serde(rename = "Owner")]
+    pub owner: ScopedName,
 
     /// The ID for the signing certificate
     #[serde(rename = "CertificateId")]

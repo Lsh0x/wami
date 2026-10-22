@@ -4,12 +4,20 @@ use crate::store::memory::InMemoryWamiStore;
 use crate::store::traits::PolicyStore;
 use crate::wami::policies::Policy;
 use async_trait::async_trait;
+use wami_core::arn::TenantPath;
 use wami_core::error::Result;
 use wami_core::types::PaginationParams;
 
 #[async_trait]
 impl PolicyStore for InMemoryWamiStore {
     async fn create_policy(&mut self, policy: Policy) -> Result<Policy> {
+        // The ARN names no tenant (wami 011): replacing a held one would let a
+        // tenant rewrite the document another tenant's attachments evaluate.
+        if self.policies.contains_key(&policy.arn) {
+            return Err(wami_core::error::AmiError::ResourceExists {
+                resource: format!("policy {}", policy.arn),
+            });
+        }
         self.policies.insert(policy.arn.clone(), policy.clone());
         Ok(policy)
     }
@@ -30,12 +38,14 @@ impl PolicyStore for InMemoryWamiStore {
 
     async fn list_policies(
         &self,
+        tenant: &TenantPath,
         path_prefix: Option<&str>,
         pagination: Option<&PaginationParams>,
     ) -> Result<(Vec<Policy>, bool, Option<String>)> {
         let mut policies: Vec<Policy> = self
             .policies
             .values()
+            .filter(|policy| &policy.wami_arn.tenant_path == tenant)
             .filter(|policy| {
                 if let Some(prefix) = path_prefix {
                     policy.path.starts_with(prefix)

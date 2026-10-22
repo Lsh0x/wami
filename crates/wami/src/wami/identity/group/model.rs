@@ -1,6 +1,6 @@
 //! Group Domain Model
 
-use crate::arn::WamiArn;
+use crate::arn::{ScopedName, WamiArn};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -55,4 +55,15 @@ pub struct Group {
     pub providers: Vec<crate::provider::ProviderConfig>,
     /// Optional tenant ID for multi-tenant isolation
     pub tenant_id: Option<crate::wami::tenant::TenantId>,
+}
+
+impl Group {
+    /// The key this group is stored and addressed under: the tenant path
+    /// its `wami_arn` carries, and its name.
+    ///
+    /// Read from the record — never built from an ARN's resource id, which is
+    /// the group's stable id, not its name (wami 005).
+    pub fn key(&self) -> ScopedName {
+        ScopedName::new(self.wami_arn.tenant_path.clone(), &self.group_name)
+    }
 }

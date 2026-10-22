@@ -43,7 +43,7 @@ let context = WamiContext::builder()
     .unwrap();
 
 let login_profile = build_login_profile(
-    "alice".into(),
+    &ScopedName::new(TenantPath::single(1), "alice"),
     true, // password_reset_required
     &context,
 )?;
@@ -106,7 +106,7 @@ let context = WamiContext::builder()
 
 // Create a new login profile with password reset required
 let login_profile = build_login_profile(
-    "alice".into(),
+    &ScopedName::new(TenantPath::single(1), "alice"),
     true,
     &context,
 )?;

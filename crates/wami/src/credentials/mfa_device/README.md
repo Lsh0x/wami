@@ -43,7 +43,7 @@ let context = WamiContext::builder()
     .unwrap();
 
 let mfa_device = build_mfa_device(
-    "alice".into(),
+    &ScopedName::new(TenantPath::single(1), "alice"),
     "arn:aws:iam::123456789012:mfa/alice".into(),
     &context,
 )?;
@@ -92,7 +92,7 @@ let context = WamiContext::builder()
 // Create a new MFA device
 let serial_number = "arn:aws:iam::123456789012:mfa/alice";
 let mfa_device = build_mfa_device(
-    "alice".into(),
+    &ScopedName::new(TenantPath::single(1), "alice"),
     serial_number.into(),
     &context,
 )?;

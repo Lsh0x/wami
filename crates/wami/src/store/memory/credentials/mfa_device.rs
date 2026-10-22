@@ -4,6 +4,7 @@ use crate::credentials::MfaDevice;
 use crate::store::memory::InMemoryWamiStore;
 use crate::store::traits::MfaDeviceStore;
 use async_trait::async_trait;
+use wami_core::arn::ScopedName;
 use wami_core::error::Result;
 
 #[async_trait]
@@ -23,11 +24,11 @@ impl MfaDeviceStore for InMemoryWamiStore {
         Ok(())
     }
 
-    async fn list_mfa_devices(&self, user_name: &str) -> Result<Vec<MfaDevice>> {
+    async fn list_mfa_devices(&self, owner: &ScopedName) -> Result<Vec<MfaDevice>> {
         let devices: Vec<MfaDevice> = self
             .mfa_devices
             .values()
-            .filter(|device| device.user_name == user_name)
+            .filter(|device| &device.owner == owner)
             .cloned()
             .collect();
         Ok(devices)

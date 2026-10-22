@@ -68,16 +68,13 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            request.user.name(),
         )
         .await?;
 
         // Use wami builder to create credential
-        let credential = cred_builder::build_service_credential(
-            request.user_name,
-            request.service_name,
-            context,
-        )?;
+        let credential =
+            cred_builder::build_service_credential(&request.user, request.service_name, context)?;
 
         // Store it
         self.write_store()
@@ -115,7 +112,7 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            request.user.name(),
         )
         .await?;
 
@@ -152,7 +149,7 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            request.user.name(),
         )
         .await?;
         self.write_store()
@@ -167,17 +164,12 @@ impl<S: ServiceCredentialStore> ServiceCredentialService<S> {
         context: &WamiContext,
         request: ListServiceSpecificCredentialsRequest,
     ) -> Result<Vec<ServiceSpecificCredential>> {
-        let user_name = request.user_name.as_deref().unwrap_or("");
-        self.guard(
-            context,
-            WamiAction::IamManageCredentials,
-            "user",
-            if user_name.is_empty() { "*" } else { user_name },
-        )
-        .await?;
+        let name = request.user.as_ref().map_or("*", |user| user.name());
+        self.guard(context, WamiAction::IamManageCredentials, "user", name)
+            .await?;
         self.read_store()
             .await
-            .list_service_specific_credentials(user_name)
+            .list_service_specific_credentials(&request.tenant, request.user.as_ref())
             .await
     }
 }
@@ -188,6 +180,16 @@ mod tests {
     use crate::service::auth::decision::{Decision, DenyReason};
     use crate::store::memory::InMemoryWamiStore;
     use wami_core::arn::{TenantPath, WamiArn};
+
+    /// The tenant every test here works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
 
     fn setup_service() -> ServiceCredentialService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
@@ -213,7 +215,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateServiceSpecificCredentialRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             service_name: "codecommit.amazonaws.com".to_string(),
         };
 
@@ -221,7 +223,7 @@ mod tests {
             .create_service_specific_credential(&context, request)
             .await
             .unwrap();
-        assert_eq!(credential.user_name, "alice");
+        assert_eq!(credential.owner.name(), "alice");
         assert_eq!(credential.service_name, "codecommit.amazonaws.com");
 
         let retrieved = service
@@ -229,7 +231,7 @@ mod tests {
             .await
             .unwrap();
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().user_name, "alice");
+        assert_eq!(retrieved.unwrap().owner.name(), "alice");
     }
 
     #[tokio::test]
@@ -238,7 +240,7 @@ mod tests {
         let context = test_context();
 
         let create_req = CreateServiceSpecificCredentialRequest {
-            user_name: "bob".to_string(),
+            user: key("bob"),
             service_name: "codecommit.amazonaws.com".to_string(),
         };
         let credential = service
@@ -247,7 +249,7 @@ mod tests {
             .unwrap();
 
         let update_req = UpdateServiceSpecificCredentialRequest {
-            user_name: "bob".to_string(),
+            user: key("bob"),
             service_specific_credential_id: credential.service_specific_credential_id.clone(),
             status: "Inactive".to_string(),
         };
@@ -264,7 +266,7 @@ mod tests {
         let context = test_context();
 
         let create_req = CreateServiceSpecificCredentialRequest {
-            user_name: "charlie".to_string(),
+            user: key("charlie"),
             service_name: "codecommit.amazonaws.com".to_string(),
         };
         let credential = service
@@ -273,7 +275,7 @@ mod tests {
             .unwrap();
 
         let delete_req = DeleteServiceSpecificCredentialRequest {
-            user_name: "charlie".to_string(),
+            user: key("charlie"),
             service_specific_credential_id: credential.service_specific_credential_id.clone(),
         };
         service
@@ -296,7 +298,7 @@ mod tests {
         // Create multiple credentials for same user
         for _ in 0..3 {
             let request = CreateServiceSpecificCredentialRequest {
-                user_name: "david".to_string(),
+                user: key("david"),
                 service_name: "codecommit.amazonaws.com".to_string(),
             };
             service
@@ -306,7 +308,8 @@ mod tests {
         }
 
         let list_request = ListServiceSpecificCredentialsRequest {
-            user_name: Some("david".to_string()),
+            tenant: tenant(),
+            user: Some(key("david")),
             service_name: None,
         };
         let credentials = service
@@ -342,7 +345,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateServiceSpecificCredentialRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             service_name: "codecommit.amazonaws.com".to_string(),
         };
 
@@ -377,7 +380,7 @@ mod tests {
         let context = test_context();
 
         let request = UpdateServiceSpecificCredentialRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             service_specific_credential_id: "some-id".to_string(),
             status: "Inactive".to_string(),
         };
@@ -398,7 +401,7 @@ mod tests {
         let context = test_context();
 
         let request = DeleteServiceSpecificCredentialRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             service_specific_credential_id: "some-id".to_string(),
         };
 
@@ -418,7 +421,8 @@ mod tests {
         let context = test_context();
 
         let request = ListServiceSpecificCredentialsRequest {
-            user_name: Some("alice".to_string()),
+            tenant: tenant(),
+            user: Some(key("alice")),
             service_name: None,
         };
 

@@ -4,6 +4,7 @@ use crate::credentials::service_credential::ServiceSpecificCredential;
 use crate::store::memory::InMemoryWamiStore;
 use crate::store::traits::ServiceCredentialStore;
 use async_trait::async_trait;
+use wami_core::arn::{ScopedName, TenantPath};
 use wami_core::error::Result;
 
 #[async_trait]
@@ -51,12 +52,14 @@ impl ServiceCredentialStore for InMemoryWamiStore {
 
     async fn list_service_specific_credentials(
         &self,
-        user_name: &str,
+        tenant: &TenantPath,
+        owner: Option<&ScopedName>,
     ) -> Result<Vec<ServiceSpecificCredential>> {
         let creds: Vec<ServiceSpecificCredential> = self
             .service_specific_credentials
             .values()
-            .filter(|cred| cred.user_name == user_name)
+            .filter(|cred| cred.owner.tenant() == tenant)
+            .filter(|cred| owner.is_none_or(|owner| &cred.owner == owner))
             .cloned()
             .collect();
         Ok(creds)

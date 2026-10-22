@@ -44,7 +44,7 @@ use crate::service::auth::policy_evaluator::{self, PolicyEffect, StatementHit};
 use crate::store::traits::{GroupStore, PolicyStore, RoleStore, UserStore};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use wami_core::arn::WamiArn;
+use wami_core::arn::{ScopedName, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
 use wami_core::types::PolicyDocument;
@@ -120,9 +120,9 @@ where
             return Ok(Decision::Allow(AllowReason::RootBypass));
         }
 
-        let user_name = self.extract_user_name_from_arn(context.caller_arn())?;
+        let user = self.extract_user_name_from_arn(context.caller_arn())?;
 
-        self.evaluate_user_policies(context, &user_name, action, resource_arn)
+        self.evaluate_user_policies(context, &user, action, resource_arn)
             .await
     }
 
@@ -176,14 +176,14 @@ where
     async fn evaluate_user_policies(
         &self,
         context: &WamiContext,
-        user_name: &str,
+        user: &ScopedName,
         action: &str,
         resource_arn: &WamiArn,
     ) -> Result<Decision> {
         let (documents, boundary) = {
             let store = self.store.read().await;
-            let documents = Self::identity_documents(&store, context, user_name).await?;
-            (documents, Self::boundary_document(&store, user_name).await?)
+            let documents = Self::identity_documents(&store, context, user).await?;
+            (documents, Self::boundary_document(&store, user).await?)
         };
         // Canonical order — see the note on this function — the boundary
         // last; the simulation reads in the same order, by the same function.
@@ -315,8 +315,8 @@ where
     }
 
     /// The user's permissions boundary, as stored.
-    async fn boundary_document(store: &S, user_name: &str) -> Result<Boundary> {
-        let Some(user) = store.get_user(user_name).await? else {
+    async fn boundary_document(store: &S, key: &ScopedName) -> Result<Boundary> {
+        let Some(user) = store.get_user(key).await? else {
             return Ok(Boundary::None);
         };
         let Some(arn) = user.permissions_boundary else {
@@ -335,12 +335,12 @@ where
     async fn identity_documents(
         store: &S,
         context: &WamiContext,
-        user_name: &str,
+        user: &ScopedName,
     ) -> Result<Vec<(PolicySource, String)>> {
         let mut documents = Vec::new();
 
         // ── 1. User attached managed policies ──────────────────────
-        for policy_arn in store.list_attached_user_policies(user_name).await? {
+        for policy_arn in store.list_attached_user_policies(user).await? {
             if let Some(policy) = store.get_policy(&policy_arn).await? {
                 documents.push((
                     PolicySource::UserManaged { arn: policy_arn },
@@ -350,16 +350,17 @@ where
         }
 
         // ── 2. User inline policies ────────────────────────────────
-        for policy_name in store.list_user_policies(user_name).await? {
-            if let Some(document) = store.get_user_policy(user_name, &policy_name).await? {
+        for policy_name in store.list_user_policies(user).await? {
+            if let Some(document) = store.get_user_policy(user, &policy_name).await? {
                 documents.push((PolicySource::UserInline { name: policy_name }, document));
             }
         }
 
         // ── 3. Group policies (attached + inline) ──────────────────
-        for group in store.list_groups_for_user(user_name).await? {
+        for group in store.list_groups_for_user(user).await? {
             let group_name = &group.group_name;
-            for policy_arn in store.list_attached_group_policies(group_name).await? {
+            let group_key = group.key();
+            for policy_arn in store.list_attached_group_policies(&group_key).await? {
                 if let Some(policy) = store.get_policy(&policy_arn).await? {
                     documents.push((
                         PolicySource::GroupManaged {
@@ -370,8 +371,8 @@ where
                     ));
                 }
             }
-            for policy_name in store.list_group_policies(group_name).await? {
-                if let Some(document) = store.get_group_policy(group_name, &policy_name).await? {
+            for policy_name in store.list_group_policies(&group_key).await? {
+                if let Some(document) = store.get_group_policy(&group_key, &policy_name).await? {
                     documents.push((
                         PolicySource::GroupInline {
                             group: group_name.clone(),
@@ -384,13 +385,22 @@ where
         }
 
         // ── 4. Assumed role policies (attached + inline) ───────────
-        let role_name = context
+        // TRANSITIONAL (wami 005, until the session carries the role's key):
+        // the role is read off its ARN's resource id, which is its id, not its
+        // name — D8, kept as it was for one commit.
+        let role_key = context
             .session_info()
             .and_then(|session| session.assumed_role_arn.as_ref())
             .filter(|role_arn| role_arn.resource.resource_type == "role")
-            .map(|role_arn| role_arn.resource.resource_id.clone());
-        if let Some(role_name) = role_name {
-            for policy_arn in store.list_attached_role_policies(&role_name).await? {
+            .map(|role_arn| {
+                ScopedName::new(
+                    role_arn.tenant_path.clone(),
+                    role_arn.resource.resource_id.clone(),
+                )
+            });
+        if let Some(role_key) = role_key {
+            let role_name = role_key.name().to_string();
+            for policy_arn in store.list_attached_role_policies(&role_key).await? {
                 if let Some(policy) = store.get_policy(&policy_arn).await? {
                     documents.push((
                         PolicySource::RoleManaged {
@@ -401,8 +411,8 @@ where
                     ));
                 }
             }
-            for policy_name in store.list_role_policies(&role_name).await? {
-                if let Some(document) = store.get_role_policy(&role_name, &policy_name).await? {
+            for policy_name in store.list_role_policies(&role_key).await? {
+                if let Some(document) = store.get_role_policy(&role_key, &policy_name).await? {
                     documents.push((
                         PolicySource::RoleInline {
                             role: role_name.clone(),
@@ -417,13 +427,19 @@ where
         Ok(documents)
     }
     /// Extract user name from a user ARN
-    fn extract_user_name_from_arn(&self, arn: &WamiArn) -> Result<String> {
+    ///
+    /// TRANSITIONAL (wami 005, until the context carries the caller's key): the
+    /// key is the ARN's tenant path and resource id, as the name was before.
+    fn extract_user_name_from_arn(&self, arn: &WamiArn) -> Result<ScopedName> {
         // Check if this is a user resource
         if arn.resource.resource_type == "user" {
             // Return the resource ID as user_name
             // Note: resource_id is the stable user ID, not necessarily the user name
             // This might need adjustment based on how user_name is mapped
-            Ok(arn.resource.resource_id.clone())
+            Ok(ScopedName::new(
+                arn.tenant_path.clone(),
+                arn.resource.resource_id.clone(),
+            ))
         } else {
             Err(AmiError::InvalidParameter {
                 message: "Caller ARN is not a user ARN".to_string(),
@@ -438,6 +454,16 @@ mod tests {
     use crate::store::memory::InMemoryWamiStore;
     use wami_core::arn::matching::MatchContext;
     use wami_core::types::{PolicyDocument, PolicyStatement};
+
+    /// The tenant every test here works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
 
     #[test]
     fn test_matches_action() {
@@ -750,8 +776,7 @@ mod tests {
     /// Helper: set up store with a user named "alice"
     async fn setup_store_with_user(ctx: &WamiContext) -> Arc<RwLock<InMemoryWamiStore>> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        let user =
-            user_builder::build_user("alice".to_string(), Some("/".to_string()), ctx).unwrap();
+        let user = user_builder::build_user(&key("alice"), Some("/".to_string()), ctx).unwrap();
         store.write().await.create_user(user).await.unwrap();
         store
     }
@@ -762,11 +787,13 @@ mod tests {
         let store = setup_store_with_user(&ctx).await;
 
         // Create a group and add alice
-        let group = group_builder::build_group("developers".to_string(), None, &ctx).unwrap();
+        let group = group_builder::build_group(&key("developers"), None, &ctx).unwrap();
         {
             let mut s = store.write().await;
             s.create_group(group).await.unwrap();
-            s.add_user_to_group("developers", "alice").await.unwrap();
+            s.add_user_to_group(&key("developers"), &key("alice"))
+                .await
+                .unwrap();
         }
 
         // Create a managed policy that allows iam:GetUser
@@ -776,6 +803,7 @@ mod tests {
             None,
             None,
             None,
+            &tenant(),
             &ctx,
         )
         .unwrap();
@@ -783,7 +811,7 @@ mod tests {
         {
             let mut s = store.write().await;
             s.create_policy(policy).await.unwrap();
-            s.attach_group_policy("developers", &policy_arn)
+            s.attach_group_policy(&key("developers"), &policy_arn)
                 .await
                 .unwrap();
         }
@@ -807,13 +835,15 @@ mod tests {
         let store = setup_store_with_user(&ctx).await;
 
         // Create group, add alice, put inline policy
-        let group = group_builder::build_group("admins".to_string(), None, &ctx).unwrap();
+        let group = group_builder::build_group(&key("admins"), None, &ctx).unwrap();
         {
             let mut s = store.write().await;
             s.create_group(group).await.unwrap();
-            s.add_user_to_group("admins", "alice").await.unwrap();
+            s.add_user_to_group(&key("admins"), &key("alice"))
+                .await
+                .unwrap();
             s.put_group_policy(
-                "admins",
+                &key("admins"),
                 "AdminInline",
                 allow_policy_json(&["iam:*"], &["*"]),
             )
@@ -842,19 +872,25 @@ mod tests {
         // Give alice a user inline policy that allows iam:*
         {
             let mut s = store.write().await;
-            s.put_user_policy("alice", "UserAllow", allow_policy_json(&["iam:*"], &["*"]))
-                .await
-                .unwrap();
+            s.put_user_policy(
+                &key("alice"),
+                "UserAllow",
+                allow_policy_json(&["iam:*"], &["*"]),
+            )
+            .await
+            .unwrap();
         }
 
         // Create group with deny policy for iam:DeleteUser
-        let group = group_builder::build_group("restricted".to_string(), None, &ctx).unwrap();
+        let group = group_builder::build_group(&key("restricted"), None, &ctx).unwrap();
         {
             let mut s = store.write().await;
             s.create_group(group).await.unwrap();
-            s.add_user_to_group("restricted", "alice").await.unwrap();
+            s.add_user_to_group(&key("restricted"), &key("alice"))
+                .await
+                .unwrap();
             s.put_group_policy(
-                "restricted",
+                &key("restricted"),
                 "DenyDelete",
                 deny_policy_json(&["iam:DeleteUser"], &["*"]),
             )
@@ -913,7 +949,7 @@ mod tests {
 
         // Create the role
         let role = role_builder::build_role(
-            "admin-role".to_string(),
+            &key("admin-role"),
             r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             None,
             None,
@@ -928,6 +964,7 @@ mod tests {
             None,
             None,
             None,
+            &tenant(),
             &ctx,
         )
         .unwrap();
@@ -937,7 +974,7 @@ mod tests {
             let mut s = store.write().await;
             s.create_role(role).await.unwrap();
             s.create_policy(policy).await.unwrap();
-            s.attach_role_policy("admin-role", &policy_arn)
+            s.attach_role_policy(&key("admin-role"), &policy_arn)
                 .await
                 .unwrap();
         }
@@ -981,7 +1018,7 @@ mod tests {
         let store = setup_store_with_user(&ctx).await;
 
         let role = role_builder::build_role(
-            "reader-role".to_string(),
+            &key("reader-role"),
             r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             None,
             None,
@@ -994,7 +1031,7 @@ mod tests {
             let mut s = store.write().await;
             s.create_role(role).await.unwrap();
             s.put_role_policy(
-                "reader-role",
+                &key("reader-role"),
                 "ReadOnly",
                 allow_policy_json(&["iam:Get*", "iam:List*"], &["*"]),
             )
@@ -1052,19 +1089,25 @@ mod tests {
         // User inline: allow iam:*
         {
             let mut s = store.write().await;
-            s.put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
-                .await
-                .unwrap();
+            s.put_user_policy(
+                &key("alice"),
+                "AllowAll",
+                allow_policy_json(&["iam:*"], &["*"]),
+            )
+            .await
+            .unwrap();
         }
 
         // Group: also allow iam:*
-        let group = group_builder::build_group("power-users".to_string(), None, &ctx).unwrap();
+        let group = group_builder::build_group(&key("power-users"), None, &ctx).unwrap();
         {
             let mut s = store.write().await;
             s.create_group(group).await.unwrap();
-            s.add_user_to_group("power-users", "alice").await.unwrap();
+            s.add_user_to_group(&key("power-users"), &key("alice"))
+                .await
+                .unwrap();
             s.put_group_policy(
-                "power-users",
+                &key("power-users"),
                 "AllowAll",
                 allow_policy_json(&["iam:*"], &["*"]),
             )
@@ -1074,7 +1117,7 @@ mod tests {
 
         // Assumed role: deny iam:DeleteUser
         let role = role_builder::build_role(
-            "restrictive-role".to_string(),
+            &key("restrictive-role"),
             r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             None,
             None,
@@ -1086,7 +1129,7 @@ mod tests {
             let mut s = store.write().await;
             s.create_role(role).await.unwrap();
             s.put_role_policy(
-                "restrictive-role",
+                &key("restrictive-role"),
                 "DenyDelete",
                 deny_policy_json(&["iam:DeleteUser"], &["*"]),
             )
@@ -1160,13 +1203,15 @@ mod tests {
         let store = setup_store_with_user(&ctx).await;
 
         // Group 1: allows iam:GetUser
-        let g1 = group_builder::build_group("readers".to_string(), None, &ctx).unwrap();
+        let g1 = group_builder::build_group(&key("readers"), None, &ctx).unwrap();
         {
             let mut s = store.write().await;
             s.create_group(g1).await.unwrap();
-            s.add_user_to_group("readers", "alice").await.unwrap();
+            s.add_user_to_group(&key("readers"), &key("alice"))
+                .await
+                .unwrap();
             s.put_group_policy(
-                "readers",
+                &key("readers"),
                 "ReadPolicy",
                 allow_policy_json(&["iam:GetUser"], &["*"]),
             )
@@ -1175,13 +1220,15 @@ mod tests {
         }
 
         // Group 2: allows iam:CreateUser
-        let g2 = group_builder::build_group("creators".to_string(), None, &ctx).unwrap();
+        let g2 = group_builder::build_group(&key("creators"), None, &ctx).unwrap();
         {
             let mut s = store.write().await;
             s.create_group(g2).await.unwrap();
-            s.add_user_to_group("creators", "alice").await.unwrap();
+            s.add_user_to_group(&key("creators"), &key("alice"))
+                .await
+                .unwrap();
             s.put_group_policy(
-                "creators",
+                &key("creators"),
                 "CreatePolicy",
                 allow_policy_json(&["iam:CreateUser"], &["*"]),
             )
@@ -1431,16 +1478,20 @@ mod tests {
         // User inline: allow iam:*
         {
             let mut s = store.write().await;
-            s.put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
-                .await
-                .unwrap();
+            s.put_user_policy(
+                &key("alice"),
+                "AllowAll",
+                allow_policy_json(&["iam:*"], &["*"]),
+            )
+            .await
+            .unwrap();
         }
 
         // User inline: deny iam:DeleteUser from outside 10.0.0.0/8
         {
             let mut s = store.write().await;
             s.put_user_policy(
-                "alice",
+                &key("alice"),
                 "DenyDeleteFromExternal",
                 policy_with_condition(
                     "Deny",
@@ -1484,9 +1535,13 @@ mod tests {
         // Give alice iam:* via user inline policy
         {
             let mut s = store.write().await;
-            s.put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
-                .await
-                .unwrap();
+            s.put_user_policy(
+                &key("alice"),
+                "AllowAll",
+                allow_policy_json(&["iam:*"], &["*"]),
+            )
+            .await
+            .unwrap();
         }
 
         // Create a boundary policy that only allows iam:Get* and iam:List*
@@ -1496,6 +1551,7 @@ mod tests {
             None,
             None,
             None,
+            &tenant(),
             &ctx,
         )
         .unwrap();
@@ -1508,7 +1564,7 @@ mod tests {
         // Set boundary on alice
         {
             let mut s = store.write().await;
-            let mut alice = s.get_user("alice").await.unwrap().unwrap();
+            let mut alice = s.get_user(&key("alice")).await.unwrap().unwrap();
             alice.permissions_boundary = Some(boundary_arn);
             s.update_user(alice).await.unwrap();
         }
@@ -1565,9 +1621,13 @@ mod tests {
         // Give alice iam:* via user inline policy, NO boundary
         {
             let mut s = store.write().await;
-            s.put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
-                .await
-                .unwrap();
+            s.put_user_policy(
+                &key("alice"),
+                "AllowAll",
+                allow_policy_json(&["iam:*"], &["*"]),
+            )
+            .await
+            .unwrap();
         }
 
         let authz = AuthorizationService::new(store);
@@ -1589,15 +1649,19 @@ mod tests {
         // Give alice iam:*
         {
             let mut s = store.write().await;
-            s.put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
-                .await
-                .unwrap();
+            s.put_user_policy(
+                &key("alice"),
+                "AllowAll",
+                allow_policy_json(&["iam:*"], &["*"]),
+            )
+            .await
+            .unwrap();
         }
 
         // Set a boundary ARN that doesn't exist in the store
         {
             let mut s = store.write().await;
-            let mut alice = s.get_user("alice").await.unwrap().unwrap();
+            let mut alice = s.get_user(&key("alice")).await.unwrap().unwrap();
             alice.permissions_boundary =
                 Some("arn:wami:iam:12345678:wami:999:policy/nonexistent".to_string());
             s.update_user(alice).await.unwrap();
@@ -1625,16 +1689,20 @@ mod tests {
         // Give alice iam:* via policy
         {
             let mut s = store.write().await;
-            s.put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
-                .await
-                .unwrap();
+            s.put_user_policy(
+                &key("alice"),
+                "AllowAll",
+                allow_policy_json(&["iam:*"], &["*"]),
+            )
+            .await
+            .unwrap();
         }
 
         // Explicit deny on iam:DeleteUser
         {
             let mut s = store.write().await;
             s.put_user_policy(
-                "alice",
+                &key("alice"),
                 "DenyDelete",
                 deny_policy_json(&["iam:DeleteUser"], &["*"]),
             )
@@ -1649,6 +1717,7 @@ mod tests {
             None,
             None,
             None,
+            &tenant(),
             &ctx,
         )
         .unwrap();
@@ -1656,7 +1725,7 @@ mod tests {
         {
             let mut s = store.write().await;
             s.create_policy(boundary).await.unwrap();
-            let mut alice = s.get_user("alice").await.unwrap().unwrap();
+            let mut alice = s.get_user(&key("alice")).await.unwrap().unwrap();
             alice.permissions_boundary = Some(boundary_arn);
             s.update_user(alice).await.unwrap();
         }
@@ -1692,7 +1761,7 @@ mod tests {
             .write()
             .await
             .put_user_policy(
-                "alice",
+                &key("alice"),
                 "AllowReads",
                 r#"{"Version":"2012-10-17","Statement":[{"Sid":"ReadAnything","Effect":"Allow","Action":["iam:GetUser"],"Resource":["*"]}]}"#
                     .to_string(),
@@ -1729,15 +1798,25 @@ mod tests {
         let store = setup_store_with_user(&ctx).await;
         {
             let mut s = store.write().await;
-            let group = group_builder::build_group("blocked".to_string(), None, &ctx).unwrap();
+            let group = group_builder::build_group(&key("blocked"), None, &ctx).unwrap();
             s.create_group(group).await.unwrap();
-            s.add_user_to_group("blocked", "alice").await.unwrap();
-            s.put_group_policy("blocked", "GroupDeny", deny_policy_json(&["iam:*"], &["*"]))
+            s.add_user_to_group(&key("blocked"), &key("alice"))
                 .await
                 .unwrap();
-            s.put_user_policy("alice", "UserDeny", deny_policy_json(&["iam:*"], &["*"]))
-                .await
-                .unwrap();
+            s.put_group_policy(
+                &key("blocked"),
+                "GroupDeny",
+                deny_policy_json(&["iam:*"], &["*"]),
+            )
+            .await
+            .unwrap();
+            s.put_user_policy(
+                &key("alice"),
+                "UserDeny",
+                deny_policy_json(&["iam:*"], &["*"]),
+            )
+            .await
+            .unwrap();
         }
 
         let authz = AuthorizationService::new(store);
@@ -1810,21 +1889,26 @@ mod tests {
     ) -> Arc<RwLock<InMemoryWamiStore>> {
         let store = setup_store_with_user(ctx).await;
         let mut s = store.write().await;
-        s.put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
-            .await
-            .unwrap();
+        s.put_user_policy(
+            &key("alice"),
+            "AllowAll",
+            allow_policy_json(&["iam:*"], &["*"]),
+        )
+        .await
+        .unwrap();
         let policy = policy_builder::build_policy(
             "Boundary".to_string(),
             boundary.to_string(),
             None,
             None,
             None,
+            &tenant(),
             ctx,
         )
         .unwrap();
         let arn = policy.arn.clone();
         s.create_policy(policy).await.unwrap();
-        let mut alice = s.get_user("alice").await.unwrap().unwrap();
+        let mut alice = s.get_user(&key("alice")).await.unwrap().unwrap();
         alice.permissions_boundary = Some(arn);
         s.update_user(alice).await.unwrap();
         drop(s);
@@ -1892,11 +1976,15 @@ mod tests {
         let store = setup_store_with_user(&ctx).await;
         {
             let mut s = store.write().await;
-            s.put_user_policy("alice", "Allow", allow_policy_json(&["iam:*"], &["*"]))
-                .await
-                .unwrap();
             s.put_user_policy(
-                "alice",
+                &key("alice"),
+                "Allow",
+                allow_policy_json(&["iam:*"], &["*"]),
+            )
+            .await
+            .unwrap();
+            s.put_user_policy(
+                &key("alice"),
                 "BrokenDeny",
                 // "Actions" instead of "Action" — valid JSON, invalid policy.
                 r#"{"Version":"2012-10-17","Statement":[{"Effect":"Deny","Actions":["iam:*"],"Resource":["*"]}]}"#
@@ -1950,7 +2038,7 @@ mod tests {
             .put_user_policy(
                 &ctx,
                 PutUserPolicyRequest {
-                    user_name: "alice".to_string(),
+                    user: key("alice"),
                     policy_name: "BrokenDeny".to_string(),
                     policy_document: r#"{"Version":"2012-10-17","Statement":[{"Effect":"Deny","Actions":["iam:*"],"Resource":["*"]}]}"#.to_string(),
                 },
@@ -1969,7 +2057,11 @@ mod tests {
         store
             .write()
             .await
-            .put_user_policy("alice", "Blocked", deny_policy_json(&["iam:*"], &["*"]))
+            .put_user_policy(
+                &key("alice"),
+                "Blocked",
+                deny_policy_json(&["iam:*"], &["*"]),
+            )
             .await
             .unwrap();
 
@@ -1994,7 +2086,11 @@ mod tests {
         store
             .write()
             .await
-            .put_user_policy("alice", "Allow", allow_policy_json(&["iam:*"], &["*"]))
+            .put_user_policy(
+                &key("alice"),
+                "Allow",
+                allow_policy_json(&["iam:*"], &["*"]),
+            )
             .await
             .unwrap();
 
@@ -2019,12 +2115,13 @@ mod tests {
                 None,
                 None,
                 None,
+                &tenant(),
                 &ctx,
             )
             .unwrap();
             let arn = policy.arn.clone();
             s.create_policy(policy).await.unwrap();
-            s.attach_user_policy("alice", &arn).await.unwrap();
+            s.attach_user_policy(&key("alice"), &arn).await.unwrap();
         }
 
         let authz = AuthorizationService::new(store);
@@ -2052,7 +2149,11 @@ mod tests {
         store
             .write()
             .await
-            .put_user_policy("alice", "Allow", allow_policy_json(&["iam:*"], &["*"]))
+            .put_user_policy(
+                &key("alice"),
+                "Allow",
+                allow_policy_json(&["iam:*"], &["*"]),
+            )
             .await
             .unwrap();
 
@@ -2077,11 +2178,15 @@ mod tests {
         let store = setup_store_with_user(ctx).await;
         {
             let mut s = store.write().await;
-            s.put_user_policy("alice", "Allow", allow_policy_json(&["iam:*"], &["*"]))
-                .await
-                .unwrap();
             s.put_user_policy(
-                "alice",
+                &key("alice"),
+                "Allow",
+                allow_policy_json(&["iam:*"], &["*"]),
+            )
+            .await
+            .unwrap();
+            s.put_user_policy(
+                &key("alice"),
                 "ConditionalDeny",
                 format!(
                     r#"{{"Version":"2012-10-17","Statement":[{{"Sid":"BlockAll","Effect":"Deny","Action":["iam:*"],"Resource":["*"],"Condition":{cond}}}]}}"#
@@ -2226,7 +2331,7 @@ mod tests {
             store
                 .write()
                 .await
-                .put_user_policy("alice", name, document.clone())
+                .put_user_policy(&key("alice"), name, document.clone())
                 .await
                 .unwrap();
         }
@@ -2313,7 +2418,7 @@ mod tests {
             .write()
             .await
             .put_user_policy(
-                "alice",
+                &key("alice"),
                 "DenyAll",
                 document_json(&[statement_json("DenyAll", "Deny", None)]),
             )

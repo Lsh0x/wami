@@ -2,13 +2,13 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use wami_core::arn::WamiArn;
+use wami_core::arn::{ScopedName, WamiArn};
 
 /// Represents an MFA (Multi-Factor Authentication) device
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MfaDevice {
-    /// The user with whom the MFA device is associated
-    pub user_name: String,
+    /// The key of the user it belongs to — its tenant and its name
+    pub owner: ScopedName,
     /// The serial number that uniquely identifies the MFA device
     pub serial_number: String,
     /// The date when the MFA device was enabled

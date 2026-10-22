@@ -82,10 +82,15 @@ where
     /// Creates a CSV report of all IAM users and their credential status.
     pub async fn generate_credential_report(
         &self,
-        _request: GenerateCredentialReportRequest,
+        request: GenerateCredentialReportRequest,
     ) -> Result<GenerateCredentialReportResponse> {
         // Fetch all users
-        let (users, _, _) = self.store.read().await.list_users(None, None).await?;
+        let (users, _, _) = self
+            .store
+            .read()
+            .await
+            .list_users(&request.tenant, None, None)
+            .await?;
 
         // Generate CSV content
         let mut csv_content = String::from(
@@ -100,14 +105,14 @@ where
                 .store
                 .read()
                 .await
-                .list_mfa_devices(&user.user_name)
+                .list_mfa_devices(&user.key())
                 .await?;
 
             let access_keys = self
                 .store
                 .read()
                 .await
-                .list_access_keys(&user.user_name, None)
+                .list_access_keys(&user.key(), None)
                 .await?
                 .0;
 
@@ -115,7 +120,7 @@ where
                 .store
                 .read()
                 .await
-                .get_login_profile(&user.user_name)
+                .get_login_profile(&user.key())
                 .await?
                 .is_some();
 
@@ -199,35 +204,39 @@ where
     /// Get account summary with resource counts and quotas
     pub async fn get_account_summary(
         &self,
-        _request: GetAccountSummaryRequest,
+        request: GetAccountSummaryRequest,
     ) -> Result<GetAccountSummaryResponse> {
         let store_read = self.store.read().await;
 
         // Count users
-        let (users, _, _) = store_read.list_users(None, None).await?;
+        let (users, _, _) = store_read.list_users(&request.tenant, None, None).await?;
         let users_count = users.len() as u32;
 
         // Count groups
-        let (groups, _, _) = store_read.list_groups(None, None).await?;
+        let (groups, _, _) = store_read.list_groups(&request.tenant, None, None).await?;
         let groups_count = groups.len() as u32;
 
         // Count roles
-        let (roles, _, _) = store_read.list_roles(None, None).await?;
+        let (roles, _, _) = store_read.list_roles(&request.tenant, None, None).await?;
         let roles_count = roles.len() as u32;
 
         // Count policies
-        let (policies, _, _) = store_read.list_policies(None, None).await?;
+        let (policies, _, _) = store_read
+            .list_policies(&request.tenant, None, None)
+            .await?;
         let policies_count = policies.len() as u32;
 
         // Count MFA devices (across all users)
         let mut mfa_count = 0;
         for user in &users {
-            let devices = store_read.list_mfa_devices(&user.user_name).await?;
+            let devices = store_read.list_mfa_devices(&user.key()).await?;
             mfa_count += devices.len() as u32;
         }
 
         // Count server certificates
-        let (certs, _, _) = store_read.list_server_certificates(None, None).await?;
+        let (certs, _, _) = store_read
+            .list_server_certificates(&request.tenant, None, None)
+            .await?;
         let certs_count = certs.len() as u32;
 
         drop(store_read);
@@ -264,6 +273,16 @@ mod tests {
     use wami_core::arn::{TenantPath, WamiArn};
     use wami_core::context::WamiContext;
 
+    /// The tenant every test here works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
+
     fn setup_service() -> CredentialReportService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
         CredentialReportService::new(store, "123456789012".to_string())
@@ -289,11 +308,12 @@ mod tests {
 
         // Create some test users
         for i in 0..3 {
-            let user = build_user(format!("user{}", i), Some("/".to_string()), &context).unwrap();
+            let user =
+                build_user(&key(format!("user{}", i)), Some("/".to_string()), &context).unwrap();
             service.store.write().await.create_user(user).await.unwrap();
         }
 
-        let request = GenerateCredentialReportRequest {};
+        let request = GenerateCredentialReportRequest { tenant: tenant() };
         let response = service.generate_credential_report(request).await.unwrap();
 
         assert_eq!(response.state, CredentialReportStatus::Complete);
@@ -306,11 +326,11 @@ mod tests {
         let context = test_context();
 
         // Create a user
-        let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+        let user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
         service.store.write().await.create_user(user).await.unwrap();
 
         // Generate report
-        let gen_request = GenerateCredentialReportRequest {};
+        let gen_request = GenerateCredentialReportRequest { tenant: tenant() };
         service
             .generate_credential_report(gen_request)
             .await
@@ -339,7 +359,7 @@ mod tests {
     async fn test_get_account_summary_empty() {
         let service = setup_service();
 
-        let request = GetAccountSummaryRequest {};
+        let request = GetAccountSummaryRequest { tenant: tenant() };
         let response = service.get_account_summary(request).await.unwrap();
 
         assert_eq!(response.summary_map.users, 0);
@@ -356,11 +376,12 @@ mod tests {
 
         // Create users
         for i in 0..5 {
-            let user = build_user(format!("user{}", i), Some("/".to_string()), &context).unwrap();
+            let user =
+                build_user(&key(format!("user{}", i)), Some("/".to_string()), &context).unwrap();
             service.store.write().await.create_user(user).await.unwrap();
         }
 
-        let request = GetAccountSummaryRequest {};
+        let request = GetAccountSummaryRequest { tenant: tenant() };
         let response = service.get_account_summary(request).await.unwrap();
 
         assert_eq!(response.summary_map.users, 5);

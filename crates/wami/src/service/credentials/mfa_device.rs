@@ -66,13 +66,13 @@ impl<S: MfaDeviceStore> MfaDeviceService<S> {
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            request.user.name(),
         )
         .await?;
 
         // Use wami builder to create MFA device
         let mfa_device =
-            mfa_builder::build_mfa_device(request.user_name, request.serial_number, context)?;
+            mfa_builder::build_mfa_device(&request.user, request.serial_number, context)?;
 
         // Store it
         self.write_store().await.create_mfa_device(mfa_device).await
@@ -123,12 +123,12 @@ impl<S: MfaDeviceStore> MfaDeviceService<S> {
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            request.user.name(),
         )
         .await?;
         self.read_store()
             .await
-            .list_mfa_devices(&request.user_name)
+            .list_mfa_devices(&request.user)
             .await
     }
 }
@@ -139,6 +139,16 @@ mod tests {
     use crate::service::auth::decision::{Decision, DenyReason};
     use crate::store::memory::InMemoryWamiStore;
     use wami_core::arn::{TenantPath, WamiArn};
+
+    /// The tenant every test here works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
 
     fn setup_service() -> MfaDeviceService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
@@ -164,21 +174,21 @@ mod tests {
         let context = test_context();
 
         let request = EnableMfaDeviceRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             serial_number: "arn:aws:iam::123456789012:mfa/alice-device".to_string(),
             authentication_code_1: "123456".to_string(),
             authentication_code_2: "789012".to_string(),
         };
 
         let mfa_device = service.create_mfa_device(&context, request).await.unwrap();
-        assert_eq!(mfa_device.user_name, "alice");
+        assert_eq!(mfa_device.owner.name(), "alice");
 
         let retrieved = service
             .get_mfa_device(&context, &mfa_device.serial_number)
             .await
             .unwrap();
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().user_name, "alice");
+        assert_eq!(retrieved.unwrap().owner.name(), "alice");
     }
 
     #[tokio::test]
@@ -187,7 +197,7 @@ mod tests {
         let context = test_context();
 
         let request = EnableMfaDeviceRequest {
-            user_name: "bob".to_string(),
+            user: key("bob"),
             serial_number: "arn:aws:iam::123456789012:mfa/bob-device".to_string(),
             authentication_code_1: "123456".to_string(),
             authentication_code_2: "789012".to_string(),
@@ -214,7 +224,7 @@ mod tests {
         // Create multiple MFA devices for same user
         for i in 0..3 {
             let request = EnableMfaDeviceRequest {
-                user_name: "charlie".to_string(),
+                user: key("charlie"),
                 serial_number: format!("arn:aws:iam::123456789012:mfa/charlie-device-{}", i),
                 authentication_code_1: "123456".to_string(),
                 authentication_code_2: "789012".to_string(),
@@ -223,7 +233,7 @@ mod tests {
         }
 
         let list_request = ListMfaDevicesRequest {
-            user_name: "charlie".to_string(),
+            user: key("charlie"),
         };
         let devices = service
             .list_mfa_devices(&context, list_request)
@@ -258,7 +268,7 @@ mod tests {
         let context = test_context();
 
         let request = EnableMfaDeviceRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             serial_number: "arn:aws:iam::123456789012:mfa/alice-device".to_string(),
             authentication_code_1: "123456".to_string(),
             authentication_code_2: "789012".to_string(),
@@ -303,9 +313,7 @@ mod tests {
         let service = MfaDeviceService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
 
-        let request = ListMfaDevicesRequest {
-            user_name: "alice".to_string(),
-        };
+        let request = ListMfaDevicesRequest { user: key("alice") };
 
         let result = service.list_mfa_devices(&context, request).await;
         assert!(matches!(

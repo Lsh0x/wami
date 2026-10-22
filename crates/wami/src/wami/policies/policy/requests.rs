@@ -1,5 +1,6 @@
 //! Policy Request and Response Types
 
+use crate::arn::TenantPath;
 use serde::{Deserialize, Serialize};
 
 use super::model::Policy;
@@ -8,6 +9,9 @@ use crate::types::{PaginationParams, Tag};
 /// Request to create an IAM managed policy
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreatePolicyRequest {
+    /// The tenant the policy belongs to — named, never the caller's by
+    /// default (wami 005). Its `wami_arn` records it.
+    pub tenant: TenantPath,
     /// The friendly name of the policy
     pub policy_name: String,
     /// The policy document in JSON format
@@ -34,6 +38,9 @@ pub struct UpdatePolicyRequest {
 /// Request to list IAM managed policies
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListPoliciesRequest {
+    /// The tenant to list — exactly this one: never its children, never the
+    /// whole store (wami 005).
+    pub tenant: TenantPath,
     /// The scope to use for filtering ("All", "AWS", or "Local")
     pub scope: Option<String>,
     /// Only list policies attached to the specified user, group, or role

@@ -16,6 +16,16 @@ use wami::wami::policies::inline::{
 };
 use wami::wami::policies::policy::CreatePolicyRequest;
 
+/// The tenant this example works in.
+fn tenant() -> wami_core::arn::TenantPath {
+    wami::arn::TenantPath::single(0)
+}
+
+/// `name`'s key in that tenant.
+fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+    wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
@@ -45,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("1. Creating user 'alice'...");
     let user_service = UserService::new(store.clone());
     let create_user_req = CreateUserRequest {
-        user_name: "alice".to_string(),
+        user: key("alice"),
         path: Some("/".to_string()),
         tags: Some(vec![]),
         permissions_boundary: None,
@@ -66,6 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }"#;
 
     let create_policy_req = CreatePolicyRequest {
+        tenant: tenant(),
         policy_name: "S3ReadOnly".to_string(),
         path: Some("/".to_string()),
         policy_document: policy_doc.to_string(),
@@ -84,7 +95,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("3. Attaching managed policy to user...");
     let attachment_service = AttachmentService::new(store.clone());
     let attach_req = AttachUserPolicyRequest {
-        user_name: "alice".to_string(),
+        user: key("alice"),
         policy_arn: policy.arn.clone(),
     };
     let attach_resp = attachment_service
@@ -94,9 +105,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Step 4: List attached policies
     println!("4. Listing attached policies for user 'alice'...");
-    let list_req = ListAttachedUserPoliciesRequest {
-        user_name: "alice".to_string(),
-    };
+    let list_req = ListAttachedUserPoliciesRequest { user: key("alice") };
     let list_resp = attachment_service
         .list_attached_user_policies(&context, list_req)
         .await?;
@@ -122,7 +131,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }"#;
 
     let put_inline_req = PutUserPolicyRequest {
-        user_name: "alice".to_string(),
+        user: key("alice"),
         policy_name: "DenyDelete".to_string(),
         policy_document: inline_doc.to_string(),
     };
@@ -133,9 +142,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Step 6: List inline policies
     println!("6. Listing inline policies for user 'alice'...");
-    let list_inline_req = ListUserPoliciesRequest {
-        user_name: "alice".to_string(),
-    };
+    let list_inline_req = ListUserPoliciesRequest { user: key("alice") };
     let list_inline_resp = inline_service
         .list_user_policies(&context, list_inline_req)
         .await?;
@@ -151,7 +158,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Step 7: Get inline policy content
     println!("7. Getting inline policy 'DenyDelete'...");
     let get_inline_req = GetUserPolicyRequest {
-        user_name: "alice".to_string(),
+        user: key("alice"),
         policy_name: "DenyDelete".to_string(),
     };
     let get_resp = inline_service

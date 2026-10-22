@@ -45,14 +45,14 @@
 //! }
 //! ```
 
-use crate::arn::{Service, TenantPath, WamiArn};
+use crate::arn::{ScopedName, Service, TenantPath, WamiArn};
 use crate::credentials::AccessKey;
 use crate::error::{AmiError, Result};
 use crate::service::auth::authentication::hash_secret;
 use crate::store::traits::{AccessKeyStore, PolicyStore, RoleStore, UserStore};
 use crate::wami::identity::role::builder as role_builder;
 use crate::wami::identity::root_user::{ROOT_TENANT_ID, ROOT_USER_ID, ROOT_USER_NAME};
-use crate::wami::identity::User;
+use crate::wami::identity::{RootUser, User};
 use crate::wami::policies::policy::builder as policy_builder;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -222,7 +222,7 @@ impl InstanceBootstrap {
 
         // Create access key
         let access_key = AccessKey {
-            user_name: ROOT_USER_NAME.to_string(),
+            owner: root_user.key(),
             access_key_id: access_key_id.clone(),
             status: "Active".to_string(),
             create_date: now,
@@ -364,6 +364,7 @@ impl InstanceBootstrap {
             .is_root(true)
             .build()?;
 
+        let root_tenant = TenantPath::single(ROOT_TENANT_ID);
         let mut store_guard = store.write().await;
         let store = &mut *store_guard;
 
@@ -374,21 +375,23 @@ impl InstanceBootstrap {
                 Some(role.path.to_string()),
                 Some(role.description.to_string()),
                 None,
+                &root_tenant,
                 &ctx,
             )?;
             let policy_arn = policy.arn.clone();
             store.create_policy(policy).await?;
 
             let built = role_builder::build_role(
-                role.name.to_string(),
+                &ScopedName::new(root_tenant.clone(), role.name),
                 role.assume_role_policy.to_string(),
                 Some(role.path.to_string()),
                 Some(role.description.to_string()),
                 None,
                 &ctx,
             )?;
+            let key = built.key();
             store.create_role(built).await?;
-            store.attach_role_policy(role.name, &policy_arn).await?;
+            store.attach_role_policy(&key, &policy_arn).await?;
         }
 
         Ok(())
@@ -400,7 +403,10 @@ impl InstanceBootstrap {
         S: UserStore + Send + Sync,
     {
         let store_guard = store.read().await;
-        let root_user = store_guard.get_user(ROOT_USER_NAME).await?;
+        // Root's key is the one this module writes it under, read off the
+        // record it builds — the tenant path exactly `0` and its name.
+        let root_key = RootUser::for_instance(instance_id).as_user().key();
+        let root_user = store_guard.get_user(&root_key).await?;
 
         // Check if root user exists and belongs to this instance
         Ok(root_user
@@ -414,6 +420,17 @@ mod tests {
     use super::*;
     use crate::service::auth::AuthenticationService;
     use crate::store::memory::InMemoryWamiStore;
+
+    /// The tenant every test here works in.
+    /// Bootstrap writes root and the seeded roles in the root tenant, `0`.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(ROOT_TENANT_ID)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
 
     #[tokio::test]
     async fn test_initialize_instance() {
@@ -433,7 +450,7 @@ mod tests {
         let user = store
             .read()
             .await
-            .get_user(ROOT_USER_NAME)
+            .get_user(&key(ROOT_USER_NAME))
             .await
             .unwrap()
             .expect("Root user should exist");
@@ -450,7 +467,7 @@ mod tests {
             .unwrap()
             .expect("Access key should exist");
 
-        assert_eq!(key.user_name, ROOT_USER_NAME);
+        assert_eq!(key.owner.name(), ROOT_USER_NAME);
         assert_eq!(key.status, "Active");
     }
 
@@ -567,11 +584,19 @@ mod tests {
 
         let s = store.read().await;
         assert!(
-            s.list_roles(None, None).await.unwrap().0.is_empty(),
+            s.list_roles(&tenant(), None, None)
+                .await
+                .unwrap()
+                .0
+                .is_empty(),
             "initialize_instance created a role nobody asked for"
         );
         assert!(
-            s.list_policies(None, None).await.unwrap().0.is_empty(),
+            s.list_policies(&tenant(), None, None)
+                .await
+                .unwrap()
+                .0
+                .is_empty(),
             "initialize_instance created a policy nobody asked for"
         );
     }
@@ -607,10 +632,10 @@ mod tests {
             .unwrap();
 
         let s = store.read().await;
-        let role = s.get_role("reader").await.unwrap();
+        let role = s.get_role(&key("reader")).await.unwrap();
         assert!(role.is_some(), "the role that was passed should exist");
 
-        let attached = s.list_attached_role_policies("reader").await.unwrap();
+        let attached = s.list_attached_role_policies(&key("reader")).await.unwrap();
         assert_eq!(attached.len(), 1, "its policy should be attached to it");
 
         let policy = s.get_policy(&attached[0]).await.unwrap().unwrap();
@@ -620,7 +645,7 @@ mod tests {
         );
 
         assert_eq!(
-            s.list_roles(None, None).await.unwrap().0.len(),
+            s.list_roles(&tenant(), None, None).await.unwrap().0.len(),
             1,
             "and nothing else should have appeared beside it"
         );
@@ -646,7 +671,13 @@ mod tests {
 
         assert!(outcome.is_err(), "a malformed document should be refused");
         assert!(
-            store.read().await.get_role("good").await.unwrap().is_none(),
+            store
+                .read()
+                .await
+                .get_role(&key("good"))
+                .await
+                .unwrap()
+                .is_none(),
             "the roles before the bad one should not have been written"
         );
     }
@@ -685,7 +716,7 @@ mod tests {
             store
                 .read()
                 .await
-                .get_role("reader")
+                .get_role(&key("reader"))
                 .await
                 .unwrap()
                 .is_none(),
@@ -744,7 +775,13 @@ mod tests {
                 panic!("expected InvalidParameter, got {err:?}");
             };
             assert!(message.contains(&format!("statement {sid}")), "{message}");
-            assert!(store.read().await.get_role("good").await.unwrap().is_none());
+            assert!(store
+                .read()
+                .await
+                .get_role(&key("good"))
+                .await
+                .unwrap()
+                .is_none());
         }
     }
 }

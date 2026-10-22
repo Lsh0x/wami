@@ -15,7 +15,7 @@
 //! use wami::store::memory::InMemoryWamiStore;
 //! use wami::store::traits::UserStore;
 //! use wami::wami::identity::user::builder::build_user;
-//! use wami::{WamiContext, TenantPath, WamiArn, Service};
+//! use wami::{ScopedName, WamiContext, TenantPath, WamiArn, Service};
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! let mut store = InMemoryWamiStore::default();
@@ -35,7 +35,7 @@
 //!     .build()?;
 //!
 //! let user = build_user(
-//!     "alice".to_string(),
+//!     &ScopedName::new(TenantPath::single(0), "alice"),
 //!     Some("/engineering/".to_string()),
 //!     &context,
 //! )?;

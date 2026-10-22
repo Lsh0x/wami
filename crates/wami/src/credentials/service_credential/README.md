@@ -59,7 +59,7 @@ let context = WamiContext::builder()
     .unwrap();
 
 let credential = build_service_credential(
-    "alice".into(),
+    &ScopedName::new(TenantPath::single(1), "alice"),
     "codecommit.amazonaws.com".into(),
     &context,
 )?;
@@ -102,7 +102,7 @@ let context = WamiContext::builder()
 
 // Create a new service-specific credential for CodeCommit
 let credential = build_service_credential(
-    "alice".into(),
+    &ScopedName::new(TenantPath::single(1), "alice"),
     "codecommit.amazonaws.com".into(),
     &context,
 )?;

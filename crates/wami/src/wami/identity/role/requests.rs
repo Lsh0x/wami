@@ -1,5 +1,7 @@
 //! Role Request and Response Types
 
+use crate::arn::ScopedName;
+use crate::arn::TenantPath;
 use serde::{Deserialize, Serialize};
 
 use super::model::Role;
@@ -8,8 +10,8 @@ use crate::types::{PaginationParams, Tag};
 /// Request parameters for creating a role
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateRoleRequest {
-    /// The name of the role
-    pub role_name: String,
+    /// The role — its tenant and its name
+    pub role: ScopedName,
     /// The trust relationship policy document
     pub assume_role_policy_document: String,
     /// The path to the role
@@ -27,8 +29,8 @@ pub struct CreateRoleRequest {
 /// Request parameters for updating a role
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateRoleRequest {
-    /// The name of the role to update
-    pub role_name: String,
+    /// The role — its tenant and its name
+    pub role: ScopedName,
     /// New description
     pub description: Option<String>,
     /// New maximum session duration
@@ -38,6 +40,9 @@ pub struct UpdateRoleRequest {
 /// Request parameters for listing roles
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListRolesRequest {
+    /// The tenant to list — exactly this one: never its children, never the
+    /// whole store (wami 005).
+    pub tenant: TenantPath,
     /// Path prefix for filtering roles
     pub path_prefix: Option<String>,
     /// Pagination parameters

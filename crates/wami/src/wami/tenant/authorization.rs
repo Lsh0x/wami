@@ -83,6 +83,7 @@
 //!     Some("/".to_string()),
 //!     None, // description
 //!     None, // tags
+//!     &TenantPath::single(0), // the tenant the policy belongs to
 //!     &context,
 //! )?;
 //!

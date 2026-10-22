@@ -27,7 +27,11 @@ pub struct GetCredentialReportResponse {
 
 /// Request to generate a new credential report
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GenerateCredentialReportRequest {}
+pub struct GenerateCredentialReportRequest {
+    /// The tenant the report covers — exactly this one, never the whole
+    /// store (wami 005).
+    pub tenant: crate::arn::TenantPath,
+}
 
 /// Response from generating a credential report
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,7 +47,11 @@ pub struct GenerateCredentialReportResponse {
 
 /// Request to get account summary
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GetAccountSummaryRequest {}
+pub struct GetAccountSummaryRequest {
+    /// The tenant the report covers — exactly this one, never the whole
+    /// store (wami 005).
+    pub tenant: crate::arn::TenantPath,
+}
 
 /// Response from getting account summary
 #[derive(Debug, Clone, Serialize, Deserialize)]

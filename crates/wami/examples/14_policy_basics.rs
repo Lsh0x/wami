@@ -18,6 +18,16 @@ use wami::store::memory::InMemoryWamiStore;
 use wami::wami::identity::user::requests::CreateUserRequest;
 use wami::wami::policies::policy::requests::{CreatePolicyRequest, ListPoliciesRequest};
 
+/// The tenant this example works in.
+fn tenant() -> wami_core::arn::TenantPath {
+    wami::arn::TenantPath::single(0)
+}
+
+/// `name`'s key in that tenant.
+fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+    wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Policy Basics ===\n");
@@ -46,7 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Step 1: Creating users...\n");
 
     let alice_req = CreateUserRequest {
-        user_name: "alice".to_string(),
+        user: key("alice"),
         path: Some("/".to_string()),
         permissions_boundary: None,
         tags: None,
@@ -55,7 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✓ Created alice");
 
     let bob_req = CreateUserRequest {
-        user_name: "bob".to_string(),
+        user: key("bob"),
         path: Some("/".to_string()),
         permissions_boundary: None,
         tags: None,
@@ -79,6 +89,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }"#;
 
     let readonly_req = CreatePolicyRequest {
+        tenant: tenant(),
         policy_name: "ReadOnlyAccess".to_string(),
         path: Some("/policies/".to_string()),
         policy_document: readonly_policy_doc.to_string(),
@@ -108,6 +119,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }"#;
 
     let deny_req = CreatePolicyRequest {
+        tenant: tenant(),
         policy_name: "DenyDelete".to_string(),
         path: Some("/policies/".to_string()),
         policy_document: deny_policy_doc.to_string(),
@@ -134,6 +146,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }"#;
 
     let admin_req = CreatePolicyRequest {
+        tenant: tenant(),
         policy_name: "AdministratorAccess".to_string(),
         path: Some("/policies/".to_string()),
         policy_document: admin_policy_doc.to_string(),
@@ -154,6 +167,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .list_policies(
             &context,
             ListPoliciesRequest {
+                tenant: tenant(),
                 scope: None,
                 only_attached: None,
                 path_prefix: None,

@@ -11,13 +11,15 @@ use crate::wami::identity::user::{
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
+use wami_core::arn::ScopedName;
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
 use wami_core::types::Tag;
 
 /// Service for managing IAM users
 ///
-/// Provides high-level operations that combine wami pure functions with store persistence.
+/// Every verb names its target by [`ScopedName`] — the tenant explicitly, never
+/// the caller's by default (wami 005).
 /// Optionally holds an [`Authorizer`] for authorization guards on every method.
 #[wami_macros::service(store_trait = "crate::store::traits::UserStore", generate_new = false)]
 pub struct UserService<S> {
@@ -54,45 +56,42 @@ impl<S: UserStore> UserService<S> {
         Ok(())
     }
 
-    /// Create a new user
+    /// Create a new user under `request.user`.
+    ///
+    /// # Errors
+    ///
+    /// [`AmiError::ResourceExists`] when the key is held: nothing is overwritten.
     pub async fn create_user(
         &self,
         context: &WamiContext,
         request: CreateUserRequest,
     ) -> Result<User> {
-        // Authorization guard
         self.guard(
             context,
             WamiAction::IamCreateUser,
             "user",
-            &request.user_name,
+            request.user.name(),
         )
         .await?;
 
-        // Use wami builder to create user with context
-        let mut user = user_builder::build_user(request.user_name, request.path, context)?;
-
-        // Apply permissions boundary if specified
+        let mut user = user_builder::build_user(&request.user, request.path, context)?;
         if let Some(boundary_arn) = request.permissions_boundary {
             user = user_builder::set_permissions_boundary(user, boundary_arn);
         }
-
-        // Apply tags if specified
         let user = if let Some(tags) = request.tags {
             user_builder::add_tags(user, tags)
         } else {
             user
         };
 
-        // Store it
         self.write_store().await.create_user(user).await
     }
 
-    /// Get a user by name
-    pub async fn get_user(&self, context: &WamiContext, user_name: &str) -> Result<Option<User>> {
-        self.guard(context, WamiAction::IamReadUser, "user", user_name)
+    /// Get the user stored under `user`
+    pub async fn get_user(&self, context: &WamiContext, user: &ScopedName) -> Result<Option<User>> {
+        self.guard(context, WamiAction::IamReadUser, "user", user.name())
             .await?;
-        self.read_store().await.get_user(user_name).await
+        self.read_store().await.get_user(user).await
     }
 
     /// Update a user
@@ -107,12 +106,12 @@ impl<S: UserStore> UserService<S> {
             context,
             WamiAction::IamUpdateUser,
             "user",
-            &request.user_name,
+            request.user.name(),
         )
         .await?;
 
         // Protect root user from being renamed
-        if request.user_name == ROOT_USER_NAME {
+        if request.user.name() == ROOT_USER_NAME {
             if let Some(ref new_name) = request.new_user_name {
                 if new_name != ROOT_USER_NAME {
                     return Err(AmiError::InvalidParameter {
@@ -122,47 +121,43 @@ impl<S: UserStore> UserService<S> {
             }
         }
 
-        // Get existing user
         let mut user = self
-            .store
-            .read()
+            .read_store()
             .await
-            .get_user(&request.user_name)
+            .get_user(&request.user)
             .await?
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("User: {}", request.user_name),
+                resource: format!("User: {}", request.user),
             })?;
 
-        // Apply updates using builder functions
         if let Some(new_user_name) = request.new_user_name {
             user = user_builder::update_user_name(user, new_user_name);
         }
-
         if let Some(new_path) = request.new_path {
             user = user_builder::update_user_path(user, new_path);
         }
 
-        // Store updated user
+        // The store finds the record by its id, so a rename moves it — with its
+        // policies, memberships and credentials — to the new key.
         self.write_store().await.update_user(user).await
     }
 
     /// Delete a user
     ///
     /// The root user cannot be deleted.
-    pub async fn delete_user(&self, context: &WamiContext, user_name: &str) -> Result<()> {
-        // Protect root user from deletion
-        if user_name == ROOT_USER_NAME {
+    pub async fn delete_user(&self, context: &WamiContext, user: &ScopedName) -> Result<()> {
+        if user.name() == ROOT_USER_NAME {
             return Err(AmiError::InvalidParameter {
                 message: "Cannot delete the root user".to_string(),
             });
         }
 
-        self.guard(context, WamiAction::IamDeleteUser, "user", user_name)
+        self.guard(context, WamiAction::IamDeleteUser, "user", user.name())
             .await?;
-        self.write_store().await.delete_user(user_name).await
+        self.write_store().await.delete_user(user).await
     }
 
-    /// List users with optional filtering
+    /// List the users of `request.tenant` — that tenant only
     pub async fn list_users(
         &self,
         context: &WamiContext,
@@ -172,7 +167,11 @@ impl<S: UserStore> UserService<S> {
             .await?;
         self.read_store()
             .await
-            .list_users(request.path_prefix.as_deref(), request.pagination.as_ref())
+            .list_users(
+                &request.tenant,
+                request.path_prefix.as_deref(),
+                request.pagination.as_ref(),
+            )
             .await
     }
 
@@ -180,34 +179,35 @@ impl<S: UserStore> UserService<S> {
     pub async fn tag_user(
         &self,
         context: &WamiContext,
-        user_name: &str,
+        user: &ScopedName,
         tags: Vec<Tag>,
     ) -> Result<()> {
-        self.guard(context, WamiAction::IamUpdateUser, "user", user_name)
+        self.guard(context, WamiAction::IamUpdateUser, "user", user.name())
             .await?;
-        self.write_store().await.tag_user(user_name, tags).await
+        self.write_store().await.tag_user(user, tags).await
     }
 
     /// List tags for a user
-    pub async fn list_user_tags(&self, context: &WamiContext, user_name: &str) -> Result<Vec<Tag>> {
-        self.guard(context, WamiAction::IamReadUser, "user", user_name)
+    pub async fn list_user_tags(
+        &self,
+        context: &WamiContext,
+        user: &ScopedName,
+    ) -> Result<Vec<Tag>> {
+        self.guard(context, WamiAction::IamReadUser, "user", user.name())
             .await?;
-        self.read_store().await.list_user_tags(user_name).await
+        self.read_store().await.list_user_tags(user).await
     }
 
     /// Untag a user
     pub async fn untag_user(
         &self,
         context: &WamiContext,
-        user_name: &str,
+        user: &ScopedName,
         tag_keys: Vec<String>,
     ) -> Result<()> {
-        self.guard(context, WamiAction::IamUpdateUser, "user", user_name)
+        self.guard(context, WamiAction::IamUpdateUser, "user", user.name())
             .await?;
-        self.write_store()
-            .await
-            .untag_user(user_name, tag_keys)
-            .await
+        self.write_store().await.untag_user(user, tag_keys).await
     }
 }
 
@@ -218,6 +218,16 @@ mod tests {
     use crate::store::memory::InMemoryWamiStore;
     use wami_core::arn::{TenantPath, WamiArn};
     use wami_core::context::WamiContext;
+
+    /// The tenant every test of this module works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
 
     fn setup_service() -> UserService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
@@ -243,7 +253,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateUserRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             path: Some("/engineering/".to_string()),
             permissions_boundary: None,
             tags: None,
@@ -253,7 +263,7 @@ mod tests {
         assert_eq!(user.user_name, "alice");
         assert_eq!(user.path, "/engineering/");
 
-        let retrieved = service.get_user(&context, "alice").await.unwrap();
+        let retrieved = service.get_user(&context, &key("alice")).await.unwrap();
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().user_name, "alice");
     }
@@ -265,7 +275,7 @@ mod tests {
 
         // Create user
         let create_request = CreateUserRequest {
-            user_name: "bob".to_string(),
+            user: key("bob"),
             path: Some("/".to_string()),
             permissions_boundary: None,
             tags: None,
@@ -274,7 +284,7 @@ mod tests {
 
         // Update user
         let update_request = UpdateUserRequest {
-            user_name: "bob".to_string(),
+            user: key("bob"),
             new_user_name: Some("robert".to_string()),
             new_path: Some("/admin/".to_string()),
         };
@@ -289,16 +299,19 @@ mod tests {
         let context = test_context();
 
         let request = CreateUserRequest {
-            user_name: "charlie".to_string(),
+            user: key("charlie"),
             path: None,
             permissions_boundary: None,
             tags: None,
         };
         service.create_user(&context, request).await.unwrap();
 
-        service.delete_user(&context, "charlie").await.unwrap();
+        service
+            .delete_user(&context, &key("charlie"))
+            .await
+            .unwrap();
 
-        let retrieved = service.get_user(&context, "charlie").await.unwrap();
+        let retrieved = service.get_user(&context, &key("charlie")).await.unwrap();
         assert!(retrieved.is_none());
     }
 
@@ -310,7 +323,7 @@ mod tests {
         // Create multiple users
         for name in ["user1", "user2", "user3"] {
             let request = CreateUserRequest {
-                user_name: name.to_string(),
+                user: key(name),
                 path: Some("/test/".to_string()),
                 permissions_boundary: None,
                 tags: None,
@@ -319,6 +332,7 @@ mod tests {
         }
 
         let list_request = ListUsersRequest {
+            tenant: tenant(),
             path_prefix: Some("/test/".to_string()),
             pagination: None,
         };
@@ -332,7 +346,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateUserRequest {
-            user_name: "tagged_user".to_string(),
+            user: key("tagged_user"),
             path: None,
             permissions_boundary: None,
             tags: None,
@@ -345,13 +359,13 @@ mod tests {
             value: "Production".to_string(),
         }];
         service
-            .tag_user(&context, "tagged_user", tags)
+            .tag_user(&context, &key("tagged_user"), tags)
             .await
             .unwrap();
 
         // List tags
         let retrieved_tags = service
-            .list_user_tags(&context, "tagged_user")
+            .list_user_tags(&context, &key("tagged_user"))
             .await
             .unwrap();
         assert_eq!(retrieved_tags.len(), 1);
@@ -359,12 +373,16 @@ mod tests {
 
         // Untag
         service
-            .untag_user(&context, "tagged_user", vec!["Environment".to_string()])
+            .untag_user(
+                &context,
+                &key("tagged_user"),
+                vec!["Environment".to_string()],
+            )
             .await
             .unwrap();
 
         let tags_after = service
-            .list_user_tags(&context, "tagged_user")
+            .list_user_tags(&context, &key("tagged_user"))
             .await
             .unwrap();
         assert_eq!(tags_after.len(), 0);
@@ -378,7 +396,7 @@ mod tests {
         let context = test_context();
 
         let request = UpdateUserRequest {
-            user_name: "nonexistent".to_string(),
+            user: key("nonexistent"),
             new_path: Some("/new/".to_string()),
             new_user_name: None,
         };
@@ -398,7 +416,7 @@ mod tests {
         }];
 
         // Tag is idempotent - succeeds even if user doesn't exist (tags are silently ignored)
-        let result = service.tag_user(&context, "nonexistent", tags).await;
+        let result = service.tag_user(&context, &key("nonexistent"), tags).await;
         assert!(result.is_ok());
     }
 
@@ -408,7 +426,7 @@ mod tests {
         let context = test_context();
 
         // List tags returns empty list for non-existent user
-        let result = service.list_user_tags(&context, "nonexistent").await;
+        let result = service.list_user_tags(&context, &key("nonexistent")).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap().len(), 0);
     }
@@ -420,7 +438,7 @@ mod tests {
 
         // Untag is idempotent - succeeds even if user doesn't exist
         let result = service
-            .untag_user(&context, "nonexistent", vec!["Key".to_string()])
+            .untag_user(&context, &key("nonexistent"), vec!["Key".to_string()])
             .await;
         assert!(result.is_ok());
     }
@@ -431,6 +449,7 @@ mod tests {
         let context = test_context();
 
         let request = ListUsersRequest {
+            tenant: tenant(),
             path_prefix: Some("/nonexistent/".to_string()),
             pagination: None,
         };
@@ -451,7 +470,7 @@ mod tests {
             ("user3", "/admin/"),
         ] {
             let request = CreateUserRequest {
-                user_name: name.to_string(),
+                user: key(name),
                 path: Some(path.to_string()),
                 permissions_boundary: None,
                 tags: None,
@@ -460,6 +479,7 @@ mod tests {
         }
 
         let request = ListUsersRequest {
+            tenant: tenant(),
             path_prefix: Some("/admin/".to_string()),
             pagination: None,
         };
@@ -475,7 +495,7 @@ mod tests {
         let context = test_context();
 
         // Delete is idempotent - succeeds even if user doesn't exist
-        let result = service.delete_user(&context, "nonexistent").await;
+        let result = service.delete_user(&context, &key("nonexistent")).await;
         assert!(result.is_ok());
     }
 
@@ -484,7 +504,7 @@ mod tests {
         let service = setup_service();
         let context = test_context();
 
-        let result = service.get_user(&context, "nonexistent").await;
+        let result = service.get_user(&context, &key("nonexistent")).await;
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
     }
@@ -496,7 +516,7 @@ mod tests {
         let service = setup_service();
         let context = test_context();
 
-        let result = service.delete_user(&context, "root").await;
+        let result = service.delete_user(&context, &key("root")).await;
         assert!(result.is_err());
         let err_msg = format!("{}", result.unwrap_err());
         assert!(err_msg.contains("Cannot delete the root user"));
@@ -509,7 +529,7 @@ mod tests {
 
         // First create a root user in the store
         let request = CreateUserRequest {
-            user_name: "root".to_string(),
+            user: key("root"),
             path: Some("/".to_string()),
             permissions_boundary: None,
             tags: None,
@@ -518,7 +538,7 @@ mod tests {
 
         // Try to rename root
         let update_request = UpdateUserRequest {
-            user_name: "root".to_string(),
+            user: key("root"),
             new_user_name: Some("not-root".to_string()),
             new_path: None,
         };
@@ -535,7 +555,7 @@ mod tests {
 
         // Create a root user
         let request = CreateUserRequest {
-            user_name: "root".to_string(),
+            user: key("root"),
             path: Some("/".to_string()),
             permissions_boundary: None,
             tags: None,
@@ -544,7 +564,7 @@ mod tests {
 
         // Changing path (not name) should be allowed
         let update_request = UpdateUserRequest {
-            user_name: "root".to_string(),
+            user: key("root"),
             new_user_name: None,
             new_path: Some("/admin/".to_string()),
         };
@@ -582,7 +602,7 @@ mod tests {
         let service = setup_guarded_service();
         let context = test_context();
         let request = CreateUserRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             path: None,
             permissions_boundary: None,
             tags: None,
@@ -598,7 +618,7 @@ mod tests {
     async fn test_guard_get_user_denied() {
         let service = setup_guarded_service();
         let context = test_context();
-        let result = service.get_user(&context, "alice").await;
+        let result = service.get_user(&context, &key("alice")).await;
         assert!(matches!(
             result,
             Err(wami_core::error::AmiError::AccessDenied { .. })
@@ -609,7 +629,7 @@ mod tests {
     async fn test_guard_delete_user_denied() {
         let service = setup_guarded_service();
         let context = test_context();
-        let result = service.delete_user(&context, "alice").await;
+        let result = service.delete_user(&context, &key("alice")).await;
         assert!(matches!(
             result,
             Err(wami_core::error::AmiError::AccessDenied { .. })
@@ -621,6 +641,7 @@ mod tests {
         let service = setup_guarded_service();
         let context = test_context();
         let request = ListUsersRequest {
+            tenant: tenant(),
             path_prefix: None,
             pagination: None,
         };
@@ -636,7 +657,7 @@ mod tests {
         let service = setup_guarded_service();
         let context = test_context();
         let request = UpdateUserRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             new_user_name: Some("bob".to_string()),
             new_path: None,
         };
@@ -654,7 +675,7 @@ mod tests {
         let result = service
             .tag_user(
                 &context,
-                "alice",
+                &key("alice"),
                 vec![wami_core::types::Tag {
                     key: "Key".to_string(),
                     value: "Val".to_string(),
@@ -672,7 +693,7 @@ mod tests {
         let service = setup_guarded_service();
         let context = test_context();
         let result = service
-            .untag_user(&context, "alice", vec!["Key".to_string()])
+            .untag_user(&context, &key("alice"), vec!["Key".to_string()])
             .await;
         assert!(matches!(
             result,
@@ -684,7 +705,7 @@ mod tests {
     async fn test_guard_list_user_tags_denied() {
         let service = setup_guarded_service();
         let context = test_context();
-        let result = service.list_user_tags(&context, "alice").await;
+        let result = service.list_user_tags(&context, &key("alice")).await;
         assert!(matches!(
             result,
             Err(wami_core::error::AmiError::AccessDenied { .. })

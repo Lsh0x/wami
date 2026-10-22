@@ -18,6 +18,16 @@ use wami::store::memory::InMemoryWamiStore;
 use wami::wami::identity::user::requests::CreateUserRequest;
 use wami::wami::sts::federation::requests::GetFederationTokenRequest;
 
+/// The tenant this example works in.
+fn tenant() -> wami_core::arn::TenantPath {
+    wami::arn::TenantPath::single(0)
+}
+
+/// `name`'s key in that tenant.
+fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+    wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Federated Access ===\n");
@@ -45,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_user(
             &context,
             CreateUserRequest {
-                user_name: "admin".to_string(),
+                user: key("admin"),
                 path: Some("/".to_string()),
                 permissions_boundary: None,
                 tags: None,

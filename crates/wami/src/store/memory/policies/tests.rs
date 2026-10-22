@@ -7,6 +7,11 @@ use crate::store::traits::PolicyStore;
 use crate::wami::policies::policy::builder as policy_builder;
 use wami_core::types::PaginationParams;
 
+/// The tenant every test here works in.
+fn tenant() -> wami_core::arn::TenantPath {
+    wami_core::arn::TenantPath::single(12345678)
+}
+
 fn test_context() -> WamiContext {
     let arn: WamiArn = "arn:wami:.*:12345678:wami:123456789012:user/test"
         .parse()
@@ -31,7 +36,8 @@ async fn test_policy_create_and_get() {
         policy_doc,
         Some("/".to_string()),
         Some("Full S3 access policy".to_string()),
-        None, // tags
+        None,
+        &tenant(), // tags
         &context,
     )
     .unwrap();
@@ -70,7 +76,8 @@ async fn test_policy_update() {
         policy_doc,
         Some("/".to_string()),
         Some("Original description".to_string()),
-        None, // tags
+        None,
+        &tenant(), // tags
         &context,
     )
     .unwrap();
@@ -102,7 +109,8 @@ async fn test_policy_delete() {
         policy_doc,
         Some("/".to_string()),
         None, // description
-        None, // tags
+        None,
+        &tenant(), // tags
         &context,
     )
     .unwrap();
@@ -122,7 +130,8 @@ async fn test_policy_delete() {
 async fn test_policy_list_empty() {
     let store = InMemoryWamiStore::new();
 
-    let (policies, is_truncated, marker) = store.list_policies(None, None).await.unwrap();
+    let (policies, is_truncated, marker) =
+        store.list_policies(&tenant(), None, None).await.unwrap();
 
     assert_eq!(policies.len(), 0);
     assert!(!is_truncated);
@@ -141,14 +150,15 @@ async fn test_policy_list_multiple() {
             policy_doc.clone(),
             Some("/".to_string()),
             None, // description
-            None, // tags
+            None,
+            &tenant(), // tags
             &context,
         )
         .unwrap();
         store.create_policy(policy).await.unwrap();
     }
 
-    let (policies, is_truncated, _) = store.list_policies(None, None).await.unwrap();
+    let (policies, is_truncated, _) = store.list_policies(&tenant(), None, None).await.unwrap();
 
     assert_eq!(policies.len(), 3);
     assert!(!is_truncated);
@@ -165,7 +175,8 @@ async fn test_policy_list_with_path_prefix() {
         policy_doc.clone(),
         Some("/admin/".to_string()),
         None, // description
-        None, // tags
+        None,
+        &tenant(), // tags
         &context,
     )
     .unwrap();
@@ -174,7 +185,8 @@ async fn test_policy_list_with_path_prefix() {
         policy_doc,
         Some("/users/".to_string()),
         None, // description
-        None, // tags
+        None,
+        &tenant(), // tags
         &context,
     )
     .unwrap();
@@ -182,7 +194,10 @@ async fn test_policy_list_with_path_prefix() {
     store.create_policy(policy1).await.unwrap();
     store.create_policy(policy2).await.unwrap();
 
-    let (policies, _, _) = store.list_policies(Some("/admin/"), None).await.unwrap();
+    let (policies, _, _) = store
+        .list_policies(&tenant(), Some("/admin/"), None)
+        .await
+        .unwrap();
 
     assert_eq!(policies.len(), 1);
     assert!(policies[0].path.starts_with("/admin/"));
@@ -201,7 +216,8 @@ async fn test_policy_list_with_pagination() {
             policy_doc.clone(),
             Some("/".to_string()),
             None, // description
-            None, // tags
+            None,
+            &tenant(), // tags
             &context,
         )
         .unwrap();
@@ -213,8 +229,10 @@ async fn test_policy_list_with_pagination() {
         marker: None,
     };
 
-    let (policies, is_truncated, marker) =
-        store.list_policies(None, Some(&pagination)).await.unwrap();
+    let (policies, is_truncated, marker) = store
+        .list_policies(&tenant(), None, Some(&pagination))
+        .await
+        .unwrap();
 
     assert_eq!(policies.len(), 3);
     assert!(is_truncated);

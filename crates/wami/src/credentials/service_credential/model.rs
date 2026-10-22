@@ -2,14 +2,14 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use wami_core::arn::WamiArn;
+use wami_core::arn::{ScopedName, WamiArn};
 
 /// Service-specific credential
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceSpecificCredential {
-    /// The name of the IAM user associated with the credential
-    #[serde(rename = "UserName")]
-    pub user_name: String,
+    /// The key of the user who owns the credential — its tenant and its name
+    #[serde(rename = "Owner")]
+    pub owner: ScopedName,
 
     /// The unique identifier for the credential
     #[serde(rename = "ServiceSpecificCredentialId")]
@@ -45,9 +45,9 @@ pub struct ServiceSpecificCredential {
 /// Metadata about a service-specific credential (without password)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceSpecificCredentialMetadata {
-    /// The name of the IAM user associated with the credential
-    #[serde(rename = "UserName")]
-    pub user_name: String,
+    /// The key of the user who owns the credential — its tenant and its name
+    #[serde(rename = "Owner")]
+    pub owner: ScopedName,
 
     /// The unique identifier for the credential
     #[serde(rename = "ServiceSpecificCredentialId")]

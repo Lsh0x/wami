@@ -4,6 +4,7 @@ use crate::credentials::AccessKey;
 use crate::store::memory::InMemoryWamiStore;
 use crate::store::traits::AccessKeyStore;
 use async_trait::async_trait;
+use wami_core::arn::ScopedName;
 use wami_core::error::Result;
 use wami_core::types::PaginationParams;
 
@@ -32,13 +33,13 @@ impl AccessKeyStore for InMemoryWamiStore {
 
     async fn list_access_keys(
         &self,
-        user_name: &str,
+        owner: &ScopedName,
         pagination: Option<&PaginationParams>,
     ) -> Result<(Vec<AccessKey>, bool, Option<String>)> {
         let mut access_keys: Vec<AccessKey> = self
             .access_keys
             .values()
-            .filter(|key| key.user_name == user_name)
+            .filter(|key| &key.owner == owner)
             .cloned()
             .collect();
 

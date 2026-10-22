@@ -1,126 +1,135 @@
 //! Group Store Implementation for InMemoryWamiStore
 
+use super::{insert_new, move_key, page, replace_by_id};
 use crate::store::memory::InMemoryWamiStore;
 use crate::store::traits::GroupStore;
 use crate::wami::identity::Group;
 use async_trait::async_trait;
+use wami_core::arn::{ScopedName, TenantPath};
 use wami_core::error::Result;
 use wami_core::types::PaginationParams;
 
 #[async_trait]
 impl GroupStore for InMemoryWamiStore {
     async fn create_group(&mut self, group: Group) -> Result<Group> {
-        self.groups.insert(group.group_name.clone(), group.clone());
-        Ok(group)
+        insert_new(
+            &mut self.groups,
+            group.key(),
+            group,
+            |g| &g.group_id,
+            "group",
+        )
     }
 
-    async fn get_group(&self, group_name: &str) -> Result<Option<Group>> {
-        Ok(self.groups.get(group_name).cloned())
+    async fn get_group(&self, key: &ScopedName) -> Result<Option<Group>> {
+        Ok(self.groups.get(key).cloned())
     }
 
     async fn update_group(&mut self, group: Group) -> Result<Group> {
-        self.groups.insert(group.group_name.clone(), group.clone());
+        let key = group.key();
+        let (old, group) = replace_by_id(
+            &mut self.groups,
+            key.clone(),
+            group,
+            |g| &g.group_id,
+            "group",
+        )?;
+        if old != key {
+            // Its policies and its members follow it; left on the old key, the
+            // next group of that name would inherit both.
+            move_key(&mut self.group_attached_policies, &old, &key);
+            move_key(&mut self.group_inline_policies, &old, &key);
+            for groups in self.user_groups.values_mut() {
+                for g in groups.iter_mut().filter(|g| **g == old) {
+                    *g = key.clone();
+                }
+            }
+        }
         Ok(group)
     }
 
-    async fn delete_group(&mut self, group_name: &str) -> Result<()> {
-        self.groups.remove(group_name);
-        // Remove from all user-group mappings
+    async fn delete_group(&mut self, key: &ScopedName) -> Result<()> {
+        self.groups.remove(key);
+        self.group_attached_policies.remove(key);
+        self.group_inline_policies.remove(key);
         for groups in self.user_groups.values_mut() {
-            groups.retain(|g| g != group_name);
+            groups.retain(|g| g != key);
         }
         Ok(())
     }
 
     async fn list_groups(
         &self,
+        tenant: &TenantPath,
         path_prefix: Option<&str>,
         pagination: Option<&PaginationParams>,
     ) -> Result<(Vec<Group>, bool, Option<String>)> {
-        let mut groups: Vec<Group> = self.groups.values().cloned().collect();
-
-        // Apply path prefix filter
-        if let Some(prefix) = path_prefix {
-            // Empty string prefix should only match empty paths, not all paths
-            if prefix.is_empty() {
-                groups.retain(|group| group.path.is_empty());
-            } else {
-                groups.retain(|group| group.path.starts_with(prefix));
-            }
-        }
-
-        groups.sort_by(|a, b| a.group_name.cmp(&b.group_name));
-
-        let mut is_truncated = false;
-        let mut marker = None;
-
-        if let Some(pagination) = pagination {
-            if let Some(max_items) = pagination.max_items {
-                if max_items > 0 && groups.len() > max_items as usize {
-                    groups.truncate(max_items as usize);
-                    is_truncated = true;
-                    if let Some(last_group) = groups.last() {
-                        marker = Some(last_group.group_name.clone());
-                    }
-                } else if max_items == 0 {
-                    // max_items = 0 means return empty list but indicate truncation if there are items
-                    is_truncated = !groups.is_empty();
-                    groups.clear();
-                }
-            }
-        }
-
-        Ok((groups, is_truncated, marker))
-    }
-
-    async fn list_groups_for_user(&self, user_name: &str) -> Result<Vec<Group>> {
-        let group_names = self.user_groups.get(user_name).cloned().unwrap_or_default();
-        let groups: Vec<Group> = group_names
-            .into_iter()
-            .filter_map(|name| self.groups.get(&name).cloned())
+        let groups: Vec<Group> = self
+            .groups
+            .iter()
+            .filter(|(key, _)| key.tenant() == tenant)
+            .map(|(_, group)| group.clone())
             .collect();
-        Ok(groups)
+        Ok(page(
+            groups,
+            path_prefix,
+            |g| &g.path,
+            |g| &g.group_name,
+            pagination,
+        ))
     }
 
-    async fn add_user_to_group(&mut self, group_name: &str, user_name: &str) -> Result<()> {
-        self.user_groups
-            .entry(user_name.to_string())
-            .or_default()
-            .push(group_name.to_string());
+    async fn list_groups_for_user(&self, user: &ScopedName) -> Result<Vec<Group>> {
+        Ok(self
+            .user_groups
+            .get(user)
+            .map(|keys| {
+                keys.iter()
+                    .filter_map(|key| self.groups.get(key).cloned())
+                    .collect()
+            })
+            .unwrap_or_default())
+    }
+
+    async fn add_user_to_group(&mut self, group: &ScopedName, user: &ScopedName) -> Result<()> {
+        let groups = self.user_groups.entry(user.clone()).or_default();
+        if !groups.contains(group) {
+            groups.push(group.clone());
+        }
         Ok(())
     }
 
-    async fn remove_user_from_group(&mut self, group_name: &str, user_name: &str) -> Result<()> {
-        if let Some(groups) = self.user_groups.get_mut(user_name) {
-            groups.retain(|g| g != group_name);
+    async fn remove_user_from_group(
+        &mut self,
+        group: &ScopedName,
+        user: &ScopedName,
+    ) -> Result<()> {
+        if let Some(groups) = self.user_groups.get_mut(user) {
+            groups.retain(|g| g != group);
         }
         Ok(())
     }
 
     // Managed policy attachment methods
-    async fn attach_group_policy(&mut self, group_name: &str, policy_arn: &str) -> Result<()> {
-        let policies = self
-            .group_attached_policies
-            .entry(group_name.to_string())
-            .or_default();
-
-        if !policies.contains(&policy_arn.to_string()) {
+    async fn attach_group_policy(&mut self, key: &ScopedName, policy_arn: &str) -> Result<()> {
+        let policies = self.group_attached_policies.entry(key.clone()).or_default();
+        if !policies.iter().any(|p| p == policy_arn) {
             policies.push(policy_arn.to_string());
         }
         Ok(())
     }
 
-    async fn detach_group_policy(&mut self, group_name: &str, policy_arn: &str) -> Result<()> {
-        if let Some(policies) = self.group_attached_policies.get_mut(group_name) {
+    async fn detach_group_policy(&mut self, key: &ScopedName, policy_arn: &str) -> Result<()> {
+        if let Some(policies) = self.group_attached_policies.get_mut(key) {
             policies.retain(|p| p != policy_arn);
         }
         Ok(())
     }
 
-    async fn list_attached_group_policies(&self, group_name: &str) -> Result<Vec<String>> {
+    async fn list_attached_group_policies(&self, key: &ScopedName) -> Result<Vec<String>> {
         Ok(self
             .group_attached_policies
-            .get(group_name)
+            .get(key)
             .cloned()
             .unwrap_or_default())
     }
@@ -128,41 +137,39 @@ impl GroupStore for InMemoryWamiStore {
     // Inline policy methods
     async fn put_group_policy(
         &mut self,
-        group_name: &str,
+        key: &ScopedName,
         policy_name: &str,
         policy_document: String,
     ) -> Result<()> {
-        let policies = self
-            .group_inline_policies
-            .entry(group_name.to_string())
-            .or_default();
-
-        policies.insert(policy_name.to_string(), policy_document);
+        self.group_inline_policies
+            .entry(key.clone())
+            .or_default()
+            .insert(policy_name.to_string(), policy_document);
         Ok(())
     }
 
     async fn get_group_policy(
         &self,
-        group_name: &str,
+        key: &ScopedName,
         policy_name: &str,
     ) -> Result<Option<String>> {
         Ok(self
             .group_inline_policies
-            .get(group_name)
+            .get(key)
             .and_then(|policies| policies.get(policy_name).cloned()))
     }
 
-    async fn delete_group_policy(&mut self, group_name: &str, policy_name: &str) -> Result<()> {
-        if let Some(policies) = self.group_inline_policies.get_mut(group_name) {
+    async fn delete_group_policy(&mut self, key: &ScopedName, policy_name: &str) -> Result<()> {
+        if let Some(policies) = self.group_inline_policies.get_mut(key) {
             policies.remove(policy_name);
         }
         Ok(())
     }
 
-    async fn list_group_policies(&self, group_name: &str) -> Result<Vec<String>> {
+    async fn list_group_policies(&self, key: &ScopedName) -> Result<Vec<String>> {
         Ok(self
             .group_inline_policies
-            .get(group_name)
+            .get(key)
             .map(|policies| policies.keys().cloned().collect())
             .unwrap_or_default())
     }

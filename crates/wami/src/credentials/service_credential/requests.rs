@@ -1,5 +1,7 @@
 //! Service Credential Request and Response Types
 
+use crate::arn::ScopedName;
+use crate::arn::TenantPath;
 use serde::{Deserialize, Serialize};
 
 use super::model::*;
@@ -7,9 +9,9 @@ use super::model::*;
 /// Request to create a service-specific credential
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateServiceSpecificCredentialRequest {
-    /// The name of the IAM user to associate with the credential
-    #[serde(rename = "UserName")]
-    pub user_name: String,
+    /// The user — its tenant and its name
+    #[serde(rename = "User")]
+    pub user: ScopedName,
 
     /// The name of the AWS service (e.g., "codecommit.amazonaws.com")
     #[serde(rename = "ServiceName")]
@@ -27,9 +29,9 @@ pub struct CreateServiceSpecificCredentialResponse {
 /// Request to delete a service-specific credential
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeleteServiceSpecificCredentialRequest {
-    /// The name of the IAM user
-    #[serde(rename = "UserName")]
-    pub user_name: String,
+    /// The user — its tenant and its name
+    #[serde(rename = "User")]
+    pub user: ScopedName,
 
     /// The unique identifier of the credential
     #[serde(rename = "ServiceSpecificCredentialId")]
@@ -39,9 +41,14 @@ pub struct DeleteServiceSpecificCredentialRequest {
 /// Request to list service-specific credentials
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListServiceSpecificCredentialsRequest {
-    /// The name of the IAM user (optional, lists all if not provided)
-    #[serde(rename = "UserName", skip_serializing_if = "Option::is_none")]
-    pub user_name: Option<String>,
+    /// The tenant to list — exactly this one: never its children, never the
+    /// whole store (wami 005).
+    pub tenant: TenantPath,
+
+    /// Only this user's credentials; its tenant must be `tenant`. All of the
+    /// tenant's when absent.
+    #[serde(rename = "User", skip_serializing_if = "Option::is_none")]
+    pub user: Option<ScopedName>,
 
     /// Filter by service name (optional)
     #[serde(rename = "ServiceName", skip_serializing_if = "Option::is_none")]
@@ -59,9 +66,9 @@ pub struct ListServiceSpecificCredentialsResponse {
 /// Request to reset a service-specific credential password
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResetServiceSpecificCredentialRequest {
-    /// The name of the IAM user
-    #[serde(rename = "UserName")]
-    pub user_name: String,
+    /// The user — its tenant and its name
+    #[serde(rename = "User")]
+    pub user: ScopedName,
 
     /// The unique identifier of the credential
     #[serde(rename = "ServiceSpecificCredentialId")]
@@ -79,9 +86,9 @@ pub struct ResetServiceSpecificCredentialResponse {
 /// Request to update a service-specific credential status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateServiceSpecificCredentialRequest {
-    /// The name of the IAM user
-    #[serde(rename = "UserName")]
-    pub user_name: String,
+    /// The user — its tenant and its name
+    #[serde(rename = "User")]
+    pub user: ScopedName,
 
     /// The unique identifier of the credential
     #[serde(rename = "ServiceSpecificCredentialId")]

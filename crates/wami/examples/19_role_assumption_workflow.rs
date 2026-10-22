@@ -19,6 +19,16 @@ use wami::wami::identity::role::requests::CreateRoleRequest;
 use wami::wami::identity::user::requests::CreateUserRequest;
 use wami::wami::sts::assume_role::requests::AssumeRoleRequest;
 
+/// The tenant this example works in.
+fn tenant() -> wami_core::arn::TenantPath {
+    wami::arn::TenantPath::single(0)
+}
+
+/// `name`'s key in that tenant.
+fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+    wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Role Assumption Workflow ===\n");
@@ -50,7 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_user(
             &context,
             CreateUserRequest {
-                user_name: "alice".to_string(),
+                user: key("alice"),
                 path: Some("/".to_string()),
                 permissions_boundary: None,
                 tags: None,
@@ -66,7 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_role(
             &context,
             CreateRoleRequest {
-                role_name: "AdminRole".to_string(),
+                role: key("AdminRole"),
                 path: Some("/".to_string()),
                 assume_role_policy_document: trust_policy.to_string(),
                 description: Some("Admin role for elevated access".to_string()),

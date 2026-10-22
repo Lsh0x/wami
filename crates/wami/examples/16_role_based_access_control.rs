@@ -19,6 +19,16 @@ use wami::wami::identity::role::requests::CreateRoleRequest;
 use wami::wami::identity::user::requests::CreateUserRequest;
 use wami::wami::policies::policy::requests::CreatePolicyRequest;
 
+/// The tenant this example works in.
+fn tenant() -> wami_core::arn::TenantPath {
+    wami::arn::TenantPath::single(0)
+}
+
+/// `name`'s key in that tenant.
+fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+    wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Role-Based Access Control (RBAC) ===\n");
@@ -47,7 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // === CREATE POLICIES ===
     println!("Step 1: Creating role policies...\n");
 
-    let _admin_policy = policy_service.create_policy(&context, CreatePolicyRequest {
+    let _admin_policy = policy_service.create_policy(&context, CreatePolicyRequest { tenant: tenant(),
         policy_name: "AdminPolicy".to_string(),
         path: Some("/rbac/".to_string()),
         policy_document: r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"*","Resource":"*"}]}"#.to_string(),
@@ -56,7 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }).await?;
     println!("✓ Created AdminPolicy");
 
-    let _dev_policy = policy_service.create_policy(&context, CreatePolicyRequest {
+    let _dev_policy = policy_service.create_policy(&context, CreatePolicyRequest { tenant: tenant(),
         policy_name: "DeveloperPolicy".to_string(),
         path: Some("/rbac/".to_string()),
         policy_document: r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:*","lambda:*"],"Resource":"*"}]}"#.to_string(),
@@ -65,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }).await?;
     println!("✓ Created DeveloperPolicy");
 
-    let _viewer_policy = policy_service.create_policy(&context, CreatePolicyRequest {
+    let _viewer_policy = policy_service.create_policy(&context, CreatePolicyRequest { tenant: tenant(),
         policy_name: "ViewerPolicy".to_string(),
         path: Some("/rbac/".to_string()),
         policy_document: r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:Get*","s3:List*"],"Resource":"*"}]}"#.to_string(),
@@ -83,7 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_role(
             &context,
             CreateRoleRequest {
-                role_name: "Admin".to_string(),
+                role: key("Admin"),
                 path: Some("/rbac/".to_string()),
                 assume_role_policy_document: trust_policy.to_string(),
                 description: Some("Administrator role".to_string()),
@@ -99,7 +109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_role(
             &context,
             CreateRoleRequest {
-                role_name: "Developer".to_string(),
+                role: key("Developer"),
                 path: Some("/rbac/".to_string()),
                 assume_role_policy_document: trust_policy.to_string(),
                 description: Some("Developer role".to_string()),
@@ -115,7 +125,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_role(
             &context,
             CreateRoleRequest {
-                role_name: "Viewer".to_string(),
+                role: key("Viewer"),
                 path: Some("/rbac/".to_string()),
                 assume_role_policy_document: trust_policy.to_string(),
                 description: Some("Viewer role".to_string()),
@@ -134,7 +144,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_user(
             &context,
             CreateUserRequest {
-                user_name: "alice".to_string(),
+                user: key("alice"),
                 path: Some("/team/".to_string()),
                 permissions_boundary: None,
                 tags: Some(vec![wami::types::Tag {
@@ -150,7 +160,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_user(
             &context,
             CreateUserRequest {
-                user_name: "bob".to_string(),
+                user: key("bob"),
                 path: Some("/team/".to_string()),
                 permissions_boundary: None,
                 tags: Some(vec![wami::types::Tag {
@@ -166,7 +176,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_user(
             &context,
             CreateUserRequest {
-                user_name: "charlie".to_string(),
+                user: key("charlie"),
                 path: Some("/team/".to_string()),
                 permissions_boundary: None,
                 tags: Some(vec![wami::types::Tag {

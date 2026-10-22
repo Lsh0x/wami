@@ -18,6 +18,16 @@ use wami::wami::identity::group::builder::build_group;
 use wami::wami::identity::role::builder::build_role;
 use wami::wami::identity::user::builder::build_user;
 
+/// The tenant this example works in.
+fn tenant() -> wami_core::arn::TenantPath {
+    wami::arn::TenantPath::single(0)
+}
+
+/// `name`'s key in that tenant.
+fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+    wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Basic CRUD Operations ===\n");
@@ -44,9 +54,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create users
     println!("Creating users...");
-    let alice = build_user("alice".to_string(), Some("/users/".to_string()), &context)?;
-    let bob = build_user("bob".to_string(), Some("/users/".to_string()), &context)?;
-    let charlie = build_user("charlie".to_string(), Some("/users/".to_string()), &context)?;
+    let alice = build_user(&key("alice"), Some("/users/".to_string()), &context)?;
+    let bob = build_user(&key("bob"), Some("/users/".to_string()), &context)?;
+    let charlie = build_user(&key("charlie"), Some("/users/".to_string()), &context)?;
 
     store.create_user(alice).await?;
     store.create_user(bob).await?;
@@ -55,12 +65,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create groups
     println!("\nCreating groups...");
-    let developers = build_group(
-        "developers".to_string(),
-        Some("/groups/".to_string()),
-        &context,
-    )?;
-    let admins = build_group("admins".to_string(), Some("/groups/".to_string()), &context)?;
+    let developers = build_group(&key("developers"), Some("/groups/".to_string()), &context)?;
+    let admins = build_group(&key("admins"), Some("/groups/".to_string()), &context)?;
 
     store.create_group(developers).await?;
     store.create_group(admins).await?;
@@ -69,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create roles
     println!("\nCreating roles...");
     let deploy_role = build_role(
-        "deploy-role".to_string(),
+        &key("deploy-role"),
         r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"*"},"Action":"sts:AssumeRole"}]}"#.to_string(),
         Some("/roles/".to_string()),
         None,
@@ -84,14 +90,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n\nStep 2: Reading resources...\n");
 
     // List all users
-    let (users, _, _) = store.list_users(None, None).await?;
+    let (users, _, _) = store.list_users(&tenant(), None, None).await?;
     println!("✓ Found {} users:", users.len());
     for user in &users {
         println!("  - {}", user.user_name);
     }
 
     // Get specific user
-    let alice_retrieved = store.get_user("alice").await?;
+    let alice_retrieved = store.get_user(&key("alice")).await?;
     if let Some(user) = alice_retrieved {
         println!("\n✓ Retrieved user 'alice':");
         println!("  - User ID: {}", user.user_id);
@@ -100,7 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // List all groups
-    let (groups, _, _) = store.list_groups(None, None).await?;
+    let (groups, _, _) = store.list_groups(&tenant(), None, None).await?;
     println!("\n✓ Found {} groups:", groups.len());
     for group in &groups {
         println!("  - {}", group.group_name);
@@ -110,7 +116,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n\nStep 3: Updating resources...\n");
 
     // Update a user (change path)
-    let mut alice = store.get_user("alice").await?.unwrap();
+    let mut alice = store.get_user(&key("alice")).await?.unwrap();
     let old_path = alice.path.clone();
     alice.path = "/admin-users/".to_string();
     store.update_user(alice).await?;
@@ -120,24 +126,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Verify update
-    let alice_updated = store.get_user("alice").await?.unwrap();
+    let alice_updated = store.get_user(&key("alice")).await?.unwrap();
     println!("  Verified: path is now '{}'", alice_updated.path);
 
     // === DELETE Operations ===
     println!("\n\nStep 4: Deleting resources...\n");
 
     // Delete a user
-    store.delete_user("charlie").await?;
+    store.delete_user(&key("charlie")).await?;
     println!("✓ Deleted user 'charlie'");
 
     // Verify deletion
-    let charlie_check = store.get_user("charlie").await?;
+    let charlie_check = store.get_user(&key("charlie")).await?;
     if charlie_check.is_none() {
         println!("  Verified: charlie no longer exists");
     }
 
     // List users after deletion
-    let (users_after, _, _) = store.list_users(None, None).await?;
+    let (users_after, _, _) = store.list_users(&tenant(), None, None).await?;
     println!("\n✓ Remaining users: {}", users_after.len());
     for user in &users_after {
         println!("  - {}", user.user_name);

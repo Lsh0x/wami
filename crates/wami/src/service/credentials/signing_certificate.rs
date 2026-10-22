@@ -67,13 +67,13 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            request.user.name(),
         )
         .await?;
 
         // Use wami builder to create certificate
         let certificate = cert_builder::build_signing_certificate(
-            request.user_name,
+            &request.user,
             request.certificate_body,
             context,
         )?;
@@ -114,7 +114,7 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            request.user.name(),
         )
         .await?;
 
@@ -148,7 +148,7 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            request.user.name(),
         )
         .await?;
         self.write_store()
@@ -163,12 +163,12 @@ impl<S: SigningCertificateStore> SigningCertificateService<S> {
         context: &WamiContext,
         request: ListSigningCertificatesRequest,
     ) -> Result<Vec<SigningCertificate>> {
-        let user_name = request.user_name.as_deref().unwrap_or("*");
-        self.guard(context, WamiAction::IamManageCredentials, "user", user_name)
+        let name = request.user.as_ref().map_or("*", |user| user.name());
+        self.guard(context, WamiAction::IamManageCredentials, "user", name)
             .await?;
         self.read_store()
             .await
-            .list_signing_certificates(request.user_name.as_deref())
+            .list_signing_certificates(&request.tenant, request.user.as_ref())
             .await
     }
 }
@@ -179,6 +179,16 @@ mod tests {
     use crate::credentials::signing_certificate::CertificateStatus;
     use crate::service::auth::decision::{Decision, DenyReason};
     use crate::store::memory::InMemoryWamiStore;
+
+    /// The tenant every test here works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(0)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
 
     fn setup_service() -> SigningCertificateService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
@@ -210,7 +220,7 @@ mod tests {
         let context = test_context();
 
         let request = UploadSigningCertificateRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             certificate_body: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"
                 .to_string(),
         };
@@ -219,7 +229,7 @@ mod tests {
             .upload_signing_certificate(&context, request)
             .await
             .unwrap();
-        assert_eq!(certificate.user_name, "alice");
+        assert_eq!(certificate.owner.name(), "alice");
         assert!(!certificate.certificate_id.is_empty());
 
         let retrieved = service
@@ -227,7 +237,7 @@ mod tests {
             .await
             .unwrap();
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().user_name, "alice");
+        assert_eq!(retrieved.unwrap().owner.name(), "alice");
     }
 
     #[tokio::test]
@@ -236,7 +246,7 @@ mod tests {
         let context = test_context();
 
         let upload_req = UploadSigningCertificateRequest {
-            user_name: "bob".to_string(),
+            user: key("bob"),
             certificate_body: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"
                 .to_string(),
         };
@@ -246,7 +256,7 @@ mod tests {
             .unwrap();
 
         let update_req = UpdateSigningCertificateRequest {
-            user_name: "bob".to_string(),
+            user: key("bob"),
             certificate_id: certificate.certificate_id.clone(),
             status: CertificateStatus::Inactive,
         };
@@ -263,7 +273,7 @@ mod tests {
         let context = test_context();
 
         let upload_req = UploadSigningCertificateRequest {
-            user_name: "charlie".to_string(),
+            user: key("charlie"),
             certificate_body: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"
                 .to_string(),
         };
@@ -273,7 +283,7 @@ mod tests {
             .unwrap();
 
         let delete_req = DeleteSigningCertificateRequest {
-            user_name: "charlie".to_string(),
+            user: key("charlie"),
             certificate_id: certificate.certificate_id.clone(),
         };
         service
@@ -296,7 +306,7 @@ mod tests {
         // Upload multiple certificates for same user
         for _ in 0..3 {
             let request = UploadSigningCertificateRequest {
-                user_name: "david".to_string(),
+                user: key("david"),
                 certificate_body: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"
                     .to_string(),
             };
@@ -307,7 +317,8 @@ mod tests {
         }
 
         let list_request = ListSigningCertificatesRequest {
-            user_name: Some("david".to_string()),
+            tenant: tenant(),
+            user: Some(key("david")),
         };
         let certificates = service
             .list_signing_certificates(&context, list_request)
@@ -344,7 +355,7 @@ mod tests {
         let context = test_context();
 
         let request = UploadSigningCertificateRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             certificate_body: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"
                 .to_string(),
         };
@@ -378,7 +389,7 @@ mod tests {
         let context = test_context();
 
         let request = UpdateSigningCertificateRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             certificate_id: "some-id".to_string(),
             status: CertificateStatus::Inactive,
         };
@@ -398,7 +409,7 @@ mod tests {
         let context = test_context();
 
         let request = DeleteSigningCertificateRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             certificate_id: "some-id".to_string(),
         };
 
@@ -417,7 +428,8 @@ mod tests {
         let context = test_context();
 
         let request = ListSigningCertificatesRequest {
-            user_name: Some("alice".to_string()),
+            tenant: tenant(),
+            user: Some(key("alice")),
         };
 
         let result = service.list_signing_certificates(&context, request).await;

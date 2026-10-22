@@ -12,7 +12,7 @@
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use wami::arn::{TenantPath, WamiArn};
+use wami::arn::{ScopedName, TenantPath, WamiArn};
 use wami::context::WamiContext;
 use wami::service::RoleService;
 use wami::store::memory::InMemoryWamiStore;
@@ -84,7 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }"#;
 
     let aws_role_req = CreateRoleRequest {
-        role_name: "lambda-execution-role".to_string(),
+        role: ScopedName::new(aws_context.tenant_path().clone(), "lambda-execution-role"),
         path: Some("/service-roles/".to_string()),
         assume_role_policy_document: aws_trust_policy.to_string(),
         description: Some("Role for Lambda function execution".to_string()),
@@ -111,7 +111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }"#;
 
     let gcp_role_req = CreateRoleRequest {
-        role_name: "compute-service-account".to_string(),
+        role: ScopedName::new(gcp_context.tenant_path().clone(), "compute-service-account"),
         path: Some("/service-accounts/".to_string()),
         assume_role_policy_document: gcp_trust_policy.to_string(),
         description: Some("Service account for Compute Engine".to_string()),
@@ -139,7 +139,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }"#;
 
     let azure_role_req = CreateRoleRequest {
-        role_name: "app-managed-identity".to_string(),
+        role: ScopedName::new(azure_context.tenant_path().clone(), "app-managed-identity"),
         path: Some("/managed-identities/".to_string()),
         assume_role_policy_document: azure_trust_policy.to_string(),
         description: Some("Managed identity for App Service".to_string()),
@@ -181,6 +181,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .list_roles(
             &aws_context,
             ListRolesRequest {
+                tenant: aws_context.tenant_path().clone(),
                 path_prefix: None,
                 pagination: None,
             },

@@ -1,5 +1,6 @@
 //! Inline Policy Response Types
 
+use crate::arn::ScopedName;
 use serde::{Deserialize, Serialize};
 
 // User inline policy responses
@@ -14,8 +15,8 @@ pub struct PutUserPolicyResponse {
 /// Response for get user policy operation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GetUserPolicyResponse {
-    /// The user name
-    pub user_name: String,
+    /// The user — its tenant and its name
+    pub user: ScopedName,
     /// The policy name
     pub policy_name: String,
     /// The policy document in JSON format
@@ -48,8 +49,8 @@ pub struct PutGroupPolicyResponse {
 /// Response for get group policy operation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GetGroupPolicyResponse {
-    /// The group name
-    pub group_name: String,
+    /// The group — its tenant and its name
+    pub group: ScopedName,
     /// The policy name
     pub policy_name: String,
     /// The policy document in JSON format
@@ -82,8 +83,8 @@ pub struct PutRolePolicyResponse {
 /// Response for get role policy operation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GetRolePolicyResponse {
-    /// The role name
-    pub role_name: String,
+    /// The role — its tenant and its name
+    pub role: ScopedName,
     /// The policy name
     pub policy_name: String,
     /// The policy document in JSON format

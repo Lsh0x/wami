@@ -17,6 +17,16 @@ use wami::service::UserService;
 use wami::store::memory::InMemoryWamiStore;
 use wami::wami::identity::user::requests::{CreateUserRequest, ListUsersRequest};
 
+/// The tenant this example works in.
+fn tenant() -> wami_core::arn::TenantPath {
+    wami::arn::TenantPath::single(0)
+}
+
+/// `name`'s key in that tenant.
+fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+    wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Provider Switching (Multi-Context) ===\n");
@@ -49,7 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\nStep 2: Creating user with context...\n");
 
     let alice_req = CreateUserRequest {
-        user_name: "alice".to_string(),
+        user: key("alice"),
         path: Some("/".to_string()),
         permissions_boundary: None,
         tags: None,
@@ -64,7 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\nStep 3: Creating another user...\n");
 
     let bob_req = CreateUserRequest {
-        user_name: "bob".to_string(),
+        user: key("bob"),
         path: Some("/".to_string()),
         permissions_boundary: None,
         tags: None,
@@ -82,6 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .list_users(
             &context,
             ListUsersRequest {
+                tenant: tenant(),
                 path_prefix: None,
                 pagination: None,
             },

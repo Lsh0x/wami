@@ -142,6 +142,16 @@ mod tests {
     use wami_core::context::WamiContext;
     use wami_core::error::AmiError;
 
+    /// The tenant every test here works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
+
     fn make_context() -> WamiContext {
         let arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
         WamiContext::builder()
@@ -212,15 +222,18 @@ mod tests {
 
     async fn setup_store_with_allow_policy(ctx: &WamiContext) -> Arc<RwLock<InMemoryWamiStore>> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        let user =
-            user_builder::build_user("alice".to_string(), Some("/".to_string()), ctx).unwrap();
+        let user = user_builder::build_user(&key("alice"), Some("/".to_string()), ctx).unwrap();
         store.write().await.create_user(user).await.unwrap();
 
         // Give alice an inline policy that allows iam:*
         store
             .write()
             .await
-            .put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
+            .put_user_policy(
+                &key("alice"),
+                "AllowAll",
+                allow_policy_json(&["iam:*"], &["*"]),
+            )
             .await
             .unwrap();
 
@@ -251,8 +264,7 @@ mod tests {
         let ctx = make_context();
         // Store with user but no policies -> default deny
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        let user =
-            user_builder::build_user("alice".to_string(), Some("/".to_string()), &ctx).unwrap();
+        let user = user_builder::build_user(&key("alice"), Some("/".to_string()), &ctx).unwrap();
         store.write().await.create_user(user).await.unwrap();
 
         let authorizer: Arc<dyn Authorizer> = into_authorizer(AuthorizationService::new(store));
@@ -282,8 +294,7 @@ mod tests {
     async fn test_authorizer_trait_check_or_deny_returns_access_denied() {
         let ctx = make_context();
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        let user =
-            user_builder::build_user("alice".to_string(), Some("/".to_string()), &ctx).unwrap();
+        let user = user_builder::build_user(&key("alice"), Some("/".to_string()), &ctx).unwrap();
         store.write().await.create_user(user).await.unwrap();
 
         let authorizer: Arc<dyn Authorizer> = into_authorizer(AuthorizationService::new(store));

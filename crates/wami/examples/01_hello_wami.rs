@@ -15,6 +15,16 @@ use wami::store::memory::InMemoryWamiStore;
 use wami::store::traits::UserStore;
 use wami::wami::identity::user::builder::build_user;
 
+/// The tenant this example works in.
+fn tenant() -> wami_core::arn::TenantPath {
+    wami::arn::TenantPath::single(0)
+}
+
+/// `name`'s key in that tenant.
+fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+    wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Hello WAMI ===\n");
@@ -43,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Step 3: Build a user using pure functions
     println!("\nStep 3: Building user 'alice'...");
-    let user = build_user("alice".to_string(), Some("/".to_string()), &context)?;
+    let user = build_user(&key("alice"), Some("/".to_string()), &context)?;
     println!("✓ User built with ARN: {}", user.wami_arn);
 
     // Step 4: Store the user
@@ -56,7 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Step 5: Retrieve the user
     println!("\nStep 5: Retrieving user from store...");
-    let retrieved = store.get_user("alice").await?;
+    let retrieved = store.get_user(&key("alice")).await?;
     match retrieved {
         Some(user) => {
             println!("✓ User retrieved successfully");

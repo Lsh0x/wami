@@ -155,6 +155,15 @@ impl TenantId {
         })
     }
 
+    /// The tenant an ARN's [`TenantPath`](crate::arn::TenantPath) names — the
+    /// same segments, so a record's `tenant_id` and its `wami_arn` cannot name
+    /// two different tenants (wami 005).
+    pub fn from_path(path: &crate::arn::TenantPath) -> Self {
+        Self {
+            segments: path.segments.clone(),
+        }
+    }
+
     /// Get the segments as a slice (for internal use)
     pub fn segments(&self) -> &[u64] {
         &self.segments

@@ -53,7 +53,7 @@ let context = WamiContext::builder()
     .build()
     .unwrap();
 
-let access_key = build_access_key("alice".into(), &context)?;
+let access_key = build_access_key(&ScopedName::new(TenantPath::single(1), "alice"), &context)?;
 ```
 
 ### `update_access_key_status`
@@ -109,7 +109,7 @@ let context = WamiContext::builder()
     .unwrap();
 
 // Create a new access key
-let access_key = build_access_key("alice".into(), &context)?;
+let access_key = build_access_key(&ScopedName::new(TenantPath::single(1), "alice"), &context)?;
 
 // Access key ID follows AWS format (AKIA prefix)
 assert!(access_key.access_key_id.starts_with("AKIA"));

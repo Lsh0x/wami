@@ -4,6 +4,7 @@
 
 use crate::credentials::AccessKey;
 use async_trait::async_trait;
+use wami_core::arn::ScopedName;
 use wami_core::error::Result;
 use wami_core::types::PaginationParams;
 
@@ -22,10 +23,10 @@ pub trait AccessKeyStore: Send + Sync {
     /// Delete an access key
     async fn delete_access_key(&mut self, access_key_id: &str) -> Result<()>;
 
-    /// List access keys for a user
+    /// List the access keys owned by the user stored under `owner`
     async fn list_access_keys(
         &self,
-        user_name: &str,
+        owner: &ScopedName,
         pagination: Option<&PaginationParams>,
     ) -> Result<(Vec<AccessKey>, bool, Option<String>)>;
 }

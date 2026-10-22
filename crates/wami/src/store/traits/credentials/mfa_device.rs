@@ -4,6 +4,7 @@
 
 use crate::credentials::MfaDevice;
 use async_trait::async_trait;
+use wami_core::arn::ScopedName;
 use wami_core::error::Result;
 
 /// Store trait for IAM MFA device operations
@@ -18,6 +19,6 @@ pub trait MfaDeviceStore: Send + Sync {
     /// Delete an MFA device
     async fn delete_mfa_device(&mut self, serial_number: &str) -> Result<()>;
 
-    /// List MFA devices for a user
-    async fn list_mfa_devices(&self, user_name: &str) -> Result<Vec<MfaDevice>>;
+    /// List the MFA devices of the user stored under `owner`
+    async fn list_mfa_devices(&self, owner: &ScopedName) -> Result<Vec<MfaDevice>>;
 }

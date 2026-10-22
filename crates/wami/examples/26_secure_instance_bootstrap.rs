@@ -20,6 +20,16 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami::store::memory::InMemoryWamiStore;
+
+/// The tenant this example works in.
+fn tenant() -> wami_core::arn::TenantPath {
+    wami::arn::TenantPath::single(0)
+}
+
+/// `name`'s key in that tenant.
+fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+    wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+}
 use wami::{
     AmiError, AuthenticationService, CreateUserRequest, InstanceBootstrap, RootCredentials,
     UserService,
@@ -88,7 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_user(
             &root_context,
             CreateUserRequest {
-                user_name: "admin".to_string(),
+                user: key("admin"),
                 path: Some("/".to_string()),
                 permissions_boundary: None,
                 tags: None,

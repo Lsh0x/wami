@@ -149,12 +149,13 @@ where
         }
 
         // Get the user who owns this access key
-        let user = store
-            .get_user(&access_key.user_name)
-            .await?
-            .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("User {}", access_key.user_name),
-            })?;
+        let user =
+            store
+                .get_user(&access_key.owner)
+                .await?
+                .ok_or_else(|| AmiError::ResourceNotFound {
+                    resource: format!("User {}", access_key.owner),
+                })?;
 
         Ok(user)
     }

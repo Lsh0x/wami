@@ -88,8 +88,9 @@ impl<S: ServiceLinkedRoleServiceStore> ServiceLinkedRoleService<S> {
             request.aws_service_name
         );
 
+        let key = wami_core::arn::ScopedName::new(request.tenant.clone(), role_name);
         let role = role_builder::build_role(
-            role_name,
+            &key,
             assume_role_policy,
             Some(path),
             request.description,
@@ -123,6 +124,11 @@ mod tests {
     use wami_core::arn::{TenantPath, WamiArn};
     use wami_core::context::WamiContext;
 
+    /// The tenant every test of this module works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
     fn setup_service() -> ServiceLinkedRoleService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
         ServiceLinkedRoleService::new(store)
@@ -147,6 +153,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateServiceLinkedRoleRequest {
+            tenant: tenant(),
             aws_service_name: "elasticbeanstalk.amazonaws.com".to_string(),
             description: Some("Service-linked role for Elastic Beanstalk".to_string()),
             custom_suffix: None,
@@ -169,6 +176,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateServiceLinkedRoleRequest {
+            tenant: tenant(),
             aws_service_name: "autoscaling.amazonaws.com".to_string(),
             description: None,
             custom_suffix: Some("MyApp".to_string()),
@@ -187,6 +195,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateServiceLinkedRoleRequest {
+            tenant: tenant(),
             aws_service_name: "invalid-service".to_string(),
             description: None,
             custom_suffix: None,
@@ -202,6 +211,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateServiceLinkedRoleRequest {
+            tenant: tenant(),
             aws_service_name: "elasticbeanstalk.amazonaws.com".to_string(),
             description: None,
             custom_suffix: None,

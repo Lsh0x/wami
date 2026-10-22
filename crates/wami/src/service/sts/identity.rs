@@ -7,6 +7,7 @@ use crate::store::traits::{IdentityStore, UserStore};
 use crate::wami::sts::CallerIdentity;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use wami_core::arn::ScopedName;
 use wami_core::error::{AmiError, Result};
 
 pub trait StsIdentityServiceStore: IdentityStore + UserStore {}
@@ -57,89 +58,49 @@ impl<S: StsIdentityServiceStore> IdentityService<S> {
         }
     }
 
-    /// Get the identity of the caller
+    /// Get the identity of the caller stored under `caller`.
     ///
-    /// In a real implementation, this would extract the caller from the request context.
-    /// For now, we accept the ARN as a parameter.
+    /// The caller is named by its key: a name parsed out of an AWS-format ARN
+    /// named a user in every tenant at once (wami 005).
     pub async fn get_caller_identity(
         &self,
         _request: GetCallerIdentityRequest,
-        caller_arn: &str,
+        caller: &ScopedName,
     ) -> Result<GetCallerIdentityResponse> {
-        // Try to get from identity store first
-        {
-            let store_guard = self.store.read().await;
-            if let Some(identity) = store_guard.get_identity(caller_arn).await? {
-                return Ok(GetCallerIdentityResponse {
-                    user_id: identity.user_id,
-                    account: identity.account,
-                    arn: identity.arn,
-                });
-            }
-        } // Drop read lock
-
-        // If not found, try to extract from user store
-        // Parse ARN to get user name: arn:aws:iam::123456789012:user/alice
-        let user_name = self.extract_user_name_from_arn(caller_arn)?;
-
-        // Get user (drop read lock before creating identity)
         let user = {
             let store_guard = self.store.read().await;
-            store_guard.get_user(&user_name).await?
-        }; // Drop read lock
-
-        if let Some(user) = user {
-            // Create and store identity
-            let identity = CallerIdentity {
-                user_id: user.user_id.clone(),
-                account: self.account_id.clone(),
-                arn: user.arn.clone(),
-                wami_arn: user.wami_arn,
-                providers: user.providers.clone(),
-            };
-
-            {
-                let mut store_guard = self.store.write().await;
-                store_guard.create_identity(identity.clone()).await?;
-            } // Drop write lock
-
-            return Ok(GetCallerIdentityResponse {
-                user_id: identity.user_id,
-                account: identity.account,
-                arn: identity.arn,
-            });
+            store_guard.get_user(caller).await?
         }
+        .ok_or_else(|| AmiError::ResourceNotFound {
+            resource: format!("Identity for {caller}"),
+        })?;
 
-        Err(AmiError::ResourceNotFound {
-            resource: format!("Identity for ARN: {}", caller_arn),
+        // Answered from the record read by the key, never from the identity
+        // store: that store is keyed by the AWS-format `arn`, which names no
+        // tenant, so two tenants' users of one name share an entry there.
+        let identity = CallerIdentity {
+            user_id: user.user_id.clone(),
+            account: self.account_id.clone(),
+            arn: user.arn.clone(),
+            wami_arn: user.wami_arn,
+            providers: user.providers.clone(),
+        };
+        self.store
+            .write()
+            .await
+            .create_identity(identity.clone())
+            .await?;
+
+        Ok(GetCallerIdentityResponse {
+            user_id: identity.user_id,
+            account: identity.account,
+            arn: identity.arn,
         })
     }
 
     /// List all identities
     pub async fn list_identities(&self) -> Result<Vec<CallerIdentity>> {
         self.store.read().await.list_identities().await
-    }
-
-    // Helper method
-    fn extract_user_name_from_arn(&self, arn: &str) -> Result<String> {
-        // Expected format: arn:aws:iam::123456789012:user/alice
-        let parts: Vec<&str> = arn.split(':').collect();
-        if parts.len() < 6 {
-            return Err(AmiError::InvalidParameter {
-                message: format!("Invalid ARN format: {}", arn),
-            });
-        }
-
-        let resource_part = parts[5]; // "user/alice"
-        let resource_parts: Vec<&str> = resource_part.split('/').collect();
-
-        if resource_parts.len() < 2 {
-            return Err(AmiError::InvalidParameter {
-                message: format!("Invalid ARN resource format: {}", arn),
-            });
-        }
-
-        Ok(resource_parts[1..].join("/"))
     }
 }
 
@@ -150,6 +111,16 @@ mod tests {
     use crate::wami::identity::user::builder::build_user;
     use wami_core::arn::{TenantPath, WamiArn};
     use wami_core::context::WamiContext;
+
+    /// The tenant every test here works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
 
     fn setup_service() -> IdentityService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
@@ -175,18 +146,15 @@ mod tests {
         let context = test_context();
 
         // Create a user
-        let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+        let user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
 
-        let user_arn = user.arn.clone();
+        let caller = user.key();
 
         service.store.write().await.create_user(user).await.unwrap();
 
         // Get caller identity
         let request = GetCallerIdentityRequest {};
-        let response = service
-            .get_caller_identity(request, &user_arn)
-            .await
-            .unwrap();
+        let response = service.get_caller_identity(request, &caller).await.unwrap();
 
         assert_eq!(response.account, "123456789012");
         assert!(response.arn.contains("alice"));
@@ -199,32 +167,18 @@ mod tests {
 
         // Create users and get their identities
         for i in 0..3 {
-            let user = build_user(format!("user{}", i), Some("/".to_string()), &context).unwrap();
-            let arn = user.arn.clone();
+            let user =
+                build_user(&key(format!("user{}", i)), Some("/".to_string()), &context).unwrap();
+            let caller = user.key();
 
             service.store.write().await.create_user(user).await.unwrap();
 
             // Trigger identity creation
             let request = GetCallerIdentityRequest {};
-            service.get_caller_identity(request, &arn).await.unwrap();
+            service.get_caller_identity(request, &caller).await.unwrap();
         }
 
         let identities = service.list_identities().await.unwrap();
         assert_eq!(identities.len(), 3);
-    }
-
-    #[tokio::test]
-    async fn test_extract_user_name_from_arn() {
-        let service = setup_service();
-
-        let name = service
-            .extract_user_name_from_arn("arn:aws:iam::123456789012:user/alice")
-            .unwrap();
-        assert_eq!(name, "alice");
-
-        let name_with_path = service
-            .extract_user_name_from_arn("arn:aws:iam::123456789012:user/department/team/bob")
-            .unwrap();
-        assert_eq!(name_with_path, "department/team/bob");
     }
 }

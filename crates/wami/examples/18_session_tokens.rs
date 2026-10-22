@@ -18,6 +18,16 @@ use wami::store::memory::InMemoryWamiStore;
 use wami::wami::identity::user::requests::CreateUserRequest;
 use wami::wami::sts::session_token::requests::GetSessionTokenRequest;
 
+/// The tenant this example works in.
+fn tenant() -> wami_core::arn::TenantPath {
+    wami::arn::TenantPath::single(0)
+}
+
+/// `name`'s key in that tenant.
+fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+    wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Session Tokens ===\n");
@@ -42,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create user
     let user_service = UserService::new(store.clone());
     let alice_req = CreateUserRequest {
-        user_name: "alice".to_string(),
+        user: key("alice"),
         path: Some("/".to_string()),
         permissions_boundary: None,
         tags: None,

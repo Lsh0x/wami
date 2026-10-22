@@ -84,6 +84,7 @@ impl<S: PolicyStore> PolicyService<S> {
             request.path,
             request.description,
             request.tags,
+            &request.tenant,
             context,
         )?;
 
@@ -153,7 +154,11 @@ impl<S: PolicyStore> PolicyService<S> {
         self.store
             .read()
             .await
-            .list_policies(request.scope.as_deref(), request.pagination.as_ref())
+            .list_policies(
+                &request.tenant,
+                request.scope.as_deref(),
+                request.pagination.as_ref(),
+            )
             .await
     }
 }
@@ -164,6 +169,11 @@ mod tests {
     use crate::service::auth::decision::{Decision, DenyReason};
     use crate::store::memory::InMemoryWamiStore;
     use wami_core::arn::{TenantPath, WamiArn};
+
+    /// The tenant every test of this module works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
 
     fn setup_service() -> PolicyService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
@@ -190,6 +200,7 @@ mod tests {
 
         let policy_doc = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":"*"}]}"#;
         let request = CreatePolicyRequest {
+            tenant: tenant(),
             policy_name: "S3FullAccess".to_string(),
             policy_document: policy_doc.to_string(),
             path: Some("/service/".to_string()),
@@ -218,6 +229,7 @@ mod tests {
         // Create policy
         let policy_doc = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"ec2:*","Resource":"*"}]}"#;
         let create_request = CreatePolicyRequest {
+            tenant: tenant(),
             policy_name: "EC2FullAccess".to_string(),
             policy_document: policy_doc.to_string(),
             path: Some("/".to_string()),
@@ -250,6 +262,7 @@ mod tests {
 
         let policy_doc = r#"{"Version":"2012-10-17","Statement":[]}"#;
         let request = CreatePolicyRequest {
+            tenant: tenant(),
             policy_name: "TempPolicy".to_string(),
             policy_document: policy_doc.to_string(),
             path: None,
@@ -273,6 +286,7 @@ mod tests {
         for i in 0..3 {
             let policy_doc = r#"{"Version":"2012-10-17","Statement":[]}"#;
             let request = CreatePolicyRequest {
+                tenant: tenant(),
                 policy_name: format!("Policy{}", i),
                 policy_document: policy_doc.to_string(),
                 path: Some("/test/".to_string()),
@@ -283,6 +297,7 @@ mod tests {
         }
 
         let list_request = ListPoliciesRequest {
+            tenant: tenant(),
             scope: None,
             only_attached: None,
             path_prefix: Some("/test/".to_string()),
@@ -339,6 +354,7 @@ mod tests {
         let context = test_context();
 
         let request = ListPoliciesRequest {
+            tenant: tenant(),
             scope: None,
             only_attached: None,
             path_prefix: Some("/nonexistent/".to_string()),
@@ -364,6 +380,7 @@ mod tests {
             ("Policy3", "/admin/"),
         ] {
             let request = CreatePolicyRequest {
+                tenant: tenant(),
                 policy_name: name.to_string(),
                 policy_document: policy_doc.clone(),
                 path: Some(path.to_string()),
@@ -376,6 +393,7 @@ mod tests {
         // Note: list_policies service method doesn't currently filter by path_prefix
         // It only uses scope and pagination. This test verifies all policies are returned.
         let request = ListPoliciesRequest {
+            tenant: tenant(),
             scope: None,
             only_attached: None,
             path_prefix: Some("/admin/".to_string()),
@@ -413,6 +431,7 @@ mod tests {
         let context = test_context();
 
         let request = CreatePolicyRequest {
+            tenant: tenant(),
             policy_name: "TestPolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             path: None,
@@ -483,6 +502,7 @@ mod tests {
         let context = test_context();
 
         let request = ListPoliciesRequest {
+            tenant: tenant(),
             scope: None,
             only_attached: None,
             path_prefix: None,
@@ -515,6 +535,7 @@ mod tests {
                 .create_policy(
                     &context,
                     CreatePolicyRequest {
+                        tenant: tenant(),
                         policy_name: "P".to_string(),
                         policy_document: document.to_string(),
                         path: None,

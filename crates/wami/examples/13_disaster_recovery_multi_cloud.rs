@@ -11,7 +11,7 @@
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use wami::arn::{TenantPath, WamiArn};
+use wami::arn::{ScopedName, TenantPath, WamiArn};
 use wami::context::WamiContext;
 use wami::service::{GroupService, UserService};
 use wami::store::memory::InMemoryWamiStore;
@@ -63,7 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create users in primary
     println!("Creating critical users in AWS...");
     let admin_req = CreateUserRequest {
-        user_name: "admin".to_string(),
+        user: ScopedName::new(aws_context.tenant_path().clone(), "admin"),
         path: Some("/critical/".to_string()),
         permissions_boundary: None,
         tags: Some(vec![
@@ -81,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✓ Created admin in AWS: {}", aws_admin.wami_arn);
 
     let operator_req = CreateUserRequest {
-        user_name: "operator".to_string(),
+        user: ScopedName::new(aws_context.tenant_path().clone(), "operator"),
         path: Some("/critical/".to_string()),
         permissions_boundary: None,
         tags: Some(vec![wami::types::Tag {
@@ -94,7 +94,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create group in primary
     let group_req = CreateGroupRequest {
-        group_name: "emergency-responders".to_string(),
+        group: ScopedName::new(aws_context.tenant_path().clone(), "emergency-responders"),
         path: Some("/critical/".to_string()),
         tags: None,
     };
@@ -103,10 +103,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Add users to group
     group_service
-        .add_user_to_group(&aws_context, "emergency-responders", "admin")
+        .add_user_to_group(
+            &aws_context,
+            &ScopedName::new(aws_context.tenant_path().clone(), "emergency-responders"),
+            &ScopedName::new(aws_context.tenant_path().clone(), "admin"),
+        )
         .await?;
     group_service
-        .add_user_to_group(&aws_context, "emergency-responders", "operator")
+        .add_user_to_group(
+            &aws_context,
+            &ScopedName::new(aws_context.tenant_path().clone(), "emergency-responders"),
+            &ScopedName::new(aws_context.tenant_path().clone(), "operator"),
+        )
         .await?;
     println!("✓ Added users to group");
 
@@ -116,7 +124,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Replicate users
     println!("Replicating users to GCP...");
     let admin_replica_req = CreateUserRequest {
-        user_name: aws_admin.user_name.clone(),
+        user: ScopedName::new(gcp_context.tenant_path().clone(), &aws_admin.user_name),
         path: Some(aws_admin.path.clone()),
         permissions_boundary: None,
         tags: Some(aws_admin.tags.clone()),
@@ -127,7 +135,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✓ Replicated admin to GCP: {}", gcp_admin.wami_arn);
 
     let operator_replica_req = CreateUserRequest {
-        user_name: aws_operator.user_name.clone(),
+        user: ScopedName::new(gcp_context.tenant_path().clone(), &aws_operator.user_name),
         path: Some(aws_operator.path.clone()),
         permissions_boundary: None,
         tags: Some(aws_operator.tags.clone()),
@@ -139,7 +147,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Replicate group
     let group_replica_req = CreateGroupRequest {
-        group_name: aws_group.group_name.clone(),
+        group: ScopedName::new(gcp_context.tenant_path().clone(), &aws_group.group_name),
         path: Some(aws_group.path.clone()),
         tags: None,
     };
@@ -150,10 +158,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Replicate group membership
     group_service
-        .add_user_to_group(&gcp_context, "emergency-responders", "admin")
+        .add_user_to_group(
+            &gcp_context,
+            &ScopedName::new(gcp_context.tenant_path().clone(), "emergency-responders"),
+            &ScopedName::new(gcp_context.tenant_path().clone(), "admin"),
+        )
         .await?;
     group_service
-        .add_user_to_group(&gcp_context, "emergency-responders", "operator")
+        .add_user_to_group(
+            &gcp_context,
+            &ScopedName::new(gcp_context.tenant_path().clone(), "emergency-responders"),
+            &ScopedName::new(gcp_context.tenant_path().clone(), "operator"),
+        )
         .await?;
     println!("✓ Replicated group membership");
 
@@ -175,6 +191,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .list_users(
             &aws_context,
             ListUsersRequest {
+                tenant: aws_context.tenant_path().clone(),
                 path_prefix: Some("/critical/".to_string()),
                 pagination: None,
             },

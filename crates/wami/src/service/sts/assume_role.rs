@@ -82,33 +82,33 @@ impl<S: AssumeRoleServiceStore> AssumeRoleService<S> {
         // Validate request
         request.validate()?;
 
-        // Verify role exists - try parsing as WAMI ARN first
-        let role = if let Ok(wami_arn) = request.role_arn.parse::<crate::arn::WamiArn>() {
-            if wami_arn.resource.resource_type == "role" {
-                // Search for role by matching wami_arn
-                let store_guard = self.read_store().await;
-                let (roles, _, _) = store_guard.list_roles(None, None).await?;
-                roles
-                    .into_iter()
-                    .find(|r| r.wami_arn.to_string() == request.role_arn)
-                    .ok_or_else(|| AmiError::ResourceNotFound {
-                        resource: format!("Role: {}", request.role_arn),
-                    })?
-            } else {
-                return Err(AmiError::InvalidParameter {
-                    message: format!("ARN is not a role: {}", request.role_arn),
-                });
-            }
-        } else {
-            // Fall back to AWS format
-            let role_name = self.extract_role_name_from_arn(&request.role_arn)?;
-            self.store
-                .read()
-                .await
-                .get_role(&role_name)
-                .await?
+        // The role is named by its wami ARN, read by its tenant and matched on
+        // the whole stored ARN. An AWS-format ARN names no tenant, so it named
+        // a role in every tenant at once and is refused (wami 005).
+        let wami_arn = request
+            .role_arn
+            .parse::<crate::arn::WamiArn>()
+            .map_err(|_| AmiError::InvalidParameter {
+                message: format!(
+                    "role ARN must be a wami ARN, which names the role's tenant: {}",
+                    request.role_arn
+                ),
+            })?;
+        if wami_arn.resource.resource_type != "role" {
+            return Err(AmiError::InvalidParameter {
+                message: format!("ARN is not a role: {}", request.role_arn),
+            });
+        }
+        let role = {
+            let store_guard = self.read_store().await;
+            let (roles, _, _) = store_guard
+                .list_roles(&wami_arn.tenant_path, None, None)
+                .await?;
+            roles
+                .into_iter()
+                .find(|r| r.wami_arn == wami_arn)
                 .ok_or_else(|| AmiError::ResourceNotFound {
-                    resource: format!("Role: {}", role_name),
+                    resource: format!("Role: {}", request.role_arn),
                 })?
         };
 
@@ -203,36 +203,6 @@ impl<S: AssumeRoleServiceStore> AssumeRoleService<S> {
             assumed_role_user,
         })
     }
-
-    // Helper methods
-
-    fn extract_role_name_from_arn(&self, arn: &str) -> Result<String> {
-        // Try parsing as WAMI ARN first
-        if let Ok(wami_arn) = arn.parse::<crate::arn::WamiArn>() {
-            if wami_arn.resource.resource_type == "role" {
-                return Ok(wami_arn.resource.resource_id);
-            }
-        }
-
-        // Fall back to AWS format: arn:aws:iam::123456789012:role/RoleName
-        let parts: Vec<&str> = arn.split(':').collect();
-        if parts.len() < 6 {
-            return Err(AmiError::InvalidParameter {
-                message: format!("Invalid role ARN: {}", arn),
-            });
-        }
-
-        let resource_part = parts[5]; // "role/RoleName"
-        let resource_parts: Vec<&str> = resource_part.split('/').collect();
-
-        if resource_parts.len() < 2 {
-            return Err(AmiError::InvalidParameter {
-                message: format!("Invalid role ARN format: {}", arn),
-            });
-        }
-
-        Ok(resource_parts[1..].join("/"))
-    }
 }
 
 #[cfg(test)]
@@ -242,6 +212,16 @@ mod tests {
     use crate::wami::identity::role::builder::build_role;
     use wami_core::arn::{TenantPath, WamiArn};
     use wami_core::context::WamiContext;
+
+    /// The tenant every test here works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
 
     fn setup_service() -> AssumeRoleService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
@@ -269,7 +249,7 @@ mod tests {
         // Create a role
         let trust_policy = r#"{"Version":"2012-10-17","Statement":[]}"#;
         let role = build_role(
-            "TestRole".to_string(),
+            &key("TestRole"),
             trust_policy.to_string(),
             Some("/".to_string()),
             None,
@@ -324,14 +304,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_assume_role_with_aws_format_arn() {
+    async fn an_aws_format_role_arn_is_refused_even_when_the_name_exists() {
         // An ARN that does not parse as a WAMI ARN takes the AWS fallback path,
         // which looks the role up by the name pulled out of the ARN.
         let service = setup_service();
         let context = test_context();
 
         let role = build_role(
-            "LegacyRole".to_string(),
+            &key("LegacyRole"),
             r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             Some("/".to_string()),
             None,
@@ -353,14 +333,18 @@ mod tests {
                 },
                 "arn:aws:iam::123456789012:user/alice",
             )
-            .await
-            .unwrap();
+            .await;
 
-        assert!(response.assumed_role_user.arn.contains("LegacyRole"));
+        // An AWS-format ARN names no tenant: the role is never looked up by
+        // its bare name, even when one exists (wami 005).
+        assert!(
+            matches!(response, Err(AmiError::InvalidParameter { .. })),
+            "{response:?}"
+        );
     }
 
     #[tokio::test]
-    async fn test_assume_role_with_aws_format_arn_unknown_role() {
+    async fn an_aws_format_role_arn_is_refused_for_an_unknown_name() {
         let service = setup_service();
         let context = test_context();
 
@@ -378,7 +362,7 @@ mod tests {
             )
             .await;
 
-        assert!(matches!(result, Err(AmiError::ResourceNotFound { .. })));
+        assert!(matches!(result, Err(AmiError::InvalidParameter { .. })));
     }
 
     #[tokio::test]
@@ -389,7 +373,7 @@ mod tests {
         // Create a role
         let trust_policy = r#"{"Version":"2012-10-17","Statement":[]}"#;
         let role = build_role(
-            "CrossAccountRole".to_string(),
+            &key("CrossAccountRole"),
             trust_policy.to_string(),
             Some("/".to_string()),
             None,
@@ -431,7 +415,7 @@ mod tests {
         // Create a role
         let trust_policy = r#"{"Version":"2012-10-17","Statement":[]}"#;
         let role = build_role(
-            "SessionRole".to_string(),
+            &key("SessionRole"),
             trust_policy.to_string(),
             Some("/".to_string()),
             None,
@@ -474,21 +458,6 @@ mod tests {
         assert!(sessions[0].assumed_role_arn.is_some());
     }
 
-    #[tokio::test]
-    async fn test_extract_role_name_from_arn() {
-        let service = setup_service();
-
-        let name = service
-            .extract_role_name_from_arn("arn:aws:iam::123456789012:role/MyRole")
-            .unwrap();
-        assert_eq!(name, "MyRole");
-
-        let name_with_path = service
-            .extract_role_name_from_arn("arn:aws:iam::123456789012:role/path/to/MyRole")
-            .unwrap();
-        assert_eq!(name_with_path, "path/to/MyRole");
-    }
-
     #[cfg(feature = "sts-jwt")]
     #[tokio::test]
     async fn test_assume_role_with_jwt_signing() {
@@ -500,7 +469,7 @@ mod tests {
         // Create a role
         let trust_policy = r#"{"Version":"2012-10-17","Statement":[]}"#;
         let role = build_role(
-            "JwtRole".to_string(),
+            &key("JwtRole"),
             trust_policy.to_string(),
             Some("/".to_string()),
             None,

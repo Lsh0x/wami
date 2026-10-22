@@ -2,6 +2,7 @@
 
 use crate::credentials::signing_certificate::SigningCertificate;
 use async_trait::async_trait;
+use wami_core::arn::{ScopedName, TenantPath};
 use wami_core::error::Result;
 
 /// Trait for signing certificate storage operations
@@ -24,8 +25,11 @@ pub trait SigningCertificateStore: Send + Sync {
 
     async fn delete_signing_certificate(&mut self, certificate_id: &str) -> Result<()>;
 
+    /// List the signing certificates of exactly `tenant`, or only those of
+    /// `owner` when given — never the whole store.
     async fn list_signing_certificates(
         &self,
-        user_name: Option<&str>,
+        tenant: &TenantPath,
+        owner: Option<&ScopedName>,
     ) -> Result<Vec<SigningCertificate>>;
 }
