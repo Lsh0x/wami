@@ -29,7 +29,7 @@ use crate::wami::policies::permissions_boundary::{PrincipalType, PutPermissionsB
 use crate::{CreateAccessKeyRequest, InstanceBootstrap};
 use std::fmt::Debug;
 use std::sync::Arc;
-use wami_core::arn::{ScopedName, TenantPath};
+use wami_core::arn::{ScopedName, TenantPath, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
 
@@ -969,4 +969,390 @@ where
         }
     }
     assert_eq!(refusals[0], refusals[1], "the refusals differ");
+}
+
+/// T1: every credential verb — update, list and delete included, not only
+/// create and read — refuses another tenant's owner, and the credential is
+/// left as it was. `update_access_key` is judged on the STORED key's owner,
+/// whatever owner the record handed in names (the takeover path: replace a
+/// key's state through a record naming oneself).
+///
+/// # Panics
+///
+/// When a credential verb of any kind reaches another tenant's owner.
+pub async fn every_credential_verb_refuses_another_tenant<S: GuardStore>(store: Shared<S>) {
+    use crate::credentials::access_key::requests::ListAccessKeysRequest;
+    use crate::credentials::login_profile::requests::UpdateLoginProfileRequest;
+    use crate::credentials::mfa_device::requests::ListMfaDevicesRequest;
+    use crate::credentials::service_credential::requests::{
+        DeleteServiceSpecificCredentialRequest, ListServiceSpecificCredentialsRequest,
+        UpdateServiceSpecificCredentialRequest,
+    };
+    use crate::credentials::signing_certificate::requests::{
+        DeleteSigningCertificateRequest, ListSigningCertificatesRequest,
+        UpdateSigningCertificateRequest,
+    };
+    use crate::credentials::signing_certificate::CertificateStatus;
+    let admin = admin57(&store).await;
+    plain_user(&store, &t67(), "bob").await;
+    let bob = key(&t67(), "bob");
+    let seed = caller(&t67(), "seed");
+    let body = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----".to_string();
+    let key_of_bob = AccessKeyService::new(store.clone())
+        .create_access_key(&seed, CreateAccessKeyRequest { user: bob.clone() })
+        .await
+        .expect("bob's key");
+    LoginProfileService::new(store.clone())
+        .create_login_profile(
+            &seed,
+            CreateLoginProfileRequest {
+                user: bob.clone(),
+                password: "Chosen-by-6!x".into(),
+                password_reset_required: false,
+            },
+        )
+        .await
+        .expect("bob's profile");
+    let device = MfaDeviceService::new(store.clone())
+        .create_mfa_device(
+            &seed,
+            EnableMfaDeviceRequest {
+                user: bob.clone(),
+                serial_number: "mfa-bob".into(),
+                authentication_code_1: "123456".into(),
+                authentication_code_2: "789012".into(),
+            },
+        )
+        .await
+        .expect("bob's device");
+    let credential = ServiceCredentialService::new(store.clone())
+        .create_service_specific_credential(
+            &seed,
+            CreateServiceSpecificCredentialRequest {
+                user: bob.clone(),
+                service_name: "codecommit.amazonaws.com".into(),
+            },
+        )
+        .await
+        .expect("bob's service credential");
+    let certificate = SigningCertificateService::new(store.clone())
+        .upload_signing_certificate(
+            &seed,
+            UploadSigningCertificateRequest {
+                user: bob.clone(),
+                certificate_body: body,
+            },
+        )
+        .await
+        .expect("bob's signing certificate");
+    let a = authz(&store);
+    let arn = target(&t67(), "user", "bob");
+    let denied = |what: &str, got: std::result::Result<(), AmiError>| match got {
+        Err(AmiError::AccessDenied { .. }) => {}
+        other => panic!("{what}: expected AccessDenied, got {other:?}"),
+    };
+
+    let keys = AccessKeyService::with_authorizer(store.clone(), a.clone());
+    let mut handed = key_of_bob.clone();
+    handed.status = "Inactive".into();
+    denied(
+        "update bob's key",
+        keys.update_access_key(&admin, handed.clone())
+            .await
+            .map(drop),
+    );
+    handed.owner = key(&t57(), "admin");
+    denied(
+        "update bob's key through a record naming 5/7's admin",
+        keys.update_access_key(&admin, handed).await.map(drop),
+    );
+    refused(
+        "list bob's keys",
+        keys.list_access_keys(
+            &admin,
+            ListAccessKeysRequest {
+                user: bob.clone(),
+                pagination: None,
+            },
+        )
+        .await,
+        &arn,
+    );
+    let stored = store
+        .read()
+        .await
+        .get_access_key(&key_of_bob.access_key_id)
+        .await
+        .expect("a read")
+        .expect("bob's key");
+    assert_eq!(
+        (stored.status.as_str(), &stored.owner),
+        ("Active", &bob),
+        "bob's key was changed"
+    );
+
+    let profiles = LoginProfileService::with_authorizer(store.clone(), a.clone());
+    refused(
+        "update bob's profile",
+        profiles
+            .update_login_profile(
+                &admin,
+                UpdateLoginProfileRequest {
+                    user: bob.clone(),
+                    password: None,
+                    password_reset_required: Some(true),
+                },
+            )
+            .await,
+        &arn,
+    );
+    refused(
+        "delete bob's profile",
+        profiles.delete_login_profile(&admin, &bob).await,
+        &arn,
+    );
+
+    let mfa = MfaDeviceService::with_authorizer(store.clone(), a.clone());
+    denied(
+        "delete bob's device",
+        mfa.delete_mfa_device(&admin, &device.serial_number).await,
+    );
+    refused(
+        "list bob's devices",
+        mfa.list_mfa_devices(&admin, ListMfaDevicesRequest { user: bob.clone() })
+            .await,
+        &arn,
+    );
+
+    let services = ServiceCredentialService::with_authorizer(store.clone(), a.clone());
+    let id = credential.service_specific_credential_id.clone();
+    denied(
+        "update bob's service credential",
+        services
+            .update_service_specific_credential(
+                &admin,
+                UpdateServiceSpecificCredentialRequest {
+                    user: bob.clone(),
+                    service_specific_credential_id: id.clone(),
+                    status: "Inactive".into(),
+                },
+            )
+            .await
+            .map(drop),
+    );
+    denied(
+        "delete bob's service credential",
+        services
+            .delete_service_specific_credential(
+                &admin,
+                DeleteServiceSpecificCredentialRequest {
+                    user: bob.clone(),
+                    service_specific_credential_id: id,
+                },
+            )
+            .await,
+    );
+    refused(
+        "list bob's service credentials",
+        services
+            .list_service_specific_credentials(
+                &admin,
+                ListServiceSpecificCredentialsRequest {
+                    tenant: t67(),
+                    user: Some(bob.clone()),
+                    service_name: None,
+                },
+            )
+            .await,
+        &arn,
+    );
+
+    let signing = SigningCertificateService::with_authorizer(store.clone(), a);
+    let id = certificate.certificate_id.clone();
+    denied(
+        "update bob's signing certificate",
+        signing
+            .update_signing_certificate(
+                &admin,
+                UpdateSigningCertificateRequest {
+                    user: bob.clone(),
+                    certificate_id: id.clone(),
+                    status: CertificateStatus::Inactive,
+                },
+            )
+            .await
+            .map(drop),
+    );
+    denied(
+        "delete bob's signing certificate",
+        signing
+            .delete_signing_certificate(
+                &admin,
+                DeleteSigningCertificateRequest {
+                    user: bob.clone(),
+                    certificate_id: id,
+                },
+            )
+            .await,
+    );
+    refused(
+        "list bob's signing certificates",
+        signing
+            .list_signing_certificates(
+                &admin,
+                ListSigningCertificatesRequest {
+                    tenant: t67(),
+                    user: Some(bob.clone()),
+                },
+            )
+            .await,
+        &arn,
+    );
+}
+
+/// A5 (ruling 9): a credential addressed by id is judged on BOTH its owner,
+/// `user/<owner>`, and itself, `credential/<id>`: an Allow needs the owner, a
+/// Deny on either wins — so a document denying `credential/*` still reaches
+/// the id verbs, and an Allow on `credential/*` alone reaches nothing.
+///
+/// # Panics
+///
+/// When a Deny on `credential/*` is ignored, or a right on the credential
+/// alone stands in for the owner.
+pub async fn a_credential_by_id_is_judged_on_its_owner_and_on_itself<S: GuardStore>(
+    store: Shared<S>,
+) {
+    plain_user(&store, &t57(), "alice").await;
+    let k = AccessKeyService::new(store.clone())
+        .create_access_key(
+            &caller(&t57(), "seed"),
+            CreateAccessKeyRequest {
+                user: key(&t57(), "alice"),
+            },
+        )
+        .await
+        .expect("alice's key");
+    let owner_only = principal(&store, &t57(), "owner-only", &[every(&t57(), "user")]).await;
+    let fenced = principal(&store, &t57(), "fenced", &[every(&t57(), "user")]).await;
+    store
+        .write()
+        .await
+        .put_user_policy(
+            &key(&t57(), "fenced"),
+            "fence",
+            format!(
+                r#"{{"Version":"2012-10-17","Statement":[{{"Effect":"Deny","Action":"iam:*","Resource":"{}"}}]}}"#,
+                every(&t57(), "credential")
+            ),
+        )
+        .await
+        .expect("the fence");
+    let credential_only = principal(
+        &store,
+        &t57(),
+        "credential-only",
+        &[every(&t57(), "credential")],
+    )
+    .await;
+    let keys = AccessKeyService::with_authorizer(store.clone(), authz(&store));
+
+    keys.get_access_key(&owner_only, &k.access_key_id)
+        .await
+        .expect("the owner's right reaches the key")
+        .expect("there");
+    let fenced_out = refused(
+        "a Deny on credential/*",
+        keys.get_access_key(&fenced, &k.access_key_id).await,
+        &k.access_key_id,
+    );
+    let absent = refused(
+        "an absent key",
+        keys.get_access_key(&fenced, "AKIAABSENTABSENTABSE").await,
+        "AKIAABSENTABSENTABSE",
+    );
+    assert_eq!(
+        fenced_out.replace(k.access_key_id.as_str(), "AKIAABSENTABSENTABSE"),
+        absent,
+        "the fence tells an existing key from an absent one"
+    );
+    refused(
+        "credential/* alone",
+        keys.get_access_key(&credential_only, &k.access_key_id)
+            .await,
+        &k.access_key_id,
+    );
+}
+
+/// T14 (Δ12, ruling 8): one store holds one instance — a record of another
+/// instance found under an id is refused exactly as an absent id, for an
+/// access key and for a policy.
+///
+/// # Panics
+///
+/// When a record of another instance is acted on, or refused differently
+/// from an absent one.
+pub async fn a_record_of_another_instance_is_refused_as_absent<S: GuardStore>(store: Shared<S>) {
+    use crate::service::PolicyService;
+    let admin = admin57_everything(&store).await;
+    plain_user(&store, &t57(), "alice").await;
+    let elsewhere = WamiContext::builder()
+        .caller_arn(
+            WamiArn::builder()
+                .service(wami_core::arn::Service::Iam)
+                .tenant_path(t57())
+                .wami_instance("elsewhere")
+                .resource("user", "seed")
+                .build()
+                .expect("an ARN"),
+        )
+        .build()
+        .expect("a context");
+    let mut foreign_key = crate::credentials::access_key::builder::build_access_key(
+        &key(&t57(), "alice"),
+        &elsewhere,
+    )
+    .expect("a key");
+    foreign_key.access_key_id = "AKIAELSEWHEREELSEWHR".into();
+    let foreign_policy = crate::wami::policies::policy::builder::build_policy(
+        "theirs".into(),
+        allow(&["*".to_string()]),
+        None,
+        None,
+        None,
+        &t57(),
+        &elsewhere,
+    )
+    .expect("a policy");
+    let policy_arn = foreign_policy.arn.clone();
+    {
+        let mut s = store.write().await;
+        s.create_access_key(foreign_key)
+            .await
+            .expect("the foreign key");
+        s.create_policy(foreign_policy)
+            .await
+            .expect("the foreign policy");
+    }
+    let keys = AccessKeyService::with_authorizer(store.clone(), authz(&store));
+    let other = refused(
+        "another instance's key",
+        keys.get_access_key(&admin, "AKIAELSEWHEREELSEWHR").await,
+        "AKIAELSEWHEREELSEWHR",
+    );
+    let absent = refused(
+        "an absent key",
+        keys.get_access_key(&admin, "AKIAABSENTABSENTABSE").await,
+        "AKIAABSENTABSENTABSE",
+    );
+    assert_eq!(
+        other.replace("AKIAELSEWHEREELSEWHR", "AKIAABSENTABSENTABSE"),
+        absent,
+        "another instance's key is told from an absent one"
+    );
+    let policies = PolicyService::with_authorizer(store.clone(), authz(&store));
+    refused(
+        "another instance's policy",
+        policies.get_policy(&admin, &policy_arn).await,
+        &policy_arn,
+    );
 }

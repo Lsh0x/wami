@@ -2,7 +2,9 @@
 //!
 //! Orchestrates policy management operations.
 
-use crate::service::auth::authorizer::{guard, guard_by_id, guard_tenant, iam_arn, Authorizer};
+use crate::service::auth::authorizer::{
+    guard, guard_by_id, guard_tenant, iam_arn, Authorizer, Found,
+};
 use crate::store::traits::PolicyStore;
 use crate::wami::policies::policy::{
     builder as policy_builder, CreatePolicyRequest, ListPoliciesRequest, Policy,
@@ -102,9 +104,11 @@ impl<S: PolicyStore> PolicyService<S> {
         policy_arn: &str,
     ) -> Result<Option<Policy>> {
         let policy = self.read_store().await.get_policy(policy_arn).await?;
-        let stored = policy
-            .as_ref()
-            .map(|p| iam_arn(context, &p.wami_arn.tenant_path, "policy", policy_arn));
+        let stored = policy.as_ref().map(|p| Found {
+            instance: p.wami_arn.wami_instance_id.clone(),
+            owner: iam_arn(context, &p.wami_arn.tenant_path, "policy", policy_arn),
+            itself: None,
+        });
         guard_by_id(
             self.authz.as_ref(),
             context,

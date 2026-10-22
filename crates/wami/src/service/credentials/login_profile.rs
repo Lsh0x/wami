@@ -5,7 +5,7 @@
 use crate::credentials::login_profile::{
     builder as login_builder, CreateLoginProfileRequest, LoginProfile, UpdateLoginProfileRequest,
 };
-use crate::service::auth::authorizer::{guard, Authorizer};
+use crate::service::auth::authorizer::{confirm, guard, Authorizer};
 use crate::store::traits::{LoginProfileStore, UserStore};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -86,7 +86,18 @@ impl<S: LoginProfileServiceStore> LoginProfileService<S> {
             user,
         )
         .await?;
-        self.read_store().await.get_login_profile(user).await
+        let profile = self.read_store().await.get_login_profile(user).await?;
+        if let Some(profile) = &profile {
+            // The record read must be the one asked for, of this instance (Δ12).
+            confirm(
+                context,
+                "user",
+                user,
+                &profile.owner,
+                &profile.wami_arn.wami_instance_id,
+            )?;
+        }
+        Ok(profile)
     }
 
     /// Update a login profile
@@ -113,6 +124,13 @@ impl<S: LoginProfileServiceStore> LoginProfileService<S> {
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
                 resource: format!("LoginProfile for user: {}", request.user),
             })?;
+        confirm(
+            context,
+            "user",
+            &request.user,
+            &profile.owner,
+            &profile.wami_arn.wami_instance_id,
+        )?;
 
         // Apply updates using builder functions
         // Note: Password updates are handled separately for security

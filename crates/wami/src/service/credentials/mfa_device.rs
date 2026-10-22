@@ -5,7 +5,7 @@
 use crate::credentials::mfa_device::{
     builder as mfa_builder, EnableMfaDeviceRequest, ListMfaDevicesRequest, MfaDevice,
 };
-use crate::service::auth::authorizer::{guard, guard_by_id, target_arn, Authorizer};
+use crate::service::auth::authorizer::{credential_found, guard, guard_by_id, Authorizer};
 use crate::store::traits::{MfaDeviceStore, UserStore};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -86,9 +86,14 @@ impl<S: MfaDeviceServiceStore> MfaDeviceService<S> {
             .await
             .get_mfa_device(serial_number)
             .await?;
-        let owner = device
-            .as_ref()
-            .map(|d| target_arn(context, "user", &d.owner));
+        let owner = device.as_ref().map(|d| {
+            credential_found(
+                context,
+                &d.owner,
+                serial_number,
+                &d.wami_arn.wami_instance_id,
+            )
+        });
         guard_by_id(
             self.authz.as_ref(),
             context,

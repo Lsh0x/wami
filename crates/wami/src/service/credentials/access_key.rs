@@ -5,7 +5,7 @@
 use crate::credentials::access_key::{
     builder as access_key_builder, AccessKey, CreateAccessKeyRequest, ListAccessKeysRequest,
 };
-use crate::service::auth::authorizer::{guard, guard_by_id, target_arn, Authorizer};
+use crate::service::auth::authorizer::{credential_found, guard, guard_by_id, Authorizer};
 use crate::store::traits::{AccessKeyStore, UserStore};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -91,7 +91,14 @@ impl<S: AccessKeyServiceStore> AccessKeyService<S> {
             .await
             .get_access_key(access_key_id)
             .await?;
-        let owner = key.as_ref().map(|k| target_arn(context, "user", &k.owner));
+        let owner = key.as_ref().map(|k| {
+            credential_found(
+                context,
+                &k.owner,
+                access_key_id,
+                &k.wami_arn.wami_instance_id,
+            )
+        });
         guard_by_id(
             self.authz.as_ref(),
             context,

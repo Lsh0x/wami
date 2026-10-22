@@ -2,7 +2,7 @@
 //!
 //! Orchestrates service-linked role management operations.
 
-use crate::service::auth::authorizer::{guard, guard_by_id, target_arn, Authorizer};
+use crate::service::auth::authorizer::{guard, guard_by_id, target_arn, Authorizer, Found};
 use crate::store::traits::{RoleStore, ServiceLinkedRoleStore};
 use crate::wami::identity::role::builder as role_builder;
 use crate::wami::identity::service_linked_role::{
@@ -100,9 +100,13 @@ impl<S: ServiceLinkedRoleServiceStore> ServiceLinkedRoleService<S> {
             .await
             .get_service_linked_role_deletion_task(deletion_task_id)
             .await?;
-        let owner = task
-            .as_ref()
-            .map(|task| target_arn(context, "role", &task.role));
+        let owner = task.as_ref().map(|task| Found {
+            // A deletion task records no instance of its own: it is the
+            // store's, which holds one instance (Δ12).
+            instance: context.instance_id().to_string(),
+            owner: target_arn(context, "role", &task.role),
+            itself: None,
+        });
         guard_by_id(
             self.authz.as_ref(),
             context,

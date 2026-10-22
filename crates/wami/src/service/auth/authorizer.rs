@@ -10,7 +10,7 @@ use wami_core::arn::{Resource, ScopedName, Service, TenantPath, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
 
-use super::decision::Decision;
+use super::decision::{Decision, DenyReason};
 
 /// Object-safe authorization interface.
 ///
@@ -158,16 +158,31 @@ pub async fn guard_arn(
     }
 }
 
+/// What a guard by id reads of the record it found under the id.
+#[derive(Debug, Clone)]
+pub struct Found {
+    /// The instance the record belongs to. One store holds one instance: a
+    /// record of another is refused as an absent one (review round 1, Δ12).
+    pub instance: String,
+    /// The ARN an Allow is needed on: its owner's key (`user/<owner>` in the
+    /// owner's tenant) or, for a policy, its own ARN in its stored tenant.
+    pub owner: WamiArn,
+    /// The record's own ARN (`credential/<id>` in the owner's tenant), when
+    /// it has one a document may name: a Deny on it wins too (A5, ruling 9).
+    pub itself: Option<WamiArn>,
+}
+
 /// The guard for a record addressed by an id (an access key, an MFA serial, a
-/// policy ARN): `owner` is the ARN rendered from the record READ by that id —
-/// its owner's key, or its own stored tenant — and `None` when nothing is
-/// stored under the id.
+/// policy ARN, a deletion task): `found` is what the record READ under that
+/// id says of itself, and `None` when nothing is stored there.
 ///
-/// An absent id and a denied owner are ONE refusal, naming the id the caller
-/// gave and nothing else: a message naming the owner, or saying "not found",
-/// would tell a caller with no right who owns what, one probe at a time (A1).
-/// With no authorizer an absent id is not refused: the verb answers as it
-/// always did.
+/// The record's owner must be allowed `action`, and an explicit Deny on the
+/// record itself refuses it as well: an Allow needs the owner, a Deny on
+/// either wins (A5). An absent id, a record of another instance (Δ12) and a
+/// refusal are ONE answer, naming the id the caller gave and nothing else: a
+/// message naming the owner, or saying "not found", would tell a caller with
+/// no right who owns what, one probe at a time (A1). With no authorizer an
+/// absent id is not refused: the verb answers as it always did.
 ///
 /// # Errors
 ///
@@ -179,7 +194,7 @@ pub async fn guard_by_id(
     action: WamiAction,
     what: &str,
     id: &str,
-    owner: Option<WamiArn>,
+    found: Option<Found>,
 ) -> Result<()> {
     let Some(authz) = authz else {
         return Ok(());
@@ -191,12 +206,46 @@ pub async fn guard_by_id(
             action.as_str()
         ),
     };
-    let Some(owner) = owner else {
+    let Some(found) = found.filter(|found| found.instance == context.instance_id()) else {
         return Err(refusal());
     };
-    match authz.check_or_deny(context, action.as_str(), &owner).await {
-        Err(AmiError::AccessDenied { .. }) => Err(refusal()),
-        other => other,
+    match authz
+        .check_or_deny(context, action.as_str(), &found.owner)
+        .await
+    {
+        Err(AmiError::AccessDenied { .. }) => return Err(refusal()),
+        other => other?,
+    }
+    if let Some(itself) = &found.itself {
+        if explicitly_denied(&authz.authorize(context, action.as_str(), itself).await?) {
+            return Err(refusal());
+        }
+    }
+    Ok(())
+}
+
+/// What a guard by id reads of a CREDENTIAL found under `id`: its owner's
+/// key, its own `credential/<id>` in the owner's tenant, and its instance.
+pub fn credential_found(
+    context: &WamiContext,
+    owner: &ScopedName,
+    id: &str,
+    instance: &str,
+) -> Found {
+    Found {
+        instance: instance.to_string(),
+        owner: target_arn(context, "user", owner),
+        itself: Some(iam_arn(context, owner.tenant(), "credential", id)),
+    }
+}
+
+/// A decision some statement refused outright — as opposed to nothing having
+/// matched.
+fn explicitly_denied(decision: &Decision) -> bool {
+    match decision {
+        Decision::Deny(DenyReason::Statements(_)) => true,
+        Decision::Deny(DenyReason::BoundaryRestricted { denied_by, .. }) => !denied_by.is_empty(),
+        _ => false,
     }
 }
 

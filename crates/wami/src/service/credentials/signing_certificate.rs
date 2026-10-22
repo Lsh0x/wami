@@ -6,7 +6,9 @@ use crate::credentials::signing_certificate::{
     builder as cert_builder, DeleteSigningCertificateRequest, ListSigningCertificatesRequest,
     SigningCertificate, UpdateSigningCertificateRequest, UploadSigningCertificateRequest,
 };
-use crate::service::auth::authorizer::{guard, guard_by_id, guard_tenant, target_arn, Authorizer};
+use crate::service::auth::authorizer::{
+    credential_found, guard, guard_by_id, guard_tenant, Authorizer,
+};
 use crate::store::traits::{SigningCertificateStore, UserStore};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -94,9 +96,14 @@ impl<S: SigningCertificateServiceStore> SigningCertificateService<S> {
             .await
             .get_signing_certificate(certificate_id)
             .await?;
-        let owner = certificate
-            .as_ref()
-            .map(|c| target_arn(context, "user", &c.owner));
+        let owner = certificate.as_ref().map(|c| {
+            credential_found(
+                context,
+                &c.owner,
+                certificate_id,
+                &c.wami_arn.wami_instance_id,
+            )
+        });
         guard_by_id(
             self.authz.as_ref(),
             context,
