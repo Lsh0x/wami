@@ -343,7 +343,7 @@ impl KeyManager {
     /// could not tell two classes of token apart — say one that only buys
     /// another token from one that grants access — which is what `aud` is for.
     ///
-    /// Note: `jsonwebtoken` with the `ring` backend expects raw 32-byte Ed25519
+    /// Note: `jsonwebtoken` with the `rust_crypto` backend expects raw 32-byte Ed25519
     /// public keys via `from_ed_der` (despite the function name suggesting DER).
     pub fn verify_token(&self, token: &str, audience: &str) -> Result<StsClaims, JwtError> {
         self.verify_claims(token, audience)
@@ -470,7 +470,7 @@ impl KeyManager {
             .key_for(&kid)
             .ok_or_else(|| JwtError::UnknownKeyId(kid.clone()))?;
 
-        // jsonwebtoken + ring expects raw 32-byte Ed25519 public key, not SPKI DER.
+        // jsonwebtoken (rust_crypto) expects raw 32-byte Ed25519 public key, not SPKI DER.
         // This is a known quirk of the `from_ed_der` API naming.
         let decoding_key = DecodingKey::from_ed_der(&pair.verifying_key.to_bytes());
         let mut validation = Validation::new(Algorithm::EdDSA);
@@ -777,6 +777,52 @@ mod tests {
             !matches!(err, JwtError::TokenTypeMismatch { .. }),
             "the label must not be judged before the signature: {err:?}"
         );
+    }
+
+    /// GHSA-h395-gr6q-cpjc: `jsonwebtoken` < 10.3 treated a registered claim of
+    /// the wrong JSON type as absent, so a check could be skipped. Read through
+    /// `serde_json::Value`, the typed `StsClaims` cannot be what refuses these.
+    #[test]
+    fn a_registered_claim_of_the_wrong_json_type_is_refused() {
+        let km = KeyManager::generate();
+        let good = serde_json::to_value(build_sts_claims(
+            &test_credentials(),
+            &test_claims_context(),
+        ))
+        .unwrap();
+
+        for (claim, wrong) in [
+            ("exp", serde_json::json!("9999999999")),
+            ("exp", serde_json::json!(null)),
+        ] {
+            let mut claims = good.clone();
+            claims[claim] = wrong.clone();
+            let token = km.sign_claims(&claims).unwrap();
+            assert!(
+                km.verify_claims::<serde_json::Value>(&token, AUD).is_err(),
+                "{claim} = {wrong} must be refused"
+            );
+        }
+
+        // The control: the same claims with the right types verify.
+        let token = km.sign_claims(&good).unwrap();
+        assert!(km.verify_claims::<serde_json::Value>(&token, AUD).is_ok());
+    }
+
+    /// wami neither sets nor validates `nbf` (`Validation::validate_nbf` is
+    /// off and `StsClaims` has no such field). Pinned so that turning it on
+    /// is a decision, not a side effect of a dependency bump.
+    #[test]
+    fn nbf_is_not_part_of_what_wami_validates() {
+        let km = KeyManager::generate();
+        let mut claims = serde_json::to_value(build_sts_claims(
+            &test_credentials(),
+            &test_claims_context(),
+        ))
+        .unwrap();
+        claims["nbf"] = serde_json::json!(i64::MAX);
+        let token = km.sign_claims(&claims).unwrap();
+        assert!(km.verify_claims::<serde_json::Value>(&token, AUD).is_ok());
     }
 
     #[test]
