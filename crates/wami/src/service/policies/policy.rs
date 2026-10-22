@@ -2,7 +2,9 @@
 //!
 //! Orchestrates policy management operations.
 
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
+use crate::service::auth::authorizer::{
+    guard, guard_by_id, guard_tenant, iam_arn, Authorizer, Found,
+};
 use crate::store::traits::PolicyStore;
 use crate::wami::policies::policy::{
     builder as policy_builder, CreatePolicyRequest, ListPoliciesRequest, Policy,
@@ -11,6 +13,7 @@ use crate::wami::policies::policy::{
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
+use wami_core::arn::ScopedName;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
 
@@ -41,33 +44,20 @@ impl<S: PolicyStore> PolicyService<S> {
         }
     }
 
-    /// Internal: check authorization if an authorizer is set.
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     /// Create a new policy
     pub async fn create_policy(
         &self,
         context: &WamiContext,
         request: CreatePolicyRequest,
     ) -> Result<Policy> {
-        // Authorization guard
-        self.guard(
+        // Judged in the tenant the request names, never the caller's.
+        let target = ScopedName::new(request.tenant.clone(), request.policy_name.clone());
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreatePolicy,
             "policy",
-            &request.policy_name,
+            &target,
         )
         .await?;
 
@@ -84,6 +74,7 @@ impl<S: PolicyStore> PolicyService<S> {
             request.path,
             request.description,
             request.tags,
+            &request.tenant,
             context,
         )?;
 
@@ -97,9 +88,37 @@ impl<S: PolicyStore> PolicyService<S> {
         context: &WamiContext,
         policy_arn: &str,
     ) -> Result<Option<Policy>> {
-        self.guard(context, WamiAction::IamReadPolicy, "policy", policy_arn)
-            .await?;
-        self.read_store().await.get_policy(policy_arn).await
+        self.read_judged(context, WamiAction::IamReadPolicy, policy_arn)
+            .await
+    }
+
+    /// Read the policy stored under `policy_arn`, then judge `action` on it in
+    /// ITS tenant — the one its `wami_arn` records. The ARN names no tenant
+    /// (wami 011), so the policy is read before it can be judged; an absent
+    /// ARN and a denied one are one refusal (A1). The resource stays
+    /// `policy/<the ARN>` as it was (wami 007 decides its id).
+    async fn read_judged(
+        &self,
+        context: &WamiContext,
+        action: WamiAction,
+        policy_arn: &str,
+    ) -> Result<Option<Policy>> {
+        let policy = self.read_store().await.get_policy(policy_arn).await?;
+        let stored = policy.as_ref().map(|p| Found {
+            instance: p.wami_arn.wami_instance_id.clone(),
+            owner: iam_arn(context, &p.wami_arn.tenant_path, "policy", policy_arn),
+            itself: None,
+        });
+        guard_by_id(
+            self.authz.as_ref(),
+            context,
+            action,
+            "policy",
+            policy_arn,
+            stored,
+        )
+        .await?;
+        Ok(policy)
     }
 
     /// Update a policy
@@ -108,20 +127,8 @@ impl<S: PolicyStore> PolicyService<S> {
         context: &WamiContext,
         request: UpdatePolicyRequest,
     ) -> Result<Policy> {
-        self.guard(
-            context,
-            WamiAction::IamCreatePolicy,
-            "policy",
-            &request.policy_arn,
-        )
-        .await?;
-
-        // Get existing policy
         let policy = self
-            .store
-            .read()
-            .await
-            .get_policy(&request.policy_arn)
+            .read_judged(context, WamiAction::IamCreatePolicy, &request.policy_arn)
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
                 resource: format!("Policy: {}", request.policy_arn),
@@ -137,7 +144,7 @@ impl<S: PolicyStore> PolicyService<S> {
 
     /// Delete a policy
     pub async fn delete_policy(&self, context: &WamiContext, policy_arn: &str) -> Result<()> {
-        self.guard(context, WamiAction::IamDeletePolicy, "policy", policy_arn)
+        self.read_judged(context, WamiAction::IamDeletePolicy, policy_arn)
             .await?;
         self.write_store().await.delete_policy(policy_arn).await
     }
@@ -148,12 +155,22 @@ impl<S: PolicyStore> PolicyService<S> {
         context: &WamiContext,
         request: ListPoliciesRequest,
     ) -> Result<(Vec<Policy>, bool, Option<String>)> {
-        self.guard(context, WamiAction::IamReadPolicy, "policy", "*")
-            .await?;
+        guard_tenant(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamReadPolicy,
+            "policy",
+            &request.tenant,
+        )
+        .await?;
         self.store
             .read()
             .await
-            .list_policies(request.scope.as_deref(), request.pagination.as_ref())
+            .list_policies(
+                &request.tenant,
+                request.scope.as_deref(),
+                request.pagination.as_ref(),
+            )
             .await
     }
 }
@@ -164,6 +181,11 @@ mod tests {
     use crate::service::auth::decision::{Decision, DenyReason};
     use crate::store::memory::InMemoryWamiStore;
     use wami_core::arn::{TenantPath, WamiArn};
+
+    /// The tenant every test of this module works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
 
     fn setup_service() -> PolicyService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
@@ -190,6 +212,7 @@ mod tests {
 
         let policy_doc = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":"*"}]}"#;
         let request = CreatePolicyRequest {
+            tenant: tenant(),
             policy_name: "S3FullAccess".to_string(),
             policy_document: policy_doc.to_string(),
             path: Some("/service/".to_string()),
@@ -218,6 +241,7 @@ mod tests {
         // Create policy
         let policy_doc = r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"ec2:*","Resource":"*"}]}"#;
         let create_request = CreatePolicyRequest {
+            tenant: tenant(),
             policy_name: "EC2FullAccess".to_string(),
             policy_document: policy_doc.to_string(),
             path: Some("/".to_string()),
@@ -250,6 +274,7 @@ mod tests {
 
         let policy_doc = r#"{"Version":"2012-10-17","Statement":[]}"#;
         let request = CreatePolicyRequest {
+            tenant: tenant(),
             policy_name: "TempPolicy".to_string(),
             policy_document: policy_doc.to_string(),
             path: None,
@@ -273,6 +298,7 @@ mod tests {
         for i in 0..3 {
             let policy_doc = r#"{"Version":"2012-10-17","Statement":[]}"#;
             let request = CreatePolicyRequest {
+                tenant: tenant(),
                 policy_name: format!("Policy{}", i),
                 policy_document: policy_doc.to_string(),
                 path: Some("/test/".to_string()),
@@ -283,6 +309,7 @@ mod tests {
         }
 
         let list_request = ListPoliciesRequest {
+            tenant: tenant(),
             scope: None,
             only_attached: None,
             path_prefix: Some("/test/".to_string()),
@@ -339,6 +366,7 @@ mod tests {
         let context = test_context();
 
         let request = ListPoliciesRequest {
+            tenant: tenant(),
             scope: None,
             only_attached: None,
             path_prefix: Some("/nonexistent/".to_string()),
@@ -364,6 +392,7 @@ mod tests {
             ("Policy3", "/admin/"),
         ] {
             let request = CreatePolicyRequest {
+                tenant: tenant(),
                 policy_name: name.to_string(),
                 policy_document: policy_doc.clone(),
                 path: Some(path.to_string()),
@@ -376,6 +405,7 @@ mod tests {
         // Note: list_policies service method doesn't currently filter by path_prefix
         // It only uses scope and pagination. This test verifies all policies are returned.
         let request = ListPoliciesRequest {
+            tenant: tenant(),
             scope: None,
             only_attached: None,
             path_prefix: Some("/admin/".to_string()),
@@ -413,6 +443,7 @@ mod tests {
         let context = test_context();
 
         let request = CreatePolicyRequest {
+            tenant: tenant(),
             policy_name: "TestPolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             path: None,
@@ -483,6 +514,7 @@ mod tests {
         let context = test_context();
 
         let request = ListPoliciesRequest {
+            tenant: tenant(),
             scope: None,
             only_attached: None,
             path_prefix: None,
@@ -515,6 +547,7 @@ mod tests {
                 .create_policy(
                     &context,
                     CreatePolicyRequest {
+                        tenant: tenant(),
                         policy_name: "P".to_string(),
                         policy_document: document.to_string(),
                         path: None,

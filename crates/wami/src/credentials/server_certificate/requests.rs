@@ -1,5 +1,6 @@
 //! Server Certificate Request and Response Types
 
+use crate::arn::{ScopedName, TenantPath};
 use serde::{Deserialize, Serialize};
 
 use super::model::*;
@@ -7,9 +8,10 @@ use super::model::*;
 /// Request to upload a server certificate
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UploadServerCertificateRequest {
-    /// Name for the server certificate
-    #[serde(rename = "ServerCertificateName")]
-    pub server_certificate_name: String,
+    /// The certificate — its tenant and its name: two tenants may each hold
+    /// a `web` (wami 005)
+    #[serde(rename = "ServerCertificate")]
+    pub server_certificate: ScopedName,
 
     /// Contents of the public key certificate in PEM-encoded format
     #[serde(rename = "CertificateBody")]
@@ -47,9 +49,10 @@ pub struct UploadServerCertificateResponse {
 /// Request to get a server certificate
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GetServerCertificateRequest {
-    /// Name of the server certificate to retrieve
-    #[serde(rename = "ServerCertificateName")]
-    pub server_certificate_name: String,
+    /// The certificate — its tenant and its name: two tenants may each hold
+    /// a `web` (wami 005)
+    #[serde(rename = "ServerCertificate")]
+    pub server_certificate: ScopedName,
 }
 
 /// Response from getting a server certificate
@@ -63,6 +66,10 @@ pub struct GetServerCertificateResponse {
 /// Request to list server certificates
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListServerCertificatesRequest {
+    /// The tenant to list — exactly this one: never its children, never the
+    /// whole store (wami 005).
+    pub tenant: TenantPath,
+
     /// Path prefix to filter certificates
     #[serde(rename = "PathPrefix", skip_serializing_if = "Option::is_none")]
     pub path_prefix: Option<String>,
@@ -95,17 +102,19 @@ pub struct ListServerCertificatesResponse {
 /// Request to delete a server certificate
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeleteServerCertificateRequest {
-    /// Name of the server certificate to delete
-    #[serde(rename = "ServerCertificateName")]
-    pub server_certificate_name: String,
+    /// The certificate — its tenant and its name: two tenants may each hold
+    /// a `web` (wami 005)
+    #[serde(rename = "ServerCertificate")]
+    pub server_certificate: ScopedName,
 }
 
 /// Request to update a server certificate
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateServerCertificateRequest {
-    /// Current name of the server certificate
-    #[serde(rename = "ServerCertificateName")]
-    pub server_certificate_name: String,
+    /// The certificate — its tenant and its name: two tenants may each hold
+    /// a `web` (wami 005)
+    #[serde(rename = "ServerCertificate")]
+    pub server_certificate: ScopedName,
 
     /// New name for the server certificate
     #[serde(

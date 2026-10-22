@@ -5,20 +5,24 @@
 use crate::credentials::mfa_device::{
     builder as mfa_builder, EnableMfaDeviceRequest, ListMfaDevicesRequest, MfaDevice,
 };
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
-use crate::store::traits::MfaDeviceStore;
+use crate::service::auth::authorizer::{credential_found, guard, guard_by_id, Authorizer};
+use crate::store::traits::{MfaDeviceStore, UserStore};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
 
+/// What the MFA device service reads: the devices, and their owners.
+pub trait MfaDeviceServiceStore: MfaDeviceStore + UserStore {}
+impl<T> MfaDeviceServiceStore for T where T: MfaDeviceStore + UserStore {}
+
 /// Service for managing IAM MFA devices
 ///
 /// Provides high-level operations for MFA device management.
 /// Optionally holds an [`Authorizer`] for authorization guards on every method.
 #[wami_macros::service(
-    store_trait = "crate::store::traits::MfaDeviceStore",
+    store_trait = "crate::service::credentials::mfa_device::MfaDeviceServiceStore",
     generate_new = false
 )]
 pub struct MfaDeviceService<S> {
@@ -26,7 +30,7 @@ pub struct MfaDeviceService<S> {
     authz: Option<Arc<dyn Authorizer>>,
 }
 
-impl<S: MfaDeviceStore> MfaDeviceService<S> {
+impl<S: MfaDeviceServiceStore> MfaDeviceService<S> {
     /// Create a new MfaDeviceService without authorization guards (backward compatible).
     pub fn new(store: Arc<RwLock<S>>) -> Self {
         Self { store, authz: None }
@@ -40,39 +44,22 @@ impl<S: MfaDeviceStore> MfaDeviceService<S> {
         }
     }
 
-    /// Internal: check authorization if an authorizer is set.
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     /// Create and enable a new MFA device
     pub async fn create_mfa_device(
         &self,
         context: &WamiContext,
         request: EnableMfaDeviceRequest,
     ) -> Result<MfaDevice> {
-        // Authorization guard
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            &request.user,
         )
         .await?;
-
-        // Use wami builder to create MFA device
-        let mfa_device =
-            mfa_builder::build_mfa_device(request.user_name, request.serial_number, context)?;
+        let owner = super::read_owner(&*self.read_store().await, context, &request.user).await?;
+        let mfa_device = mfa_builder::build_mfa_device(&owner, request.serial_number, context)?;
 
         // Store it
         self.write_store().await.create_mfa_device(mfa_device).await
@@ -84,14 +71,39 @@ impl<S: MfaDeviceStore> MfaDeviceService<S> {
         context: &WamiContext,
         serial_number: &str,
     ) -> Result<Option<MfaDevice>> {
-        self.guard(
+        self.read_judged(context, serial_number).await
+    }
+
+    /// Read the device stored under `serial_number`, then judge its OWNER;
+    /// an absent serial and a denied owner are one refusal (A1).
+    async fn read_judged(
+        &self,
+        context: &WamiContext,
+        serial_number: &str,
+    ) -> Result<Option<MfaDevice>> {
+        let device = self
+            .read_store()
+            .await
+            .get_mfa_device(serial_number)
+            .await?;
+        let owner = device.as_ref().map(|d| {
+            credential_found(
+                context,
+                &d.owner,
+                serial_number,
+                &d.wami_arn.wami_instance_id,
+            )
+        });
+        guard_by_id(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageCredentials,
-            "credential",
+            "MFA device",
             serial_number,
+            owner,
         )
         .await?;
-        self.read_store().await.get_mfa_device(serial_number).await
+        Ok(device)
     }
 
     /// Delete an MFA device
@@ -100,13 +112,7 @@ impl<S: MfaDeviceStore> MfaDeviceService<S> {
         context: &WamiContext,
         serial_number: &str,
     ) -> Result<()> {
-        self.guard(
-            context,
-            WamiAction::IamManageCredentials,
-            "credential",
-            serial_number,
-        )
-        .await?;
+        self.read_judged(context, serial_number).await?;
         self.write_store()
             .await
             .delete_mfa_device(serial_number)
@@ -119,16 +125,17 @@ impl<S: MfaDeviceStore> MfaDeviceService<S> {
         context: &WamiContext,
         request: ListMfaDevicesRequest,
     ) -> Result<Vec<MfaDevice>> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            &request.user,
         )
         .await?;
         self.read_store()
             .await
-            .list_mfa_devices(&request.user_name)
+            .list_mfa_devices(&request.user)
             .await
     }
 }
@@ -140,9 +147,28 @@ mod tests {
     use crate::store::memory::InMemoryWamiStore;
     use wami_core::arn::{TenantPath, WamiArn};
 
-    fn setup_service() -> MfaDeviceService<InMemoryWamiStore> {
-        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        MfaDeviceService::new(store)
+    /// The tenant every test here works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
+
+    /// A service over a store holding the users the tests mint credentials
+    /// for: a credential is only ever minted for a user that is there.
+    async fn setup_service() -> MfaDeviceService<InMemoryWamiStore> {
+        use crate::store::traits::UserStore;
+        let mut seeded = InMemoryWamiStore::default();
+        for name in ["alice", "bob", "charlie", "david"] {
+            let user =
+                crate::wami::identity::user::builder::build_user(&key(name), None, &test_context())
+                    .unwrap();
+            seeded.create_user(user).await.unwrap();
+        }
+        MfaDeviceService::new(Arc::new(RwLock::new(seeded)))
     }
 
     fn test_context() -> WamiContext {
@@ -160,34 +186,34 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_and_get_mfa_device() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         let request = EnableMfaDeviceRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             serial_number: "arn:aws:iam::123456789012:mfa/alice-device".to_string(),
             authentication_code_1: "123456".to_string(),
             authentication_code_2: "789012".to_string(),
         };
 
         let mfa_device = service.create_mfa_device(&context, request).await.unwrap();
-        assert_eq!(mfa_device.user_name, "alice");
+        assert_eq!(mfa_device.owner.name(), "alice");
 
         let retrieved = service
             .get_mfa_device(&context, &mfa_device.serial_number)
             .await
             .unwrap();
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().user_name, "alice");
+        assert_eq!(retrieved.unwrap().owner.name(), "alice");
     }
 
     #[tokio::test]
     async fn test_delete_mfa_device() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         let request = EnableMfaDeviceRequest {
-            user_name: "bob".to_string(),
+            user: key("bob"),
             serial_number: "arn:aws:iam::123456789012:mfa/bob-device".to_string(),
             authentication_code_1: "123456".to_string(),
             authentication_code_2: "789012".to_string(),
@@ -208,13 +234,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_list_mfa_devices() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         // Create multiple MFA devices for same user
         for i in 0..3 {
             let request = EnableMfaDeviceRequest {
-                user_name: "charlie".to_string(),
+                user: key("charlie"),
                 serial_number: format!("arn:aws:iam::123456789012:mfa/charlie-device-{}", i),
                 authentication_code_1: "123456".to_string(),
                 authentication_code_2: "789012".to_string(),
@@ -223,7 +249,7 @@ mod tests {
         }
 
         let list_request = ListMfaDevicesRequest {
-            user_name: "charlie".to_string(),
+            user: key("charlie"),
         };
         let devices = service
             .list_mfa_devices(&context, list_request)
@@ -258,7 +284,7 @@ mod tests {
         let context = test_context();
 
         let request = EnableMfaDeviceRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             serial_number: "arn:aws:iam::123456789012:mfa/alice-device".to_string(),
             authentication_code_1: "123456".to_string(),
             authentication_code_2: "789012".to_string(),
@@ -303,9 +329,7 @@ mod tests {
         let service = MfaDeviceService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
 
-        let request = ListMfaDevicesRequest {
-            user_name: "alice".to_string(),
-        };
+        let request = ListMfaDevicesRequest { user: key("alice") };
 
         let result = service.list_mfa_devices(&context, request).await;
         assert!(matches!(

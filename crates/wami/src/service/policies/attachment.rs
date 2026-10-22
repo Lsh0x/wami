@@ -2,12 +2,13 @@
 //!
 //! Service for attaching and detaching managed policies to/from users, groups, and roles.
 
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
+use crate::service::auth::authorizer::{guard, in_instance, Authorizer};
 use crate::store::traits::{GroupStore, PolicyStore, RoleStore, UserStore};
 use crate::wami::policies::attachment::*;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
+use wami_core::arn::ScopedName;
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
 
@@ -43,21 +44,6 @@ where
         }
     }
 
-    /// Internal: check authorization if an authorizer is set.
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     // User policy attachment methods
 
     /// Attach a managed policy to a user
@@ -66,11 +52,12 @@ where
         context: &WamiContext,
         request: AttachUserPolicyRequest,
     ) -> Result<AttachUserPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamAttachPolicy,
             "user",
-            &request.user_name,
+            &request.user,
         )
         .await?;
 
@@ -78,19 +65,20 @@ where
 
         // Verify user exists
         store
-            .get_user(&request.user_name)
+            .get_user(&request.user)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("User: {}", request.user_name),
+                resource: format!("User: {}", request.user),
             })?;
 
         // Verify policy exists
-        let policy = store
-            .get_policy(&request.policy_arn)
-            .await?
-            .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Policy: {}", request.policy_arn),
-            })?;
+        let policy = attachable(
+            context,
+            store.get_policy(&request.policy_arn).await?,
+            &request.policy_arn,
+            &request.user,
+        )?;
 
         // Verify policy is attachable
         if !policy.is_attachable {
@@ -101,7 +89,7 @@ where
 
         // Attach the policy
         store
-            .attach_user_policy(&request.user_name, &request.policy_arn)
+            .attach_user_policy(&request.user, &request.policy_arn)
             .await?;
 
         // Update policy attachment count
@@ -112,7 +100,7 @@ where
         Ok(AttachUserPolicyResponse {
             message: format!(
                 "Policy {} attached to user {}",
-                request.policy_arn, request.user_name
+                request.policy_arn, request.user
             ),
         })
     }
@@ -123,11 +111,12 @@ where
         context: &WamiContext,
         request: DetachUserPolicyRequest,
     ) -> Result<DetachUserPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamDetachPolicy,
             "user",
-            &request.user_name,
+            &request.user,
         )
         .await?;
 
@@ -135,28 +124,26 @@ where
 
         // Verify user exists
         store
-            .get_user(&request.user_name)
+            .get_user(&request.user)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("User: {}", request.user_name),
+                resource: format!("User: {}", request.user),
             })?;
 
-        // Detach the policy
+        let held = store
+            .list_attached_user_policies(&request.user)
+            .await?
+            .contains(&request.policy_arn);
         store
-            .detach_user_policy(&request.user_name, &request.policy_arn)
+            .detach_user_policy(&request.user, &request.policy_arn)
             .await?;
-
-        // Update policy attachment count
-        if let Some(policy) = store.get_policy(&request.policy_arn).await? {
-            let mut updated_policy = policy.clone();
-            updated_policy.attachment_count = updated_policy.attachment_count.saturating_sub(1);
-            store.update_policy(updated_policy).await?;
-        }
+        release(&mut *store, context, held, &request.policy_arn).await?;
 
         Ok(DetachUserPolicyResponse {
             message: format!(
                 "Policy {} detached from user {}",
-                request.policy_arn, request.user_name
+                request.policy_arn, request.user
             ),
         })
     }
@@ -167,11 +154,12 @@ where
         context: &WamiContext,
         request: ListAttachedUserPoliciesRequest,
     ) -> Result<ListAttachedUserPoliciesResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "user",
-            &request.user_name,
+            &request.user,
         )
         .await?;
 
@@ -179,16 +167,15 @@ where
 
         // Verify user exists
         store
-            .get_user(&request.user_name)
+            .get_user(&request.user)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("User: {}", request.user_name),
+                resource: format!("User: {}", request.user),
             })?;
 
         // Get attached policy ARNs
-        let policy_arns = store
-            .list_attached_user_policies(&request.user_name)
-            .await?;
+        let policy_arns = store.list_attached_user_policies(&request.user).await?;
 
         // Convert ARNs to AttachedPolicy objects
         let mut attached_policies = Vec::new();
@@ -212,11 +199,12 @@ where
         context: &WamiContext,
         request: AttachGroupPolicyRequest,
     ) -> Result<AttachGroupPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamAttachPolicy,
             "group",
-            &request.group_name,
+            &request.group,
         )
         .await?;
 
@@ -224,19 +212,20 @@ where
 
         // Verify group exists
         store
-            .get_group(&request.group_name)
+            .get_group(&request.group)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Group: {}", request.group_name),
+                resource: format!("Group: {}", request.group),
             })?;
 
         // Verify policy exists
-        let policy = store
-            .get_policy(&request.policy_arn)
-            .await?
-            .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Policy: {}", request.policy_arn),
-            })?;
+        let policy = attachable(
+            context,
+            store.get_policy(&request.policy_arn).await?,
+            &request.policy_arn,
+            &request.group,
+        )?;
 
         // Verify policy is attachable
         if !policy.is_attachable {
@@ -247,7 +236,7 @@ where
 
         // Attach the policy
         store
-            .attach_group_policy(&request.group_name, &request.policy_arn)
+            .attach_group_policy(&request.group, &request.policy_arn)
             .await?;
 
         // Update policy attachment count
@@ -258,7 +247,7 @@ where
         Ok(AttachGroupPolicyResponse {
             message: format!(
                 "Policy {} attached to group {}",
-                request.policy_arn, request.group_name
+                request.policy_arn, request.group
             ),
         })
     }
@@ -269,11 +258,12 @@ where
         context: &WamiContext,
         request: DetachGroupPolicyRequest,
     ) -> Result<DetachGroupPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamDetachPolicy,
             "group",
-            &request.group_name,
+            &request.group,
         )
         .await?;
 
@@ -281,28 +271,26 @@ where
 
         // Verify group exists
         store
-            .get_group(&request.group_name)
+            .get_group(&request.group)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Group: {}", request.group_name),
+                resource: format!("Group: {}", request.group),
             })?;
 
-        // Detach the policy
+        let held = store
+            .list_attached_group_policies(&request.group)
+            .await?
+            .contains(&request.policy_arn);
         store
-            .detach_group_policy(&request.group_name, &request.policy_arn)
+            .detach_group_policy(&request.group, &request.policy_arn)
             .await?;
-
-        // Update policy attachment count
-        if let Some(policy) = store.get_policy(&request.policy_arn).await? {
-            let mut updated_policy = policy.clone();
-            updated_policy.attachment_count = updated_policy.attachment_count.saturating_sub(1);
-            store.update_policy(updated_policy).await?;
-        }
+        release(&mut *store, context, held, &request.policy_arn).await?;
 
         Ok(DetachGroupPolicyResponse {
             message: format!(
                 "Policy {} detached from group {}",
-                request.policy_arn, request.group_name
+                request.policy_arn, request.group
             ),
         })
     }
@@ -313,11 +301,12 @@ where
         context: &WamiContext,
         request: ListAttachedGroupPoliciesRequest,
     ) -> Result<ListAttachedGroupPoliciesResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "group",
-            &request.group_name,
+            &request.group,
         )
         .await?;
 
@@ -325,16 +314,15 @@ where
 
         // Verify group exists
         store
-            .get_group(&request.group_name)
+            .get_group(&request.group)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Group: {}", request.group_name),
+                resource: format!("Group: {}", request.group),
             })?;
 
         // Get attached policy ARNs
-        let policy_arns = store
-            .list_attached_group_policies(&request.group_name)
-            .await?;
+        let policy_arns = store.list_attached_group_policies(&request.group).await?;
 
         // Convert ARNs to AttachedPolicy objects
         let mut attached_policies = Vec::new();
@@ -358,11 +346,12 @@ where
         context: &WamiContext,
         request: AttachRolePolicyRequest,
     ) -> Result<AttachRolePolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamAttachPolicy,
             "role",
-            &request.role_name,
+            &request.role,
         )
         .await?;
 
@@ -370,19 +359,20 @@ where
 
         // Verify role exists
         store
-            .get_role(&request.role_name)
+            .get_role(&request.role)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Role: {}", request.role_name),
+                resource: format!("Role: {}", request.role),
             })?;
 
         // Verify policy exists
-        let policy = store
-            .get_policy(&request.policy_arn)
-            .await?
-            .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Policy: {}", request.policy_arn),
-            })?;
+        let policy = attachable(
+            context,
+            store.get_policy(&request.policy_arn).await?,
+            &request.policy_arn,
+            &request.role,
+        )?;
 
         // Verify policy is attachable
         if !policy.is_attachable {
@@ -393,7 +383,7 @@ where
 
         // Attach the policy
         store
-            .attach_role_policy(&request.role_name, &request.policy_arn)
+            .attach_role_policy(&request.role, &request.policy_arn)
             .await?;
 
         // Update policy attachment count
@@ -404,7 +394,7 @@ where
         Ok(AttachRolePolicyResponse {
             message: format!(
                 "Policy {} attached to role {}",
-                request.policy_arn, request.role_name
+                request.policy_arn, request.role
             ),
         })
     }
@@ -415,11 +405,12 @@ where
         context: &WamiContext,
         request: DetachRolePolicyRequest,
     ) -> Result<DetachRolePolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamDetachPolicy,
             "role",
-            &request.role_name,
+            &request.role,
         )
         .await?;
 
@@ -427,28 +418,26 @@ where
 
         // Verify role exists
         store
-            .get_role(&request.role_name)
+            .get_role(&request.role)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Role: {}", request.role_name),
+                resource: format!("Role: {}", request.role),
             })?;
 
-        // Detach the policy
+        let held = store
+            .list_attached_role_policies(&request.role)
+            .await?
+            .contains(&request.policy_arn);
         store
-            .detach_role_policy(&request.role_name, &request.policy_arn)
+            .detach_role_policy(&request.role, &request.policy_arn)
             .await?;
-
-        // Update policy attachment count
-        if let Some(policy) = store.get_policy(&request.policy_arn).await? {
-            let mut updated_policy = policy.clone();
-            updated_policy.attachment_count = updated_policy.attachment_count.saturating_sub(1);
-            store.update_policy(updated_policy).await?;
-        }
+        release(&mut *store, context, held, &request.policy_arn).await?;
 
         Ok(DetachRolePolicyResponse {
             message: format!(
                 "Policy {} detached from role {}",
-                request.policy_arn, request.role_name
+                request.policy_arn, request.role
             ),
         })
     }
@@ -459,11 +448,12 @@ where
         context: &WamiContext,
         request: ListAttachedRolePoliciesRequest,
     ) -> Result<ListAttachedRolePoliciesResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "role",
-            &request.role_name,
+            &request.role,
         )
         .await?;
 
@@ -471,16 +461,15 @@ where
 
         // Verify role exists
         store
-            .get_role(&request.role_name)
+            .get_role(&request.role)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Role: {}", request.role_name),
+                resource: format!("Role: {}", request.role),
             })?;
 
         // Get attached policy ARNs
-        let policy_arns = store
-            .list_attached_role_policies(&request.role_name)
-            .await?;
+        let policy_arns = store.list_attached_role_policies(&request.role).await?;
 
         // Convert ARNs to AttachedPolicy objects
         let mut attached_policies = Vec::new();
@@ -497,6 +486,64 @@ where
     }
 }
 
+/// The policy stored under `arn`, if it may be attached to — or be the
+/// boundary of — `principal`: a policy that is not stored, a policy of
+/// another tenant and a policy of another instance (round 3 M1: the key is
+/// the caller's ARN string, whose account field is an instance the caller
+/// writes, so the context's VERIFIED instance decides) are ONE refusal, naming the ARN the caller gave and no
+/// tenant, so the answer says nothing of what another tenant holds (wami 005,
+/// A7, review round 1 Δ6). The policy's tenant is the one its `wami_arn`
+/// records; its AWS-format ARN names none (wami 011).
+///
+/// # Errors
+///
+/// [`AmiError::ResourceNotFound`] for both.
+pub(crate) fn attachable(
+    context: &WamiContext,
+    policy: Option<crate::wami::policies::Policy>,
+    arn: &str,
+    principal: &ScopedName,
+) -> Result<crate::wami::policies::Policy> {
+    match policy {
+        Some(policy)
+            if in_instance(context, &policy.wami_arn)
+                && &policy.wami_arn.tenant_path == principal.tenant() =>
+        {
+            Ok(policy)
+        }
+        _ => Err(AmiError::ResourceNotFound {
+            resource: format!("Policy: {arn}"),
+        }),
+    }
+}
+
+/// Moves down the count of the policy under `arn` once `principal` no longer
+/// holds it — only when it `held` it, and only for a policy of the context's
+/// instance; any other is answered as an absent one and its count never
+/// moves (wami 005, round 3 M1). A detach of a policy the principal never
+/// held used to decrement all the same: repeated, it brought a still-attached
+/// policy's count to zero.
+///
+/// # Errors
+///
+/// The store's, on the read or the write.
+async fn release<S: PolicyStore + ?Sized>(
+    store: &mut S,
+    context: &WamiContext,
+    held: bool,
+    arn: &str,
+) -> Result<()> {
+    if !held {
+        return Ok(());
+    }
+    let found = store.get_policy(arn).await?;
+    if let Some(mut policy) = found.filter(|p| in_instance(context, &p.wami_arn)) {
+        policy.attachment_count = policy.attachment_count.saturating_sub(1);
+        store.update_policy(policy).await?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -509,6 +556,16 @@ mod tests {
     use std::sync::Arc;
     use wami_core::arn::{TenantPath, WamiArn};
     use wami_core::context::WamiContext;
+
+    /// The tenant every test of this module works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(0)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
 
     async fn create_test_context() -> WamiContext {
         WamiContext::builder()
@@ -528,6 +585,369 @@ mod tests {
             .unwrap()
     }
 
+    /// A context of another instance, to write its records with.
+    fn elsewhere() -> WamiContext {
+        WamiContext::builder()
+            .caller_arn(
+                WamiArn::builder()
+                    .service(crate::arn::Service::Iam)
+                    .tenant_path(TenantPath::single(0))
+                    .wami_instance("elsewhere")
+                    .resource("user", "admin")
+                    .build()
+                    .unwrap(),
+            )
+            .build()
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn a_principal_of_another_instance_is_absent_to_every_attachment_verb() {
+        // One store, one instance: a record of another, read by its key, is
+        // answered as an absent one (wami 005, R8; review round 2 F3).
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = AttachmentService::new(store.clone());
+        let context = create_test_context().await;
+        let there = elsewhere();
+        let policy = build_policy(
+            "P".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+            None,
+            None,
+            None,
+            &tenant(),
+            &context,
+        )
+        .unwrap();
+        let arn = {
+            let mut s = store.write().await;
+            s.create_user(build_user(&key("alice"), None, &there).unwrap())
+                .await
+                .unwrap();
+            s.create_group(build_group(&key("devs"), None, &there).unwrap())
+                .await
+                .unwrap();
+            let role = build_role(&key("ops"), "{}".to_string(), None, None, None, &there);
+            s.create_role(role.unwrap()).await.unwrap();
+            s.create_policy(policy).await.unwrap().arn
+        };
+        let absent = |what: &str, got: std::result::Result<String, AmiError>| {
+            assert!(
+                matches!(&got, Err(AmiError::ResourceNotFound { .. })),
+                "{what}: {got:?}"
+            );
+        };
+        let (user, group, role) = (key("alice"), key("devs"), key("ops"));
+        let p = || arn.clone();
+        absent(
+            "attach user",
+            service
+                .attach_user_policy(
+                    &context,
+                    AttachUserPolicyRequest {
+                        user: user.clone(),
+                        policy_arn: p(),
+                    },
+                )
+                .await
+                .map(|r| r.message),
+        );
+        absent(
+            "detach user",
+            service
+                .detach_user_policy(
+                    &context,
+                    DetachUserPolicyRequest {
+                        user: user.clone(),
+                        policy_arn: p(),
+                    },
+                )
+                .await
+                .map(|r| r.message),
+        );
+        absent(
+            "list user",
+            service
+                .list_attached_user_policies(&context, ListAttachedUserPoliciesRequest { user })
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "attach group",
+            service
+                .attach_group_policy(
+                    &context,
+                    AttachGroupPolicyRequest {
+                        group: group.clone(),
+                        policy_arn: p(),
+                    },
+                )
+                .await
+                .map(|r| r.message),
+        );
+        absent(
+            "detach group",
+            service
+                .detach_group_policy(
+                    &context,
+                    DetachGroupPolicyRequest {
+                        group: group.clone(),
+                        policy_arn: p(),
+                    },
+                )
+                .await
+                .map(|r| r.message),
+        );
+        absent(
+            "list group",
+            service
+                .list_attached_group_policies(&context, ListAttachedGroupPoliciesRequest { group })
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "attach role",
+            service
+                .attach_role_policy(
+                    &context,
+                    AttachRolePolicyRequest {
+                        role: role.clone(),
+                        policy_arn: p(),
+                    },
+                )
+                .await
+                .map(|r| r.message),
+        );
+        absent(
+            "detach role",
+            service
+                .detach_role_policy(
+                    &context,
+                    DetachRolePolicyRequest {
+                        role: role.clone(),
+                        policy_arn: p(),
+                    },
+                )
+                .await
+                .map(|r| r.message),
+        );
+        absent(
+            "list role",
+            service
+                .list_attached_role_policies(&context, ListAttachedRolePoliciesRequest { role })
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+    }
+
+    /// Another instance's policy `P`, stored with `count` attachments, and
+    /// the caller's own alice, devs and ops — every one of them holding it
+    /// in its attached list, as a store written before this check would.
+    async fn a_foreign_policy_held_by_own_principals(
+        store: &Arc<RwLock<InMemoryWamiStore>>,
+        context: &WamiContext,
+        count: i32,
+    ) -> String {
+        let mut policy = build_policy(
+            "P".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+            None,
+            None,
+            None,
+            &tenant(),
+            &elsewhere(),
+        )
+        .unwrap();
+        policy.attachment_count = count;
+        let mut s = store.write().await;
+        let arn = s.create_policy(policy).await.unwrap().arn;
+        s.create_user(build_user(&key("alice"), None, context).unwrap())
+            .await
+            .unwrap();
+        s.create_group(build_group(&key("devs"), None, context).unwrap())
+            .await
+            .unwrap();
+        let role = build_role(&key("ops"), "{}".to_string(), None, None, None, context);
+        s.create_role(role.unwrap()).await.unwrap();
+        arn
+    }
+
+    async fn count_of(store: &Arc<RwLock<InMemoryWamiStore>>, arn: &str) -> i32 {
+        store
+            .read()
+            .await
+            .get_policy(arn)
+            .await
+            .unwrap()
+            .unwrap()
+            .attachment_count
+    }
+
+    #[tokio::test]
+    async fn a_policy_of_another_instance_is_absent_to_every_attach() {
+        // The policy key is the caller's ARN string, whose account field is
+        // an instance the caller writes: found by key, another instance's
+        // policy was attached and its count moved (round 3 M1).
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = AttachmentService::new(store.clone());
+        let context = create_test_context().await;
+        let arn = a_foreign_policy_held_by_own_principals(&store, &context, 0).await;
+        let absent = |what: &str, got: std::result::Result<String, AmiError>| {
+            assert!(
+                matches!(&got, Err(AmiError::ResourceNotFound { .. })),
+                "{what}: {got:?}"
+            );
+        };
+        let (user, group, role) = (key("alice"), key("devs"), key("ops"));
+        let policy_arn = arn.clone();
+        absent(
+            "attach user",
+            service
+                .attach_user_policy(&context, AttachUserPolicyRequest { user, policy_arn })
+                .await
+                .map(|r| r.message),
+        );
+        let policy_arn = arn.clone();
+        absent(
+            "attach group",
+            service
+                .attach_group_policy(&context, AttachGroupPolicyRequest { group, policy_arn })
+                .await
+                .map(|r| r.message),
+        );
+        let policy_arn = arn.clone();
+        absent(
+            "attach role",
+            service
+                .attach_role_policy(&context, AttachRolePolicyRequest { role, policy_arn })
+                .await
+                .map(|r| r.message),
+        );
+        assert_eq!(count_of(&store, &arn).await, 0, "its count moved");
+    }
+
+    #[tokio::test]
+    async fn a_policy_of_another_instance_is_absent_to_every_detach() {
+        // The detach answers as for an absent policy, and the foreign
+        // policy's count — read by key — never moves (round 3 M1).
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = AttachmentService::new(store.clone());
+        let context = create_test_context().await;
+        let arn = a_foreign_policy_held_by_own_principals(&store, &context, 3).await;
+        let never = "arn:aws:iam::123456789012:policy/never-stored".to_string();
+        {
+            let mut s = store.write().await;
+            for p in [&arn, &never] {
+                s.attach_user_policy(&key("alice"), p).await.unwrap();
+                s.attach_group_policy(&key("devs"), p).await.unwrap();
+                s.attach_role_policy(&key("ops"), p).await.unwrap();
+            }
+        }
+        for policy_arn in [arn.clone(), never.clone()] {
+            let (user, group, role) = (key("alice"), key("devs"), key("ops"));
+            let p = policy_arn.clone();
+            let answers = [
+                service
+                    .detach_user_policy(
+                        &context,
+                        DetachUserPolicyRequest {
+                            user,
+                            policy_arn: p,
+                        },
+                    )
+                    .await
+                    .is_ok(),
+                service
+                    .detach_group_policy(
+                        &context,
+                        DetachGroupPolicyRequest {
+                            group,
+                            policy_arn: policy_arn.clone(),
+                        },
+                    )
+                    .await
+                    .is_ok(),
+                service
+                    .detach_role_policy(
+                        &context,
+                        DetachRolePolicyRequest {
+                            role,
+                            policy_arn: policy_arn.clone(),
+                        },
+                    )
+                    .await
+                    .is_ok(),
+            ];
+            assert_eq!(answers, [true; 3], "{policy_arn}: the absent answer");
+        }
+        assert_eq!(count_of(&store, &arn).await, 3, "its count moved");
+    }
+
+    #[tokio::test]
+    async fn no_detach_sequence_brings_an_attached_policys_count_to_zero() {
+        // A detach from a principal that never held the policy decremented
+        // its count all the same: repeated, it reached zero while the policy
+        // was still attached elsewhere (round 3, deep #14350).
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = AttachmentService::new(store.clone());
+        let policies = crate::service::policies::policy::PolicyService::new(store.clone());
+        let context = create_test_context().await;
+        let policy = build_policy(
+            "P".to_string(),
+            r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+            None,
+            None,
+            None,
+            &tenant(),
+            &context,
+        )
+        .unwrap();
+        let arn = {
+            let mut s = store.write().await;
+            for name in ["alice", "bob"] {
+                s.create_user(build_user(&key(name), None, &context).unwrap())
+                    .await
+                    .unwrap();
+            }
+            s.create_group(build_group(&key("devs"), None, &context).unwrap())
+                .await
+                .unwrap();
+            let role = build_role(&key("ops"), "{}".to_string(), None, None, None, &context);
+            s.create_role(role.unwrap()).await.unwrap();
+            s.create_policy(policy).await.unwrap().arn
+        };
+        service
+            .attach_user_policy(
+                &context,
+                AttachUserPolicyRequest {
+                    user: key("alice"),
+                    policy_arn: arn.clone(),
+                },
+            )
+            .await
+            .unwrap();
+        for _ in 0..3 {
+            let policy_arn = arn.clone();
+            let user = key("bob");
+            let _ = service
+                .detach_user_policy(&context, DetachUserPolicyRequest { user, policy_arn })
+                .await;
+            let (group, policy_arn) = (key("devs"), arn.clone());
+            let _ = service
+                .detach_group_policy(&context, DetachGroupPolicyRequest { group, policy_arn })
+                .await;
+            let (role, policy_arn) = (key("ops"), arn.clone());
+            let _ = service
+                .detach_role_policy(&context, DetachRolePolicyRequest { role, policy_arn })
+                .await;
+        }
+        assert_eq!(count_of(&store, &arn).await, 1, "alice still holds it");
+        assert!(
+            policies.delete_policy(&context, &arn).await.is_err(),
+            "deleted while attached"
+        );
+    }
+
     #[tokio::test]
     async fn test_attach_user_policy() {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
@@ -535,7 +955,7 @@ mod tests {
         let context = create_test_context().await;
 
         // Create user and policy
-        let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+        let user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
         let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let policy = build_policy(
@@ -544,6 +964,7 @@ mod tests {
             None,
             None,
             None,
+            &tenant(),
             &context,
         )
         .unwrap();
@@ -551,16 +972,14 @@ mod tests {
 
         // Attach policy to user
         let request = AttachUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_arn: created_policy.arn.clone(),
         };
         let response = service.attach_user_policy(&context, request).await.unwrap();
         assert!(response.message.contains("attached"));
 
         // List attached policies
-        let list_request = ListAttachedUserPoliciesRequest {
-            user_name: "alice".to_string(),
-        };
+        let list_request = ListAttachedUserPoliciesRequest { user: key("alice") };
         let list_response = service
             .list_attached_user_policies(&context, list_request)
             .await
@@ -579,7 +998,7 @@ mod tests {
         let context = create_test_context().await;
 
         // Create user and policy
-        let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+        let user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
         let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let policy = build_policy(
@@ -588,6 +1007,7 @@ mod tests {
             None,
             None,
             None,
+            &tenant(),
             &context,
         )
         .unwrap();
@@ -595,7 +1015,7 @@ mod tests {
 
         // Attach policy
         let attach_request = AttachUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_arn: created_policy.arn.clone(),
         };
         service
@@ -605,7 +1025,7 @@ mod tests {
 
         // Detach policy
         let detach_request = DetachUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_arn: created_policy.arn.clone(),
         };
         let response = service
@@ -615,9 +1035,7 @@ mod tests {
         assert!(response.message.contains("detached"));
 
         // Verify detached
-        let list_request = ListAttachedUserPoliciesRequest {
-            user_name: "alice".to_string(),
-        };
+        let list_request = ListAttachedUserPoliciesRequest { user: key("alice") };
         let list_response = service
             .list_attached_user_policies(&context, list_request)
             .await
@@ -632,7 +1050,7 @@ mod tests {
         let context = create_test_context().await;
 
         // Create group and policy
-        let group = build_group("developers".to_string(), Some("/".to_string()), &context).unwrap();
+        let group = build_group(&key("developers"), Some("/".to_string()), &context).unwrap();
         let _created_group = store.write().await.create_group(group).await.unwrap();
 
         let policy = build_policy(
@@ -641,6 +1059,7 @@ mod tests {
             None,
             None,
             None,
+            &tenant(),
             &context,
         )
         .unwrap();
@@ -648,7 +1067,7 @@ mod tests {
 
         // Attach policy to group
         let request = AttachGroupPolicyRequest {
-            group_name: "developers".to_string(),
+            group: key("developers"),
             policy_arn: created_policy.arn.clone(),
         };
         let response = service
@@ -666,7 +1085,7 @@ mod tests {
 
         // Create role and policy
         let role = build_role(
-            "AdminRole".to_string(),
+            &key("AdminRole"),
             r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             Some("/".to_string()),
             None,
@@ -682,6 +1101,7 @@ mod tests {
             None,
             None,
             None,
+            &tenant(),
             &context,
         )
         .unwrap();
@@ -689,7 +1109,7 @@ mod tests {
 
         // Attach policy to role
         let request = AttachRolePolicyRequest {
-            role_name: "AdminRole".to_string(),
+            role: key("AdminRole"),
             policy_arn: created_policy.arn.clone(),
         };
         let response = service.attach_role_policy(&context, request).await.unwrap();
@@ -702,7 +1122,7 @@ mod tests {
         let service = AttachmentService::new(store.clone());
         let context = create_test_context().await;
 
-        let group = build_group("developers".to_string(), Some("/".to_string()), &context).unwrap();
+        let group = build_group(&key("developers"), Some("/".to_string()), &context).unwrap();
         store.write().await.create_group(group).await.unwrap();
 
         let policy = build_policy(
@@ -711,6 +1131,7 @@ mod tests {
             None,
             None,
             None,
+            &tenant(),
             &context,
         )
         .unwrap();
@@ -720,7 +1141,7 @@ mod tests {
             .attach_group_policy(
                 &context,
                 AttachGroupPolicyRequest {
-                    group_name: "developers".to_string(),
+                    group: key("developers"),
                     policy_arn: created_policy.arn.clone(),
                 },
             )
@@ -731,7 +1152,7 @@ mod tests {
             .list_attached_group_policies(
                 &context,
                 ListAttachedGroupPoliciesRequest {
-                    group_name: "developers".to_string(),
+                    group: key("developers"),
                 },
             )
             .await
@@ -743,7 +1164,7 @@ mod tests {
             .detach_group_policy(
                 &context,
                 DetachGroupPolicyRequest {
-                    group_name: "developers".to_string(),
+                    group: key("developers"),
                     policy_arn: created_policy.arn.clone(),
                 },
             )
@@ -754,7 +1175,7 @@ mod tests {
             .list_attached_group_policies(
                 &context,
                 ListAttachedGroupPoliciesRequest {
-                    group_name: "developers".to_string(),
+                    group: key("developers"),
                 },
             )
             .await
@@ -769,7 +1190,7 @@ mod tests {
         let context = create_test_context().await;
 
         let role = build_role(
-            "AdminRole".to_string(),
+            &key("AdminRole"),
             r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             Some("/".to_string()),
             None,
@@ -785,6 +1206,7 @@ mod tests {
             None,
             None,
             None,
+            &tenant(),
             &context,
         )
         .unwrap();
@@ -794,7 +1216,7 @@ mod tests {
             .attach_role_policy(
                 &context,
                 AttachRolePolicyRequest {
-                    role_name: "AdminRole".to_string(),
+                    role: key("AdminRole"),
                     policy_arn: created_policy.arn.clone(),
                 },
             )
@@ -805,7 +1227,7 @@ mod tests {
             .list_attached_role_policies(
                 &context,
                 ListAttachedRolePoliciesRequest {
-                    role_name: "AdminRole".to_string(),
+                    role: key("AdminRole"),
                 },
             )
             .await
@@ -817,7 +1239,7 @@ mod tests {
             .detach_role_policy(
                 &context,
                 DetachRolePolicyRequest {
-                    role_name: "AdminRole".to_string(),
+                    role: key("AdminRole"),
                     policy_arn: created_policy.arn.clone(),
                 },
             )
@@ -828,7 +1250,7 @@ mod tests {
             .list_attached_role_policies(
                 &context,
                 ListAttachedRolePoliciesRequest {
-                    role_name: "AdminRole".to_string(),
+                    role: key("AdminRole"),
                 },
             )
             .await
@@ -848,13 +1270,14 @@ mod tests {
             None,
             None,
             None,
+            &tenant(),
             &context,
         )
         .unwrap();
         let created_policy = store.write().await.create_policy(policy).await.unwrap();
 
         let request = AttachUserPolicyRequest {
-            user_name: "nonexistent".to_string(),
+            user: key("nonexistent"),
             policy_arn: created_policy.arn,
         };
         let result = service.attach_user_policy(&context, request).await;
@@ -871,11 +1294,11 @@ mod tests {
         let service = AttachmentService::new(store.clone());
         let context = create_test_context().await;
 
-        let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+        let user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
         let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let request = AttachUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_arn: "arn:wami:.*:0:wami:123456789012:policy/nonexistent".to_string(),
         };
         let result = service.attach_user_policy(&context, request).await;
@@ -909,7 +1332,7 @@ mod tests {
         let context = create_test_context().await;
 
         let request = AttachUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_arn: "arn:wami:iam:0:wami:123456789012:policy/test".to_string(),
         };
         let result = service.attach_user_policy(&context, request).await;
@@ -927,7 +1350,7 @@ mod tests {
         let context = create_test_context().await;
 
         let request = DetachUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_arn: "arn:wami:iam:0:wami:123456789012:policy/test".to_string(),
         };
         let result = service.detach_user_policy(&context, request).await;
@@ -944,9 +1367,7 @@ mod tests {
             AttachmentService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
         let context = create_test_context().await;
 
-        let request = ListAttachedUserPoliciesRequest {
-            user_name: "alice".to_string(),
-        };
+        let request = ListAttachedUserPoliciesRequest { user: key("alice") };
         let result = service.list_attached_user_policies(&context, request).await;
         assert!(matches!(
             result,
@@ -962,7 +1383,7 @@ mod tests {
         let context = create_test_context().await;
 
         let request = AttachGroupPolicyRequest {
-            group_name: "admins".to_string(),
+            group: key("admins"),
             policy_arn: "arn:wami:iam:0:wami:123456789012:policy/test".to_string(),
         };
         let result = service.attach_group_policy(&context, request).await;
@@ -980,7 +1401,7 @@ mod tests {
         let context = create_test_context().await;
 
         let request = AttachRolePolicyRequest {
-            role_name: "admin-role".to_string(),
+            role: key("admin-role"),
             policy_arn: "arn:wami:iam:0:wami:123456789012:policy/test".to_string(),
         };
         let result = service.attach_role_policy(&context, request).await;
@@ -997,7 +1418,7 @@ mod tests {
             AttachmentService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
         let context = create_test_context().await;
         let request = DetachGroupPolicyRequest {
-            group_name: "admins".to_string(),
+            group: key("admins"),
             policy_arn: "arn:wami:iam:0:wami:123456789012:policy/test".to_string(),
         };
         assert!(matches!(
@@ -1013,7 +1434,7 @@ mod tests {
             AttachmentService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
         let context = create_test_context().await;
         let request = ListAttachedGroupPoliciesRequest {
-            group_name: "admins".to_string(),
+            group: key("admins"),
         };
         assert!(matches!(
             service
@@ -1030,7 +1451,7 @@ mod tests {
             AttachmentService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
         let context = create_test_context().await;
         let request = DetachRolePolicyRequest {
-            role_name: "admin-role".to_string(),
+            role: key("admin-role"),
             policy_arn: "arn:wami:iam:0:wami:123456789012:policy/test".to_string(),
         };
         assert!(matches!(
@@ -1046,7 +1467,7 @@ mod tests {
             AttachmentService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
         let context = create_test_context().await;
         let request = ListAttachedRolePoliciesRequest {
-            role_name: "admin-role".to_string(),
+            role: key("admin-role"),
         };
         assert!(matches!(
             service.list_attached_role_policies(&context, request).await,

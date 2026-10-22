@@ -17,11 +17,13 @@ use crate::wami::policies::evaluation::{
     ContextEntry, EvaluationResult, SimulateCustomPolicyRequest, SimulatePolicyResponse,
     SimulatePrincipalPolicyRequest, StatementMatch,
 };
+use crate::wami::policies::permissions_boundary::PrincipalType;
 use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_condition::evaluator::parse_condition_block;
 use wami_condition::{evaluate_condition_block, keys, ConditionContext, ConditionValue};
+use wami_core::arn::ScopedName;
 use wami_core::error::{AmiError, Result};
 use wami_core::types::{PolicyDocument, PolicyStatement};
 
@@ -78,6 +80,14 @@ fn check_every_document(documents: &[Named], boundary_unreadable: Option<AmiErro
         Some(error) => Err(error),
         None => Ok(()),
     }
+}
+
+/// What a simulation reads of its principal.
+struct SimulatedPrincipal {
+    /// Its stored `wami_arn`, for the condition context.
+    arn: String,
+    /// The ARN of its permissions boundary, if any.
+    boundary: Option<String>,
 }
 
 pub trait EvaluationServiceStore: UserStore + RoleStore + PolicyStore {}
@@ -193,20 +203,17 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
         &self,
         request: SimulatePrincipalPolicyRequest,
     ) -> Result<SimulatePolicyResponse> {
-        // Parse principal ARN to determine type
-        let (principal_type, principal_name) =
-            self.parse_principal_arn(&request.policy_source_arn)?;
+        // The principal is named by its key — the tenant explicitly — and read
+        // once: a name parsed out of an ARN named a principal in every tenant,
+        // and the resource id of a wami ARN is an id, not a name (wami 005).
+        let principal = self
+            .fetch_principal(request.principal_type, &request.principal)
+            .await?;
 
-        // Fetch principal's policies from store. `fetch_principal_policies`
-        // returns none today (its TODO); they are checked below with the
-        // others all the same, so filling it cannot open a door.
-        let mut identity: Vec<(Origin, Named)> = self
-            .fetch_principal_policies(&principal_type, &principal_name)
-            .await?
-            .into_iter()
-            .enumerate()
-            .map(|(i, document)| ((0, i), (format!("principal policy #{i}"), document)))
-            .collect();
+        // The principal's own documents are not gathered here yet (the store
+        // holds them; this simulation has never read them): the request's
+        // `policy_input_list` stands in, checked with the others all the same.
+        let mut identity: Vec<(Origin, Named)> = Vec::new();
 
         // Add additional policy documents from request if provided
         if let Some(extra_policies) = request.policy_input_list {
@@ -217,9 +224,19 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
         // The boundary, named as the authorizer names it and read with the
         // identity documents, last, as the authorizer reads it: before any
         // evaluation and whatever the identity verdict.
-        let boundary = self
-            .fetch_permissions_boundary(&principal_type, &principal_name)
-            .await?;
+        let boundary = match principal.boundary {
+            // A boundary of another tenant takes no part (ruling 1).
+            Some(arn) => match self.store.read().await.get_policy(&arn).await? {
+                Some(policy) if &policy.wami_arn.tenant_path != request.principal.tenant() => {
+                    return Err(AmiError::UnreadablePolicy {
+                        policy: format!("permissions boundary {arn}"),
+                        message: "the policy is not of the principal's tenant".to_string(),
+                    });
+                }
+                other => other,
+            },
+            None => None,
+        };
         let boundary_named = boundary.as_ref().map(|boundary| {
             let source = PolicySource::PermissionsBoundary {
                 arn: boundary.arn.clone(),
@@ -249,7 +266,7 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
         // Build condition context from request context entries and principal ARN
         let condition_context = self.build_condition_context(
             request.context_entries.as_deref(),
-            Some(&request.policy_source_arn),
+            Some(&principal.arn),
             None, // resource_arn will be set per evaluation
         )?;
 
@@ -290,133 +307,41 @@ impl<S: EvaluationServiceStore> EvaluationService<S> {
 
     // Helper methods
 
-    /// Parse principal ARN to extract type and name
-    fn parse_principal_arn(&self, arn: &str) -> Result<(String, String)> {
-        // Expected formats:
-        // arn:aws:iam::123456789012:user/alice
-        // arn:aws:iam::123456789012:user/path/to/alice
-        // arn:aws:iam::123456789012:role/MyRole
-        // arn:aws:iam::123456789012:role/path/MyRole
-
-        let parts: Vec<&str> = arn.split(':').collect();
-        if parts.len() < 6 {
-            return Err(AmiError::InvalidParameter {
-                message: format!("Invalid principal ARN: {}", arn),
-            });
-        }
-
-        let resource_part = parts[5]; // "user/alice" or "user/path/alice"
-        let resource_parts: Vec<&str> = resource_part.split('/').collect();
-
-        if resource_parts.len() < 2 {
-            return Err(AmiError::InvalidParameter {
-                message: format!("Invalid principal ARN format: {}", arn),
-            });
-        }
-
-        let principal_type = resource_parts[0].to_string();
-        // The principal name is always the last part (after the type and any path components)
-        let principal_name = resource_parts[resource_parts.len() - 1].to_string();
-
-        Ok((principal_type, principal_name))
-    }
-
-    /// Fetch policies for a user or role
-    async fn fetch_principal_policies(
+    /// The principal stored under `key`, as the simulation needs it: its ARN
+    /// (for the condition context) and the ARN of its permissions boundary.
+    async fn fetch_principal(
         &self,
-        principal_type: &str,
-        principal_name: &str,
-    ) -> Result<Vec<PolicyDocument>> {
-        let policies = Vec::new();
-
+        principal_type: PrincipalType,
+        key: &ScopedName,
+    ) -> Result<SimulatedPrincipal> {
+        let store = self.store.read().await;
         match principal_type {
-            "user" => {
-                // Verify user exists
-                let _user = self
-                    .store
-                    .read()
-                    .await
-                    .get_user(principal_name)
-                    .await?
-                    .ok_or_else(|| AmiError::ResourceNotFound {
-                        resource: format!("User: {}", principal_name),
-                    })?;
-
-                // TODO: Policy attachments are not yet implemented in the User model
-                // In a full implementation, we would:
-                // 1. Query a policy_attachments table/map
-                // 2. Fetch all attached policies
-                // 3. Include inline policies if any
-                // For now, return empty list (will use policy_input_list from request instead)
-            }
-            "role" => {
-                // Verify role exists
-                let _role = self
-                    .store
-                    .read()
-                    .await
-                    .get_role(principal_name)
-                    .await?
-                    .ok_or_else(|| AmiError::ResourceNotFound {
-                        resource: format!("Role: {}", principal_name),
-                    })?;
-
-                // TODO: Same as user - policy attachments need separate tracking
-            }
-            _ => {
-                return Err(AmiError::InvalidParameter {
-                    message: format!("Unsupported principal type: {}", principal_type),
+            PrincipalType::User => {
+                let user =
+                    store
+                        .get_user(key)
+                        .await?
+                        .ok_or_else(|| AmiError::ResourceNotFound {
+                            resource: format!("User: {key}"),
+                        })?;
+                Ok(SimulatedPrincipal {
+                    arn: user.wami_arn.to_string(),
+                    boundary: user.permissions_boundary,
                 })
             }
-        }
-
-        Ok(policies)
-    }
-
-    /// Fetch permissions boundary for a user or role
-    async fn fetch_permissions_boundary(
-        &self,
-        principal_type: &str,
-        principal_name: &str,
-    ) -> Result<Option<crate::wami::policies::Policy>> {
-        let boundary_arn = match principal_type {
-            "user" => {
-                let user = self
-                    .store
-                    .read()
-                    .await
-                    .get_user(principal_name)
-                    .await?
-                    .ok_or_else(|| AmiError::ResourceNotFound {
-                        resource: format!("User: {}", principal_name),
-                    })?;
-                user.permissions_boundary
-            }
-            "role" => {
-                let role = self
-                    .store
-                    .read()
-                    .await
-                    .get_role(principal_name)
-                    .await?
-                    .ok_or_else(|| AmiError::ResourceNotFound {
-                        resource: format!("Role: {}", principal_name),
-                    })?;
-                role.permissions_boundary
-            }
-            _ => {
-                return Err(AmiError::InvalidParameter {
-                    message: format!("Unsupported principal type: {}", principal_type),
+            PrincipalType::Role => {
+                let role =
+                    store
+                        .get_role(key)
+                        .await?
+                        .ok_or_else(|| AmiError::ResourceNotFound {
+                            resource: format!("Role: {key}"),
+                        })?;
+                Ok(SimulatedPrincipal {
+                    arn: role.wami_arn.to_string(),
+                    boundary: role.permissions_boundary,
                 })
             }
-        };
-
-        // Fetch the boundary policy if it exists
-        if let Some(arn) = boundary_arn {
-            let policy = self.store.read().await.get_policy(&arn).await?;
-            Ok(policy)
-        } else {
-            Ok(None)
         }
     }
 
@@ -706,6 +631,23 @@ mod tests {
     use wami_core::arn::{TenantPath, WamiArn};
     use wami_core::context::WamiContext;
 
+    /// The key a test context names: its ARN's tenant and resource, as the
+    /// test records are written under (test code: production never builds a
+    /// key from an ARN, wami 005).
+    fn keyed(arn: &wami_core::arn::WamiArn) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(arn.tenant_path.clone(), arn.resource.resource_id.clone())
+    }
+
+    /// The tenant every test here works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
+
     fn setup_service() -> EvaluationService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
         EvaluationService::new(store, "123456789012".to_string())
@@ -718,6 +660,7 @@ mod tests {
         WamiContext::builder()
             .instance_id("123456789012")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&arn))
             .caller_arn(arn)
             .is_root(false)
             .build()
@@ -845,7 +788,8 @@ mod tests {
         let context = test_context();
 
         // Create a user
-        let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+        let mut user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
+        user.wami_arn = context.caller_arn().clone();
 
         service.store.write().await.create_user(user).await.unwrap();
 
@@ -864,7 +808,8 @@ mod tests {
         // Note: Since User model doesn't have attached_policies yet,
         // we pass the policy via policy_input_list
         let request = SimulatePrincipalPolicyRequest {
-            policy_source_arn: "arn:aws:iam::123456789012:user/alice".to_string(),
+            principal_type: crate::wami::policies::permissions_boundary::PrincipalType::User,
+            principal: key("alice"),
             action_names: vec!["ec2:DescribeInstances".to_string()],
             resource_arns: None,
             policy_input_list: Some(vec![policy_doc.to_string()]),
@@ -891,6 +836,7 @@ mod tests {
             None,
             None,
             None,
+            &tenant(),
             &context,
         )
         .unwrap();
@@ -904,7 +850,7 @@ mod tests {
             .unwrap();
 
         let mut role = build_role(
-            "AppRole".to_string(),
+            &key("AppRole"),
             r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             Some("/".to_string()),
             None,
@@ -925,7 +871,8 @@ mod tests {
 
         let response = service
             .simulate_principal_policy(SimulatePrincipalPolicyRequest {
-                policy_source_arn: "arn:aws:iam::123456789012:role/AppRole".to_string(),
+                principal_type: crate::wami::policies::permissions_boundary::PrincipalType::Role,
+                principal: key("AppRole"),
                 action_names: vec![
                     "ec2:DescribeInstances".to_string(),
                     "s3:GetObject".to_string(),
@@ -950,7 +897,8 @@ mod tests {
 
         let result = service
             .simulate_principal_policy(SimulatePrincipalPolicyRequest {
-                policy_source_arn: "arn:aws:iam::123456789012:role/Missing".to_string(),
+                principal_type: crate::wami::policies::permissions_boundary::PrincipalType::Role,
+                principal: key("Missing"),
                 action_names: vec!["ec2:DescribeInstances".to_string()],
                 resource_arns: None,
                 policy_input_list: None,
@@ -960,46 +908,6 @@ mod tests {
 
         assert!(matches!(result, Err(AmiError::ResourceNotFound { .. })));
     }
-
-    #[tokio::test]
-    async fn test_parse_principal_arn_user() {
-        let service = setup_service();
-
-        let (principal_type, principal_name) = service
-            .parse_principal_arn("arn:aws:iam::123456789012:user/alice")
-            .unwrap();
-
-        assert_eq!(principal_type, "user");
-        assert_eq!(principal_name, "alice");
-    }
-
-    #[tokio::test]
-    async fn test_parse_principal_arn_role() {
-        let service = setup_service();
-
-        let (principal_type, principal_name) = service
-            .parse_principal_arn("arn:aws:iam::123456789012:role/MyRole")
-            .unwrap();
-
-        assert_eq!(principal_type, "role");
-        assert_eq!(principal_name, "MyRole");
-    }
-
-    #[tokio::test]
-    async fn test_parse_principal_arn_with_path() {
-        let service = setup_service();
-
-        let (principal_type, principal_name) = service
-            .parse_principal_arn("arn:aws:iam::123456789012:user/department/team/alice")
-            .unwrap();
-
-        assert_eq!(principal_type, "user");
-        // Principal name is just the name, not the path
-        // Path is /department/team/ and name is alice
-        assert_eq!(principal_name, "alice");
-    }
-
-    // ========== Complex Policy Evaluation Tests ==========
 
     #[tokio::test]
     async fn test_multiple_policies_deny_wins() {
@@ -1831,12 +1739,14 @@ mod tests {
     async fn test_build_condition_context_with_principal_arn() {
         // Create a user first so the principal exists
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        let user = build_user("alice".to_string(), None, &test_context()).unwrap();
+        let mut user = build_user(&key("alice"), None, &test_context()).unwrap();
+        user.wami_arn = test_context().caller_arn().clone();
         store.write().await.create_user(user).await.unwrap();
 
         let service = EvaluationService::new(store, "123456789012".to_string());
         let request = SimulatePrincipalPolicyRequest {
-            policy_source_arn: "arn:aws:iam::123456789012:user/alice".to_string(),
+            principal_type: crate::wami::policies::permissions_boundary::PrincipalType::User,
+            principal: key("alice"),
             policy_input_list: None,
             action_names: vec!["s3:GetObject".to_string()],
             resource_arns: None,
@@ -2063,12 +1973,14 @@ mod tests {
         let ctx = WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&arn))
             .caller_arn(arn)
             .is_root(false)
             .build()
             .unwrap();
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        let mut user = build_user("alice".to_string(), Some("/".to_string()), &ctx).unwrap();
+        let mut user = build_user(&key("alice"), Some("/".to_string()), &ctx).unwrap();
+        user.wami_arn = ctx.caller_arn().clone();
         if let Some(document) = boundary {
             let policy = build_policy(
                 "Boundary".to_string(),
@@ -2076,6 +1988,7 @@ mod tests {
                 None,
                 None,
                 None,
+                &tenant(),
                 &ctx,
             )
             .unwrap();
@@ -2134,7 +2047,7 @@ mod tests {
             store
                 .write()
                 .await
-                .put_user_policy("alice", "Doc", document.clone())
+                .put_user_policy(&key("alice"), "Doc", document.clone())
                 .await
                 .unwrap();
 
@@ -2143,7 +2056,9 @@ mod tests {
                 .await;
             let simulation = EvaluationService::new(store, "999".to_string())
                 .simulate_principal_policy(SimulatePrincipalPolicyRequest {
-                    policy_source_arn: "arn:wami:iam::999:user/alice".to_string(),
+                    principal_type:
+                        crate::wami::policies::permissions_boundary::PrincipalType::User,
+                    principal: key("alice"),
                     action_names: vec!["iam:GetUser".to_string()],
                     resource_arns: Some(vec![resource.to_string()]),
                     policy_input_list: Some(vec![document.clone()]),
@@ -2207,7 +2122,8 @@ mod tests {
         context_entries: Option<Vec<ContextEntry>>,
     ) -> SimulatePrincipalPolicyRequest {
         SimulatePrincipalPolicyRequest {
-            policy_source_arn: "arn:wami:iam::999:user/alice".to_string(),
+            principal_type: crate::wami::policies::permissions_boundary::PrincipalType::User,
+            principal: key("alice"),
             action_names: vec!["iam:GetUser".to_string()],
             resource_arns: Some(vec!["arn:wami:iam:12345678:wami:999:user/bob".to_string()]),
             policy_input_list: Some(documents),
@@ -2352,7 +2268,7 @@ mod tests {
                 store
                     .write()
                     .await
-                    .put_user_policy("alice", &format!("Doc{i}"), document.clone())
+                    .put_user_policy(&key("alice"), &format!("Doc{i}"), document.clone())
                     .await
                     .unwrap();
             }
@@ -2360,6 +2276,7 @@ mod tests {
             let ctx = WamiContext::builder()
                 .instance_id("999")
                 .tenant_path(TenantPath::single(12345678))
+                .caller_key(keyed(&arn))
                 .caller_arn(arn)
                 .is_root(false)
                 .source_ip("not-an-ip")
@@ -2401,6 +2318,7 @@ mod tests {
             let ctx = WamiContext::builder()
                 .instance_id("999")
                 .tenant_path(TenantPath::single(12345678))
+                .caller_key(key("alice"))
                 .caller_arn("arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap())
                 .is_root(false)
                 .source_ip("10.1.2.3")

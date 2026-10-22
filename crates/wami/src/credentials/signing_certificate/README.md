@@ -53,7 +53,7 @@ let context = WamiContext::builder()
     .unwrap();
 
 let certificate = build_signing_certificate(
-    "alice".into(),
+    &ScopedName::new(TenantPath::single(1), "alice"),
     "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----".to_string(),
     &context,
 )?;
@@ -95,7 +95,7 @@ let context = WamiContext::builder()
 // Create a new signing certificate
 let certificate_body = "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----";
 let certificate = build_signing_certificate(
-    "alice".into(),
+    &ScopedName::new(TenantPath::single(1), "alice"),
     certificate_body.to_string(),
     &context,
 )?;

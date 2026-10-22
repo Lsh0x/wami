@@ -2,6 +2,7 @@
 
 use crate::credentials::service_credential::ServiceSpecificCredential;
 use async_trait::async_trait;
+use wami_core::arn::{ScopedName, TenantPath};
 use wami_core::error::Result;
 
 /// Trait for service-specific credential storage operations
@@ -27,8 +28,11 @@ pub trait ServiceCredentialStore: Send + Sync {
         service_specific_credential_id: &str,
     ) -> Result<()>;
 
+    /// List the service-specific credentials of exactly `tenant`, or only
+    /// those of `owner` when given — never the whole store.
     async fn list_service_specific_credentials(
         &self,
-        user_name: &str,
+        tenant: &TenantPath,
+        owner: Option<&ScopedName>,
     ) -> Result<Vec<ServiceSpecificCredential>>;
 }

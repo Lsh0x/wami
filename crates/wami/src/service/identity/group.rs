@@ -2,7 +2,7 @@
 //!
 //! Orchestrates group management operations including membership management.
 
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
+use crate::service::auth::authorizer::{confirm, guard, guard_tenant, Authorizer};
 use crate::store::traits::GroupStore;
 use crate::wami::identity::group::{
     builder as group_builder, CreateGroupRequest, Group, ListGroupsRequest, UpdateGroupRequest,
@@ -10,6 +10,7 @@ use crate::wami::identity::group::{
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
+use wami_core::arn::ScopedName;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
 
@@ -36,35 +37,22 @@ impl<S: GroupStore> GroupService<S> {
         }
     }
 
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     /// Create a new group
     pub async fn create_group(
         &self,
         context: &WamiContext,
         request: CreateGroupRequest,
     ) -> Result<Group> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreateGroup,
             "group",
-            &request.group_name,
+            &request.group,
         )
         .await?;
 
-        let group = group_builder::build_group(request.group_name, request.path, context)?;
+        let group = group_builder::build_group(&request.group, request.path, context)?;
         self.write_store().await.create_group(group).await
     }
 
@@ -72,11 +60,27 @@ impl<S: GroupStore> GroupService<S> {
     pub async fn get_group(
         &self,
         context: &WamiContext,
-        group_name: &str,
+        group: &ScopedName,
     ) -> Result<Option<Group>> {
-        self.guard(context, WamiAction::IamReadRole, "group", group_name)
-            .await?;
-        self.read_store().await.get_group(group_name).await
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamReadRole,
+            "group",
+            group,
+        )
+        .await?;
+        let found = self.read_store().await.get_group(group).await?;
+        if let Some(found) = &found {
+            confirm(
+                context,
+                "group",
+                group,
+                &found.key(),
+                &found.wami_arn.wami_instance_id,
+            )?;
+        }
+        Ok(found)
     }
 
     /// Update a group
@@ -85,22 +89,43 @@ impl<S: GroupStore> GroupService<S> {
         context: &WamiContext,
         request: UpdateGroupRequest,
     ) -> Result<Group> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamUpdateUser,
             "group",
-            &request.group_name,
+            &request.group,
         )
         .await?;
+        // The destination of a rename is judged too, before it is read (Δ7).
+        if let Some(new_name) = &request.new_group_name {
+            if new_name != request.group.name() {
+                guard(
+                    self.authz.as_ref(),
+                    context,
+                    WamiAction::IamUpdateUser,
+                    "group",
+                    &request.group.renamed(new_name.clone()),
+                )
+                .await?;
+            }
+        }
 
         let mut group = self
             .read_store()
             .await
-            .get_group(&request.group_name)
+            .get_group(&request.group)
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
-                resource: format!("Group: {}", request.group_name),
+                resource: format!("Group: {}", request.group),
             })?;
+        confirm(
+            context,
+            "group",
+            &request.group,
+            &group.key(),
+            &group.wami_arn.wami_instance_id,
+        )?;
 
         if let Some(new_group_name) = request.new_group_name {
             group = group_builder::update_group_name(group, new_group_name);
@@ -114,10 +139,16 @@ impl<S: GroupStore> GroupService<S> {
     }
 
     /// Delete a group
-    pub async fn delete_group(&self, context: &WamiContext, group_name: &str) -> Result<()> {
-        self.guard(context, WamiAction::IamDeleteGroup, "group", group_name)
-            .await?;
-        self.write_store().await.delete_group(group_name).await
+    pub async fn delete_group(&self, context: &WamiContext, group: &ScopedName) -> Result<()> {
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamDeleteGroup,
+            "group",
+            group,
+        )
+        .await?;
+        self.write_store().await.delete_group(group).await
     }
 
     /// List groups with optional filtering
@@ -126,11 +157,21 @@ impl<S: GroupStore> GroupService<S> {
         context: &WamiContext,
         request: ListGroupsRequest,
     ) -> Result<(Vec<Group>, bool, Option<String>)> {
-        self.guard(context, WamiAction::IamListUsers, "group", "*")
-            .await?;
+        guard_tenant(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamListUsers,
+            "group",
+            &request.tenant,
+        )
+        .await?;
         self.read_store()
             .await
-            .list_groups(request.path_prefix.as_deref(), request.pagination.as_ref())
+            .list_groups(
+                &request.tenant,
+                request.path_prefix.as_deref(),
+                request.pagination.as_ref(),
+            )
             .await
     }
 
@@ -138,19 +179,30 @@ impl<S: GroupStore> GroupService<S> {
     pub async fn add_user_to_group(
         &self,
         context: &WamiContext,
-        group_name: &str,
-        user_name: &str,
+        group: &ScopedName,
+        user: &ScopedName,
     ) -> Result<()> {
-        self.guard(
+        // A membership acts on two targets: the group and the user, each
+        // judged in its own tenant (A4).
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageGroupMembers,
             "group",
-            group_name,
+            group,
+        )
+        .await?;
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamManageGroupMembers,
+            "user",
+            user,
         )
         .await?;
         self.write_store()
             .await
-            .add_user_to_group(group_name, user_name)
+            .add_user_to_group(group, user)
             .await
     }
 
@@ -158,19 +210,30 @@ impl<S: GroupStore> GroupService<S> {
     pub async fn remove_user_from_group(
         &self,
         context: &WamiContext,
-        group_name: &str,
-        user_name: &str,
+        group: &ScopedName,
+        user: &ScopedName,
     ) -> Result<()> {
-        self.guard(
+        // A membership acts on two targets: the group and the user, each
+        // judged in its own tenant (A4).
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageGroupMembers,
             "group",
-            group_name,
+            group,
+        )
+        .await?;
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamManageGroupMembers,
+            "user",
+            user,
         )
         .await?;
         self.write_store()
             .await
-            .remove_user_from_group(group_name, user_name)
+            .remove_user_from_group(group, user)
             .await
     }
 
@@ -178,14 +241,17 @@ impl<S: GroupStore> GroupService<S> {
     pub async fn list_groups_for_user(
         &self,
         context: &WamiContext,
-        user_name: &str,
+        user: &ScopedName,
     ) -> Result<Vec<Group>> {
-        self.guard(context, WamiAction::IamReadUser, "user", user_name)
-            .await?;
-        self.read_store()
-            .await
-            .list_groups_for_user(user_name)
-            .await
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamReadUser,
+            "user",
+            user,
+        )
+        .await?;
+        self.read_store().await.list_groups_for_user(user).await
     }
 }
 
@@ -198,6 +264,16 @@ mod tests {
     use crate::wami::identity::user::builder as user_builder;
     use wami_core::arn::{TenantPath, WamiArn};
     use wami_core::context::WamiContext;
+
+    /// The tenant every test of this module works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
 
     fn setup_service() -> GroupService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
@@ -223,7 +299,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateGroupRequest {
-            group_name: "admins".to_string(),
+            group: key("admins"),
             path: Some("/it/".to_string()),
             tags: None,
         };
@@ -232,7 +308,7 @@ mod tests {
         assert_eq!(group.group_name, "admins");
         assert_eq!(group.path, "/it/");
 
-        let retrieved = service.get_group(&context, "admins").await.unwrap();
+        let retrieved = service.get_group(&context, &key("admins")).await.unwrap();
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().group_name, "admins");
     }
@@ -243,7 +319,7 @@ mod tests {
         let context = test_context();
 
         let create_request = CreateGroupRequest {
-            group_name: "developers".to_string(),
+            group: key("developers"),
             path: Some("/".to_string()),
             tags: None,
         };
@@ -253,7 +329,7 @@ mod tests {
             .unwrap();
 
         let update_request = UpdateGroupRequest {
-            group_name: "developers".to_string(),
+            group: key("developers"),
             new_group_name: Some("engineers".to_string()),
             new_path: Some("/tech/".to_string()),
         };
@@ -271,15 +347,21 @@ mod tests {
         let context = test_context();
 
         let request = CreateGroupRequest {
-            group_name: "temp_group".to_string(),
+            group: key("temp_group"),
             path: None,
             tags: None,
         };
         service.create_group(&context, request).await.unwrap();
 
-        service.delete_group(&context, "temp_group").await.unwrap();
+        service
+            .delete_group(&context, &key("temp_group"))
+            .await
+            .unwrap();
 
-        let retrieved = service.get_group(&context, "temp_group").await.unwrap();
+        let retrieved = service
+            .get_group(&context, &key("temp_group"))
+            .await
+            .unwrap();
         assert!(retrieved.is_none());
     }
 
@@ -290,7 +372,7 @@ mod tests {
 
         for name in ["group1", "group2", "group3"] {
             let request = CreateGroupRequest {
-                group_name: name.to_string(),
+                group: key(name),
                 path: Some("/test/".to_string()),
                 tags: None,
             };
@@ -298,6 +380,7 @@ mod tests {
         }
 
         let list_request = ListGroupsRequest {
+            tenant: tenant(),
             path_prefix: Some("/test/".to_string()),
             pagination: None,
         };
@@ -312,35 +395,35 @@ mod tests {
         let context = test_context();
 
         let user =
-            user_builder::build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+            user_builder::build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
         store.write().await.create_user(user).await.unwrap();
 
         let request = CreateGroupRequest {
-            group_name: "admins".to_string(),
+            group: key("admins"),
             path: None,
             tags: None,
         };
         service.create_group(&context, request).await.unwrap();
 
         service
-            .add_user_to_group(&context, "admins", "alice")
+            .add_user_to_group(&context, &key("admins"), &key("alice"))
             .await
             .unwrap();
 
         let groups = service
-            .list_groups_for_user(&context, "alice")
+            .list_groups_for_user(&context, &key("alice"))
             .await
             .unwrap();
         assert_eq!(groups.len(), 1);
         assert_eq!(groups[0].group_name, "admins");
 
         service
-            .remove_user_from_group(&context, "admins", "alice")
+            .remove_user_from_group(&context, &key("admins"), &key("alice"))
             .await
             .unwrap();
 
         let groups_after = service
-            .list_groups_for_user(&context, "alice")
+            .list_groups_for_user(&context, &key("alice"))
             .await
             .unwrap();
         assert_eq!(groups_after.len(), 0);
@@ -371,7 +454,7 @@ mod tests {
         let service = GroupService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
         let request = CreateGroupRequest {
-            group_name: "admins".to_string(),
+            group: key("admins"),
             path: None,
             tags: None,
         };
@@ -387,7 +470,7 @@ mod tests {
         let service = GroupService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
         assert!(matches!(
-            service.get_group(&context, "admins").await,
+            service.get_group(&context, &key("admins")).await,
             Err(wami_core::error::AmiError::AccessDenied { .. })
         ));
     }
@@ -398,7 +481,7 @@ mod tests {
         let service = GroupService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
         assert!(matches!(
-            service.delete_group(&context, "admins").await,
+            service.delete_group(&context, &key("admins")).await,
             Err(wami_core::error::AmiError::AccessDenied { .. })
         ));
     }
@@ -409,7 +492,9 @@ mod tests {
         let service = GroupService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
         assert!(matches!(
-            service.add_user_to_group(&context, "admins", "alice").await,
+            service
+                .add_user_to_group(&context, &key("admins"), &key("alice"))
+                .await,
             Err(wami_core::error::AmiError::AccessDenied { .. })
         ));
     }
@@ -420,6 +505,7 @@ mod tests {
         let service = GroupService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
         let request = ListGroupsRequest {
+            tenant: tenant(),
             path_prefix: None,
             pagination: None,
         };

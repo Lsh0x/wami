@@ -359,17 +359,19 @@ impl WamiArn {
     /// Returns true if this ARN identifies the platform root user.
     ///
     /// Both conditions must hold: the resource is the user named
-    /// [`ROOT_USER_NAME`], **and** it sits in the root tenant
-    /// ([`ROOT_TENANT_ID`]).
+    /// [`ROOT_USER_NAME`], **and** its tenant path is EXACTLY the root tenant
+    /// (`[ROOT_TENANT_ID]`) — never a path that merely starts with it.
     ///
     /// The tenant check is not redundant. A root context bypasses every
     /// authorization check, so deriving it from a name alone would make the
     /// privilege reachable by anything able to influence a resource id — and
-    /// nothing forbids naming a user `root` inside an ordinary tenant.
+    /// nothing forbids naming a user `root` inside an ordinary tenant. Reading
+    /// only the path's first segment made `0/7`, a child of the root tenant,
+    /// root as well (wami 005, D6).
     pub fn is_root_user(&self) -> bool {
         self.resource.resource_type == "user"
             && self.resource.resource_id == ROOT_USER_NAME
-            && self.tenant_path.root_u64() == Some(ROOT_TENANT_ID)
+            && self.tenant_path.segments == [ROOT_TENANT_ID]
     }
 
     /// Returns the cloud provider name if synced.
@@ -452,6 +454,32 @@ impl<'de> Deserialize<'de> for WamiArn {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn root_named(segments: Vec<u64>) -> WamiArn {
+        WamiArn {
+            service: Service::Iam,
+            tenant_path: TenantPath::new(segments),
+            wami_instance_id: "inst".to_string(),
+            cloud_mapping: None,
+            resource: Resource {
+                resource_type: "user".to_string(),
+                resource_id: ROOT_USER_NAME.to_string(),
+            },
+        }
+    }
+
+    #[test]
+    fn root_is_the_user_at_path_exactly_zero() {
+        assert!(root_named(vec![ROOT_TENANT_ID]).is_root_user());
+    }
+
+    #[test]
+    fn a_child_of_the_root_tenant_is_not_root() {
+        // `0/7` starts with the root tenant; reading only the first segment
+        // made a user named root there root as well (wami 005, D6, P6).
+        assert!(!root_named(vec![ROOT_TENANT_ID, 7]).is_root_user());
+        assert!(!root_named(vec![]).is_root_user());
+    }
 
     #[test]
     fn test_tenant_path_single() {

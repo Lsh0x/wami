@@ -22,6 +22,7 @@ use wami::store::memory::InMemoryWamiStore;
 use wami::{
     AuthenticationService, CreateUserRequest, InstanceBootstrap, TenantService, UserService,
 };
+use wami_core::arn::ScopedName;
 use wami_core::context::WamiContext;
 
 /// Accepts only a `Send` future. Calling it is the assertion.
@@ -58,7 +59,7 @@ async fn one_store_handle_serves_every_service() {
         .create_user(
             &context,
             CreateUserRequest {
-                user_name: "alice".to_string(),
+                user: ScopedName::new(context.tenant_path().clone(), "alice"),
                 path: Some("/".to_string()),
                 permissions_boundary: None,
                 tags: None,
@@ -69,7 +70,14 @@ async fn one_store_handle_serves_every_service() {
 
     // One store, so each write is visible through the other handle.
     assert!(tenants.get_tenant(&tenant.id).await.unwrap().is_some());
-    assert!(users.get_user(&context, "alice").await.unwrap().is_some());
+    assert!(users
+        .get_user(
+            &context,
+            &ScopedName::new(context.tenant_path().clone(), "alice")
+        )
+        .await
+        .unwrap()
+        .is_some());
 }
 
 #[tokio::test]
@@ -81,11 +89,14 @@ async fn service_futures_are_send() {
     // A read and a write on each, since both guards used to be the blocking kind.
     assert_send(tenants.list_tenants());
     assert_send(tenants.create_tenant(&context, "acme".to_string(), None, None));
-    assert_send(users.get_user(&context, "alice"));
+    assert_send(users.get_user(
+        &context,
+        &ScopedName::new(context.tenant_path().clone(), "alice"),
+    ));
     assert_send(users.create_user(
         &context,
         CreateUserRequest {
-            user_name: "bob".to_string(),
+            user: ScopedName::new(context.tenant_path().clone(), "bob"),
             path: None,
             permissions_boundary: None,
             tags: None,

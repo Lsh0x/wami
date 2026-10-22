@@ -1,27 +1,26 @@
 //! Group Builder Functions
 
 use super::model::Group;
-use crate::arn::{Service, WamiArn};
+use crate::arn::{ScopedName, Service, WamiArn};
 use crate::context::WamiContext;
 use crate::error::Result;
 use crate::provider::{CloudProvider, ResourceType};
 use chrono::Utc;
 use uuid::Uuid;
 
-/// Build a new Group with context-based identifiers
+/// Build a new Group under `key`, in the context's instance.
+///
+/// The tenant is the key's, never the caller's (wami 005); `tenant_id` is
+/// stamped from the same path.
 #[allow(clippy::result_large_err)]
-pub fn build_group(
-    group_name: String,
-    path: Option<String>,
-    context: &WamiContext,
-) -> Result<Group> {
+pub fn build_group(key: &ScopedName, path: Option<String>, context: &WamiContext) -> Result<Group> {
     let group_id = Uuid::new_v4().to_string();
     let path = path.unwrap_or_else(|| "/".to_string());
+    let group_name = key.name().to_string();
 
-    // Build WAMI ARN using context
     let wami_arn = WamiArn::builder()
         .service(Service::Iam)
-        .tenant_path(context.tenant_path().clone())
+        .tenant_path(key.tenant().clone())
         .wami_instance(context.instance_id())
         .resource("group", &group_id)
         .build()?;
@@ -42,7 +41,7 @@ pub fn build_group(
         create_date: Utc::now(),
         wami_arn,
         providers: Vec::new(),
-        tenant_id: None,
+        tenant_id: Some(crate::wami::tenant::TenantId::from_path(key.tenant())),
         tags: vec![],
     })
 }
@@ -123,6 +122,16 @@ mod tests {
     use crate::arn::TenantPath;
     use crate::wami::tenant::TenantId;
 
+    /// The tenant every test of this module works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
+
     fn test_context() -> WamiContext {
         let arn: WamiArn = "arn:wami:.*:12345678:wami:123456789012:user/test"
             .parse()
@@ -139,7 +148,7 @@ mod tests {
     #[test]
     fn test_build_group() {
         let context = test_context();
-        let group = build_group("admins".to_string(), None, &context).unwrap();
+        let group = build_group(&key("admins"), None, &context).unwrap();
 
         assert_eq!(group.group_name, "admins");
         assert_eq!(group.path, "/");
@@ -148,7 +157,12 @@ mod tests {
         // WamiArn uses group_id (UUID), not group_name - verify structure instead
         assert_eq!(group.wami_arn.resource.resource_type, "group");
         assert_eq!(group.wami_arn.resource.resource_id, group.group_id);
-        assert!(group.tenant_id.is_none());
+        // The tenant is stamped from the key, so the record has one tenant (D10).
+        assert_eq!(
+            group.tenant_id,
+            Some(crate::wami::tenant::TenantId::from_path(&tenant()))
+        );
+        assert_eq!(group.wami_arn.tenant_path, tenant());
         assert_eq!(group.providers.len(), 0);
     }
 
@@ -156,7 +170,7 @@ mod tests {
     fn test_build_group_with_path() {
         let context = test_context();
         let group = build_group(
-            "developers".to_string(),
+            &key("developers"),
             Some("/engineering/".to_string()),
             &context,
         )
@@ -169,7 +183,7 @@ mod tests {
     #[test]
     fn test_update_group_name() {
         let context = test_context();
-        let group = build_group("old-name".to_string(), None, &context).unwrap();
+        let group = build_group(&key("old-name"), None, &context).unwrap();
         let updated = update_group_name(group, "new-name".to_string());
 
         assert_eq!(updated.group_name, "new-name");
@@ -178,7 +192,7 @@ mod tests {
     #[test]
     fn test_update_group_path() {
         let context = test_context();
-        let group = build_group("admins".to_string(), None, &context).unwrap();
+        let group = build_group(&key("admins"), None, &context).unwrap();
         let updated = update_group_path(group, "/admin/".to_string());
 
         assert_eq!(updated.path, "/admin/");
@@ -187,7 +201,7 @@ mod tests {
     #[test]
     fn test_set_tenant_id() {
         let context = test_context();
-        let group = build_group("admins".to_string(), None, &context).unwrap();
+        let group = build_group(&key("admins"), None, &context).unwrap();
         let tenant_id = TenantId::root(); // Test with root tenant
 
         let updated = set_tenant_id(group, tenant_id.clone());
@@ -197,7 +211,7 @@ mod tests {
     #[test]
     fn test_add_provider() {
         let context = test_context();
-        let group = build_group("admins".to_string(), None, &context).unwrap();
+        let group = build_group(&key("admins"), None, &context).unwrap();
 
         let provider_config = crate::provider::ProviderConfig {
             provider_name: "aws".to_string(),
@@ -215,7 +229,7 @@ mod tests {
     #[test]
     fn test_add_provider_no_duplicates() {
         let context = test_context();
-        let group = build_group("admins".to_string(), None, &context).unwrap();
+        let group = build_group(&key("admins"), None, &context).unwrap();
 
         let provider_config = crate::provider::ProviderConfig {
             provider_name: "aws".to_string(),
@@ -234,7 +248,7 @@ mod tests {
     #[test]
     fn test_build_group_immutable() {
         let context = test_context();
-        let group = build_group("test".to_string(), None, &context).unwrap();
+        let group = build_group(&key("test"), None, &context).unwrap();
         let group_name = group.group_name.clone();
 
         let _ = update_group_name(group.clone(), "changed".to_string());
@@ -248,7 +262,7 @@ mod tests {
     #[test]
     fn test_build_group_empty_name() {
         let context = test_context();
-        let group = build_group("".to_string(), None, &context).unwrap();
+        let group = build_group(&key(""), None, &context).unwrap();
         assert_eq!(group.group_name, "");
         assert!(!group.group_id.is_empty());
     }
@@ -256,7 +270,7 @@ mod tests {
     #[test]
     fn test_build_group_empty_path() {
         let context = test_context();
-        let group = build_group("admins".to_string(), Some("".to_string()), &context).unwrap();
+        let group = build_group(&key("admins"), Some("".to_string()), &context).unwrap();
         assert_eq!(group.path, "");
     }
 
@@ -264,14 +278,14 @@ mod tests {
     fn test_build_group_very_long_name() {
         let context = test_context();
         let long_name = "a".repeat(100);
-        let group = build_group(long_name.clone(), None, &context).unwrap();
+        let group = build_group(&key(&long_name), None, &context).unwrap();
         assert_eq!(group.group_name, long_name);
     }
 
     #[test]
     fn test_build_group_with_unicode_in_name() {
         let context = test_context();
-        let group = build_group("组".to_string(), None, &context).unwrap();
+        let group = build_group(&key("组"), None, &context).unwrap();
         assert_eq!(group.group_name, "组");
     }
 
@@ -280,7 +294,7 @@ mod tests {
         let context = test_context();
         // Paths with null bytes should be handled (though unusual)
         let group = build_group(
-            "admins".to_string(),
+            &key("admins"),
             Some("/path\0with\0null/".to_string()),
             &context,
         )
@@ -299,7 +313,7 @@ mod tests {
             .build();
 
         if let Ok(context) = context_result {
-            let group_result = build_group("admins".to_string(), None, &context);
+            let group_result = build_group(&key("admins"), None, &context);
             assert!(group_result.is_err());
         }
     }

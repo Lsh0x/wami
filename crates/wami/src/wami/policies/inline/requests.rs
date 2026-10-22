@@ -1,5 +1,6 @@
 //! Inline Policy Request Types
 
+use crate::arn::ScopedName;
 use serde::{Deserialize, Serialize};
 
 // User inline policy requests
@@ -7,8 +8,8 @@ use serde::{Deserialize, Serialize};
 /// Request to put an inline policy on a user
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PutUserPolicyRequest {
-    /// The name of the user
-    pub user_name: String,
+    /// The user — its tenant and its name
+    pub user: ScopedName,
     /// The name of the policy
     pub policy_name: String,
     /// The policy document in JSON format
@@ -18,8 +19,8 @@ pub struct PutUserPolicyRequest {
 /// Request to get an inline policy from a user
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GetUserPolicyRequest {
-    /// The name of the user
-    pub user_name: String,
+    /// The user — its tenant and its name
+    pub user: ScopedName,
     /// The name of the policy
     pub policy_name: String,
 }
@@ -27,8 +28,8 @@ pub struct GetUserPolicyRequest {
 /// Request to delete an inline policy from a user
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeleteUserPolicyRequest {
-    /// The name of the user
-    pub user_name: String,
+    /// The user — its tenant and its name
+    pub user: ScopedName,
     /// The name of the policy
     pub policy_name: String,
 }
@@ -36,8 +37,8 @@ pub struct DeleteUserPolicyRequest {
 /// Request to list inline policies for a user
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListUserPoliciesRequest {
-    /// The name of the user
-    pub user_name: String,
+    /// The user — its tenant and its name
+    pub user: ScopedName,
 }
 
 // Group inline policy requests
@@ -45,8 +46,8 @@ pub struct ListUserPoliciesRequest {
 /// Request to put an inline policy on a group
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PutGroupPolicyRequest {
-    /// The name of the group
-    pub group_name: String,
+    /// The group — its tenant and its name
+    pub group: ScopedName,
     /// The name of the policy
     pub policy_name: String,
     /// The policy document in JSON format
@@ -56,8 +57,8 @@ pub struct PutGroupPolicyRequest {
 /// Request to get an inline policy from a group
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GetGroupPolicyRequest {
-    /// The name of the group
-    pub group_name: String,
+    /// The group — its tenant and its name
+    pub group: ScopedName,
     /// The name of the policy
     pub policy_name: String,
 }
@@ -65,8 +66,8 @@ pub struct GetGroupPolicyRequest {
 /// Request to delete an inline policy from a group
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeleteGroupPolicyRequest {
-    /// The name of the group
-    pub group_name: String,
+    /// The group — its tenant and its name
+    pub group: ScopedName,
     /// The name of the policy
     pub policy_name: String,
 }
@@ -74,8 +75,8 @@ pub struct DeleteGroupPolicyRequest {
 /// Request to list inline policies for a group
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListGroupPoliciesRequest {
-    /// The name of the group
-    pub group_name: String,
+    /// The group — its tenant and its name
+    pub group: ScopedName,
 }
 
 // Role inline policy requests
@@ -83,8 +84,8 @@ pub struct ListGroupPoliciesRequest {
 /// Request to put an inline policy on a role
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PutRolePolicyRequest {
-    /// The name of the role
-    pub role_name: String,
+    /// The role — its tenant and its name
+    pub role: ScopedName,
     /// The name of the policy
     pub policy_name: String,
     /// The policy document in JSON format
@@ -94,8 +95,8 @@ pub struct PutRolePolicyRequest {
 /// Request to get an inline policy from a role
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GetRolePolicyRequest {
-    /// The name of the role
-    pub role_name: String,
+    /// The role — its tenant and its name
+    pub role: ScopedName,
     /// The name of the policy
     pub policy_name: String,
 }
@@ -103,8 +104,8 @@ pub struct GetRolePolicyRequest {
 /// Request to delete an inline policy from a role
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeleteRolePolicyRequest {
-    /// The name of the role
-    pub role_name: String,
+    /// The role — its tenant and its name
+    pub role: ScopedName,
     /// The name of the policy
     pub policy_name: String,
 }
@@ -112,6 +113,6 @@ pub struct DeleteRolePolicyRequest {
 /// Request to list inline policies for a role
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListRolePoliciesRequest {
-    /// The name of the role
-    pub role_name: String,
+    /// The role — its tenant and its name
+    pub role: ScopedName,
 }

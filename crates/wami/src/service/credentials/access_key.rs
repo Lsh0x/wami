@@ -5,20 +5,25 @@
 use crate::credentials::access_key::{
     builder as access_key_builder, AccessKey, CreateAccessKeyRequest, ListAccessKeysRequest,
 };
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
-use crate::store::traits::AccessKeyStore;
+use crate::service::auth::authorizer::{credential_found, guard, guard_by_id, Authorizer};
+use crate::store::traits::{AccessKeyStore, UserStore};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
-use wami_core::error::Result;
+use wami_core::error::{AmiError, Result};
+
+/// What the access key service reads: the keys, and their owners — a key is
+/// judged on, and stamped with, the tenant of the user who owns it (wami 005).
+pub trait AccessKeyServiceStore: AccessKeyStore + UserStore {}
+impl<T> AccessKeyServiceStore for T where T: AccessKeyStore + UserStore {}
 
 /// Service for managing IAM access keys
 ///
 /// Provides high-level operations for access key management.
 /// Optionally holds an [`Authorizer`] for authorization guards on every method.
 #[wami_macros::service(
-    store_trait = "crate::store::traits::AccessKeyStore",
+    store_trait = "crate::service::credentials::access_key::AccessKeyServiceStore",
     generate_new = false
 )]
 pub struct AccessKeyService<S> {
@@ -26,7 +31,7 @@ pub struct AccessKeyService<S> {
     authz: Option<Arc<dyn Authorizer>>,
 }
 
-impl<S: AccessKeyStore> AccessKeyService<S> {
+impl<S: AccessKeyServiceStore> AccessKeyService<S> {
     /// Create a new AccessKeyService without authorization guards (backward compatible).
     pub fn new(store: Arc<RwLock<S>>) -> Self {
         Self { store, authz: None }
@@ -40,38 +45,25 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
         }
     }
 
-    /// Internal: check authorization if an authorizer is set.
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     /// Create a new access key
     pub async fn create_access_key(
         &self,
         context: &WamiContext,
         request: CreateAccessKeyRequest,
     ) -> Result<AccessKey> {
-        // Authorization guard
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            &request.user,
         )
         .await?;
 
-        // Use wami builder to create access key
-        let access_key = access_key_builder::build_access_key(request.user_name, context)?;
+        // The owner is read, and the key takes ITS key and tenant: never the
+        // caller's (D5).
+        let owner = super::read_owner(&*self.read_store().await, context, &request.user).await?;
+        let access_key = access_key_builder::build_access_key(&owner, context)?;
 
         // Store it
         self.write_store().await.create_access_key(access_key).await
@@ -83,14 +75,40 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
         context: &WamiContext,
         access_key_id: &str,
     ) -> Result<Option<AccessKey>> {
-        self.guard(
+        self.read_judged(context, access_key_id).await
+    }
+
+    /// Read the key stored under `access_key_id`, then judge its OWNER: the
+    /// key is addressed by id, so its owner is known only once it is read. An
+    /// absent id and a denied owner are one refusal naming the id (A1).
+    async fn read_judged(
+        &self,
+        context: &WamiContext,
+        access_key_id: &str,
+    ) -> Result<Option<AccessKey>> {
+        let key = self
+            .read_store()
+            .await
+            .get_access_key(access_key_id)
+            .await?;
+        let owner = key.as_ref().map(|k| {
+            credential_found(
+                context,
+                &k.owner,
+                access_key_id,
+                &k.wami_arn.wami_instance_id,
+            )
+        });
+        guard_by_id(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageCredentials,
-            "credential",
+            "access key",
             access_key_id,
+            owner,
         )
         .await?;
-        self.read_store().await.get_access_key(access_key_id).await
+        Ok(key)
     }
 
     /// Update an access key (e.g., change status)
@@ -99,13 +117,19 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
         context: &WamiContext,
         access_key: AccessKey,
     ) -> Result<AccessKey> {
-        self.guard(
-            context,
-            WamiAction::IamManageCredentials,
-            "user",
-            &access_key.user_name,
-        )
-        .await?;
+        // Judged on the STORED key's owner, never on the owner the caller
+        // wrote into the record it hands in.
+        let stored = self.read_judged(context, &access_key.access_key_id).await?;
+        if let Some(stored) = &stored {
+            if stored.owner != access_key.owner {
+                return Err(AmiError::InvalidParameter {
+                    message: format!(
+                        "access key {} belongs to {}, not {}",
+                        access_key.access_key_id, stored.owner, access_key.owner
+                    ),
+                });
+            }
+        }
         self.write_store().await.update_access_key(access_key).await
     }
 
@@ -115,13 +139,7 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
         context: &WamiContext,
         access_key_id: &str,
     ) -> Result<()> {
-        self.guard(
-            context,
-            WamiAction::IamManageCredentials,
-            "credential",
-            access_key_id,
-        )
-        .await?;
+        self.read_judged(context, access_key_id).await?;
         self.write_store()
             .await
             .delete_access_key(access_key_id)
@@ -134,16 +152,17 @@ impl<S: AccessKeyStore> AccessKeyService<S> {
         context: &WamiContext,
         request: ListAccessKeysRequest,
     ) -> Result<(Vec<AccessKey>, bool, Option<String>)> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            &request.user,
         )
         .await?;
         self.read_store()
             .await
-            .list_access_keys(&request.user_name, request.pagination.as_ref())
+            .list_access_keys(&request.user, request.pagination.as_ref())
             .await
     }
 }
@@ -155,9 +174,28 @@ mod tests {
     use crate::store::memory::InMemoryWamiStore;
     use wami_core::arn::{TenantPath, WamiArn};
 
-    fn setup_service() -> AccessKeyService<InMemoryWamiStore> {
-        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        AccessKeyService::new(store)
+    /// The tenant every test here works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
+
+    /// A service over a store holding the users the tests mint credentials
+    /// for: a credential is only ever minted for a user that is there.
+    async fn setup_service() -> AccessKeyService<InMemoryWamiStore> {
+        use crate::store::traits::UserStore;
+        let mut seeded = InMemoryWamiStore::default();
+        for name in ["alice", "bob", "charlie", "david"] {
+            let user =
+                crate::wami::identity::user::builder::build_user(&key(name), None, &test_context())
+                    .unwrap();
+            seeded.create_user(user).await.unwrap();
+        }
+        AccessKeyService::new(Arc::new(RwLock::new(seeded)))
     }
 
     fn test_context() -> WamiContext {
@@ -175,15 +213,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_and_get_access_key() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
-        let request = CreateAccessKeyRequest {
-            user_name: "alice".to_string(),
-        };
+        let request = CreateAccessKeyRequest { user: key("alice") };
 
         let access_key = service.create_access_key(&context, request).await.unwrap();
-        assert_eq!(access_key.user_name, "alice");
+        assert_eq!(access_key.owner.name(), "alice");
         assert!(!access_key.access_key_id.is_empty());
         assert!(access_key.secret_access_key.is_some());
 
@@ -192,17 +228,15 @@ mod tests {
             .await
             .unwrap();
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().user_name, "alice");
+        assert_eq!(retrieved.unwrap().owner.name(), "alice");
     }
 
     #[tokio::test]
     async fn test_delete_access_key() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
-        let request = CreateAccessKeyRequest {
-            user_name: "bob".to_string(),
-        };
+        let request = CreateAccessKeyRequest { user: key("bob") };
         let access_key = service.create_access_key(&context, request).await.unwrap();
 
         service
@@ -219,19 +253,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_list_access_keys() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         // Create multiple access keys for same user
         for _ in 0..3 {
             let request = CreateAccessKeyRequest {
-                user_name: "charlie".to_string(),
+                user: key("charlie"),
             };
             service.create_access_key(&context, request).await.unwrap();
         }
 
         let list_request = ListAccessKeysRequest {
-            user_name: "charlie".to_string(),
+            user: key("charlie"),
             pagination: None,
         };
         let (keys, _, _) = service
@@ -245,7 +279,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_access_key_nonexistent() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         let result = service.get_access_key(&context, "nonexistent-key-id").await;
@@ -255,7 +289,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_access_key_nonexistent() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         // Delete is idempotent - succeeds even if access key doesn't exist
@@ -267,11 +301,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_list_access_keys_empty_result() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         let request = ListAccessKeysRequest {
-            user_name: "nonexistent".to_string(),
+            user: key("nonexistent"),
             pagination: None,
         };
 
@@ -281,12 +315,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_access_key_nonexistent() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         // Update is idempotent - creates/updates even if access key doesn't exist
         use crate::credentials::build_access_key;
-        let access_key = build_access_key("alice".to_string(), &context).unwrap();
+        let access_key = build_access_key(&key("alice"), &context).unwrap();
         let mut nonexistent_key = access_key;
         nonexistent_key.access_key_id = "nonexistent-key-id".to_string();
 
@@ -319,9 +353,7 @@ mod tests {
         let service = AccessKeyService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
 
-        let request = CreateAccessKeyRequest {
-            user_name: "alice".to_string(),
-        };
+        let request = CreateAccessKeyRequest { user: key("alice") };
 
         let result = service.create_access_key(&context, request).await;
         assert!(matches!(
@@ -349,8 +381,7 @@ mod tests {
         let service = AccessKeyService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
 
-        let access_key =
-            crate::credentials::build_access_key("alice".to_string(), &context).unwrap();
+        let access_key = crate::credentials::build_access_key(&key("alice"), &context).unwrap();
 
         let result = service.update_access_key(&context, access_key).await;
         assert!(matches!(
@@ -379,7 +410,7 @@ mod tests {
         let context = test_context();
 
         let request = ListAccessKeysRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             pagination: None,
         };
 

@@ -19,6 +19,16 @@ use wami::wami::identity::group::requests::CreateGroupRequest;
 use wami::wami::identity::role::requests::CreateRoleRequest;
 use wami::wami::identity::user::requests::{CreateUserRequest, ListUsersRequest};
 
+/// The tenant this example works in.
+fn tenant() -> wami_core::arn::TenantPath {
+    wami::arn::TenantPath::single(0)
+}
+
+/// `name`'s key in that tenant.
+fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+    wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Service Layer Introduction ===\n");
@@ -55,7 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create users
     println!("Creating users...");
     let alice_req = CreateUserRequest {
-        user_name: "alice".to_string(),
+        user: key("alice"),
         path: Some("/users/".to_string()),
         permissions_boundary: None,
         tags: None,
@@ -64,7 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✓ Created user: {}", alice.user_name);
 
     let bob_req = CreateUserRequest {
-        user_name: "bob".to_string(),
+        user: key("bob"),
         path: Some("/users/".to_string()),
         permissions_boundary: None,
         tags: None,
@@ -75,7 +85,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create groups
     println!("\nCreating groups...");
     let dev_group_req = CreateGroupRequest {
-        group_name: "developers".to_string(),
+        group: key("developers"),
         path: Some("/groups/".to_string()),
         tags: None,
     };
@@ -85,7 +95,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create role
     println!("\nCreating role...");
     let role_req = CreateRoleRequest {
-        role_name: "deploy-role".to_string(),
+        role: key("deploy-role"),
         path: Some("/roles/".to_string()),
         assume_role_policy_document: r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"*"},"Action":"sts:AssumeRole"}]}"#.to_string(),
         description: Some("Role for deployment".to_string()),
@@ -100,7 +110,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n\nStep 3: Reading resources via services...\n");
 
     // Get specific user
-    let alice_retrieved = user_service.get_user(&context, "alice").await?;
+    let alice_retrieved = user_service.get_user(&context, &key("alice")).await?;
     if let Some(user) = alice_retrieved {
         println!("✓ Retrieved user 'alice':");
         println!("  - User ID: {}", user.user_id);
@@ -112,6 +122,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .list_users(
             &context,
             ListUsersRequest {
+                tenant: tenant(),
                 path_prefix: None,
                 pagination: None,
             },
@@ -127,7 +138,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     use wami::wami::identity::user::requests::UpdateUserRequest;
     let update_req = UpdateUserRequest {
-        user_name: "alice".to_string(),
+        user: key("alice"),
         new_user_name: None,
         new_path: Some("/admin-users/".to_string()),
     };
@@ -137,11 +148,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // === DELETE Operations via Services ===
     println!("\n\nStep 5: Deleting resources via services...\n");
 
-    user_service.delete_user(&context, "bob").await?;
+    user_service.delete_user(&context, &key("bob")).await?;
     println!("✓ Deleted user 'bob'");
 
     // Verify deletion
-    let bob_check = user_service.get_user(&context, "bob").await?;
+    let bob_check = user_service.get_user(&context, &key("bob")).await?;
     if bob_check.is_none() {
         println!("  Verified: bob no longer exists");
     }

@@ -7,6 +7,8 @@
 //! The store layer is a pure persistence layer with no provider coupling.
 //! Resources themselves carry their provider-specific information.
 
+#[cfg(feature = "conformance")]
+pub mod conformance;
 pub mod memory;
 pub mod resource;
 pub mod traits;

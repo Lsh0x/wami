@@ -5,17 +5,25 @@
 
 use async_trait::async_trait;
 use std::sync::Arc;
-use wami_core::arn::WamiArn;
+use wami_core::actions::WamiAction;
+use wami_core::arn::{Resource, ScopedName, Service, TenantPath, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
 
-use super::decision::Decision;
+use super::decision::{Decision, DenyReason};
 
 /// Object-safe authorization interface.
 ///
 /// Services hold an `Option<Arc<dyn Authorizer>>` and call [`Authorizer::check_or_deny`]
 /// at the top of each method. When `None`, no authorization check is performed
 /// (backward compatibility with existing callers).
+///
+/// The check AT USE of the caller's key — the record it names must carry the
+/// caller ARN, a session's role likewise, policies only of the principal's
+/// tenant (wami 005) — lives in wami's implementation,
+/// `AuthorizationService::authorize`, which holds the store; the trait and
+/// the guards get no store handle. An implementation of this trait of one's
+/// own decides without those checks unless it makes them.
 #[async_trait]
 pub trait Authorizer: Send + Sync {
     /// Decide whether `context` may perform `action` on `resource_arn`.
@@ -71,26 +79,236 @@ pub trait Authorizer: Send + Sync {
     }
 }
 
-/// Helper: build a WAMI ARN for an IAM resource from the caller's context.
+/// The ARN a guard judges for the `kind` named by `target`:
+/// `arn:wami:iam:{target's tenant}:wami:{instance}:{kind}/{target's name}`.
 ///
-/// Produces: `arn:wami:iam:{tenant}:wami:{instance}:{resource_type}/{resource_id}`
-pub fn iam_resource_arn(
-    context: &WamiContext,
-    resource_type: &str,
-    resource_id: &str,
-) -> Result<WamiArn> {
-    use wami_core::arn::{Resource, Service};
+/// The tenant is the TARGET's, never the caller's (wami 005): rendered from
+/// the caller's, a right on one tenant's `user/*` covered every tenant's
+/// user of the same name. The resource is the name, so documents written as
+/// `user/alice` or `user/*` keep their meaning.
+pub fn target_arn(context: &WamiContext, kind: &str, target: &ScopedName) -> WamiArn {
+    iam_arn(context, target.tenant(), kind, target.name())
+}
 
-    Ok(WamiArn {
+/// The ARN a guard judges for a verb on every `kind` of `tenant` — a list:
+/// `{kind}/*` in exactly that tenant.
+pub fn tenant_arn(context: &WamiContext, kind: &str, tenant: &TenantPath) -> WamiArn {
+    iam_arn(context, tenant, kind, "*")
+}
+
+/// `arn:wami:iam:{tenant}:wami:{instance}:{kind}/{id}`.
+pub(crate) fn iam_arn(context: &WamiContext, tenant: &TenantPath, kind: &str, id: &str) -> WamiArn {
+    WamiArn {
         service: Service::Iam,
-        tenant_path: context.tenant_path().clone(),
+        tenant_path: tenant.clone(),
         wami_instance_id: context.instance_id().to_string(),
         cloud_mapping: None,
         resource: Resource {
-            resource_type: resource_type.to_string(),
-            resource_id: resource_id.to_string(),
+            resource_type: kind.to_string(),
+            resource_id: id.to_string(),
         },
+    }
+}
+
+/// THE guard (wami 005): judge `action` on `target`'s ARN, before anything is
+/// read.
+///
+/// Every service calls this one function; there is no per-service copy. It
+/// runs before the target is read, so a refusal is the same whether the
+/// target exists or not — `NotFound` only ever follows an allowed guard. With
+/// no authorizer, nothing is judged (services built without one).
+///
+/// # Errors
+///
+/// [`AmiError::AccessDenied`] naming the target's ARN when the decision is
+/// not an Allow, and whatever the authorizer returns when it cannot decide.
+pub async fn guard(
+    authz: Option<&Arc<dyn Authorizer>>,
+    context: &WamiContext,
+    action: WamiAction,
+    kind: &str,
+    target: &ScopedName,
+) -> Result<()> {
+    guard_arn(authz, context, action, &target_arn(context, kind, target)).await
+}
+
+/// [`guard`] for a verb on a whole tenant (a list): judges `{kind}/*` in
+/// `tenant`.
+///
+/// # Errors
+///
+/// As [`guard`].
+pub async fn guard_tenant(
+    authz: Option<&Arc<dyn Authorizer>>,
+    context: &WamiContext,
+    action: WamiAction,
+    kind: &str,
+    tenant: &TenantPath,
+) -> Result<()> {
+    guard_arn(authz, context, action, &tenant_arn(context, kind, tenant)).await
+}
+
+/// [`guard`] on an ARN already rendered from the target's stored tenant.
+///
+/// # Errors
+///
+/// As [`guard`].
+pub async fn guard_arn(
+    authz: Option<&Arc<dyn Authorizer>>,
+    context: &WamiContext,
+    action: WamiAction,
+    arn: &WamiArn,
+) -> Result<()> {
+    match authz {
+        Some(authz) => authz.check_or_deny(context, action.as_str(), arn).await,
+        None => Ok(()),
+    }
+}
+
+/// What a guard by id reads of the record it found under the id.
+#[derive(Debug, Clone)]
+pub struct Found {
+    /// The instance the record belongs to. One store holds one instance: a
+    /// record of another is refused as an absent one (review round 1, Δ12).
+    pub instance: String,
+    /// The ARN an Allow is needed on: its owner's key (`user/<owner>` in the
+    /// owner's tenant) or, for a policy, its own ARN in its stored tenant.
+    pub owner: WamiArn,
+    /// The record's own ARN (`credential/<id>` in the owner's tenant), when
+    /// it has one a document may name: a Deny on it wins too (A5, ruling 9).
+    pub itself: Option<WamiArn>,
+}
+
+/// The guard for a record addressed by an id (an access key, an MFA serial, a
+/// policy ARN, a deletion task): `found` is what the record READ under that
+/// id says of itself, and `None` when nothing is stored there.
+///
+/// The record's owner must be allowed `action`, and an explicit Deny on the
+/// record itself refuses it as well: an Allow needs the owner, a Deny on
+/// either wins (A5). An absent id, a record of another instance (Δ12) and a
+/// refusal are ONE answer, naming the id the caller gave and nothing else: a
+/// message naming the owner, or saying "not found", would tell a caller with
+/// no right who owns what, one probe at a time (A1). With no authorizer an
+/// absent id is not refused: the verb answers as it always did.
+///
+/// # Errors
+///
+/// [`AmiError::AccessDenied`] naming `what` and `id` — for an absent id, a
+/// refusal, and any error reached only through the record. An error reading
+/// the caller's own set (a store that fails, a document that cannot be read)
+/// comes as it came, for a present and an absent id alike.
+pub async fn guard_by_id(
+    authz: Option<&Arc<dyn Authorizer>>,
+    context: &WamiContext,
+    action: WamiAction,
+    what: &str,
+    id: &str,
+    found: Option<Found>,
+) -> Result<()> {
+    let Some(authz) = authz else {
+        return Ok(());
+    };
+    let refusal = || AmiError::AccessDenied {
+        message: format!(
+            "{} is not authorized to perform {} on {what} {id}",
+            context.caller_arn(),
+            action.as_str()
+        ),
+    };
+    // The caller's own set is read FIRST, on a target the record does not
+    // choose: a failing store or a document that cannot be read answers the
+    // same for a present and an absent id (review round 2 F2).
+    // A caller refused outright (no key, a forged one) gets the one refusal.
+    match authz
+        .authorize(context, action.as_str(), context.caller_arn())
+        .await
+    {
+        Err(AmiError::AccessDenied { .. }) => return Err(refusal()),
+        Err(unreadable) => return Err(unreadable),
+        Ok(_) => {}
+    }
+    let Some(found) = found.filter(|found| found.instance == context.instance_id()) else {
+        return Err(refusal());
+    };
+    // From here an error is reached only through the record — a condition
+    // read against its owner or itself. Told apart from the refusal, it
+    // would say the id exists (A1): it IS the refusal.
+    if authz
+        .check_or_deny(context, action.as_str(), &found.owner)
+        .await
+        .is_err()
+    {
+        return Err(refusal());
+    }
+    if let Some(itself) = &found.itself {
+        match authz.authorize(context, action.as_str(), itself).await {
+            Ok(decision) if !explicitly_denied(&decision) => {}
+            _ => return Err(refusal()),
+        }
+    }
+    Ok(())
+}
+
+/// What a guard by id reads of a CREDENTIAL found under `id`: its owner's
+/// key, its own `credential/<id>` in the owner's tenant, and its instance.
+pub fn credential_found(
+    context: &WamiContext,
+    owner: &ScopedName,
+    id: &str,
+    instance: &str,
+) -> Found {
+    Found {
+        instance: instance.to_string(),
+        owner: target_arn(context, "user", owner),
+        itself: Some(iam_arn(context, owner.tenant(), "credential", id)),
+    }
+}
+
+/// A decision some statement refused outright — as opposed to nothing having
+/// matched.
+fn explicitly_denied(decision: &Decision) -> bool {
+    match decision {
+        Decision::Deny(DenyReason::Statements(_)) => true,
+        Decision::Deny(DenyReason::BoundaryRestricted { denied_by, .. }) => !denied_by.is_empty(),
+        _ => false,
+    }
+}
+
+/// The record read by `requested` must be the one the guard judged: `read`
+/// is the key the stored record carries, `read_instance` its instance.
+///
+/// For a store keyed by [`ScopedName`] the two are equal by construction;
+/// this refuses a store that returns another record than the one asked for —
+/// another tenant's of the same name — rather than acting on it.
+///
+/// # Errors
+///
+/// [`AmiError::AccessDenied`] naming the guarded ARN, the refusal a denied
+/// guard gives, when the record is not the requested one.
+pub fn confirm(
+    context: &WamiContext,
+    kind: &str,
+    requested: &ScopedName,
+    read: &ScopedName,
+    read_instance: &str,
+) -> Result<()> {
+    if read == requested && read_instance == context.instance_id() {
+        return Ok(());
+    }
+    Err(AmiError::AccessDenied {
+        message: format!(
+            "{} is not authorized to act on {}: the store returned another record",
+            context.caller_arn(),
+            target_arn(context, kind, requested)
+        ),
     })
+}
+
+/// Whether a record read by its key belongs to the context's instance. One
+/// store holds one instance: a record of another is answered as an absent
+/// one, at every by-key read (wami 005, R8; review round 2 F3).
+pub(crate) fn in_instance(context: &WamiContext, record: &WamiArn) -> bool {
+    record.wami_instance_id == context.instance_id()
 }
 
 /// Extension: implement `Authorizer` for the concrete `AuthorizationService<S>`.
@@ -142,47 +360,78 @@ mod tests {
     use wami_core::context::WamiContext;
     use wami_core::error::AmiError;
 
+    /// The key a test context names: its ARN's tenant and resource, as the
+    /// test records are written under (test code: production never builds a
+    /// key from an ARN, wami 005).
+    fn keyed(arn: &wami_core::arn::WamiArn) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(arn.tenant_path.clone(), arn.resource.resource_id.clone())
+    }
+
+    /// The tenant every test here works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
+
     fn make_context() -> WamiContext {
         let arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/alice".parse().unwrap();
         WamiContext::builder()
             .instance_id("999")
             .tenant_path(TenantPath::single(12345678))
+            .caller_key(keyed(&arn))
             .caller_arn(arn)
             .is_root(false)
             .build()
             .unwrap()
     }
 
-    // ---- iam_resource_arn tests ----
+    // ---- target_arn tests ----
 
     #[test]
-    fn test_iam_resource_arn_produces_correct_arn() {
+    fn the_guarded_arn_takes_the_targets_tenant_never_the_callers() {
+        // The caller is of 12345678; the target is 5/7's bob.
         let ctx = make_context();
-        let arn = iam_resource_arn(&ctx, "user", "bob").unwrap();
-
-        assert_eq!(arn.to_string(), "arn:wami:iam:12345678:wami:999:user/bob");
+        let bob = wami_core::arn::ScopedName::new(TenantPath::new(vec![5, 7]), "bob");
+        assert_eq!(
+            target_arn(&ctx, "user", &bob).to_string(),
+            "arn:wami:iam:5/7:wami:999:user/bob"
+        );
     }
 
     #[test]
-    fn test_iam_resource_arn_with_role_type() {
+    fn the_guarded_arn_carries_the_kind_and_the_name() {
         let ctx = make_context();
-        let arn = iam_resource_arn(&ctx, "role", "admin-role").unwrap();
-
         assert_eq!(
-            arn.to_string(),
+            target_arn(&ctx, "role", &key("admin-role")).to_string(),
             "arn:wami:iam:12345678:wami:999:role/admin-role"
         );
     }
 
     #[test]
-    fn test_iam_resource_arn_with_policy_type() {
+    fn a_list_is_guarded_on_every_kind_of_the_tenant_it_lists() {
         let ctx = make_context();
-        let arn = iam_resource_arn(&ctx, "policy", "readonly").unwrap();
-
         assert_eq!(
-            arn.to_string(),
-            "arn:wami:iam:12345678:wami:999:policy/readonly"
+            tenant_arn(&ctx, "user", &TenantPath::new(vec![6, 7])).to_string(),
+            "arn:wami:iam:6/7:wami:999:user/*"
         );
+    }
+
+    #[test]
+    fn confirm_refuses_a_record_of_another_tenant() {
+        let ctx = make_context();
+        let asked = wami_core::arn::ScopedName::new(TenantPath::new(vec![5, 7]), "alice");
+        let other = wami_core::arn::ScopedName::new(TenantPath::new(vec![6, 7]), "alice");
+        assert!(confirm(&ctx, "user", &asked, &asked, "999").is_ok());
+        let refused = confirm(&ctx, "user", &asked, &other, "999");
+        assert!(
+            matches!(&refused, Err(AmiError::AccessDenied { message }) if message.contains("arn:wami:iam:5/7:wami:999:user/alice")),
+            "{refused:?}"
+        );
+        assert!(confirm(&ctx, "user", &asked, &asked, "another-instance").is_err());
     }
 
     // ---- into_authorizer tests ----
@@ -212,15 +461,19 @@ mod tests {
 
     async fn setup_store_with_allow_policy(ctx: &WamiContext) -> Arc<RwLock<InMemoryWamiStore>> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        let user =
-            user_builder::build_user("alice".to_string(), Some("/".to_string()), ctx).unwrap();
+        let mut user = user_builder::build_user(&key("alice"), Some("/".to_string()), ctx).unwrap();
+        user.wami_arn = ctx.caller_arn().clone();
         store.write().await.create_user(user).await.unwrap();
 
         // Give alice an inline policy that allows iam:*
         store
             .write()
             .await
-            .put_user_policy("alice", "AllowAll", allow_policy_json(&["iam:*"], &["*"]))
+            .put_user_policy(
+                &key("alice"),
+                "AllowAll",
+                allow_policy_json(&["iam:*"], &["*"]),
+            )
             .await
             .unwrap();
 
@@ -251,8 +504,9 @@ mod tests {
         let ctx = make_context();
         // Store with user but no policies -> default deny
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        let user =
-            user_builder::build_user("alice".to_string(), Some("/".to_string()), &ctx).unwrap();
+        let mut user =
+            user_builder::build_user(&key("alice"), Some("/".to_string()), &ctx).unwrap();
+        user.wami_arn = ctx.caller_arn().clone();
         store.write().await.create_user(user).await.unwrap();
 
         let authorizer: Arc<dyn Authorizer> = into_authorizer(AuthorizationService::new(store));
@@ -282,8 +536,9 @@ mod tests {
     async fn test_authorizer_trait_check_or_deny_returns_access_denied() {
         let ctx = make_context();
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        let user =
-            user_builder::build_user("alice".to_string(), Some("/".to_string()), &ctx).unwrap();
+        let mut user =
+            user_builder::build_user(&key("alice"), Some("/".to_string()), &ctx).unwrap();
+        user.wami_arn = ctx.caller_arn().clone();
         store.write().await.create_user(user).await.unwrap();
 
         let authorizer: Arc<dyn Authorizer> = into_authorizer(AuthorizationService::new(store));
@@ -298,5 +553,97 @@ mod tests {
             "Expected AccessDenied, got: {:?}",
             err
         );
+    }
+
+    // ---- guard_by_id: one answer for a present and an absent id (F2) ----
+
+    /// An authorizer whose store fails on every read of the caller's set.
+    struct FailingStore;
+
+    #[async_trait::async_trait]
+    impl Authorizer for FailingStore {
+        async fn authorize(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            _resource_arn: &WamiArn,
+        ) -> Result<Decision> {
+            Err(AmiError::StoreError(
+                "the caller's policies: disk".to_string(),
+            ))
+        }
+    }
+
+    /// An authorizer allowing everything but one ARN, whose statement carries
+    /// a condition the request cannot be read against — an error reached
+    /// only through that target, i.e. only when the record exists.
+    struct UnreadableOn(WamiArn);
+
+    #[async_trait::async_trait]
+    impl Authorizer for UnreadableOn {
+        async fn authorize(
+            &self,
+            _context: &WamiContext,
+            _action: &str,
+            resource_arn: &WamiArn,
+        ) -> Result<Decision> {
+            if resource_arn == &self.0 {
+                return Err(AmiError::UnreadableCondition {
+                    policy: "owner-only".to_string(),
+                    statement: "#0".to_string(),
+                    message: "aws:SourceIp is no address".to_string(),
+                });
+            }
+            Ok(Decision::Allow(AllowReason::RootBypass))
+        }
+    }
+
+    /// `guard_by_id`'s answer for `found`, as the caller sees it.
+    async fn answer(authz: Arc<dyn Authorizer>, found: Option<Found>) -> String {
+        let got = guard_by_id(
+            Some(&authz),
+            &make_context(),
+            WamiAction::IamManageCredentials,
+            "access key",
+            "AKIAEXAMPLE",
+            found,
+        )
+        .await;
+        format!("{got:?}")
+    }
+
+    fn bobs_key(ctx: &WamiContext) -> Found {
+        credential_found(ctx, &key("bob"), "AKIAEXAMPLE", "999")
+    }
+
+    #[tokio::test]
+    async fn a_failing_store_answers_alike_for_a_present_and_an_absent_id() {
+        let ctx = make_context();
+        let authz: Arc<dyn Authorizer> = Arc::new(FailingStore);
+        let present = answer(authz.clone(), Some(bobs_key(&ctx))).await;
+        let absent = answer(authz.clone(), None).await;
+        let elsewhere = Found {
+            instance: "another".to_string(),
+            ..bobs_key(&ctx)
+        };
+        let foreign = answer(authz, Some(elsewhere)).await;
+        assert_eq!(present, absent, "the id's existence is observable");
+        assert_eq!(present, foreign, "another instance's record is observable");
+        assert!(present.contains("StoreError"), "the store error: {present}");
+    }
+
+    #[tokio::test]
+    async fn an_error_reached_only_through_the_record_answers_as_the_refusal() {
+        let ctx = make_context();
+        let found = bobs_key(&ctx);
+        for (what, on) in [
+            ("its owner", found.owner.clone()),
+            ("itself", found.itself.clone().unwrap()),
+        ] {
+            let authz: Arc<dyn Authorizer> = Arc::new(UnreadableOn(on));
+            let present = answer(authz.clone(), Some(bobs_key(&ctx))).await;
+            let absent = answer(authz, None).await;
+            assert_eq!(present, absent, "an error on {what} told the id exists");
+        }
     }
 }

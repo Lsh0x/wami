@@ -1,5 +1,6 @@
 //! AccessKey Request and Response Types
 
+use crate::arn::ScopedName;
 use serde::{Deserialize, Serialize};
 
 use super::model::AccessKey;
@@ -11,15 +12,15 @@ pub use super::model::AccessKeyLastUsed;
 /// Request parameters for creating a new access key
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateAccessKeyRequest {
-    /// The name of the IAM user to create the access key for
-    pub user_name: String,
+    /// The user — its tenant and its name
+    pub user: ScopedName,
 }
 
 /// Request parameters for updating an access key's status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateAccessKeyRequest {
-    /// The name of the user whose access key should be updated
-    pub user_name: String,
+    /// The user — its tenant and its name
+    pub user: ScopedName,
     /// The access key ID to update
     pub access_key_id: String,
     /// The new status: "Active" or "Inactive"
@@ -29,8 +30,8 @@ pub struct UpdateAccessKeyRequest {
 /// Request parameters for listing access keys
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListAccessKeysRequest {
-    /// The name of the user whose access keys to list
-    pub user_name: String,
+    /// The user — its tenant and its name
+    pub user: ScopedName,
     /// Pagination parameters
     pub pagination: Option<PaginationParams>,
 }

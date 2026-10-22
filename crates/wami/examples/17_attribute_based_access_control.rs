@@ -19,6 +19,16 @@ use wami::types::Tag;
 use wami::wami::identity::user::requests::CreateUserRequest;
 use wami::wami::policies::policy::requests::CreatePolicyRequest;
 
+/// The tenant this example works in.
+fn tenant() -> wami_core::arn::TenantPath {
+    wami::arn::TenantPath::single(0)
+}
+
+/// `name`'s key in that tenant.
+fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+    wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Attribute-Based Access Control (ABAC) ===\n");
@@ -50,7 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_user(
             &context,
             CreateUserRequest {
-                user_name: "alice".to_string(),
+                user: key("alice"),
                 path: Some("/".to_string()),
                 permissions_boundary: None,
                 tags: Some(vec![
@@ -72,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_user(
             &context,
             CreateUserRequest {
-                user_name: "bob".to_string(),
+                user: key("bob"),
                 path: Some("/".to_string()),
                 permissions_boundary: None,
                 tags: Some(vec![
@@ -94,7 +104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_user(
             &context,
             CreateUserRequest {
-                user_name: "charlie".to_string(),
+                user: key("charlie"),
                 path: Some("/".to_string()),
                 permissions_boundary: None,
                 tags: Some(vec![
@@ -133,6 +143,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_policy(
             &context,
             CreatePolicyRequest {
+                tenant: tenant(),
                 policy_name: "ABACPolicy".to_string(),
                 path: Some("/abac/".to_string()),
                 policy_document: abac_policy_doc.to_string(),

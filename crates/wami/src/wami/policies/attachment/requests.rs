@@ -1,12 +1,13 @@
 //! Policy Attachment Request Types
 
+use crate::arn::ScopedName;
 use serde::{Deserialize, Serialize};
 
 /// Request to attach a managed policy to a user
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AttachUserPolicyRequest {
-    /// The name of the user
-    pub user_name: String,
+    /// The user — its tenant and its name
+    pub user: ScopedName,
     /// The ARN of the policy to attach
     pub policy_arn: String,
 }
@@ -14,8 +15,8 @@ pub struct AttachUserPolicyRequest {
 /// Request to detach a managed policy from a user
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DetachUserPolicyRequest {
-    /// The name of the user
-    pub user_name: String,
+    /// The user — its tenant and its name
+    pub user: ScopedName,
     /// The ARN of the policy to detach
     pub policy_arn: String,
 }
@@ -23,15 +24,15 @@ pub struct DetachUserPolicyRequest {
 /// Request to list attached policies for a user
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListAttachedUserPoliciesRequest {
-    /// The name of the user
-    pub user_name: String,
+    /// The user — its tenant and its name
+    pub user: ScopedName,
 }
 
 /// Request to attach a managed policy to a group
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AttachGroupPolicyRequest {
-    /// The name of the group
-    pub group_name: String,
+    /// The group — its tenant and its name
+    pub group: ScopedName,
     /// The ARN of the policy to attach
     pub policy_arn: String,
 }
@@ -39,8 +40,8 @@ pub struct AttachGroupPolicyRequest {
 /// Request to detach a managed policy from a group
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DetachGroupPolicyRequest {
-    /// The name of the group
-    pub group_name: String,
+    /// The group — its tenant and its name
+    pub group: ScopedName,
     /// The ARN of the policy to detach
     pub policy_arn: String,
 }
@@ -48,15 +49,15 @@ pub struct DetachGroupPolicyRequest {
 /// Request to list attached policies for a group
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListAttachedGroupPoliciesRequest {
-    /// The name of the group
-    pub group_name: String,
+    /// The group — its tenant and its name
+    pub group: ScopedName,
 }
 
 /// Request to attach a managed policy to a role
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AttachRolePolicyRequest {
-    /// The name of the role
-    pub role_name: String,
+    /// The role — its tenant and its name
+    pub role: ScopedName,
     /// The ARN of the policy to attach
     pub policy_arn: String,
 }
@@ -64,8 +65,8 @@ pub struct AttachRolePolicyRequest {
 /// Request to detach a managed policy from a role
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DetachRolePolicyRequest {
-    /// The name of the role
-    pub role_name: String,
+    /// The role — its tenant and its name
+    pub role: ScopedName,
     /// The ARN of the policy to detach
     pub policy_arn: String,
 }
@@ -73,6 +74,6 @@ pub struct DetachRolePolicyRequest {
 /// Request to list attached policies for a role
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListAttachedRolePoliciesRequest {
-    /// The name of the role
-    pub role_name: String,
+    /// The role — its tenant and its name
+    pub role: ScopedName,
 }

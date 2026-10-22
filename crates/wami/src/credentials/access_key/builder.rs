@@ -3,13 +3,17 @@
 use super::model::AccessKey;
 use crate::provider::ProviderConfig;
 use uuid::Uuid;
-use wami_core::arn::{Service, WamiArn};
+use wami_core::arn::{ScopedName, Service, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
 
 /// Build a new AccessKey resource with context-based identifiers
+///
+/// Its ARN takes the OWNER's tenant from `owner` — the key read from the
+/// owner's stored record — never the caller's (wami 005): a credential minted
+/// by a caller of one tenant for a user of another belongs to the user's.
 #[allow(clippy::result_large_err)]
-pub fn build_access_key(user_name: String, context: &WamiContext) -> Result<AccessKey> {
+pub fn build_access_key(owner: &ScopedName, context: &WamiContext) -> Result<AccessKey> {
     // Generate AWS-compatible access key ID (AKIA prefix + 16 alphanumeric chars)
     let random_part = Uuid::new_v4().to_string().replace('-', "").to_uppercase();
     let access_key_id = format!("AKIA{}", &random_part[..16]);
@@ -17,7 +21,7 @@ pub fn build_access_key(user_name: String, context: &WamiContext) -> Result<Acce
     // Build WAMI ARN using context
     let wami_arn = WamiArn::builder()
         .service(Service::Iam)
-        .tenant_path(context.tenant_path().clone())
+        .tenant_path(owner.tenant().clone())
         .wami_instance(context.instance_id())
         .resource("access-key", &access_key_id)
         .build()?;
@@ -27,7 +31,7 @@ pub fn build_access_key(user_name: String, context: &WamiContext) -> Result<Acce
         + &uuid::Uuid::new_v4().to_string().replace('-', "")[..8];
 
     Ok(AccessKey {
-        user_name,
+        owner: owner.clone(),
         access_key_id,
         status: "Active".to_string(),
         create_date: chrono::Utc::now(),
@@ -55,6 +59,16 @@ mod tests {
     use wami_core::arn::{TenantPath, WamiArn};
     use wami_core::context::WamiContext;
 
+    /// The tenant every test of this module works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
+
     fn test_context() -> WamiContext {
         let user_arn: WamiArn = "arn:wami:iam:12345678:wami:999:user/test".parse().unwrap();
         WamiContext::builder()
@@ -69,9 +83,9 @@ mod tests {
     #[test]
     fn test_build_access_key() {
         let context = test_context();
-        let access_key = build_access_key("alice".to_string(), &context).unwrap();
+        let access_key = build_access_key(&key("alice"), &context).unwrap();
 
-        assert_eq!(access_key.user_name, "alice");
+        assert_eq!(access_key.owner.name(), "alice");
         assert!(access_key.access_key_id.starts_with("AKIA"));
         assert_eq!(access_key.status, "Active");
         assert!(access_key.secret_access_key.is_some());
@@ -80,7 +94,7 @@ mod tests {
     #[test]
     fn test_update_access_key_status() {
         let context = test_context();
-        let access_key = build_access_key("alice".to_string(), &context).unwrap();
+        let access_key = build_access_key(&key("alice"), &context).unwrap();
         let updated = update_access_key_status(access_key, "Inactive".to_string());
 
         assert_eq!(updated.status, "Inactive");
@@ -91,8 +105,8 @@ mod tests {
     #[test]
     fn test_build_access_key_empty_user_name() {
         let context = test_context();
-        let access_key = build_access_key("".to_string(), &context).unwrap();
-        assert_eq!(access_key.user_name, "");
+        let access_key = build_access_key(&key(""), &context).unwrap();
+        assert_eq!(access_key.owner.name(), "");
         assert!(access_key.access_key_id.starts_with("AKIA"));
     }
 
@@ -100,21 +114,21 @@ mod tests {
     fn test_build_access_key_very_long_user_name() {
         let context = test_context();
         let long_name = "a".repeat(200);
-        let access_key = build_access_key(long_name.clone(), &context).unwrap();
-        assert_eq!(access_key.user_name, long_name);
+        let access_key = build_access_key(&key(&long_name), &context).unwrap();
+        assert_eq!(access_key.owner.name(), long_name);
     }
 
     #[test]
     fn test_build_access_key_with_unicode() {
         let context = test_context();
-        let access_key = build_access_key("用户".to_string(), &context).unwrap();
-        assert_eq!(access_key.user_name, "用户");
+        let access_key = build_access_key(&key("用户"), &context).unwrap();
+        assert_eq!(access_key.owner.name(), "用户");
     }
 
     #[test]
     fn test_update_access_key_status_empty() {
         let context = test_context();
-        let access_key = build_access_key("alice".to_string(), &context).unwrap();
+        let access_key = build_access_key(&key("alice"), &context).unwrap();
         let updated = update_access_key_status(access_key, "".to_string());
         assert_eq!(updated.status, "");
     }
@@ -130,7 +144,7 @@ mod tests {
             .build();
 
         if let Ok(context) = context_result {
-            let key_result = build_access_key("alice".to_string(), &context);
+            let key_result = build_access_key(&key("alice"), &context);
             assert!(key_result.is_err());
         }
     }
@@ -148,7 +162,7 @@ mod tests {
             .unwrap();
 
         // Should succeed - 0 is a valid tenant ID
-        let access_key = build_access_key("alice".to_string(), &context).unwrap();
-        assert_eq!(access_key.user_name, "alice");
+        let access_key = build_access_key(&key("alice"), &context).unwrap();
+        assert_eq!(access_key.owner.name(), "alice");
     }
 }

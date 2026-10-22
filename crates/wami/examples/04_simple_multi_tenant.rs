@@ -11,7 +11,7 @@
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use wami::arn::{TenantPath, WamiArn};
+use wami::arn::{ScopedName, TenantPath, WamiArn};
 use wami::context::WamiContext;
 use wami::service::{TenantService, UserService};
 use wami::store::memory::InMemoryWamiStore;
@@ -109,7 +109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let user_service = UserService::new(store.clone());
 
     let alice_req = CreateUserRequest {
-        user_name: "alice".to_string(),
+        user: ScopedName::new(company_a_context.tenant_path().clone(), "alice"),
         path: Some("/company-a/".to_string()),
         permissions_boundary: None,
         tags: None,
@@ -121,7 +121,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  ARN: {}", alice.arn);
 
     let bob_req = CreateUserRequest {
-        user_name: "bob".to_string(),
+        user: ScopedName::new(company_a_context.tenant_path().clone(), "bob"),
         path: Some("/company-a/".to_string()),
         permissions_boundary: None,
         tags: None,
@@ -135,7 +135,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\nCreating users for Company B...");
 
     let charlie_req = CreateUserRequest {
-        user_name: "charlie".to_string(),
+        user: ScopedName::new(company_b_context.tenant_path().clone(), "charlie"),
         path: Some("/company-b/".to_string()),
         permissions_boundary: None,
         tags: None,
@@ -147,7 +147,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  ARN: {}", charlie.arn);
 
     let diana_req = CreateUserRequest {
-        user_name: "diana".to_string(),
+        user: ScopedName::new(company_b_context.tenant_path().clone(), "diana"),
         path: Some("/company-b/".to_string()),
         permissions_boundary: None,
         tags: None,
@@ -165,6 +165,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .list_users(
             &root_context,
             ListUsersRequest {
+                tenant: root_context.tenant_path().clone(),
                 path_prefix: None,
                 pagination: None,
             },
@@ -177,6 +178,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .list_users(
             &company_a_context,
             ListUsersRequest {
+                tenant: company_a_context.tenant_path().clone(),
                 path_prefix: Some("/company-a/".to_string()),
                 pagination: None,
             },
@@ -195,6 +197,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .list_users(
             &company_b_context,
             ListUsersRequest {
+                tenant: company_b_context.tenant_path().clone(),
                 path_prefix: Some("/company-b/".to_string()),
                 pagination: None,
             },

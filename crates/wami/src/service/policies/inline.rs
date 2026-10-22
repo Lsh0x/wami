@@ -2,7 +2,7 @@
 //!
 //! Service for managing inline policies on users, groups, and roles.
 
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
+use crate::service::auth::authorizer::{guard, in_instance, Authorizer};
 use crate::service::auth::decision::PolicySource;
 use crate::service::auth::policy_evaluator;
 use crate::store::traits::{GroupStore, RoleStore, UserStore};
@@ -45,21 +45,6 @@ where
         }
     }
 
-    /// Internal: check authorization if an authorizer is set.
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     // User inline policy methods
 
     /// Put an inline policy on a user
@@ -68,11 +53,12 @@ where
         context: &WamiContext,
         request: PutUserPolicyRequest,
     ) -> Result<PutUserPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreatePolicy,
             "user",
-            &request.user_name,
+            &request.user,
         )
         .await?;
 
@@ -80,10 +66,11 @@ where
 
         // Verify user exists
         store
-            .get_user(&request.user_name)
+            .get_user(&request.user)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("User: {}", request.user_name),
+                resource: format!("User: {}", request.user),
             })?;
 
         // Refuse at write exactly what the read refuses — the same parser,
@@ -101,17 +88,13 @@ where
 
         // Put the inline policy
         store
-            .put_user_policy(
-                &request.user_name,
-                &request.policy_name,
-                request.policy_document,
-            )
+            .put_user_policy(&request.user, &request.policy_name, request.policy_document)
             .await?;
 
         Ok(PutUserPolicyResponse {
             message: format!(
                 "Inline policy {} added to user {}",
-                request.policy_name, request.user_name
+                request.policy_name, request.user
             ),
         })
     }
@@ -122,11 +105,12 @@ where
         context: &WamiContext,
         request: GetUserPolicyRequest,
     ) -> Result<GetUserPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "user",
-            &request.user_name,
+            &request.user,
         )
         .await?;
 
@@ -134,25 +118,23 @@ where
 
         // Verify user exists
         store
-            .get_user(&request.user_name)
+            .get_user(&request.user)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("User: {}", request.user_name),
+                resource: format!("User: {}", request.user),
             })?;
 
         // Get the inline policy
         let policy_document = store
-            .get_user_policy(&request.user_name, &request.policy_name)
+            .get_user_policy(&request.user, &request.policy_name)
             .await?
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!(
-                    "Policy {} for user {}",
-                    request.policy_name, request.user_name
-                ),
+                resource: format!("Policy {} for user {}", request.policy_name, request.user),
             })?;
 
         Ok(GetUserPolicyResponse {
-            user_name: request.user_name,
+            user: request.user,
             policy_name: request.policy_name,
             policy_document,
         })
@@ -164,11 +146,12 @@ where
         context: &WamiContext,
         request: DeleteUserPolicyRequest,
     ) -> Result<DeleteUserPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamDeletePolicy,
             "user",
-            &request.user_name,
+            &request.user,
         )
         .await?;
 
@@ -176,21 +159,22 @@ where
 
         // Verify user exists
         store
-            .get_user(&request.user_name)
+            .get_user(&request.user)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("User: {}", request.user_name),
+                resource: format!("User: {}", request.user),
             })?;
 
         // Delete the inline policy
         store
-            .delete_user_policy(&request.user_name, &request.policy_name)
+            .delete_user_policy(&request.user, &request.policy_name)
             .await?;
 
         Ok(DeleteUserPolicyResponse {
             message: format!(
                 "Inline policy {} deleted from user {}",
-                request.policy_name, request.user_name
+                request.policy_name, request.user
             ),
         })
     }
@@ -201,11 +185,12 @@ where
         context: &WamiContext,
         request: ListUserPoliciesRequest,
     ) -> Result<ListUserPoliciesResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "user",
-            &request.user_name,
+            &request.user,
         )
         .await?;
 
@@ -213,14 +198,15 @@ where
 
         // Verify user exists
         store
-            .get_user(&request.user_name)
+            .get_user(&request.user)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("User: {}", request.user_name),
+                resource: format!("User: {}", request.user),
             })?;
 
         // List the inline policies
-        let policy_names = store.list_user_policies(&request.user_name).await?;
+        let policy_names = store.list_user_policies(&request.user).await?;
 
         Ok(ListUserPoliciesResponse { policy_names })
     }
@@ -233,11 +219,12 @@ where
         context: &WamiContext,
         request: PutGroupPolicyRequest,
     ) -> Result<PutGroupPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreatePolicy,
             "group",
-            &request.group_name,
+            &request.group,
         )
         .await?;
 
@@ -245,10 +232,11 @@ where
 
         // Verify group exists
         store
-            .get_group(&request.group_name)
+            .get_group(&request.group)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Group: {}", request.group_name),
+                resource: format!("Group: {}", request.group),
             })?;
 
         // Refuse at write exactly what the read refuses — the same parser,
@@ -259,7 +247,7 @@ where
         refuse_unreadable(
             &request.policy_document,
             &PolicySource::GroupInline {
-                group: request.group_name.clone(),
+                group: request.group.name().to_string(),
                 name: request.policy_name.clone(),
             }
             .to_string(),
@@ -268,7 +256,7 @@ where
         // Put the inline policy
         store
             .put_group_policy(
-                &request.group_name,
+                &request.group,
                 &request.policy_name,
                 request.policy_document,
             )
@@ -277,7 +265,7 @@ where
         Ok(PutGroupPolicyResponse {
             message: format!(
                 "Inline policy {} added to group {}",
-                request.policy_name, request.group_name
+                request.policy_name, request.group
             ),
         })
     }
@@ -288,11 +276,12 @@ where
         context: &WamiContext,
         request: GetGroupPolicyRequest,
     ) -> Result<GetGroupPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "group",
-            &request.group_name,
+            &request.group,
         )
         .await?;
 
@@ -300,25 +289,23 @@ where
 
         // Verify group exists
         store
-            .get_group(&request.group_name)
+            .get_group(&request.group)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Group: {}", request.group_name),
+                resource: format!("Group: {}", request.group),
             })?;
 
         // Get the inline policy
         let policy_document = store
-            .get_group_policy(&request.group_name, &request.policy_name)
+            .get_group_policy(&request.group, &request.policy_name)
             .await?
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!(
-                    "Policy {} for group {}",
-                    request.policy_name, request.group_name
-                ),
+                resource: format!("Policy {} for group {}", request.policy_name, request.group),
             })?;
 
         Ok(GetGroupPolicyResponse {
-            group_name: request.group_name,
+            group: request.group,
             policy_name: request.policy_name,
             policy_document,
         })
@@ -330,11 +317,12 @@ where
         context: &WamiContext,
         request: DeleteGroupPolicyRequest,
     ) -> Result<DeleteGroupPolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamDeletePolicy,
             "group",
-            &request.group_name,
+            &request.group,
         )
         .await?;
 
@@ -342,21 +330,22 @@ where
 
         // Verify group exists
         store
-            .get_group(&request.group_name)
+            .get_group(&request.group)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Group: {}", request.group_name),
+                resource: format!("Group: {}", request.group),
             })?;
 
         // Delete the inline policy
         store
-            .delete_group_policy(&request.group_name, &request.policy_name)
+            .delete_group_policy(&request.group, &request.policy_name)
             .await?;
 
         Ok(DeleteGroupPolicyResponse {
             message: format!(
                 "Inline policy {} deleted from group {}",
-                request.policy_name, request.group_name
+                request.policy_name, request.group
             ),
         })
     }
@@ -367,11 +356,12 @@ where
         context: &WamiContext,
         request: ListGroupPoliciesRequest,
     ) -> Result<ListGroupPoliciesResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "group",
-            &request.group_name,
+            &request.group,
         )
         .await?;
 
@@ -379,14 +369,15 @@ where
 
         // Verify group exists
         store
-            .get_group(&request.group_name)
+            .get_group(&request.group)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Group: {}", request.group_name),
+                resource: format!("Group: {}", request.group),
             })?;
 
         // List the inline policies
-        let policy_names = store.list_group_policies(&request.group_name).await?;
+        let policy_names = store.list_group_policies(&request.group).await?;
 
         Ok(ListGroupPoliciesResponse { policy_names })
     }
@@ -399,11 +390,12 @@ where
         context: &WamiContext,
         request: PutRolePolicyRequest,
     ) -> Result<PutRolePolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreatePolicy,
             "role",
-            &request.role_name,
+            &request.role,
         )
         .await?;
 
@@ -411,10 +403,11 @@ where
 
         // Verify role exists
         store
-            .get_role(&request.role_name)
+            .get_role(&request.role)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Role: {}", request.role_name),
+                resource: format!("Role: {}", request.role),
             })?;
 
         // Refuse at write exactly what the read refuses — the same parser,
@@ -425,7 +418,7 @@ where
         refuse_unreadable(
             &request.policy_document,
             &PolicySource::RoleInline {
-                role: request.role_name.clone(),
+                role: request.role.name().to_string(),
                 name: request.policy_name.clone(),
             }
             .to_string(),
@@ -433,17 +426,13 @@ where
 
         // Put the inline policy
         store
-            .put_role_policy(
-                &request.role_name,
-                &request.policy_name,
-                request.policy_document,
-            )
+            .put_role_policy(&request.role, &request.policy_name, request.policy_document)
             .await?;
 
         Ok(PutRolePolicyResponse {
             message: format!(
                 "Inline policy {} added to role {}",
-                request.policy_name, request.role_name
+                request.policy_name, request.role
             ),
         })
     }
@@ -454,11 +443,12 @@ where
         context: &WamiContext,
         request: GetRolePolicyRequest,
     ) -> Result<GetRolePolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "role",
-            &request.role_name,
+            &request.role,
         )
         .await?;
 
@@ -466,25 +456,23 @@ where
 
         // Verify role exists
         store
-            .get_role(&request.role_name)
+            .get_role(&request.role)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Role: {}", request.role_name),
+                resource: format!("Role: {}", request.role),
             })?;
 
         // Get the inline policy
         let policy_document = store
-            .get_role_policy(&request.role_name, &request.policy_name)
+            .get_role_policy(&request.role, &request.policy_name)
             .await?
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!(
-                    "Policy {} for role {}",
-                    request.policy_name, request.role_name
-                ),
+                resource: format!("Policy {} for role {}", request.policy_name, request.role),
             })?;
 
         Ok(GetRolePolicyResponse {
-            role_name: request.role_name,
+            role: request.role,
             policy_name: request.policy_name,
             policy_document,
         })
@@ -496,11 +484,12 @@ where
         context: &WamiContext,
         request: DeleteRolePolicyRequest,
     ) -> Result<DeleteRolePolicyResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamDeletePolicy,
             "role",
-            &request.role_name,
+            &request.role,
         )
         .await?;
 
@@ -508,21 +497,22 @@ where
 
         // Verify role exists
         store
-            .get_role(&request.role_name)
+            .get_role(&request.role)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Role: {}", request.role_name),
+                resource: format!("Role: {}", request.role),
             })?;
 
         // Delete the inline policy
         store
-            .delete_role_policy(&request.role_name, &request.policy_name)
+            .delete_role_policy(&request.role, &request.policy_name)
             .await?;
 
         Ok(DeleteRolePolicyResponse {
             message: format!(
                 "Inline policy {} deleted from role {}",
-                request.policy_name, request.role_name
+                request.policy_name, request.role
             ),
         })
     }
@@ -533,11 +523,12 @@ where
         context: &WamiContext,
         request: ListRolePoliciesRequest,
     ) -> Result<ListRolePoliciesResponse> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamReadPolicy,
             "role",
-            &request.role_name,
+            &request.role,
         )
         .await?;
 
@@ -545,14 +536,15 @@ where
 
         // Verify role exists
         store
-            .get_role(&request.role_name)
+            .get_role(&request.role)
             .await?
+            .filter(|record| in_instance(context, &record.wami_arn))
             .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("Role: {}", request.role_name),
+                resource: format!("Role: {}", request.role),
             })?;
 
         // List the inline policies
-        let policy_names = store.list_role_policies(&request.role_name).await?;
+        let policy_names = store.list_role_policies(&request.role).await?;
 
         Ok(ListRolePoliciesResponse { policy_names })
     }
@@ -580,6 +572,16 @@ mod tests {
     use wami_core::arn::{TenantPath, WamiArn};
     use wami_core::context::WamiContext;
 
+    /// The tenant every test of this module works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(0)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
+
     async fn create_test_context() -> WamiContext {
         WamiContext::builder()
             .instance_id("123456789012")
@@ -599,16 +601,211 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_principal_of_another_instance_is_absent_to_every_inline_verb() {
+        // One store, one instance: a record of another, read by its key, is
+        // answered as an absent one (wami 005, R8; review round 2 F3).
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = InlinePolicyService::new(store.clone());
+        let context = create_test_context().await;
+        let there = WamiContext::builder()
+            .caller_arn(
+                WamiArn::builder()
+                    .service(crate::arn::Service::Iam)
+                    .tenant_path(TenantPath::single(0))
+                    .wami_instance("elsewhere")
+                    .resource("user", "admin")
+                    .build()
+                    .unwrap(),
+            )
+            .build()
+            .unwrap();
+        let doc = || {
+            r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["iam:GetUser"],"Resource":["*"]}]}"#
+                .to_string()
+        };
+        let (user, group, role) = (key("alice"), key("devs"), key("ops"));
+        {
+            let mut s = store.write().await;
+            s.create_user(build_user(&user, None, &there).unwrap())
+                .await
+                .unwrap();
+            s.create_group(build_group(&group, None, &there).unwrap())
+                .await
+                .unwrap();
+            let built = build_role(&role, "{}".to_string(), None, None, None, &there);
+            s.create_role(built.unwrap()).await.unwrap();
+            // A policy already on each, so a read or a delete has something
+            // to find.
+            s.put_user_policy(&user, "kept", doc()).await.unwrap();
+            s.put_group_policy(&group, "kept", doc()).await.unwrap();
+            s.put_role_policy(&role, "kept", doc()).await.unwrap();
+        }
+        let absent = |what: &str, got: std::result::Result<String, AmiError>| {
+            assert!(
+                matches!(&got, Err(AmiError::ResourceNotFound { .. })),
+                "{what}: {got:?}"
+            );
+        };
+        let n = || "kept".to_string();
+        absent(
+            "put user",
+            service
+                .put_user_policy(
+                    &context,
+                    PutUserPolicyRequest {
+                        user: user.clone(),
+                        policy_name: "new".to_string(),
+                        policy_document: doc(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "get user",
+            service
+                .get_user_policy(
+                    &context,
+                    GetUserPolicyRequest {
+                        user: user.clone(),
+                        policy_name: n(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "list user",
+            service
+                .list_user_policies(&context, ListUserPoliciesRequest { user: user.clone() })
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "delete user",
+            service
+                .delete_user_policy(
+                    &context,
+                    DeleteUserPolicyRequest {
+                        user,
+                        policy_name: n(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "put group",
+            service
+                .put_group_policy(
+                    &context,
+                    PutGroupPolicyRequest {
+                        group: group.clone(),
+                        policy_name: "new".to_string(),
+                        policy_document: doc(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "get group",
+            service
+                .get_group_policy(
+                    &context,
+                    GetGroupPolicyRequest {
+                        group: group.clone(),
+                        policy_name: n(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "list group",
+            service
+                .list_group_policies(
+                    &context,
+                    ListGroupPoliciesRequest {
+                        group: group.clone(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "delete group",
+            service
+                .delete_group_policy(
+                    &context,
+                    DeleteGroupPolicyRequest {
+                        group,
+                        policy_name: n(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "put role",
+            service
+                .put_role_policy(
+                    &context,
+                    PutRolePolicyRequest {
+                        role: role.clone(),
+                        policy_name: "new".to_string(),
+                        policy_document: doc(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "get role",
+            service
+                .get_role_policy(
+                    &context,
+                    GetRolePolicyRequest {
+                        role: role.clone(),
+                        policy_name: n(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "list role",
+            service
+                .list_role_policies(&context, ListRolePoliciesRequest { role: role.clone() })
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+        absent(
+            "delete role",
+            service
+                .delete_role_policy(
+                    &context,
+                    DeleteRolePolicyRequest {
+                        role,
+                        policy_name: n(),
+                    },
+                )
+                .await
+                .map(|r| format!("{r:?}")),
+        );
+    }
+
+    #[tokio::test]
     async fn test_put_user_policy() {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
         let service = InlinePolicyService::new(store.clone());
         let context = create_test_context().await;
 
-        let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+        let user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
         let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let request = PutUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_name: "MyInlinePolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
@@ -622,11 +819,11 @@ mod tests {
         let service = InlinePolicyService::new(store.clone());
         let context = create_test_context().await;
 
-        let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+        let user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
         let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let put_request = PutUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_name: "MyInlinePolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
@@ -636,7 +833,7 @@ mod tests {
             .unwrap();
 
         let get_request = GetUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_name: "MyInlinePolicy".to_string(),
         };
         let response = service
@@ -653,11 +850,11 @@ mod tests {
         let service = InlinePolicyService::new(store.clone());
         let context = create_test_context().await;
 
-        let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+        let user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
         let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let put_request = PutUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_name: "MyInlinePolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
@@ -667,7 +864,7 @@ mod tests {
             .unwrap();
 
         let delete_request = DeleteUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_name: "MyInlinePolicy".to_string(),
         };
         let response = service
@@ -683,11 +880,11 @@ mod tests {
         let service = InlinePolicyService::new(store.clone());
         let context = create_test_context().await;
 
-        let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+        let user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
         let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let put_request1 = PutUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_name: "Policy1".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
@@ -697,7 +894,7 @@ mod tests {
             .unwrap();
 
         let put_request2 = PutUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_name: "Policy2".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
@@ -706,9 +903,7 @@ mod tests {
             .await
             .unwrap();
 
-        let list_request = ListUserPoliciesRequest {
-            user_name: "alice".to_string(),
-        };
+        let list_request = ListUserPoliciesRequest { user: key("alice") };
         let response = service
             .list_user_policies(&context, list_request)
             .await
@@ -722,11 +917,11 @@ mod tests {
         let service = InlinePolicyService::new(store.clone());
         let context = create_test_context().await;
 
-        let group = build_group("developers".to_string(), Some("/".to_string()), &context).unwrap();
+        let group = build_group(&key("developers"), Some("/".to_string()), &context).unwrap();
         let _created_group = store.write().await.create_group(group).await.unwrap();
 
         let request = PutGroupPolicyRequest {
-            group_name: "developers".to_string(),
+            group: key("developers"),
             policy_name: "MyInlinePolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
@@ -741,7 +936,7 @@ mod tests {
         let context = create_test_context().await;
 
         let role = build_role(
-            "AdminRole".to_string(),
+            &key("AdminRole"),
             r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             Some("/".to_string()),
             None,
@@ -752,7 +947,7 @@ mod tests {
         let _created_role = store.write().await.create_role(role).await.unwrap();
 
         let request = PutRolePolicyRequest {
-            role_name: "AdminRole".to_string(),
+            role: key("AdminRole"),
             policy_name: "MyInlinePolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
         };
@@ -766,7 +961,7 @@ mod tests {
         let service = InlinePolicyService::new(store.clone());
         let context = create_test_context().await;
 
-        let group = build_group("developers".to_string(), Some("/".to_string()), &context).unwrap();
+        let group = build_group(&key("developers"), Some("/".to_string()), &context).unwrap();
         store.write().await.create_group(group).await.unwrap();
 
         let document = r#"{"Version":"2012-10-17","Statement":[]}"#;
@@ -774,7 +969,7 @@ mod tests {
             .put_group_policy(
                 &context,
                 PutGroupPolicyRequest {
-                    group_name: "developers".to_string(),
+                    group: key("developers"),
                     policy_name: "MyInlinePolicy".to_string(),
                     policy_document: document.to_string(),
                 },
@@ -786,7 +981,7 @@ mod tests {
             .get_group_policy(
                 &context,
                 GetGroupPolicyRequest {
-                    group_name: "developers".to_string(),
+                    group: key("developers"),
                     policy_name: "MyInlinePolicy".to_string(),
                 },
             )
@@ -798,7 +993,7 @@ mod tests {
             .list_group_policies(
                 &context,
                 ListGroupPoliciesRequest {
-                    group_name: "developers".to_string(),
+                    group: key("developers"),
                 },
             )
             .await
@@ -809,7 +1004,7 @@ mod tests {
             .delete_group_policy(
                 &context,
                 DeleteGroupPolicyRequest {
-                    group_name: "developers".to_string(),
+                    group: key("developers"),
                     policy_name: "MyInlinePolicy".to_string(),
                 },
             )
@@ -820,7 +1015,7 @@ mod tests {
             .list_group_policies(
                 &context,
                 ListGroupPoliciesRequest {
-                    group_name: "developers".to_string(),
+                    group: key("developers"),
                 },
             )
             .await
@@ -835,7 +1030,7 @@ mod tests {
         let context = create_test_context().await;
 
         let role = build_role(
-            "AdminRole".to_string(),
+            &key("AdminRole"),
             r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             Some("/".to_string()),
             None,
@@ -850,7 +1045,7 @@ mod tests {
             .put_role_policy(
                 &context,
                 PutRolePolicyRequest {
-                    role_name: "AdminRole".to_string(),
+                    role: key("AdminRole"),
                     policy_name: "MyInlinePolicy".to_string(),
                     policy_document: document.to_string(),
                 },
@@ -862,7 +1057,7 @@ mod tests {
             .get_role_policy(
                 &context,
                 GetRolePolicyRequest {
-                    role_name: "AdminRole".to_string(),
+                    role: key("AdminRole"),
                     policy_name: "MyInlinePolicy".to_string(),
                 },
             )
@@ -874,7 +1069,7 @@ mod tests {
             .list_role_policies(
                 &context,
                 ListRolePoliciesRequest {
-                    role_name: "AdminRole".to_string(),
+                    role: key("AdminRole"),
                 },
             )
             .await
@@ -885,7 +1080,7 @@ mod tests {
             .delete_role_policy(
                 &context,
                 DeleteRolePolicyRequest {
-                    role_name: "AdminRole".to_string(),
+                    role: key("AdminRole"),
                     policy_name: "MyInlinePolicy".to_string(),
                 },
             )
@@ -896,7 +1091,7 @@ mod tests {
             .list_role_policies(
                 &context,
                 ListRolePoliciesRequest {
-                    role_name: "AdminRole".to_string(),
+                    role: key("AdminRole"),
                 },
             )
             .await
@@ -910,11 +1105,11 @@ mod tests {
         let service = InlinePolicyService::new(store.clone());
         let context = create_test_context().await;
 
-        let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+        let user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
         let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let request = PutUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_name: "MyInlinePolicy".to_string(),
             policy_document: "invalid json".to_string(),
         };
@@ -935,7 +1130,7 @@ mod tests {
         let context = create_test_context().await;
 
         let request = PutUserPolicyRequest {
-            user_name: "nonexistent".to_string(),
+            user: key("nonexistent"),
             policy_name: "Policy".to_string(),
             policy_document: r#"{"Version":"2012-10-17"}"#.to_string(),
         };
@@ -951,7 +1146,7 @@ mod tests {
         let context = create_test_context().await;
 
         let request = GetUserPolicyRequest {
-            user_name: "nonexistent".to_string(),
+            user: key("nonexistent"),
             policy_name: "Policy".to_string(),
         };
 
@@ -965,11 +1160,11 @@ mod tests {
         let service = InlinePolicyService::new(store.clone());
         let context = create_test_context().await;
 
-        let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+        let user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
         let _created_user = store.write().await.create_user(user).await.unwrap();
 
         let request = GetUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_name: "NonexistentPolicy".to_string(),
         };
 
@@ -984,7 +1179,7 @@ mod tests {
         let context = create_test_context().await;
 
         let request = DeleteUserPolicyRequest {
-            user_name: "nonexistent".to_string(),
+            user: key("nonexistent"),
             policy_name: "Policy".to_string(),
         };
 
@@ -999,7 +1194,7 @@ mod tests {
         let context = create_test_context().await;
 
         let request = ListUserPoliciesRequest {
-            user_name: "nonexistent".to_string(),
+            user: key("nonexistent"),
         };
 
         let result = service.list_user_policies(&context, request).await;
@@ -1013,7 +1208,7 @@ mod tests {
         let context = create_test_context().await;
 
         let request = PutGroupPolicyRequest {
-            group_name: "nonexistent".to_string(),
+            group: key("nonexistent"),
             policy_name: "Policy".to_string(),
             policy_document: r#"{"Version":"2012-10-17"}"#.to_string(),
         };
@@ -1029,7 +1224,7 @@ mod tests {
         let context = create_test_context().await;
 
         let request = PutRolePolicyRequest {
-            role_name: "nonexistent".to_string(),
+            role: key("nonexistent"),
             policy_name: "Policy".to_string(),
             policy_document: r#"{"Version":"2012-10-17"}"#.to_string(),
         };
@@ -1081,11 +1276,11 @@ mod tests {
         let context = create_test_context().await;
 
         // Create user so the store operation can succeed
-        let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+        let user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
         store.write().await.create_user(user).await.unwrap();
 
         let request = PutUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_name: "TestPolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["*"],"Resource":["*"]}]}"#.to_string(),
         };
@@ -1102,7 +1297,7 @@ mod tests {
         let context = create_test_context().await;
 
         let request = PutUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_name: "TestPolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17"}"#.to_string(),
         };
@@ -1125,7 +1320,7 @@ mod tests {
         let context = create_test_context().await;
 
         let request = GetUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_name: "TestPolicy".to_string(),
         };
 
@@ -1143,9 +1338,7 @@ mod tests {
             InlinePolicyService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
         let context = create_test_context().await;
 
-        let request = ListUserPoliciesRequest {
-            user_name: "alice".to_string(),
-        };
+        let request = ListUserPoliciesRequest { user: key("alice") };
 
         let result = service.list_user_policies(&context, request).await;
         assert!(matches!(
@@ -1162,7 +1355,7 @@ mod tests {
         let context = create_test_context().await;
 
         let request = DeleteUserPolicyRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             policy_name: "TestPolicy".to_string(),
         };
 
@@ -1181,7 +1374,7 @@ mod tests {
         let context = create_test_context().await;
 
         let request = PutGroupPolicyRequest {
-            group_name: "admins".to_string(),
+            group: key("admins"),
             policy_name: "TestPolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17"}"#.to_string(),
         };
@@ -1201,7 +1394,7 @@ mod tests {
         let context = create_test_context().await;
 
         let request = PutRolePolicyRequest {
-            role_name: "admin-role".to_string(),
+            role: key("admin-role"),
             policy_name: "TestPolicy".to_string(),
             policy_document: r#"{"Version":"2012-10-17"}"#.to_string(),
         };
@@ -1220,7 +1413,7 @@ mod tests {
             InlinePolicyService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
         let context = create_test_context().await;
         let request = GetGroupPolicyRequest {
-            group_name: "admins".to_string(),
+            group: key("admins"),
             policy_name: "P".to_string(),
         };
         assert!(matches!(
@@ -1236,7 +1429,7 @@ mod tests {
             InlinePolicyService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
         let context = create_test_context().await;
         let request = ListGroupPoliciesRequest {
-            group_name: "admins".to_string(),
+            group: key("admins"),
         };
         assert!(matches!(
             service.list_group_policies(&context, request).await,
@@ -1251,7 +1444,7 @@ mod tests {
             InlinePolicyService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
         let context = create_test_context().await;
         let request = DeleteGroupPolicyRequest {
-            group_name: "admins".to_string(),
+            group: key("admins"),
             policy_name: "P".to_string(),
         };
         assert!(matches!(
@@ -1267,7 +1460,7 @@ mod tests {
             InlinePolicyService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
         let context = create_test_context().await;
         let request = GetRolePolicyRequest {
-            role_name: "admin-role".to_string(),
+            role: key("admin-role"),
             policy_name: "P".to_string(),
         };
         assert!(matches!(
@@ -1283,7 +1476,7 @@ mod tests {
             InlinePolicyService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
         let context = create_test_context().await;
         let request = ListRolePoliciesRequest {
-            role_name: "admin-role".to_string(),
+            role: key("admin-role"),
         };
         assert!(matches!(
             service.list_role_policies(&context, request).await,
@@ -1298,7 +1491,7 @@ mod tests {
             InlinePolicyService::with_authorizer(store.clone(), Arc::new(DenyAllAuthorizer));
         let context = create_test_context().await;
         let request = DeleteRolePolicyRequest {
-            role_name: "admin-role".to_string(),
+            role: key("admin-role"),
             policy_name: "P".to_string(),
         };
         assert!(matches!(
@@ -1318,12 +1511,12 @@ mod tests {
 
         {
             let mut s = store.write().await;
-            let user = build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+            let user = build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
             s.create_user(user).await.unwrap();
-            let group = build_group("devs".to_string(), Some("/".to_string()), &context).unwrap();
+            let group = build_group(&key("devs"), Some("/".to_string()), &context).unwrap();
             s.create_group(group).await.unwrap();
             let role = build_role(
-                "AppRole".to_string(),
+                &key("AppRole"),
                 r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
                 Some("/".to_string()),
                 None,
@@ -1338,7 +1531,7 @@ mod tests {
             .put_user_policy(
                 &context,
                 PutUserPolicyRequest {
-                    user_name: "alice".to_string(),
+                    user: key("alice"),
                     policy_name: "Broken".to_string(),
                     policy_document: broken.to_string(),
                 },
@@ -1351,7 +1544,7 @@ mod tests {
             .put_group_policy(
                 &context,
                 PutGroupPolicyRequest {
-                    group_name: "devs".to_string(),
+                    group: key("devs"),
                     policy_name: "Broken".to_string(),
                     policy_document: broken.to_string(),
                 },
@@ -1364,7 +1557,7 @@ mod tests {
             .put_role_policy(
                 &context,
                 PutRolePolicyRequest {
-                    role_name: "AppRole".to_string(),
+                    role: key("AppRole"),
                     policy_name: "Broken".to_string(),
                     policy_document: broken.to_string(),
                 },
@@ -1404,15 +1597,15 @@ mod tests {
         let service = InlinePolicyService::new(store.clone());
         let context = create_test_context().await;
         let mut s = store.write().await;
-        s.create_user(build_user("alice".to_string(), Some("/".to_string()), &context).unwrap())
+        s.create_user(build_user(&key("alice"), Some("/".to_string()), &context).unwrap())
             .await
             .unwrap();
-        s.create_group(build_group("devs".to_string(), Some("/".to_string()), &context).unwrap())
+        s.create_group(build_group(&key("devs"), Some("/".to_string()), &context).unwrap())
             .await
             .unwrap();
         s.create_role(
             build_role(
-                "Admin".to_string(),
+                &key("Admin"),
                 r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
                 Some("/".to_string()),
                 None,
@@ -1430,7 +1623,7 @@ mod tests {
                 .put_user_policy(
                     &context,
                     PutUserPolicyRequest {
-                        user_name: "alice".to_string(),
+                        user: key("alice"),
                         policy_name: "P".to_string(),
                         policy_document: document.clone(),
                     },
@@ -1441,7 +1634,7 @@ mod tests {
                 .put_group_policy(
                     &context,
                     PutGroupPolicyRequest {
-                        group_name: "devs".to_string(),
+                        group: key("devs"),
                         policy_name: "P".to_string(),
                         policy_document: document.clone(),
                     },
@@ -1452,7 +1645,7 @@ mod tests {
                 .put_role_policy(
                     &context,
                     PutRolePolicyRequest {
-                        role_name: "Admin".to_string(),
+                        role: key("Admin"),
                         policy_name: "P".to_string(),
                         policy_document: document,
                     },

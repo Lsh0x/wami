@@ -48,6 +48,10 @@ scaleway = ["wami-core/scaleway"]
 all-providers = ["wami-core/all-providers"]
 default = ["sts-jwt"]
 sts-jwt = ["dep:ed25519-dalek", "dep:jsonwebtoken"]
+# The store conformance suite (`wami::store::conformance`), for a backend's own
+# tests: every store runs the same checks, so "keyed by (tenant, name)" holds
+# by construction (wami 005).
+conformance = []
 
 # Demonstrates every provider translation, so it only builds when they exist.
 # Without this, `cargo check --all-targets` on a default build fails on an

@@ -8,6 +8,9 @@ use super::model::*;
 /// Request parameters for creating a service-linked role
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateServiceLinkedRoleRequest {
+    /// The tenant the role is created in — named, never the caller's by
+    /// default (wami 005).
+    pub tenant: crate::arn::TenantPath,
     /// The service principal for the AWS service to which this role is attached
     pub aws_service_name: String,
     /// A description of the role

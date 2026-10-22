@@ -161,6 +161,8 @@ impl RootUser {
             .instance_id(self.instance_id())
             .tenant_path(TenantPath::single(ROOT_TENANT_ID))
             .caller_arn(self.user.wami_arn.clone())
+            // From the record this context is built of (wami 005, (c)).
+            .caller_key(self.user.key())
             .is_root(true)
             .build()
     }
@@ -178,6 +180,8 @@ impl RootUser {
             .instance_id(self.instance_id())
             .tenant_path(TenantPath::single(ROOT_TENANT_ID))
             .caller_arn(self.user.wami_arn.clone())
+            // From the record this context is built of (wami 005, (c)).
+            .caller_key(self.user.key())
             .is_root(true)
             .region(region)
             .build()

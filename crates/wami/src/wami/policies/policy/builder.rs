@@ -1,30 +1,35 @@
 //! Policy Builder
 
 use super::model::Policy;
-use crate::arn::{Service, WamiArn};
+use crate::arn::{Service, TenantPath, WamiArn};
 use crate::context::WamiContext;
 use crate::error::Result;
 use crate::provider::ProviderConfig;
 use crate::types::Tag;
 use uuid::Uuid;
 
-/// Build a new Policy resource with context-based identifiers
-#[allow(clippy::result_large_err)]
+/// Build a new Policy of `tenant`, in the context's instance.
+///
+/// The tenant is named by the request, never taken from the caller (wami 005):
+/// its `wami_arn` records it, and that is the tenant a guard judges for every
+/// later act on the policy. The AWS-format `arn` it is stored under carries no
+/// tenant (wami 011).
+#[allow(clippy::result_large_err, clippy::too_many_arguments)]
 pub fn build_policy(
     policy_name: String,
     policy_document: String,
     path: Option<String>,
     description: Option<String>,
     tags: Option<Vec<Tag>>,
+    tenant: &TenantPath,
     context: &WamiContext,
 ) -> Result<Policy> {
     let path = path.unwrap_or_else(|| "/".to_string());
     let policy_id = Uuid::new_v4().to_string();
 
-    // Build WAMI ARN using context
     let wami_arn = WamiArn::builder()
         .service(Service::Iam)
-        .tenant_path(context.tenant_path().clone())
+        .tenant_path(tenant.clone())
         .wami_instance(context.instance_id())
         .resource("policy", &policy_id)
         .build()?;
@@ -53,7 +58,7 @@ pub fn build_policy(
         tags: tags.unwrap_or_default(),
         wami_arn,
         providers: Vec::new(),
-        tenant_id: None,
+        tenant_id: Some(crate::wami::tenant::TenantId::from_path(tenant)),
     })
 }
 

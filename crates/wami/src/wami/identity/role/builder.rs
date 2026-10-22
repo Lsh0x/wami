@@ -1,17 +1,20 @@
 //! Role Builder Functions
 
 use super::model::Role;
-use crate::arn::{Service, WamiArn};
+use crate::arn::{ScopedName, Service, WamiArn};
 use crate::context::WamiContext;
 use crate::error::Result;
 use crate::provider::{CloudProvider, ResourceType};
 use chrono::Utc;
 use uuid::Uuid;
 
-/// Build a new Role with context-based identifiers
+/// Build a new Role under `key`, in the context's instance.
+///
+/// The tenant is the key's, never the caller's (wami 005); `tenant_id` is
+/// stamped from the same path.
 #[allow(clippy::result_large_err)]
 pub fn build_role(
-    role_name: String,
+    key: &ScopedName,
     assume_role_policy_document: String,
     path: Option<String>,
     description: Option<String>,
@@ -20,11 +23,11 @@ pub fn build_role(
 ) -> Result<Role> {
     let role_id = Uuid::new_v4().to_string();
     let path = path.unwrap_or_else(|| "/".to_string());
+    let role_name = key.name().to_string();
 
-    // Build WAMI ARN using context
     let wami_arn = WamiArn::builder()
         .service(Service::Iam)
-        .tenant_path(context.tenant_path().clone())
+        .tenant_path(key.tenant().clone())
         .wami_instance(context.instance_id())
         .resource("role", &role_id)
         .build()?;
@@ -50,7 +53,7 @@ pub fn build_role(
         tags: vec![],
         wami_arn,
         providers: Vec::new(),
-        tenant_id: None,
+        tenant_id: Some(crate::wami::tenant::TenantId::from_path(key.tenant())),
     })
 }
 
@@ -154,6 +157,16 @@ mod tests {
     use crate::types::Tag;
     use crate::wami::tenant::TenantId;
 
+    /// The tenant every test of this module works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
+
     fn test_context() -> WamiContext {
         let arn: WamiArn = "arn:wami:.*:12345678:wami:123456789012:user/test"
             .parse()
@@ -175,7 +188,7 @@ mod tests {
     fn test_build_role_minimal() {
         let context = test_context();
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             test_trust_policy(),
             None,
             None,
@@ -198,7 +211,7 @@ mod tests {
     fn test_build_role_with_all_options() {
         let context = test_context();
         let role = build_role(
-            "admin-role".to_string(),
+            &key("admin-role"),
             test_trust_policy(),
             Some("/admin/".to_string()),
             Some("Administrator role".to_string()),
@@ -217,7 +230,7 @@ mod tests {
     fn test_update_assume_role_policy() {
         let context = test_context();
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             test_trust_policy(),
             None,
             None,
@@ -236,7 +249,7 @@ mod tests {
     fn test_update_description() {
         let context = test_context();
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             test_trust_policy(),
             None,
             None,
@@ -256,7 +269,7 @@ mod tests {
     fn test_update_max_session_duration() {
         let context = test_context();
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             test_trust_policy(),
             None,
             None,
@@ -273,7 +286,7 @@ mod tests {
     fn test_set_permissions_boundary() {
         let context = test_context();
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             test_trust_policy(),
             None,
             None,
@@ -292,7 +305,7 @@ mod tests {
     fn test_clear_permissions_boundary() {
         let context = test_context();
         let mut role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             test_trust_policy(),
             None,
             None,
@@ -311,7 +324,7 @@ mod tests {
     fn test_add_tags() {
         let context = test_context();
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             test_trust_policy(),
             None,
             None,
@@ -339,7 +352,7 @@ mod tests {
     fn test_add_tags_no_duplicates() {
         let context = test_context();
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             test_trust_policy(),
             None,
             None,
@@ -368,7 +381,7 @@ mod tests {
     fn test_set_tenant_id() {
         let context = test_context();
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             test_trust_policy(),
             None,
             None,
@@ -387,7 +400,7 @@ mod tests {
     fn test_role_immutability() {
         let context = test_context();
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             test_trust_policy(),
             None,
             None,
@@ -408,15 +421,7 @@ mod tests {
     #[test]
     fn test_build_role_empty_name() {
         let context = test_context();
-        let role = build_role(
-            "".to_string(),
-            test_trust_policy(),
-            None,
-            None,
-            None,
-            &context,
-        )
-        .unwrap();
+        let role = build_role(&key(""), test_trust_policy(), None, None, None, &context).unwrap();
         assert_eq!(role.role_name, "");
     }
 
@@ -424,7 +429,7 @@ mod tests {
     fn test_build_role_empty_path() {
         let context = test_context();
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             test_trust_policy(),
             Some("".to_string()),
             None,
@@ -439,7 +444,7 @@ mod tests {
     fn test_build_role_invalid_json_trust_policy() {
         let context = test_context();
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             "not valid json".to_string(),
             None,
             None,
@@ -454,7 +459,7 @@ mod tests {
     fn test_build_role_empty_trust_policy() {
         let context = test_context();
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             "".to_string(),
             None,
             None,
@@ -469,7 +474,7 @@ mod tests {
     fn test_build_role_empty_description() {
         let context = test_context();
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             test_trust_policy(),
             None,
             Some("".to_string()),
@@ -484,7 +489,7 @@ mod tests {
     fn test_build_role_zero_session_duration() {
         let context = test_context();
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             test_trust_policy(),
             None,
             None,
@@ -500,7 +505,7 @@ mod tests {
         let context = test_context();
         // Negative duration should be handled (though invalid)
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             test_trust_policy(),
             None,
             None,
@@ -515,7 +520,7 @@ mod tests {
     fn test_build_role_very_large_session_duration() {
         let context = test_context();
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             test_trust_policy(),
             None,
             None,
@@ -533,7 +538,7 @@ mod tests {
         let policy =
             r#"{"Version":"2012-10-17","Statement":[{"Effect":"Allow"}]}"#.replace('}', "\0}");
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             policy.clone(),
             None,
             None,
@@ -553,7 +558,7 @@ mod tests {
             "a".repeat(10000)
         );
         let role = build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             long_policy.clone(),
             None,
             None,
@@ -568,7 +573,7 @@ mod tests {
     fn test_build_role_with_unicode() {
         let context = test_context();
         let role = build_role(
-            "角色".to_string(),
+            &key("角色"),
             test_trust_policy(),
             None,
             None,
@@ -591,7 +596,7 @@ mod tests {
 
         if let Ok(context) = context_result {
             let role_result = build_role(
-                "test-role".to_string(),
+                &key("test-role"),
                 test_trust_policy(),
                 None,
                 None,

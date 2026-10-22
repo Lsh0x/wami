@@ -2,27 +2,31 @@
 
 use super::model::MfaDevice;
 use crate::provider::ProviderConfig;
-use wami_core::arn::{Service, WamiArn};
+use wami_core::arn::{ScopedName, Service, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
 
 /// Build a new MfaDevice resource with context-based identifiers
+///
+/// Its ARN takes the OWNER's tenant from `owner` — the key read from the
+/// owner's stored record — never the caller's (wami 005): a credential minted
+/// by a caller of one tenant for a user of another belongs to the user's.
 #[allow(clippy::result_large_err)]
 pub fn build_mfa_device(
-    user_name: String,
+    owner: &ScopedName,
     serial_number: String,
     context: &WamiContext,
 ) -> Result<MfaDevice> {
     // Build WAMI ARN using context
     let wami_arn = WamiArn::builder()
         .service(Service::Iam)
-        .tenant_path(context.tenant_path().clone())
+        .tenant_path(owner.tenant().clone())
         .wami_instance(context.instance_id())
         .resource("mfa", &serial_number)
         .build()?;
 
     Ok(MfaDevice {
-        user_name,
+        owner: owner.clone(),
         serial_number,
         enable_date: chrono::Utc::now(),
         wami_arn,

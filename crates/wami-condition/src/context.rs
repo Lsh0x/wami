@@ -46,9 +46,9 @@ pub struct ConditionContext {
     pub tag_keys: Vec<String>,
 
     // WAMI-specific - Multi-tenant
-    pub tenant_id: Option<u64>,
-    pub principal_tenant_id: Option<u64>,
-    pub resource_tenant_id: Option<u64>,
+    pub tenant_id: Option<String>,
+    pub principal_tenant_id: Option<String>,
+    pub resource_tenant_id: Option<String>,
     pub tenant_name: Option<String>,
     pub tenant_status: Option<String>,
     pub cross_tenant_request: Option<bool>,
@@ -148,9 +148,9 @@ pub struct ConditionContextBuilder {
     resource_tags: HashMap<String, String>,
     request_tags: HashMap<String, String>,
     tag_keys: Vec<String>,
-    tenant_id: Option<u64>,
-    principal_tenant_id: Option<u64>,
-    resource_tenant_id: Option<u64>,
+    tenant_id: Option<String>,
+    principal_tenant_id: Option<String>,
+    resource_tenant_id: Option<String>,
     tenant_name: Option<String>,
     tenant_status: Option<String>,
     cross_tenant_request: Option<bool>,
@@ -315,18 +315,18 @@ impl ConditionContextBuilder {
         self
     }
 
-    pub fn tenant_id(mut self, id: u64) -> Self {
-        self.tenant_id = Some(id);
+    pub fn tenant_id(mut self, id: impl ToString) -> Self {
+        self.tenant_id = Some(id.to_string());
         self
     }
 
-    pub fn principal_tenant_id(mut self, id: u64) -> Self {
-        self.principal_tenant_id = Some(id);
+    pub fn principal_tenant_id(mut self, id: impl ToString) -> Self {
+        self.principal_tenant_id = Some(id.to_string());
         self
     }
 
-    pub fn resource_tenant_id(mut self, id: u64) -> Self {
-        self.resource_tenant_id = Some(id);
+    pub fn resource_tenant_id(mut self, id: impl ToString) -> Self {
+        self.resource_tenant_id = Some(id.to_string());
         self
     }
 

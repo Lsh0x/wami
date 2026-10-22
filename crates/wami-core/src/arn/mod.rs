@@ -95,6 +95,7 @@
 pub mod builder;
 pub mod matching;
 pub mod parser;
+pub mod scoped_name;
 pub mod transformer;
 pub mod types;
 
@@ -102,6 +103,7 @@ pub mod types;
 pub use builder::ArnBuilder;
 pub use matching::{glob_match, matches_arn_pattern, MatchContext};
 pub use parser::{parse_arn, ArnParseError};
+pub use scoped_name::ScopedName;
 pub use transformer::{available_providers, get_transformer, ArnTransformer, ProviderArnInfo};
 // Each translation is behind its provider's feature, off by default: a
 // deployment that syncs with no cloud should not compile any of them.

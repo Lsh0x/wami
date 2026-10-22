@@ -3,14 +3,14 @@
 use super::model::*;
 use chrono::Utc;
 use uuid::Uuid;
-use wami_core::arn::{Service, WamiArn};
+use wami_core::arn::{ScopedName, Service, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
 
 /// Build a new ServerCertificate resource with context-based identifiers
 #[allow(clippy::result_large_err)]
 pub fn build_server_certificate(
-    server_certificate_name: String,
+    key: &ScopedName,
     certificate_body: String,
     certificate_chain: Option<String>,
     path: String,
@@ -22,7 +22,7 @@ pub fn build_server_certificate(
     // Build WAMI ARN using context
     let wami_arn = WamiArn::builder()
         .service(Service::Iam)
-        .tenant_path(context.tenant_path().clone())
+        .tenant_path(key.tenant().clone())
         .wami_instance(context.instance_id())
         .resource("server-certificate", &cert_id)
         .build()?;
@@ -32,12 +32,12 @@ pub fn build_server_certificate(
         "arn:aws:iam::{}:server-certificate{}{}",
         context.instance_id(),
         if path == "/" { "" } else { &path },
-        server_certificate_name
+        key.name()
     );
 
     let metadata = ServerCertificateMetadata {
         path,
-        server_certificate_name,
+        server_certificate_name: key.name().to_string(),
         arn,
         server_certificate_id: cert_id,
         upload_date: Utc::now(),

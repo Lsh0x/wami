@@ -4,12 +4,20 @@ use crate::store::memory::InMemoryWamiStore;
 use crate::store::traits::PolicyStore;
 use crate::wami::policies::Policy;
 use async_trait::async_trait;
+use wami_core::arn::TenantPath;
 use wami_core::error::Result;
 use wami_core::types::PaginationParams;
 
 #[async_trait]
 impl PolicyStore for InMemoryWamiStore {
     async fn create_policy(&mut self, policy: Policy) -> Result<Policy> {
+        // The ARN names no tenant (wami 011): replacing a held one would let a
+        // tenant rewrite the document another tenant's attachments evaluate.
+        if self.policies.contains_key(&policy.arn) {
+            return Err(wami_core::error::AmiError::ResourceExists {
+                resource: format!("policy {}", policy.arn),
+            });
+        }
         self.policies.insert(policy.arn.clone(), policy.clone());
         Ok(policy)
     }
@@ -24,18 +32,45 @@ impl PolicyStore for InMemoryWamiStore {
     }
 
     async fn delete_policy(&mut self, policy_arn: &str) -> Result<()> {
+        let attached = [
+            &self.user_attached_policies,
+            &self.group_attached_policies,
+            &self.role_attached_policies,
+        ]
+        .iter()
+        .any(|map| {
+            map.values()
+                .any(|arns| arns.iter().any(|a| a == policy_arn))
+        });
+        let bounding = self
+            .users
+            .values()
+            .any(|u| u.permissions_boundary.as_deref() == Some(policy_arn))
+            || self
+                .roles
+                .values()
+                .any(|r| r.permissions_boundary.as_deref() == Some(policy_arn));
+        if attached || bounding {
+            return Err(wami_core::error::AmiError::InvalidParameter {
+                message: format!(
+                    "policy {policy_arn} is attached or bounds a principal: detach it first"
+                ),
+            });
+        }
         self.policies.remove(policy_arn);
         Ok(())
     }
 
     async fn list_policies(
         &self,
+        tenant: &TenantPath,
         path_prefix: Option<&str>,
         pagination: Option<&PaginationParams>,
     ) -> Result<(Vec<Policy>, bool, Option<String>)> {
         let mut policies: Vec<Policy> = self
             .policies
             .values()
+            .filter(|policy| &policy.wami_arn.tenant_path == tenant)
             .filter(|policy| {
                 if let Some(prefix) = path_prefix {
                     policy.path.starts_with(prefix)

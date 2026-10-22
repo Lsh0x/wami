@@ -56,7 +56,7 @@ let context = WamiContext::builder()
     .unwrap();
 
 let certificate = build_server_certificate(
-    "my-cert".to_string(),
+    &ScopedName::new(TenantPath::single(1), "my-cert"),
     "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----".to_string(),
     None, // certificate_chain
     "/".to_string(), // path
@@ -102,7 +102,7 @@ let context = WamiContext::builder()
 // Create a new server certificate
 let certificate_body = "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----";
 let certificate = build_server_certificate(
-    "my-cert".to_string(),
+    &ScopedName::new(TenantPath::single(1), "my-cert"),
     certificate_body.to_string(),
     None,
     "/".to_string(),

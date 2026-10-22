@@ -20,7 +20,7 @@
 //! ```rust
 //! use wami::store::memory::InMemoryStore;
 //! use wami::store::{Store, traits::UserStore};
-//! use wami::arn::{TenantPath, WamiArn};
+//! use wami::arn::{ScopedName, TenantPath, WamiArn};
 //! use wami::context::WamiContext;
 //! use wami::wami::identity::user::builder::build_user;
 //!
@@ -47,12 +47,11 @@
 //!         .is_root(false)
 //!         .build()?;
 //!     
+//!     // A user is named by its key: the tenant it lives in, and its name.
+//!     let alice = ScopedName::new(TenantPath::single(0), "alice");
+//!
 //!     // Build a user using pure functions
-//!     let user = build_user(
-//!         "alice".to_string(),
-//!         Some("/".to_string()),
-//!         &context,
-//!     )?;
+//!     let user = build_user(&alice, Some("/".to_string()), &context)?;
 //!     
 //!     // Store the user
 //!     let created_user = store.wami_store().await?.create_user(user).await?;
@@ -60,7 +59,7 @@
 //!     println!("User ARN: {}", created_user.arn);
 //!     
 //!     // Retrieve the user
-//!     let retrieved = store.wami_store().await?.get_user("alice").await?;
+//!     let retrieved = store.wami_store().await?.get_user(&alice).await?;
 //!     if let Some(user) = retrieved {
 //!         println!("Retrieved user: {}", user.user_name);
 //!     }
@@ -88,7 +87,7 @@ pub use wami_core::types::{
 // Re-export ARN types
 pub use wami_core::arn::{
     available_providers, get_transformer, parse_arn, ArnBuilder, ArnParseError, ArnTransformer,
-    CloudMapping, ProviderArnInfo, Resource, Service, TenantPath, WamiArn,
+    CloudMapping, ProviderArnInfo, Resource, ScopedName, Service, TenantPath, WamiArn,
 };
 // Behind their provider's feature, all off by default.
 #[cfg(feature = "aws")]

@@ -32,7 +32,6 @@
 //! ```
 
 use crate::store::traits::{AccessKeyStore, UserStore};
-use crate::wami::identity::root_user::ROOT_USER_NAME;
 use crate::wami::identity::User;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -149,12 +148,13 @@ where
         }
 
         // Get the user who owns this access key
-        let user = store
-            .get_user(&access_key.user_name)
-            .await?
-            .ok_or_else(|| AmiError::ResourceNotFound {
-                resource: format!("User {}", access_key.user_name),
-            })?;
+        let user =
+            store
+                .get_user(&access_key.owner)
+                .await?
+                .ok_or_else(|| AmiError::ResourceNotFound {
+                    resource: format!("User {}", access_key.owner),
+                })?;
 
         Ok(user)
     }
@@ -169,7 +169,13 @@ where
         // tenant_path, instance_id and is_root all come from the ARN now — see
         // WamiContextBuilder::build. Restating them here was how they could
         // disagree with the identity they are supposed to describe.
-        WamiContext::builder().caller_arn(arn.clone()).build()
+        // The key is read off the same record as the ARN: the evaluator finds
+        // the caller's policies by it, and checks it against the ARN at use
+        // (wami 005, (c)).
+        WamiContext::builder()
+            .caller_arn(arn.clone())
+            .caller_key(user.key())
+            .build()
     }
 
     /// Create context for a root user
@@ -186,8 +192,10 @@ where
             .validate_access_key(access_key_id, secret_access_key)
             .await?;
 
-        // Verify this is actually the root user
-        if user.user_name != ROOT_USER_NAME {
+        // Root is decided on the stored RECORD — its ARN at tenant path
+        // exactly `0` — never on its name: any tenant's user named root passed
+        // the name check, and with it every authorization check (D6).
+        if !user.wami_arn.is_root_user() {
             return Err(AmiError::AccessDenied {
                 message: "Not a root user".to_string(),
             });
@@ -207,6 +215,7 @@ where
                 crate::wami::identity::root_user::ROOT_TENANT_ID,
             ))
             .caller_arn(user.wami_arn.clone())
+            .caller_key(user.key())
             .is_root(true)
             .build()
     }

@@ -263,6 +263,16 @@ mod tests {
     use crate::wami::identity::user::builder as user_builder;
     use crate::wami::policies::policy::builder as policy_builder;
 
+    /// The tenant every test of this module works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
+
     fn test_context() -> WamiContext {
         let arn: WamiArn = "arn:wami:.*:12345678:wami:123456789012:user/test"
             .parse()
@@ -280,7 +290,7 @@ mod tests {
     fn test_resource_user_arn() {
         let context = test_context();
         let user =
-            user_builder::build_user("alice".to_string(), Some("/".to_string()), &context).unwrap();
+            user_builder::build_user(&key("alice"), Some("/".to_string()), &context).unwrap();
 
         let resource = Resource::User(user.clone());
 
@@ -293,7 +303,7 @@ mod tests {
         let context = test_context();
         let trust_policy = r#"{"Version":"2012-10-17"}"#.to_string();
         let role = role_builder::build_role(
-            "admin-role".to_string(),
+            &key("admin-role"),
             trust_policy,
             Some("/".to_string()),
             None,
@@ -311,9 +321,8 @@ mod tests {
     #[test]
     fn test_resource_group_arn() {
         let context = test_context();
-        let group =
-            group_builder::build_group("developers".to_string(), Some("/".to_string()), &context)
-                .unwrap();
+        let group = group_builder::build_group(&key("developers"), Some("/".to_string()), &context)
+            .unwrap();
 
         let resource = Resource::Group(group.clone());
 
@@ -331,6 +340,7 @@ mod tests {
             Some("/".to_string()),
             None,
             None,
+            &tenant(),
             &context,
         )
         .unwrap();
@@ -344,8 +354,7 @@ mod tests {
     #[test]
     fn test_resource_access_key_arn() {
         let context = test_context();
-        let access_key =
-            access_key_builder::build_access_key("alice".to_string(), &context).unwrap();
+        let access_key = access_key_builder::build_access_key(&key("alice"), &context).unwrap();
 
         let resource = Resource::AccessKey(access_key.clone());
 
@@ -358,8 +367,7 @@ mod tests {
     #[test]
     fn test_resource_as_user() {
         let context = test_context();
-        let user =
-            user_builder::build_user("bob".to_string(), Some("/".to_string()), &context).unwrap();
+        let user = user_builder::build_user(&key("bob"), Some("/".to_string()), &context).unwrap();
 
         let resource = Resource::User(user.clone());
 
@@ -376,7 +384,7 @@ mod tests {
         let context = test_context();
         let trust_policy = r#"{"Version":"2012-10-17"}"#.to_string();
         let role = role_builder::build_role(
-            "test-role".to_string(),
+            &key("test-role"),
             trust_policy,
             Some("/".to_string()),
             None,
@@ -405,6 +413,7 @@ mod tests {
             Some("/".to_string()),
             None,
             None,
+            &tenant(),
             &context,
         )
         .unwrap();
@@ -423,8 +432,7 @@ mod tests {
     fn test_resource_as_group() {
         let context = test_context();
         let group =
-            group_builder::build_group("admins".to_string(), Some("/".to_string()), &context)
-                .unwrap();
+            group_builder::build_group(&key("admins"), Some("/".to_string()), &context).unwrap();
 
         let resource = Resource::Group(group.clone());
 
@@ -436,8 +444,8 @@ mod tests {
     #[test]
     fn test_resource_into_user() {
         let context = test_context();
-        let user = user_builder::build_user("charlie".to_string(), Some("/".to_string()), &context)
-            .unwrap();
+        let user =
+            user_builder::build_user(&key("charlie"), Some("/".to_string()), &context).unwrap();
 
         let resource = Resource::User(user.clone());
         let extracted = resource.into_user();
@@ -450,7 +458,7 @@ mod tests {
         let context = test_context();
         let trust_policy = r#"{"Version":"2012-10-17"}"#.to_string();
         let role = role_builder::build_role(
-            "my-role".to_string(),
+            &key("my-role"),
             trust_policy,
             Some("/".to_string()),
             None,
@@ -475,6 +483,7 @@ mod tests {
             Some("/".to_string()),
             None,
             None,
+            &tenant(),
             &context,
         )
         .unwrap();
@@ -489,8 +498,7 @@ mod tests {
     fn test_resource_into_group() {
         let context = test_context();
         let group =
-            group_builder::build_group("ops-team".to_string(), Some("/".to_string()), &context)
-                .unwrap();
+            group_builder::build_group(&key("ops-team"), Some("/".to_string()), &context).unwrap();
 
         let resource = Resource::Group(group.clone());
         let extracted = resource.into_group();
@@ -504,7 +512,7 @@ mod tests {
         let context = test_context();
         let trust_policy = r#"{"Version":"2012-10-17"}"#.to_string();
         let role = role_builder::build_role(
-            "my-role".to_string(),
+            &key("my-role"),
             trust_policy,
             Some("/".to_string()),
             None,
@@ -524,13 +532,12 @@ mod tests {
         let context = test_context();
 
         // User
-        let user =
-            user_builder::build_user("test".to_string(), Some("/".to_string()), &context).unwrap();
+        let user = user_builder::build_user(&key("test"), Some("/".to_string()), &context).unwrap();
         assert_eq!(Resource::User(user).resource_type(), "user");
 
         // Role
         let role = role_builder::build_role(
-            "role".to_string(),
+            &key("role"),
             "{}".to_string(),
             Some("/".to_string()),
             None,
@@ -547,6 +554,7 @@ mod tests {
             Some("/".to_string()),
             None,
             None,
+            &tenant(),
             &context,
         )
         .unwrap();
@@ -554,19 +562,18 @@ mod tests {
 
         // Group
         let group =
-            group_builder::build_group("grp".to_string(), Some("/".to_string()), &context).unwrap();
+            group_builder::build_group(&key("grp"), Some("/".to_string()), &context).unwrap();
         assert_eq!(Resource::Group(group).resource_type(), "group");
 
         // Access Key
-        let key = access_key_builder::build_access_key("user".to_string(), &context).unwrap();
+        let key = access_key_builder::build_access_key(&key("user"), &context).unwrap();
         assert_eq!(Resource::AccessKey(key).resource_type(), "access-key");
     }
 
     #[test]
     fn test_resource_all_downcast_combinations() {
         let context = test_context();
-        let user =
-            user_builder::build_user("test".to_string(), Some("/".to_string()), &context).unwrap();
+        let user = user_builder::build_user(&key("test"), Some("/".to_string()), &context).unwrap();
         let resource = Resource::User(user);
 
         // User should only match as_user

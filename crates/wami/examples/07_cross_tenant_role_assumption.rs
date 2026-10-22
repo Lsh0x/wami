@@ -11,7 +11,7 @@
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use wami::arn::{TenantPath, WamiArn};
+use wami::arn::{ScopedName, TenantPath, WamiArn};
 use wami::context::WamiContext;
 use wami::service::{AssumeRoleService, RoleService, TenantService, UserService};
 use wami::store::memory::InMemoryWamiStore;
@@ -108,7 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let user_service = UserService::new(store.clone());
 
     let alice_req = CreateUserRequest {
-        user_name: "alice".to_string(),
+        user: ScopedName::new(tenant_a_context.tenant_path().clone(), "alice"),
         path: Some("/".to_string()),
         permissions_boundary: None,
         tags: None,
@@ -136,7 +136,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .to_string();
 
     let role_req = CreateRoleRequest {
-        role_name: "cross-tenant-reader".to_string(),
+        role: ScopedName::new(
+            tenant_b_context.tenant_path().clone(),
+            "cross-tenant-reader",
+        ),
         path: Some("/".to_string()),
         assume_role_policy_document: trust_policy,
         description: Some("Role for cross-tenant read access".to_string()),

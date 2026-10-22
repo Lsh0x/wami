@@ -72,8 +72,12 @@ impl MatchContext {
 impl From<&crate::context::WamiContext> for MatchContext {
     fn from(ctx: &crate::context::WamiContext) -> Self {
         Self {
-            tenant: Some(ctx.tenant_path().as_string()),
-            principal: Some(ctx.caller_arn().resource.resource_id.clone()),
+            // The verified principal's tenant, never the declared path (F1).
+            tenant: ctx
+                .principal_tenant()
+                .map(crate::arn::TenantPath::as_string),
+            // The caller's NAME, from its key: the ARN's resource is its id.
+            principal: ctx.caller_key().map(|key| key.name().to_string()),
             service: Some(ctx.caller_arn().service.to_string()),
         }
     }
@@ -256,6 +260,26 @@ fn glob_match_recursive(pattern: &[u8], text: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_tenant_variable_is_the_keys_tenant_never_a_declared_path() {
+        // wami 005, review round 2 F1: a declared path is the caller's to set.
+        use crate::arn::{ScopedName, TenantPath};
+        use crate::context::WamiContext;
+        let arn: crate::arn::WamiArn = "arn:wami:iam:5/7:wami:i:user/alice-id".parse().unwrap();
+        let declared = WamiContext::builder()
+            .caller_arn(arn.clone())
+            .tenant_path(TenantPath::single(6))
+            .build()
+            .unwrap();
+        assert_eq!(MatchContext::from(&declared).tenant, None);
+        let keyed = WamiContext::builder()
+            .caller_arn(arn)
+            .caller_key(ScopedName::new(TenantPath::new(vec![5, 7]), "alice"))
+            .build()
+            .unwrap();
+        assert_eq!(MatchContext::from(&keyed).tenant.as_deref(), Some("5/7"));
+    }
 
     // ── Variable Substitution ─────────────────────────────────
 

@@ -12,6 +12,16 @@
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
+
+/// The tenant this example works in.
+fn tenant() -> wami_core::arn::TenantPath {
+    wami::arn::TenantPath::single(0)
+}
+
+/// `name`'s key in that tenant.
+fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+    wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+}
 use wami::{
     arn::{TenantPath, WamiArn},
     context::WamiContext,
@@ -64,7 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create a user
     let alice_req = CreateUserRequest {
-        user_name: "alice".to_string(),
+        user: key("alice"),
         path: Some("/developers/".to_string()),
         permissions_boundary: None,
         tags: None,
@@ -86,6 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_policy(
             &context,
             CreatePolicyRequest {
+                tenant: tenant(),
                 policy_name: "AdminPolicy".to_string(),
                 policy_document: admin_policy_doc.to_string(),
                 path: Some("/".to_string()),
@@ -115,6 +126,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_policy(
             &context,
             CreatePolicyRequest {
+                tenant: tenant(),
                 policy_name: "S3OnlyBoundary".to_string(),
                 policy_document: s3_boundary_doc.to_string(),
                 path: Some("/boundaries/".to_string()),
@@ -134,7 +146,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Simulate alice's permissions (admin policy allows everything)
     let sim_req = SimulatePrincipalPolicyRequest {
-        policy_source_arn: alice.arn.clone(),
+        principal_type: wami::wami::policies::permissions_boundary::PrincipalType::User,
+        principal: alice.key(),
         action_names: vec![
             "s3:GetObject".to_string(),
             "ec2:RunInstances".to_string(),
@@ -165,7 +178,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let put_boundary_req = PutPermissionsBoundaryRequest {
         principal_type: PrincipalType::User,
-        principal_name: "alice".to_string(),
+        principal: key("alice"),
         permissions_boundary: s3_boundary.arn.clone(),
     };
     boundary_service
@@ -181,7 +194,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("📋 Part 5: Testing Permissions WITH Boundary\n");
 
     let sim_req_with_boundary = SimulatePrincipalPolicyRequest {
-        policy_source_arn: alice.arn.clone(),
+        principal_type: wami::wami::policies::permissions_boundary::PrincipalType::User,
+        principal: alice.key(),
         action_names: vec![
             "s3:GetObject".to_string(),
             "s3:PutObject".to_string(),
@@ -229,7 +243,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }"#;
 
     let dev_role_req = CreateRoleRequest {
-        role_name: "DeveloperRole".to_string(),
+        role: key("DeveloperRole"),
         assume_role_policy_document: assume_policy_doc.to_string(),
         path: Some("/roles/".to_string()),
         description: Some("Role for developers".to_string()),
@@ -258,6 +272,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .create_policy(
             &context,
             CreatePolicyRequest {
+                tenant: tenant(),
                 policy_name: "ReadOnlyBoundary".to_string(),
                 policy_document: read_only_boundary_doc.to_string(),
                 path: Some("/boundaries/".to_string()),
@@ -274,7 +289,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Attach boundary to role
     let put_role_boundary = PutPermissionsBoundaryRequest {
         principal_type: PrincipalType::Role,
-        principal_name: "DeveloperRole".to_string(),
+        principal: key("DeveloperRole"),
         permissions_boundary: read_only_boundary.arn.clone(),
     };
     boundary_service
@@ -284,7 +299,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test role with boundary
     let role_sim_req = SimulatePrincipalPolicyRequest {
-        policy_source_arn: dev_role.arn.clone(),
+        principal_type: wami::wami::policies::permissions_boundary::PrincipalType::Role,
+        principal: dev_role.key(),
         action_names: vec![
             "s3:GetObject".to_string(),
             "s3:PutObject".to_string(),
@@ -320,7 +336,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let delete_user_boundary = DeletePermissionsBoundaryRequest {
         principal_type: PrincipalType::User,
-        principal_name: "alice".to_string(),
+        principal: key("alice"),
     };
     boundary_service
         .delete_permissions_boundary(&context, delete_user_boundary)
@@ -330,7 +346,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let delete_role_boundary = DeletePermissionsBoundaryRequest {
         principal_type: PrincipalType::Role,
-        principal_name: "DeveloperRole".to_string(),
+        principal: key("DeveloperRole"),
     };
     boundary_service
         .delete_permissions_boundary(&context, delete_role_boundary)

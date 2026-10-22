@@ -45,8 +45,10 @@ pub struct DeletionTaskInfo {
     pub deletion_task_id: String,
     /// The status of the deletion task
     pub status: DeletionTaskStatus,
-    /// The role name being deleted
-    pub role_name: String,
+    /// The role being deleted — its tenant and its name: a bare name named a
+    /// role in every tenant, and left the task's guard no tenant to judge
+    /// (wami 005).
+    pub role: crate::arn::ScopedName,
     /// Failure reason if status is Failed
     pub failure_reason: Option<DeletionTaskFailureReason>,
     /// The date and time when the deletion task was created

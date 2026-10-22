@@ -1,98 +1,83 @@
 //! Role Store Implementation for InMemoryWamiStore
 
+use super::{insert_new, move_key, page, replace_by_id};
 use crate::store::memory::InMemoryWamiStore;
 use crate::store::traits::RoleStore;
 use crate::wami::identity::Role;
 use async_trait::async_trait;
+use wami_core::arn::{ScopedName, TenantPath};
 use wami_core::error::Result;
 use wami_core::types::PaginationParams;
 
 #[async_trait]
 impl RoleStore for InMemoryWamiStore {
     async fn create_role(&mut self, role: Role) -> Result<Role> {
-        self.roles.insert(role.role_name.clone(), role.clone());
-        Ok(role)
+        insert_new(&mut self.roles, role.key(), role, |r| &r.role_id, "role")
     }
 
-    async fn get_role(&self, role_name: &str) -> Result<Option<Role>> {
-        Ok(self.roles.get(role_name).cloned())
+    async fn get_role(&self, key: &ScopedName) -> Result<Option<Role>> {
+        Ok(self.roles.get(key).cloned())
     }
 
     async fn update_role(&mut self, role: Role) -> Result<Role> {
-        self.roles.insert(role.role_name.clone(), role.clone());
+        let key = role.key();
+        let (old, role) =
+            replace_by_id(&mut self.roles, key.clone(), role, |r| &r.role_id, "role")?;
+        // A role's policies are its own: they follow it, or the next role of
+        // the old name inherits them.
+        move_key(&mut self.role_attached_policies, &old, &key);
+        move_key(&mut self.role_inline_policies, &old, &key);
         Ok(role)
     }
 
-    async fn delete_role(&mut self, role_name: &str) -> Result<()> {
-        self.roles.remove(role_name);
+    async fn delete_role(&mut self, key: &ScopedName) -> Result<()> {
+        self.roles.remove(key);
+        self.role_attached_policies.remove(key);
+        self.role_inline_policies.remove(key);
         Ok(())
     }
 
     async fn list_roles(
         &self,
+        tenant: &TenantPath,
         path_prefix: Option<&str>,
         pagination: Option<&PaginationParams>,
     ) -> Result<(Vec<Role>, bool, Option<String>)> {
-        let mut roles: Vec<Role> = self.roles.values().cloned().collect();
-
-        // Apply path prefix filter
-        if let Some(prefix) = path_prefix {
-            // Empty string prefix should only match empty paths, not all paths
-            if prefix.is_empty() {
-                roles.retain(|role| role.path.is_empty());
-            } else {
-                roles.retain(|role| role.path.starts_with(prefix));
-            }
-        }
-
-        roles.sort_by(|a, b| a.role_name.cmp(&b.role_name));
-
-        let mut is_truncated = false;
-        let mut marker = None;
-
-        if let Some(pagination) = pagination {
-            if let Some(max_items) = pagination.max_items {
-                if max_items > 0 && roles.len() > max_items as usize {
-                    roles.truncate(max_items as usize);
-                    is_truncated = true;
-                    if let Some(last_role) = roles.last() {
-                        marker = Some(last_role.role_name.clone());
-                    }
-                } else if max_items == 0 {
-                    // max_items = 0 means return empty list but indicate truncation if there are items
-                    is_truncated = !roles.is_empty();
-                    roles.clear();
-                }
-            }
-        }
-
-        Ok((roles, is_truncated, marker))
+        let roles: Vec<Role> = self
+            .roles
+            .iter()
+            .filter(|(key, _)| key.tenant() == tenant)
+            .map(|(_, role)| role.clone())
+            .collect();
+        Ok(page(
+            roles,
+            path_prefix,
+            |r| &r.path,
+            |r| &r.role_name,
+            pagination,
+        ))
     }
 
     // Managed policy attachment methods
-    async fn attach_role_policy(&mut self, role_name: &str, policy_arn: &str) -> Result<()> {
-        let policies = self
-            .role_attached_policies
-            .entry(role_name.to_string())
-            .or_default();
-
-        if !policies.contains(&policy_arn.to_string()) {
+    async fn attach_role_policy(&mut self, key: &ScopedName, policy_arn: &str) -> Result<()> {
+        let policies = self.role_attached_policies.entry(key.clone()).or_default();
+        if !policies.iter().any(|p| p == policy_arn) {
             policies.push(policy_arn.to_string());
         }
         Ok(())
     }
 
-    async fn detach_role_policy(&mut self, role_name: &str, policy_arn: &str) -> Result<()> {
-        if let Some(policies) = self.role_attached_policies.get_mut(role_name) {
+    async fn detach_role_policy(&mut self, key: &ScopedName, policy_arn: &str) -> Result<()> {
+        if let Some(policies) = self.role_attached_policies.get_mut(key) {
             policies.retain(|p| p != policy_arn);
         }
         Ok(())
     }
 
-    async fn list_attached_role_policies(&self, role_name: &str) -> Result<Vec<String>> {
+    async fn list_attached_role_policies(&self, key: &ScopedName) -> Result<Vec<String>> {
         Ok(self
             .role_attached_policies
-            .get(role_name)
+            .get(key)
             .cloned()
             .unwrap_or_default())
     }
@@ -100,37 +85,35 @@ impl RoleStore for InMemoryWamiStore {
     // Inline policy methods
     async fn put_role_policy(
         &mut self,
-        role_name: &str,
+        key: &ScopedName,
         policy_name: &str,
         policy_document: String,
     ) -> Result<()> {
-        let policies = self
-            .role_inline_policies
-            .entry(role_name.to_string())
-            .or_default();
-
-        policies.insert(policy_name.to_string(), policy_document);
+        self.role_inline_policies
+            .entry(key.clone())
+            .or_default()
+            .insert(policy_name.to_string(), policy_document);
         Ok(())
     }
 
-    async fn get_role_policy(&self, role_name: &str, policy_name: &str) -> Result<Option<String>> {
+    async fn get_role_policy(&self, key: &ScopedName, policy_name: &str) -> Result<Option<String>> {
         Ok(self
             .role_inline_policies
-            .get(role_name)
+            .get(key)
             .and_then(|policies| policies.get(policy_name).cloned()))
     }
 
-    async fn delete_role_policy(&mut self, role_name: &str, policy_name: &str) -> Result<()> {
-        if let Some(policies) = self.role_inline_policies.get_mut(role_name) {
+    async fn delete_role_policy(&mut self, key: &ScopedName, policy_name: &str) -> Result<()> {
+        if let Some(policies) = self.role_inline_policies.get_mut(key) {
             policies.remove(policy_name);
         }
         Ok(())
     }
 
-    async fn list_role_policies(&self, role_name: &str) -> Result<Vec<String>> {
+    async fn list_role_policies(&self, key: &ScopedName) -> Result<Vec<String>> {
         Ok(self
             .role_inline_policies
-            .get(role_name)
+            .get(key)
             .map(|policies| policies.keys().cloned().collect())
             .unwrap_or_default())
     }

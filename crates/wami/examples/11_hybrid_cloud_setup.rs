@@ -17,6 +17,16 @@ use wami::service::UserService;
 use wami::store::memory::InMemoryWamiStore;
 use wami::wami::identity::user::requests::{CreateUserRequest, ListUsersRequest};
 
+/// The tenant this example works in.
+fn tenant() -> wami_core::arn::TenantPath {
+    wami::arn::TenantPath::single(0)
+}
+
+/// `name`'s key in that tenant.
+fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+    wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+}
+
 // === CUSTOM ON-PREMISE PROVIDER ===
 #[derive(Debug, Clone)]
 struct OnPremiseProvider {
@@ -169,7 +179,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let user_service = UserService::new(store.clone());
 
     let onprem_req = CreateUserRequest {
-        user_name: "alice-onprem".to_string(),
+        user: key("alice-onprem"),
         path: Some("/employees/".to_string()),
         permissions_boundary: None,
         tags: Some(vec![
@@ -196,7 +206,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("\n\nStep 3: Creating user in AWS cloud...\n");
 
     let aws_req = CreateUserRequest {
-        user_name: "alice-cloud".to_string(),
+        user: key("alice-cloud"),
         path: Some("/employees/".to_string()),
         permissions_boundary: None,
         tags: Some(vec![
@@ -237,6 +247,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         .list_users(
             &onprem_context,
             ListUsersRequest {
+                tenant: tenant(),
                 path_prefix: None,
                 pagination: None,
             },

@@ -2,27 +2,36 @@
 //!
 //! Orchestrates role management operations.
 
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
-use crate::store::traits::RoleStore;
+use crate::service::auth::authorizer::{confirm, guard, guard_tenant, Authorizer};
+use crate::store::traits::{PolicyStore, RoleStore};
+
+/// What the role service reads: the roles, and the policies a boundary
+/// given at create names (review round 1, Δ5).
+pub trait RoleServiceStore: RoleStore + PolicyStore {}
+impl<T> RoleServiceStore for T where T: RoleStore + PolicyStore {}
 use crate::wami::identity::role::{
     builder as role_builder, CreateRoleRequest, ListRolesRequest, Role, UpdateRoleRequest,
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
+use wami_core::arn::ScopedName;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
 
 /// Service for managing IAM roles
 ///
 /// Provides high-level operations for role management.
-#[wami_macros::service(store_trait = "crate::store::traits::RoleStore", generate_new = false)]
+#[wami_macros::service(
+    store_trait = "crate::service::identity::role::RoleServiceStore",
+    generate_new = false
+)]
 pub struct RoleService<S> {
     store: Arc<RwLock<S>>,
     authz: Option<Arc<dyn Authorizer>>,
 }
 
-impl<S: RoleStore> RoleService<S> {
+impl<S: RoleServiceStore> RoleService<S> {
     pub fn new(store: Arc<RwLock<S>>) -> Self {
         Self { store, authz: None }
     }
@@ -34,36 +43,23 @@ impl<S: RoleStore> RoleService<S> {
         }
     }
 
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     /// Create a new role
     pub async fn create_role(
         &self,
         context: &WamiContext,
         request: CreateRoleRequest,
     ) -> Result<Role> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreateRole,
             "role",
-            &request.role_name,
+            &request.role,
         )
         .await?;
 
         let mut role = role_builder::build_role(
-            request.role_name,
+            &request.role,
             request.assume_role_policy_document,
             request.path,
             request.description,
@@ -72,6 +68,16 @@ impl<S: RoleStore> RoleService<S> {
         )?;
 
         if let Some(boundary_arn) = request.permissions_boundary {
+            // The checks every door setting a boundary runs: a stored policy
+            // of the role's tenant, suitable as a boundary (Δ5); a foreign one
+            // and an absent one answer alike (Δ6).
+            crate::service::policies::permissions_boundary::boundary_policy(
+                &*self.read_store().await,
+                context,
+                &boundary_arn,
+                &request.role,
+            )
+            .await?;
             role = role_builder::set_permissions_boundary(role, boundary_arn);
         }
 
@@ -85,10 +91,26 @@ impl<S: RoleStore> RoleService<S> {
     }
 
     /// Get a role by name
-    pub async fn get_role(&self, context: &WamiContext, role_name: &str) -> Result<Option<Role>> {
-        self.guard(context, WamiAction::IamReadRole, "role", role_name)
-            .await?;
-        self.read_store().await.get_role(role_name).await
+    pub async fn get_role(&self, context: &WamiContext, role: &ScopedName) -> Result<Option<Role>> {
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamReadRole,
+            "role",
+            role,
+        )
+        .await?;
+        let found = self.read_store().await.get_role(role).await?;
+        if let Some(found) = &found {
+            confirm(
+                context,
+                "role",
+                role,
+                &found.key(),
+                &found.wami_arn.wami_instance_id,
+            )?;
+        }
+        Ok(found)
     }
 
     /// Update a role
@@ -97,11 +119,12 @@ impl<S: RoleStore> RoleService<S> {
         context: &WamiContext,
         request: UpdateRoleRequest,
     ) -> Result<Role> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreateRole,
             "role",
-            &request.role_name,
+            &request.role,
         )
         .await?;
 
@@ -109,11 +132,18 @@ impl<S: RoleStore> RoleService<S> {
             .store
             .read()
             .await
-            .get_role(&request.role_name)
+            .get_role(&request.role)
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
-                resource: format!("Role: {}", request.role_name),
+                resource: format!("Role: {}", request.role),
             })?;
+        confirm(
+            context,
+            "role",
+            &request.role,
+            &role.key(),
+            &role.wami_arn.wami_instance_id,
+        )?;
 
         if let Some(description) = request.description {
             role = role_builder::update_description(role, Some(description));
@@ -127,10 +157,16 @@ impl<S: RoleStore> RoleService<S> {
     }
 
     /// Delete a role
-    pub async fn delete_role(&self, context: &WamiContext, role_name: &str) -> Result<()> {
-        self.guard(context, WamiAction::IamDeleteRole, "role", role_name)
-            .await?;
-        self.write_store().await.delete_role(role_name).await
+    pub async fn delete_role(&self, context: &WamiContext, role: &ScopedName) -> Result<()> {
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamDeleteRole,
+            "role",
+            role,
+        )
+        .await?;
+        self.write_store().await.delete_role(role).await
     }
 
     /// List roles with optional filtering
@@ -139,12 +175,22 @@ impl<S: RoleStore> RoleService<S> {
         context: &WamiContext,
         request: ListRolesRequest,
     ) -> Result<(Vec<Role>, bool, Option<String>)> {
-        self.guard(context, WamiAction::IamReadRole, "role", "*")
-            .await?;
+        guard_tenant(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamReadRole,
+            "role",
+            &request.tenant,
+        )
+        .await?;
         self.store
             .read()
             .await
-            .list_roles(request.path_prefix.as_deref(), request.pagination.as_ref())
+            .list_roles(
+                &request.tenant,
+                request.path_prefix.as_deref(),
+                request.pagination.as_ref(),
+            )
             .await
     }
 }
@@ -157,6 +203,16 @@ mod tests {
     use wami_core::arn::{TenantPath, WamiArn};
     use wami_core::context::WamiContext;
     use wami_core::types::Tag;
+
+    /// The tenant every test of this module works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
 
     fn setup_service() -> RoleService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
@@ -182,7 +238,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateRoleRequest {
-            role_name: "admin-role".to_string(),
+            role: key("admin-role"),
             assume_role_policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             path: Some("/admin/".to_string()),
             description: Some("Admin role".to_string()),
@@ -196,7 +252,10 @@ mod tests {
         assert_eq!(role.path, "/admin/");
         assert_eq!(role.max_session_duration, Some(3600));
 
-        let retrieved = service.get_role(&context, "admin-role").await.unwrap();
+        let retrieved = service
+            .get_role(&context, &key("admin-role"))
+            .await
+            .unwrap();
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().role_name, "admin-role");
     }
@@ -207,7 +266,7 @@ mod tests {
         let context = test_context();
 
         let create_request = CreateRoleRequest {
-            role_name: "test-role".to_string(),
+            role: key("test-role"),
             assume_role_policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             path: None,
             description: Some("Test role".to_string()),
@@ -218,7 +277,7 @@ mod tests {
         service.create_role(&context, create_request).await.unwrap();
 
         let update_request = UpdateRoleRequest {
-            role_name: "test-role".to_string(),
+            role: key("test-role"),
             description: Some("Updated description".to_string()),
             max_session_duration: Some(7200),
         };
@@ -233,7 +292,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateRoleRequest {
-            role_name: "temp-role".to_string(),
+            role: key("temp-role"),
             assume_role_policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             path: None,
             description: None,
@@ -243,9 +302,12 @@ mod tests {
         };
         service.create_role(&context, request).await.unwrap();
 
-        service.delete_role(&context, "temp-role").await.unwrap();
+        service
+            .delete_role(&context, &key("temp-role"))
+            .await
+            .unwrap();
 
-        let retrieved = service.get_role(&context, "temp-role").await.unwrap();
+        let retrieved = service.get_role(&context, &key("temp-role")).await.unwrap();
         assert!(retrieved.is_none());
     }
 
@@ -256,7 +318,7 @@ mod tests {
 
         for name in ["role1", "role2", "role3"] {
             let request = CreateRoleRequest {
-                role_name: name.to_string(),
+                role: key(name),
                 assume_role_policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#
                     .to_string(),
                 path: Some("/test/".to_string()),
@@ -269,6 +331,7 @@ mod tests {
         }
 
         let list_request = ListRolesRequest {
+            tenant: tenant(),
             path_prefix: Some("/test/".to_string()),
             pagination: None,
         };
@@ -287,7 +350,7 @@ mod tests {
         }];
 
         let request = CreateRoleRequest {
-            role_name: "tagged-role".to_string(),
+            role: key("tagged-role"),
             assume_role_policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             path: None,
             description: None,
@@ -327,7 +390,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateRoleRequest {
-            role_name: "admin-role".to_string(),
+            role: key("admin-role"),
             assume_role_policy_document: r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
             path: None,
             description: None,
@@ -349,7 +412,7 @@ mod tests {
         let service = RoleService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
 
-        let result = service.get_role(&context, "admin-role").await;
+        let result = service.get_role(&context, &key("admin-role")).await;
         assert!(matches!(
             result,
             Err(wami_core::error::AmiError::AccessDenied { .. })
@@ -363,7 +426,7 @@ mod tests {
         let context = test_context();
 
         let request = UpdateRoleRequest {
-            role_name: "admin-role".to_string(),
+            role: key("admin-role"),
             description: Some("Updated".to_string()),
             max_session_duration: None,
         };
@@ -381,7 +444,7 @@ mod tests {
         let service = RoleService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
 
-        let result = service.delete_role(&context, "admin-role").await;
+        let result = service.delete_role(&context, &key("admin-role")).await;
         assert!(matches!(
             result,
             Err(wami_core::error::AmiError::AccessDenied { .. })
@@ -395,6 +458,7 @@ mod tests {
         let context = test_context();
 
         let request = ListRolesRequest {
+            tenant: tenant(),
             path_prefix: None,
             pagination: None,
         };

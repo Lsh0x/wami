@@ -2,13 +2,16 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use wami_core::arn::WamiArn;
+use wami_core::arn::{ScopedName, WamiArn};
 
 /// Represents an IAM access key
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccessKey {
-    /// The name of the IAM user that the key is associated with
-    pub user_name: String,
+    /// The key of the user who owns the access key — its tenant and its name.
+    ///
+    /// A name alone would name a user in every tenant at once; authentication
+    /// reads the owner by this key.
+    pub owner: ScopedName,
     /// The ID for this access key
     pub access_key_id: String,
     /// The status of the access key: Active or Inactive

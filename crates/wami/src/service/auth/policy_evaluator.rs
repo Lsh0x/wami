@@ -25,7 +25,7 @@ use wami_condition::{
     evaluate_condition_block, evaluator::parse_condition_block, ConditionContext, ConditionError,
 };
 use wami_core::arn::matching::{glob_match, matches_arn_pattern, MatchContext};
-use wami_core::arn::WamiArn;
+use wami_core::arn::{TenantPath, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
 use wami_core::types::{PolicyDocument, PolicyStatement};
@@ -87,11 +87,10 @@ pub fn evaluate_policy_document(
     source: &PolicySource,
 ) -> Result<Option<StatementHit>> {
     let resource_str = resource_arn.to_string();
-    let match_ctx = MatchContext {
-        tenant: Some(context.tenant_path().as_string()),
-        principal: Some(context.caller_arn().resource.resource_id.clone()),
-        service: Some(context.caller_arn().service.to_string()),
-    };
+    // `${tenant}` and `${principal}` come from the caller's key — never the
+    // declared path, nor the id its ARN carries (D8; review round 1 Δ2,
+    // round 2 F1). A context with no key has neither to offer.
+    let match_ctx = MatchContext::from(context);
     let cond_ctx = build_condition_context(context, resource_arn);
 
     // The condition is read only once action and resource match, as the
@@ -261,17 +260,22 @@ pub fn matches_resource(
 pub fn build_condition_context(context: &WamiContext, resource_arn: &WamiArn) -> ConditionContext {
     let mut builder = ConditionContext::builder()
         .principal_arn(context.caller_arn().to_string())
-        .username(context.caller_arn().resource.resource_id.clone())
         .principal_type(context.caller_arn().resource.resource_type.clone())
         .resource_arn(resource_arn.to_string());
+    // aws:username is the caller's NAME, from its key — the ARN's resource is
+    // the principal's stable id (D8, review round 1 Δ2).
+    if let Some(key) = context.caller_key() {
+        builder = builder.username(key.name());
+    }
 
-    // Tenant info
-    if let Some(primary) = context.tenant_path().root_u64() {
-        builder = builder.tenant_id(primary).principal_tenant_id(primary);
+    // Tenants are FULL paths: `5/7` is not `5/9`, `0/7` is not `0` (review
+    // round 1, Δ11).
+    // The principal's tenant is its key's, never the declared path (review
+    // round 2 F1): with no key, the request carries no tenant to match.
+    if let Some(tenant) = context.principal_tenant().map(TenantPath::as_string) {
+        builder = builder.tenant_id(&tenant).principal_tenant_id(&tenant);
     }
-    if let Some(resource_tenant) = resource_arn.tenant_path.root_u64() {
-        builder = builder.resource_tenant_id(resource_tenant);
-    }
+    builder = builder.resource_tenant_id(resource_arn.tenant_path.as_string());
 
     // Request metadata (set by HTTP/transport layer)
     if let Some(ip) = context.source_ip() {
@@ -961,6 +965,75 @@ mod tests {
                 .unwrap()
                 .map(|hit| hit.effect);
         assert_eq!(effect, Some(PolicyEffect::Allow));
+    }
+
+    // ─── the tenant a policy reads (review round 2, F1) ───────
+
+    /// alice of 5/7 acting with a declared path of 6 — keyless, since a key
+    /// beside another path is refused at build; this is how a widened
+    /// context reaches evaluation.
+    fn declaring_6() -> WamiContext {
+        WamiContext::builder()
+            .caller_arn("arn:wami:iam:5/7:wami:999:user/alice-id".parse().unwrap())
+            .tenant_path(TenantPath::single(6))
+            .build()
+            .unwrap()
+    }
+
+    /// alice of 5/7, keyed by the record the context was built from.
+    fn keyed_57() -> WamiContext {
+        WamiContext::builder()
+            .caller_arn("arn:wami:iam:5/7:wami:999:user/alice-id".parse().unwrap())
+            .caller_key(wami_core::arn::ScopedName::new(
+                TenantPath::new(vec![5, 7]),
+                "alice",
+            ))
+            .build()
+            .unwrap()
+    }
+
+    fn allow_when(cond: serde_json::Value) -> PolicyDocument {
+        PolicyDocument {
+            version: "2012-10-17".to_string(),
+            statement: vec![make_statement("Allow", &["iam:*"], &["*"], Some(cond))],
+        }
+    }
+
+    #[test]
+    fn a_declared_path_is_not_the_tenant_variable() {
+        let doc = make_policy(
+            "Allow",
+            &["iam:GetUser"],
+            &["arn:wami:iam:${tenant}:wami:999:user/*"],
+        );
+        let in_6: WamiArn = "arn:wami:iam:6:wami:999:user/bob".parse().unwrap();
+        let hit = evaluate_policy_document(&doc, "iam:GetUser", &in_6, &declaring_6(), &a_policy());
+        assert!(hit.unwrap().is_none(), "${{tenant}} took the declared path");
+
+        let in_57: WamiArn = "arn:wami:iam:5/7:wami:999:user/bob".parse().unwrap();
+        let hit = evaluate_policy_document(&doc, "iam:GetUser", &in_57, &keyed_57(), &a_policy());
+        assert!(hit.unwrap().is_some(), "${{tenant}} is the key's tenant");
+    }
+
+    #[test]
+    fn a_declared_path_is_not_the_principal_tenant() {
+        let resource = bob();
+        for key in ["wami:PrincipalTenantId", "wami:TenantId"] {
+            let doc = allow_when(serde_json::json!({"StringEquals": {key: "6"}}));
+            let hit = evaluate_policy_document(
+                &doc,
+                "iam:GetUser",
+                &resource,
+                &declaring_6(),
+                &a_policy(),
+            );
+            assert!(hit.unwrap().is_none(), "{key} took the declared path");
+
+            let doc = allow_when(serde_json::json!({"StringEquals": {key: "5/7"}}));
+            let hit =
+                evaluate_policy_document(&doc, "iam:GetUser", &resource, &keyed_57(), &a_policy());
+            assert!(hit.unwrap().is_some(), "{key} is the key's tenant");
+        }
     }
 
     // ─── build_condition_context ──────────────────────────────

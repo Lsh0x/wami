@@ -2,7 +2,7 @@
 //!
 //! Orchestrates service-linked role management operations.
 
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
+use crate::service::auth::authorizer::{guard, guard_by_id, target_arn, Authorizer, Found};
 use crate::store::traits::{RoleStore, ServiceLinkedRoleStore};
 use crate::wami::identity::role::builder as role_builder;
 use crate::wami::identity::service_linked_role::{
@@ -42,31 +42,23 @@ impl<S: ServiceLinkedRoleServiceStore> ServiceLinkedRoleService<S> {
         }
     }
 
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     /// Create a service-linked role
     pub async fn create_service_linked_role(
         &self,
         context: &WamiContext,
         request: CreateServiceLinkedRoleRequest,
     ) -> Result<Role> {
-        self.guard(
+        let role_name = slr_ops::service_linked_role_operations::generate_role_name(
+            &request.aws_service_name,
+            request.custom_suffix.as_deref(),
+        );
+        let key = wami_core::arn::ScopedName::new(request.tenant.clone(), role_name);
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamCreateRole,
             "role",
-            &request.aws_service_name,
+            &key,
         )
         .await?;
 
@@ -76,11 +68,6 @@ impl<S: ServiceLinkedRoleServiceStore> ServiceLinkedRoleService<S> {
             slr_ops::service_linked_role_operations::validate_custom_suffix(suffix)?;
         }
 
-        let role_name = slr_ops::service_linked_role_operations::generate_role_name(
-            &request.aws_service_name,
-            request.custom_suffix.as_deref(),
-        );
-
         let path = "/aws-service-role/".to_string() + &request.aws_service_name + "/";
 
         let assume_role_policy = format!(
@@ -89,7 +76,7 @@ impl<S: ServiceLinkedRoleServiceStore> ServiceLinkedRoleService<S> {
         );
 
         let role = role_builder::build_role(
-            role_name,
+            &key,
             assume_role_policy,
             Some(path),
             request.description,
@@ -106,13 +93,30 @@ impl<S: ServiceLinkedRoleServiceStore> ServiceLinkedRoleService<S> {
         context: &WamiContext,
         deletion_task_id: &str,
     ) -> Result<Option<DeletionTaskInfo>> {
-        self.guard(context, WamiAction::IamReadRole, "role", deletion_task_id)
-            .await?;
-        self.store
-            .read()
+        // Addressed by id: the task is read first, and judged on the role it
+        // records; an absent id and a denied role are one refusal (A1).
+        let task = self
+            .read_store()
             .await
             .get_service_linked_role_deletion_task(deletion_task_id)
-            .await
+            .await?;
+        let owner = task.as_ref().map(|task| Found {
+            // A deletion task records no instance of its own: it is the
+            // store's, which holds one instance (Δ12).
+            instance: context.instance_id().to_string(),
+            owner: target_arn(context, "role", &task.role),
+            itself: None,
+        });
+        guard_by_id(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamReadRole,
+            "deletion task",
+            deletion_task_id,
+            owner,
+        )
+        .await?;
+        Ok(task)
     }
 }
 
@@ -122,6 +126,11 @@ mod tests {
     use crate::store::memory::InMemoryWamiStore;
     use wami_core::arn::{TenantPath, WamiArn};
     use wami_core::context::WamiContext;
+
+    /// The tenant every test of this module works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
 
     fn setup_service() -> ServiceLinkedRoleService<InMemoryWamiStore> {
         let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
@@ -147,6 +156,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateServiceLinkedRoleRequest {
+            tenant: tenant(),
             aws_service_name: "elasticbeanstalk.amazonaws.com".to_string(),
             description: Some("Service-linked role for Elastic Beanstalk".to_string()),
             custom_suffix: None,
@@ -169,6 +179,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateServiceLinkedRoleRequest {
+            tenant: tenant(),
             aws_service_name: "autoscaling.amazonaws.com".to_string(),
             description: None,
             custom_suffix: Some("MyApp".to_string()),
@@ -187,6 +198,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateServiceLinkedRoleRequest {
+            tenant: tenant(),
             aws_service_name: "invalid-service".to_string(),
             description: None,
             custom_suffix: None,
@@ -202,6 +214,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateServiceLinkedRoleRequest {
+            tenant: tenant(),
             aws_service_name: "elasticbeanstalk.amazonaws.com".to_string(),
             description: None,
             custom_suffix: None,

@@ -11,7 +11,7 @@
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use wami::arn::{TenantPath, WamiArn};
+use wami::arn::{ScopedName, TenantPath, WamiArn};
 use wami::context::WamiContext;
 use wami::service::{GroupService, TenantService, UserService};
 use wami::store::memory::InMemoryWamiStore;
@@ -105,7 +105,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create user
     let user_req = CreateUserRequest {
-        user_name: "bob".to_string(),
+        user: ScopedName::new(old_tenant_context.tenant_path().clone(), "bob"),
         path: Some("/users/".to_string()),
         permissions_boundary: None,
         tags: None,
@@ -119,7 +119,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create group
     let group_req = CreateGroupRequest {
-        group_name: "developers".to_string(),
+        group: ScopedName::new(old_tenant_context.tenant_path().clone(), "developers"),
         path: Some("/groups/".to_string()),
         tags: None,
     };
@@ -132,7 +132,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Add user to group
     group_service
-        .add_user_to_group(&old_tenant_context, "developers", "bob")
+        .add_user_to_group(
+            &old_tenant_context,
+            &ScopedName::new(old_tenant_context.tenant_path().clone(), "developers"),
+            &ScopedName::new(old_tenant_context.tenant_path().clone(), "bob"),
+        )
         .await?;
     println!("\n✓ Added bob to developers group in old-tenant");
 
@@ -142,7 +146,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Re-create user in new tenant
     println!("Migrating user...");
     let new_user_req = CreateUserRequest {
-        user_name: old_user.user_name.clone(),
+        user: ScopedName::new(
+            new_tenant_context.tenant_path().clone(),
+            &old_user.user_name,
+        ),
         path: Some(old_user.path.clone()),
         permissions_boundary: old_user.permissions_boundary.clone(),
         tags: Some(old_user.tags.clone()),
@@ -157,7 +164,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Re-create group in new tenant
     println!("\nMigrating group...");
     let new_group_req = CreateGroupRequest {
-        group_name: old_group.group_name.clone(),
+        group: ScopedName::new(
+            new_tenant_context.tenant_path().clone(),
+            &old_group.group_name,
+        ),
         path: Some(old_group.path.clone()),
         tags: Some(old_group.tags.clone()),
     };
@@ -171,7 +181,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Re-establish group membership
     println!("\nRestoring group membership...");
     group_service
-        .add_user_to_group(&new_tenant_context, "developers", "bob")
+        .add_user_to_group(
+            &new_tenant_context,
+            &ScopedName::new(new_tenant_context.tenant_path().clone(), "developers"),
+            &ScopedName::new(new_tenant_context.tenant_path().clone(), "bob"),
+        )
         .await?;
     println!("✓ Re-added bob to developers group in new-tenant");
 
@@ -198,6 +212,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .list_users(
             &old_tenant_context,
             ListUsersRequest {
+                tenant: old_tenant_context.tenant_path().clone(),
                 path_prefix: Some("/users/".to_string()),
                 pagination: None,
             },
@@ -209,6 +224,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .list_users(
             &new_tenant_context,
             ListUsersRequest {
+                tenant: new_tenant_context.tenant_path().clone(),
                 path_prefix: Some("/users/".to_string()),
                 pagination: None,
             },

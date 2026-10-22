@@ -2,7 +2,7 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use wami_core::arn::WamiArn;
+use wami_core::arn::{ScopedName, WamiArn};
 
 /// Server certificate metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -56,4 +56,15 @@ pub struct ServerCertificate {
 
     /// List of cloud providers where this resource exists
     pub providers: Vec<crate::provider::ProviderConfig>,
+}
+
+impl ServerCertificate {
+    /// The key this certificate is stored and addressed under: the tenant path
+    /// its `wami_arn` carries, and its name. Two tenants may each hold a `web`.
+    pub fn key(&self) -> ScopedName {
+        ScopedName::new(
+            self.wami_arn.tenant_path.clone(),
+            &self.server_certificate_metadata.server_certificate_name,
+        )
+    }
 }

@@ -6,6 +6,7 @@
 
 use crate::wami::sts::{CallerIdentity, StsSession};
 use std::collections::HashMap;
+use wami_core::arn::ScopedName;
 
 pub mod identity;
 pub mod session;
@@ -26,7 +27,7 @@ mod tests;
 #[derive(Debug, Clone, Default)]
 pub struct InMemoryStsStore {
     pub(super) sessions: HashMap<String, StsSession>,
-    pub(super) identities: HashMap<String, CallerIdentity>,
+    pub(super) identities: HashMap<ScopedName, CallerIdentity>,
 }
 
 impl InMemoryStsStore {

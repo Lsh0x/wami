@@ -2,13 +2,13 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use wami_core::arn::WamiArn;
+use wami_core::arn::{ScopedName, WamiArn};
 
 /// Represents a login profile (console password) for an IAM user
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoginProfile {
-    /// The user with whom the login profile is associated
-    pub user_name: String,
+    /// The key of the user it belongs to — its tenant and its name
+    pub owner: ScopedName,
     /// The date when the login profile was created
     pub create_date: DateTime<Utc>,
     /// Whether the user must reset their password on next sign-in

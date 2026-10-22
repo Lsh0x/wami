@@ -3061,7 +3061,7 @@ fn test_context_builder_all_methods() {
     );
     assert_eq!(context.username, Some("alice".to_string()));
     assert_eq!(context.mfa_present, Some(true));
-    assert_eq!(context.tenant_id, Some(12345));
+    assert_eq!(context.tenant_id.as_deref(), Some("12345"));
 }
 
 #[test]
@@ -7180,6 +7180,30 @@ fn every_declared_key_is_written_where_it_is_read() {
         assign_context_value(&mut context, "wami:Team", &core),
         Ok(false)
     );
+}
+
+#[test]
+fn a_tenant_path_is_read_only_in_its_canonical_form() {
+    // `05/7` and `+5` parse as numbers, and kept raw they never equal the
+    // `5/7` and `5` a principal's tenant renders as: refused at parse
+    // (wami 005, review round 2, low).
+    use crate::keys::assign_context_value;
+    for key in [
+        "wami:TenantId",
+        "wami:PrincipalTenantId",
+        "wami:ResourceTenantId",
+    ] {
+        for raw in ["05/7", "+5", "5/07", "007", "5/+7"] {
+            let mut context = ConditionContext::builder().build();
+            let got = assign_context_value(&mut context, key, &[raw.to_string()]);
+            assert!(got.is_err(), "{key} took {raw}: {got:?}");
+        }
+        for canonical in ["5/7", "0", "12345678/87654321"] {
+            let mut context = ConditionContext::builder().build();
+            let got = assign_context_value(&mut context, key, &[canonical.to_string()]);
+            assert!(got.is_ok(), "{key} refused {canonical}: {got:?}");
+        }
+    }
 }
 
 #[test]

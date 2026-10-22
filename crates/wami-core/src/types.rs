@@ -129,7 +129,7 @@ pub struct PolicyStatement {
     pub condition: Option<Value>,
 }
 
-/// Deserialize either a single string or an array of strings into a Vec<String>
+/// Deserialize either a single string or an array of strings into a `Vec<String>`
 fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
     D: Deserializer<'de>,

@@ -5,20 +5,25 @@
 use crate::credentials::login_profile::{
     builder as login_builder, CreateLoginProfileRequest, LoginProfile, UpdateLoginProfileRequest,
 };
-use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
-use crate::store::traits::LoginProfileStore;
+use crate::service::auth::authorizer::{confirm, guard, Authorizer};
+use crate::store::traits::{LoginProfileStore, UserStore};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
+use wami_core::arn::ScopedName;
 use wami_core::context::WamiContext;
 use wami_core::error::Result;
+
+/// What the login profile service reads: the profiles, and their owners.
+pub trait LoginProfileServiceStore: LoginProfileStore + UserStore {}
+impl<T> LoginProfileServiceStore for T where T: LoginProfileStore + UserStore {}
 
 /// Service for managing IAM login profiles
 ///
 /// Provides high-level operations for console password management.
 /// Optionally holds an [`Authorizer`] for authorization guards on every method.
 #[wami_macros::service(
-    store_trait = "crate::store::traits::LoginProfileStore",
+    store_trait = "crate::service::credentials::login_profile::LoginProfileServiceStore",
     generate_new = false
 )]
 pub struct LoginProfileService<S> {
@@ -26,7 +31,7 @@ pub struct LoginProfileService<S> {
     authz: Option<Arc<dyn Authorizer>>,
 }
 
-impl<S: LoginProfileStore> LoginProfileService<S> {
+impl<S: LoginProfileServiceStore> LoginProfileService<S> {
     /// Create a new LoginProfileService without authorization guards (backward compatible).
     pub fn new(store: Arc<RwLock<S>>) -> Self {
         Self { store, authz: None }
@@ -40,43 +45,25 @@ impl<S: LoginProfileStore> LoginProfileService<S> {
         }
     }
 
-    /// Internal: check authorization if an authorizer is set.
-    async fn guard(
-        &self,
-        context: &WamiContext,
-        action: WamiAction,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<()> {
-        if let Some(authz) = &self.authz {
-            let arn = iam_resource_arn(context, resource_type, resource_id)?;
-            authz.check_or_deny(context, action.as_str(), &arn).await?;
-        }
-        Ok(())
-    }
-
     /// Create a new login profile
     pub async fn create_login_profile(
         &self,
         context: &WamiContext,
         request: CreateLoginProfileRequest,
     ) -> Result<LoginProfile> {
-        // Authorization guard
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            &request.user,
         )
         .await?;
+        let owner = super::read_owner(&*self.read_store().await, context, &request.user).await?;
 
-        // Use wami builder to create login profile
         // Note: Password is validated but not stored in the model for security
-        let login_profile = login_builder::build_login_profile(
-            request.user_name,
-            request.password_reset_required,
-            context,
-        )?;
+        let login_profile =
+            login_builder::build_login_profile(&owner, request.password_reset_required, context)?;
 
         // Store it
         self.write_store()
@@ -89,11 +76,28 @@ impl<S: LoginProfileStore> LoginProfileService<S> {
     pub async fn get_login_profile(
         &self,
         context: &WamiContext,
-        user_name: &str,
+        user: &ScopedName,
     ) -> Result<Option<LoginProfile>> {
-        self.guard(context, WamiAction::IamManageCredentials, "user", user_name)
-            .await?;
-        self.read_store().await.get_login_profile(user_name).await
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            user,
+        )
+        .await?;
+        let profile = self.read_store().await.get_login_profile(user).await?;
+        if let Some(profile) = &profile {
+            // The record read must be the one asked for, of this instance (Δ12).
+            confirm(
+                context,
+                "user",
+                user,
+                &profile.owner,
+                &profile.wami_arn.wami_instance_id,
+            )?;
+        }
+        Ok(profile)
     }
 
     /// Update a login profile
@@ -102,11 +106,12 @@ impl<S: LoginProfileStore> LoginProfileService<S> {
         context: &WamiContext,
         request: UpdateLoginProfileRequest,
     ) -> Result<LoginProfile> {
-        self.guard(
+        guard(
+            self.authz.as_ref(),
             context,
             WamiAction::IamManageCredentials,
             "user",
-            &request.user_name,
+            &request.user,
         )
         .await?;
 
@@ -114,11 +119,18 @@ impl<S: LoginProfileStore> LoginProfileService<S> {
         let profile = self
             .read_store()
             .await
-            .get_login_profile(&request.user_name)
+            .get_login_profile(&request.user)
             .await?
             .ok_or_else(|| crate::error::AmiError::ResourceNotFound {
-                resource: format!("LoginProfile for user: {}", request.user_name),
+                resource: format!("LoginProfile for user: {}", request.user),
             })?;
+        confirm(
+            context,
+            "user",
+            &request.user,
+            &profile.owner,
+            &profile.wami_arn.wami_instance_id,
+        )?;
 
         // Apply updates using builder functions
         // Note: Password updates are handled separately for security
@@ -133,13 +145,20 @@ impl<S: LoginProfileStore> LoginProfileService<S> {
     }
 
     /// Delete a login profile
-    pub async fn delete_login_profile(&self, context: &WamiContext, user_name: &str) -> Result<()> {
-        self.guard(context, WamiAction::IamManageCredentials, "user", user_name)
-            .await?;
-        self.write_store()
-            .await
-            .delete_login_profile(user_name)
-            .await
+    pub async fn delete_login_profile(
+        &self,
+        context: &WamiContext,
+        user: &ScopedName,
+    ) -> Result<()> {
+        guard(
+            self.authz.as_ref(),
+            context,
+            WamiAction::IamManageCredentials,
+            "user",
+            user,
+        )
+        .await?;
+        self.write_store().await.delete_login_profile(user).await
     }
 }
 
@@ -150,9 +169,28 @@ mod tests {
     use crate::store::memory::InMemoryWamiStore;
     use wami_core::arn::{TenantPath, WamiArn};
 
-    fn setup_service() -> LoginProfileService<InMemoryWamiStore> {
-        let store = Arc::new(RwLock::new(InMemoryWamiStore::default()));
-        LoginProfileService::new(store)
+    /// The tenant every test here works in.
+    fn tenant() -> wami_core::arn::TenantPath {
+        wami_core::arn::TenantPath::single(12345678)
+    }
+
+    /// `name`'s key in that tenant.
+    fn key(name: impl AsRef<str>) -> wami_core::arn::ScopedName {
+        wami_core::arn::ScopedName::new(tenant(), name.as_ref())
+    }
+
+    /// A service over a store holding the users the tests mint credentials
+    /// for: a credential is only ever minted for a user that is there.
+    async fn setup_service() -> LoginProfileService<InMemoryWamiStore> {
+        use crate::store::traits::UserStore;
+        let mut seeded = InMemoryWamiStore::default();
+        for name in ["alice", "bob", "charlie", "david"] {
+            let user =
+                crate::wami::identity::user::builder::build_user(&key(name), None, &test_context())
+                    .unwrap();
+            seeded.create_user(user).await.unwrap();
+        }
+        LoginProfileService::new(Arc::new(RwLock::new(seeded)))
     }
 
     fn test_context() -> WamiContext {
@@ -170,11 +208,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_and_get_login_profile() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         let request = CreateLoginProfileRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             password: "P@ssw0rd123!".to_string(), // Validated but not stored
             password_reset_required: true,
         };
@@ -183,24 +221,27 @@ mod tests {
             .create_login_profile(&context, request)
             .await
             .unwrap();
-        assert_eq!(profile.user_name, "alice");
+        assert_eq!(profile.owner.name(), "alice");
         assert!(profile.password_reset_required);
 
-        let retrieved = service.get_login_profile(&context, "alice").await.unwrap();
+        let retrieved = service
+            .get_login_profile(&context, &key("alice"))
+            .await
+            .unwrap();
         assert!(retrieved.is_some());
         let retrieved_profile = retrieved.unwrap();
-        assert_eq!(retrieved_profile.user_name, "alice");
+        assert_eq!(retrieved_profile.owner.name(), "alice");
         assert!(retrieved_profile.password_reset_required);
     }
 
     #[tokio::test]
     async fn test_update_login_profile() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         // Create profile
         let create_request = CreateLoginProfileRequest {
-            user_name: "bob".to_string(),
+            user: key("bob"),
             password: "InitialP@ss123".to_string(),
             password_reset_required: true,
         };
@@ -211,7 +252,7 @@ mod tests {
 
         // Update profile - change password_reset_required flag
         let update_request = UpdateLoginProfileRequest {
-            user_name: "bob".to_string(),
+            user: key("bob"),
             password: Some("NewP@ssw0rd456!".to_string()), // Password validation only
             password_reset_required: Some(false),
         };
@@ -219,17 +260,17 @@ mod tests {
             .update_login_profile(&context, update_request)
             .await
             .unwrap();
-        assert_eq!(updated.user_name, "bob");
+        assert_eq!(updated.owner.name(), "bob");
         assert!(!updated.password_reset_required);
     }
 
     #[tokio::test]
     async fn test_delete_login_profile() {
-        let service = setup_service();
+        let service = setup_service().await;
         let context = test_context();
 
         let request = CreateLoginProfileRequest {
-            user_name: "charlie".to_string(),
+            user: key("charlie"),
             password: "TempP@ss789".to_string(),
             password_reset_required: false,
         };
@@ -239,12 +280,12 @@ mod tests {
             .unwrap();
 
         service
-            .delete_login_profile(&context, "charlie")
+            .delete_login_profile(&context, &key("charlie"))
             .await
             .unwrap();
 
         let retrieved = service
-            .get_login_profile(&context, "charlie")
+            .get_login_profile(&context, &key("charlie"))
             .await
             .unwrap();
         assert!(retrieved.is_none());
@@ -276,7 +317,7 @@ mod tests {
         let context = test_context();
 
         let request = CreateLoginProfileRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             password: "P@ssw0rd123!".to_string(),
             password_reset_required: false,
         };
@@ -294,7 +335,7 @@ mod tests {
         let service = LoginProfileService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
 
-        let result = service.get_login_profile(&context, "alice").await;
+        let result = service.get_login_profile(&context, &key("alice")).await;
         assert!(matches!(
             result,
             Err(wami_core::error::AmiError::AccessDenied { .. })
@@ -308,7 +349,7 @@ mod tests {
         let context = test_context();
 
         let request = UpdateLoginProfileRequest {
-            user_name: "alice".to_string(),
+            user: key("alice"),
             password: None,
             password_reset_required: Some(true),
         };
@@ -326,7 +367,7 @@ mod tests {
         let service = LoginProfileService::with_authorizer(store, Arc::new(DenyAllAuthorizer));
         let context = test_context();
 
-        let result = service.delete_login_profile(&context, "alice").await;
+        let result = service.delete_login_profile(&context, &key("alice")).await;
         assert!(matches!(
             result,
             Err(wami_core::error::AmiError::AccessDenied { .. })
