@@ -87,7 +87,11 @@ pub struct Tag {
 }
 
 /// Policy document representation
+/// A policy document. A field this library does not read is refused, never
+/// dropped: a misspelt `"Statment"` would leave a document with nothing in it
+/// (wami 001).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PolicyDocument {
     #[serde(rename = "Version")]
     pub version: String,
@@ -95,7 +99,13 @@ pub struct PolicyDocument {
     pub statement: Vec<PolicyStatement>,
 }
 
+/// One statement. A field this library does not read — `"Conditon"` for
+/// `"Condition"`, a `NotResource` or `NotAction` it does not evaluate — is
+/// refused, never dropped: dropped, a misspelt condition made an `Allow`
+/// unconditional, and a `NotResource` made a statement apply everywhere
+/// (wami 001).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PolicyStatement {
     /// Optional statement id, as AWS defines it.
     ///
@@ -105,10 +115,8 @@ pub struct PolicyStatement {
     /// rewritten — a log that is worse than silent, because it is confidently
     /// wrong.
     ///
-    /// Adding it is backward compatible in both directions: the struct does
-    /// not deny unknown fields, so documents already carrying a `Sid` are
-    /// accepted today and merely drop it, and `skip_serializing_if` keeps
-    /// documents without one byte-identical when re-serialised.
+    /// `skip_serializing_if` keeps documents without one byte-identical when
+    /// re-serialised.
     #[serde(rename = "Sid", default, skip_serializing_if = "Option::is_none")]
     pub sid: Option<String>,
     #[serde(rename = "Effect")]
@@ -140,5 +148,38 @@ where
         _ => Err(serde::de::Error::custom(
             "expected string or array of strings",
         )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_statement_with_a_field_nobody_reads_is_refused() {
+        // "Conditon" used to be dropped by serde: the statement had no
+        // condition at all, and an Allow written with one granted everywhere.
+        // A NotResource beside an Action was dropped the same way (wami 001).
+        for (json, field) in [
+            (
+                r#"{"Effect":"Allow","Action":"*","Resource":"*","Conditon":{"Bool":{"aws:SecureTransport":"true"}}}"#,
+                "Conditon",
+            ),
+            (
+                r#"{"Effect":"Deny","Action":"*","Resource":"*","NotResource":"arn:wami:x"}"#,
+                "NotResource",
+            ),
+        ] {
+            let err = serde_json::from_str::<PolicyStatement>(json)
+                .expect_err("a field nobody reads must not be dropped");
+            assert!(err.to_string().contains(field), "{field}: {err}");
+        }
+    }
+
+    #[test]
+    fn a_document_with_a_field_nobody_reads_is_refused() {
+        let json = r#"{"Version":"2012-10-17","Statment":[],"Statement":[]}"#;
+        let err = serde_json::from_str::<PolicyDocument>(json).unwrap_err();
+        assert!(err.to_string().contains("Statment"), "{err}");
     }
 }

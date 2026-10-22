@@ -28,9 +28,16 @@ pub trait Authorizer: Send + Sync {
     ///
     /// [`AmiError::UnreadablePolicy`] when a policy document cannot be parsed.
     /// That is deliberately not a denial: an unreadable policy might have held
-    /// a deny, so no decision can honestly be made from it.
+    /// a deny, so no decision can honestly be made from it — a statement's
+    /// condition that cannot be read refuses the document the same way.
+    ///
+    /// [`AmiError::UnreadableCondition`] when a statement that reaches the
+    /// request carries a condition that cannot be evaluated against it. Not a
+    /// denial either, and for the same reason: that statement might have been
+    /// a deny.
     ///
     /// [`AmiError::UnreadablePolicy`]: wami_core::error::AmiError::UnreadablePolicy
+    /// [`AmiError::UnreadableCondition`]: wami_core::error::AmiError::UnreadableCondition
     async fn authorize(
         &self,
         context: &WamiContext,

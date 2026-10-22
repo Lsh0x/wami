@@ -393,13 +393,9 @@ This document tracks the implementation of condition keys for policy evaluation 
     "Resource": "*",
     "Condition": {
       "StringEquals": {
-        "wami:TenantId": "${wami:PrincipalTenantId}"
-      },
-      "StringEquals": {
-        "wami:TenantStatus": "active"
-      },
-      "NumericGreaterThan": {
-        "wami:AuthenticationStrength": "70"
+        "wami:TenantId": "${wami:PrincipalTenantId}",
+        "wami:TenantStatus": "active",
+        "wami:AuthenticationStrength": "strong"
       }
     }
   }]
@@ -415,14 +411,14 @@ This document tracks the implementation of condition keys for policy evaluation 
     "Action": ["s3:GetObject", "storage.objects.get"],
     "Resource": "*",
     "Condition": {
-      "StringLike": {
+      "ForAnyValue:StringLike": {
         "wami:Provider": ["AWS", "GCP"]
       },
       "StringEquals": {
         "wami:ResourceDataClassification": "public"
       },
       "Bool": {
-        "wami:SecureTransport": "true"
+        "aws:SecureTransport": "true"
       }
     }
   }]

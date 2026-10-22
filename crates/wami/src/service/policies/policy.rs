@@ -71,6 +71,12 @@ impl<S: PolicyStore> PolicyService<S> {
         )
         .await?;
 
+        // Refused at write for what the read refuses (wami 001).
+        crate::service::policies::inline::refuse_unreadable(
+            &request.policy_document,
+            &format!("managed policy {}", request.policy_name),
+        )?;
+
         // Use wami builder to create policy (includes tags)
         let policy = policy_builder::build_policy(
             request.policy_name,
@@ -347,7 +353,9 @@ mod tests {
     async fn test_list_policies_with_path_prefix() {
         let service = setup_service();
         let context = test_context();
-        let policy_doc = r#"{"Version":"2012-10-17"}"#.to_string();
+        // A document the read accepts: one without "Statement" is refused at
+        // create since wami 001, as the authorizer refuses it at read.
+        let policy_doc = r#"{"Version":"2012-10-17","Statement":[]}"#.to_string();
 
         // Create policies with different paths
         for (name, path) in [
@@ -486,5 +494,40 @@ mod tests {
             result,
             Err(wami_core::error::AmiError::AccessDenied { .. })
         ));
+    }
+
+    #[tokio::test]
+    async fn a_managed_policy_the_read_would_refuse_is_refused_at_create() {
+        // wami 001, review round 2: the read refuses it, so the write must.
+        let service = setup_service();
+        let context = test_context();
+        for (sid, document) in [
+            (
+                "Typo",
+                r#"{"Version":"2012-10-17","Statement":[{"Sid":"Typo","Effect":"Deny","Action":["iam:*"],"Resource":["*"],"Condition":{"StringEqualz":{"aws:username":"alice"}}}]}"#,
+            ),
+            (
+                "NoDelete",
+                r#"{"Version":"2012-10-17","Statement":[{"Sid":"NoDelete","Effect":"Dney","Action":["iam:*"],"Resource":["*"]}]}"#,
+            ),
+        ] {
+            let err = service
+                .create_policy(
+                    &context,
+                    CreatePolicyRequest {
+                        policy_name: "P".to_string(),
+                        policy_document: document.to_string(),
+                        path: None,
+                        description: None,
+                        tags: None,
+                    },
+                )
+                .await
+                .expect_err("a document the read refuses must be refused at create");
+            let crate::error::AmiError::InvalidParameter { message } = &err else {
+                panic!("expected InvalidParameter, got {err:?}");
+            };
+            assert!(message.contains(&format!("statement {sid}")), "{message}");
+        }
     }
 }

@@ -3,6 +3,8 @@
 //! Service for managing inline policies on users, groups, and roles.
 
 use crate::service::auth::authorizer::{iam_resource_arn, Authorizer};
+use crate::service::auth::decision::PolicySource;
+use crate::service::auth::policy_evaluator;
 use crate::store::traits::{GroupStore, RoleStore, UserStore};
 use crate::wami::policies::inline::*;
 use std::sync::Arc;
@@ -10,7 +12,6 @@ use tokio::sync::RwLock;
 use wami_core::actions::WamiAction;
 use wami_core::context::WamiContext;
 use wami_core::error::{AmiError, Result};
-use wami_core::types::PolicyDocument;
 
 pub trait InlinePolicyServiceStore: UserStore + GroupStore + RoleStore {}
 impl<T> InlinePolicyServiceStore for T where T: UserStore + GroupStore + RoleStore {}
@@ -85,17 +86,18 @@ where
                 resource: format!("User: {}", request.user_name),
             })?;
 
-        // Validate against PolicyDocument, not merely `Value`: a document that
-        // is valid JSON but not a valid policy — `"Actions"` for `"Action"`,
-        // say — used to be accepted here and then evaluate to nothing, so a
-        // Deny written with a typo silently stopped applying. Refusing it at
-        // the point where someone can still fix it is the other half of the
-        // fix; `parse_policy_doc` covers documents already in the store.
-        serde_json::from_str::<PolicyDocument>(&request.policy_document).map_err(|e| {
-            AmiError::InvalidParameter {
-                message: format!("Invalid policy document: {}", e),
+        // Refuse at write exactly what the read refuses — the same parser,
+        // `parse_policy_doc` (wami 001): a document that is no policy, a
+        // misspelt Effect, a condition that cannot be read. Accepted here, it
+        // refused every decision reading it, at authorize time, for everyone
+        // but root; refused here, someone can still fix it.
+        refuse_unreadable(
+            &request.policy_document,
+            &PolicySource::UserInline {
+                name: request.policy_name.clone(),
             }
-        })?;
+            .to_string(),
+        )?;
 
         // Put the inline policy
         store
@@ -249,17 +251,19 @@ where
                 resource: format!("Group: {}", request.group_name),
             })?;
 
-        // Validate against PolicyDocument, not merely `Value`: a document that
-        // is valid JSON but not a valid policy — `"Actions"` for `"Action"`,
-        // say — used to be accepted here and then evaluate to nothing, so a
-        // Deny written with a typo silently stopped applying. Refusing it at
-        // the point where someone can still fix it is the other half of the
-        // fix; `parse_policy_doc` covers documents already in the store.
-        serde_json::from_str::<PolicyDocument>(&request.policy_document).map_err(|e| {
-            AmiError::InvalidParameter {
-                message: format!("Invalid policy document: {}", e),
+        // Refuse at write exactly what the read refuses — the same parser,
+        // `parse_policy_doc` (wami 001): a document that is no policy, a
+        // misspelt Effect, a condition that cannot be read. Accepted here, it
+        // refused every decision reading it, at authorize time, for everyone
+        // but root; refused here, someone can still fix it.
+        refuse_unreadable(
+            &request.policy_document,
+            &PolicySource::GroupInline {
+                group: request.group_name.clone(),
+                name: request.policy_name.clone(),
             }
-        })?;
+            .to_string(),
+        )?;
 
         // Put the inline policy
         store
@@ -413,17 +417,19 @@ where
                 resource: format!("Role: {}", request.role_name),
             })?;
 
-        // Validate against PolicyDocument, not merely `Value`: a document that
-        // is valid JSON but not a valid policy — `"Actions"` for `"Action"`,
-        // say — used to be accepted here and then evaluate to nothing, so a
-        // Deny written with a typo silently stopped applying. Refusing it at
-        // the point where someone can still fix it is the other half of the
-        // fix; `parse_policy_doc` covers documents already in the store.
-        serde_json::from_str::<PolicyDocument>(&request.policy_document).map_err(|e| {
-            AmiError::InvalidParameter {
-                message: format!("Invalid policy document: {}", e),
+        // Refuse at write exactly what the read refuses — the same parser,
+        // `parse_policy_doc` (wami 001): a document that is no policy, a
+        // misspelt Effect, a condition that cannot be read. Accepted here, it
+        // refused every decision reading it, at authorize time, for everyone
+        // but root; refused here, someone can still fix it.
+        refuse_unreadable(
+            &request.policy_document,
+            &PolicySource::RoleInline {
+                role: request.role_name.clone(),
+                name: request.policy_name.clone(),
             }
-        })?;
+            .to_string(),
+        )?;
 
         // Put the inline policy
         store
@@ -550,6 +556,16 @@ where
 
         Ok(ListRolePoliciesResponse { policy_names })
     }
+}
+
+/// A document the read would refuse, refused at write: the caller's input,
+/// so `InvalidParameter`, naming the statement — never quoting the document.
+pub(crate) fn refuse_unreadable(document: &str, policy: &str) -> Result<()> {
+    policy_evaluator::read_policy_document(document, policy)
+        .map(|_| ())
+        .map_err(|e| AmiError::InvalidParameter {
+            message: format!("Invalid policy document: {e}"),
+        })
 }
 
 #[cfg(test)]
@@ -1356,5 +1372,93 @@ mod tests {
             .await
             .expect_err("role path must refuse");
         assert!(matches!(role_err, AmiError::InvalidParameter { .. }));
+    }
+
+    // ─── wami 001, review round 2: one door for reading, one for writing ─
+
+    /// Documents the read refuses: a misspelt operator, a misspelt Effect.
+    fn refused_documents() -> [(&'static str, String); 2] {
+        [
+            (
+                "Typo",
+                r#"{"Version":"2012-10-17","Statement":[{"Sid":"Typo","Effect":"Deny","Action":["iam:*"],"Resource":["*"],"Condition":{"StringEqualz":{"aws:username":"alice"}}}]}"#.to_string(),
+            ),
+            (
+                "NoDelete",
+                r#"{"Version":"2012-10-17","Statement":[{"Sid":"NoDelete","Effect":"Dney","Action":["iam:*"],"Resource":["*"]}]}"#.to_string(),
+            ),
+        ]
+    }
+
+    fn refused_at_write(outcome: Result<impl std::fmt::Debug>, sid: &str) {
+        let err = outcome.expect_err("a document the read refuses must be refused at write");
+        let AmiError::InvalidParameter { message } = &err else {
+            panic!("expected InvalidParameter, got {err:?}");
+        };
+        assert!(message.contains(&format!("statement {sid}")), "{message}");
+    }
+
+    #[tokio::test]
+    async fn an_inline_policy_the_read_would_refuse_is_refused_at_write() {
+        let store = Arc::new(RwLock::new(InMemoryWamiStore::new()));
+        let service = InlinePolicyService::new(store.clone());
+        let context = create_test_context().await;
+        let mut s = store.write().await;
+        s.create_user(build_user("alice".to_string(), Some("/".to_string()), &context).unwrap())
+            .await
+            .unwrap();
+        s.create_group(build_group("devs".to_string(), Some("/".to_string()), &context).unwrap())
+            .await
+            .unwrap();
+        s.create_role(
+            build_role(
+                "Admin".to_string(),
+                r#"{"Version":"2012-10-17","Statement":[]}"#.to_string(),
+                Some("/".to_string()),
+                None,
+                None,
+                &context,
+            )
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+        drop(s);
+
+        for (sid, document) in refused_documents() {
+            let user = service
+                .put_user_policy(
+                    &context,
+                    PutUserPolicyRequest {
+                        user_name: "alice".to_string(),
+                        policy_name: "P".to_string(),
+                        policy_document: document.clone(),
+                    },
+                )
+                .await;
+            refused_at_write(user, sid);
+            let group = service
+                .put_group_policy(
+                    &context,
+                    PutGroupPolicyRequest {
+                        group_name: "devs".to_string(),
+                        policy_name: "P".to_string(),
+                        policy_document: document.clone(),
+                    },
+                )
+                .await;
+            refused_at_write(group, sid);
+            let role = service
+                .put_role_policy(
+                    &context,
+                    PutRolePolicyRequest {
+                        role_name: "Admin".to_string(),
+                        policy_name: "P".to_string(),
+                        policy_document: document,
+                    },
+                )
+                .await;
+            refused_at_write(role, sid);
+        }
     }
 }

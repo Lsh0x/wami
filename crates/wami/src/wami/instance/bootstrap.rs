@@ -58,7 +58,6 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use wami_core::PolicyDocument;
 
 /// Root user credentials returned after instance initialization
 ///
@@ -329,11 +328,13 @@ impl InstanceBootstrap {
         // as we go would leave a caller who passed four roles and one typo with
         // three roles created and no way to tell from the error which.
         for role in roles {
-            serde_json::from_str::<PolicyDocument>(role.policy_document).map_err(|e| {
-                AmiError::InvalidParameter {
-                    message: format!("role {}: policy_document is not a policy: {e}", role.name),
-                }
-            })?;
+            // Refused for exactly what the read refuses — the same parser as
+            // the four other write paths (wami 001): seeded unchecked, a typo
+            // refused every decision reading the role, at authorize time.
+            crate::service::policies::inline::refuse_unreadable(
+                role.policy_document,
+                &format!("role {} policy {}", role.name, role.policy_name),
+            )?;
 
             // Only that it is JSON. A trust policy carries `Principal` and no
             // `Resource`, and this library models no type for one — `PolicyDocument`
@@ -709,5 +710,41 @@ mod tests {
         InstanceBootstrap::seed_roles(store.clone(), "999888777", &[seed("publisher", theirs)])
             .await
             .expect("a caller's own action should be storable");
+    }
+
+    /// A fifth write path, and the same refusals as the other four (wami 001):
+    /// a document the read refuses is refused here, the statement named, and
+    /// nothing is stored.
+    #[tokio::test]
+    async fn test_seed_roles_refuses_what_the_read_refuses() {
+        use crate::store::traits::RoleStore;
+
+        for (sid, document) in [
+            (
+                "Typo",
+                r#"{"Version":"2012-10-17","Statement":[{"Sid":"Typo","Effect":"Deny","Action":["iam:*"],"Resource":["*"],"Condition":{"StringEqualz":{"aws:username":"alice"}}}]}"#,
+            ),
+            (
+                "NoDelete",
+                r#"{"Version":"2012-10-17","Statement":[{"Sid":"NoDelete","Effect":"Dney","Action":["iam:*"],"Resource":["*"]}]}"#,
+            ),
+        ] {
+            let store = Arc::new(tokio::sync::RwLock::new(InMemoryWamiStore::default()));
+            InstanceBootstrap::initialize_instance(store.clone(), "999888777")
+                .await
+                .unwrap();
+            let err = InstanceBootstrap::seed_roles(
+                store.clone(),
+                "999888777",
+                &[seed("good", READS), seed("bad", document)],
+            )
+            .await
+            .expect_err("a document the read refuses must be refused at seed");
+            let AmiError::InvalidParameter { message } = &err else {
+                panic!("expected InvalidParameter, got {err:?}");
+            };
+            assert!(message.contains(&format!("statement {sid}")), "{message}");
+            assert!(store.read().await.get_role("good").await.unwrap().is_none());
+        }
     }
 }
