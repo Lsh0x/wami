@@ -1,12 +1,12 @@
 # Issue #008: `wami-scope` — policies compiled into what a query may reach
 
-**Status**: 🟡 In progress — `wami-scope`, `wami-scope-gql` and the Grafeo tests built (feat/008-scope); the SQL translator and the services' call sites remain  
+**Status**: 🟡 In progress — built and merged: `wami-scope` (compile, fence, narrowing, lints), `wami-scope-gql`, `wami-scope-tests` (the sharing world on a real store, the port, the suite, Grafeo), `AuthorizationService::documents`; remain: `wami-scope-sql` with `tests/sqlite.rs`, the services' call sites, the yuga allowlist, three wami issues named below  
 **Priority**: High  
 **Type**: Feature Enhancement  
 **Assignee**: TBD  
 **Created**: 2026-10-30  
 **Labels**: `enhancement`, `policy-engine`, `multi-tenant`, `wami-feature`  
-**Design**: Mermaid Live, workspace `wami`, session `wami-013-scope` (`design`, `design-discussion`)
+**Design**: studio, project `wami`, conversation `wami-008-scope` (design-discussion; diagram #2, the sharing world, v13)
 
 ## Summary
 
@@ -53,32 +53,64 @@ and Deny end up read three different ways.
 pub struct Scope {
     pub allow: Vec<Pattern>,
     pub deny: Vec<Pattern>,
-    /// A matching statement the compiler could not fold (a Condition, a
-    /// variable with no value): the re-check does real work.
+    /// A matching statement the compiler could not fold (a Condition), or a
+    /// permissions boundary the caller did not compile: the re-check does
+    /// real work.
     pub residual: bool,
+    /// The action compiled for: its service is the fence's service axis.
+    pub action: String,
+    /// The fence, when fenced: exact trees a row must also match.
+    pub fence: Vec<Pattern>,
 }
 
 impl Scope {
-    pub fn compile(policies: &[PolicyDocument], action: &str, ctx: &MatchContext) -> Scope;
+    pub fn compile(policies: &[PolicyDocument], action: &str, ctx: &MatchContext) -> Result<Scope, ScopeError>;
+    /// The service's fence: the tenant roots it gives (the caller's, the
+    /// public space it opens) and their descendants, in the action's
+    /// service — a conjunction `matches` requires and `lower` ands. A
+    /// fenced scope may exclude what the bare evaluator allows: its oracle
+    /// is the evaluator and the fence. It mirrors what the services'
+    /// `decide` refuses before any document; never assumed by the library.
+    pub fn fenced(&self, tenants: &[&str]) -> Scope;
     /// The evaluator's own glob and substitution (wami_core::arn::matching).
     pub fn matches(&self, arn: &str) -> bool;
-    /// The literal text before the first `*` of each allow pattern.
+    /// Lowered to exact, prefix, and, or, not: what every store renders.
+    pub fn lower(&self) -> Predicate;
     pub fn prefixes(&self) -> Vec<&str>;
-    /// Nothing granted lists nothing, never everything.
     pub fn is_empty(&self) -> bool;
 }
 
+/// The scopes of one query, by bound name (a GQL variable, a SQL alias),
+/// each under the action reading it stands for; `bind` a returned name,
+/// `test` a name only tested (EXISTS, count, ORDER BY); `admit(row)` is the
+/// re-check a returned row cannot skip. Nothing in it is a traversal or a
+/// syntax.
+pub struct Narrowing { /* bindings */ }
+
 impl Pattern {
-    /// Literal tenant prefix, `*` inside a segment, `**` only as a trailing
-    /// `/**`: the subset a store can translate. Services check their role
-    /// documents against it at boot.
+    /// Literal service and tenant (or `${service}`, `${tenant}`, or a
+    /// tenant followed by `/*`), `*` inside a segment, `**` only as a
+    /// trailing `/**`: the subset a store translates exactly. Services check
+    /// their role documents against it at boot.
     pub fn compilable(motif: &str) -> Result<(), NotCompilable>;
 }
 ```
 
-A conformance harness ships with the crate: random policies, random ARNs,
-and the assertion that a translator keeps exactly the rows the evaluator
-allows.
+`AuthorizationService::documents(context)` (wami) hands out the documents
+the evaluator reads for a caller — identity documents in reading order, the
+boundary apart, root flagged — so a scope is compiled from exactly what a
+row is then judged on.
+
+`wami-scope-tests` (unpublished) holds the world, the oracle and the suite:
+a cloud account's shape (buckets, directories, functions, topics, keys;
+users, groups, roles, sessions, a boundary; shares as trees across tenants)
+loaded into a real `InMemoryWamiStore`, the oracle `authorize` itself, a
+port (`Store::load`, `run(shape, narrowing)`, seven shapes without a
+syntax), an in-memory reference, and the suite — the table by hand, every
+principal × shape bare and fenced, tightness, the leak detectors (an unbound
+child, a count, an ORDER BY, an EXISTS under a loose scope), random policies
+and random shapes. `tests/grafeo.rs` runs it on Grafeo; a SQL store will be
+`tests/sqlite.rs`.
 
 ### Layer 2: one translator per backend, each its own crate
 
@@ -91,9 +123,10 @@ allows.
   repository of its own or anatta): `Scope` to a GQL `WHERE` fragment and its
   parameters — `=` for a literal, `STARTS WITH` for a prefix, both for a
   trailing `/**`; a deny pushed down only when exact; `scope.matches` on each
-  row, since GQL has no user-defined function for the glob. Checked against
-  Grafeo in `wami-scope-grafeo-tests` (out of the default members: Grafeo 0.6
-  needs Rust 1.99, above the MSRV).
+  row, since GQL has no user-defined function for the glob; `narrowing_filter`
+  renders a whole query's bindings, parameters prefixed per name. Checked
+  against Grafeo in `wami-scope-tests` (out of the default members: Grafeo
+  0.6 needs Rust 1.99, above the MSRV).
 - yuga translator (in anatta, in the search adapters): an id allowlist built
   from the store's ARN index before top-k, else oversampling with the scope
   as filter.
@@ -110,13 +143,21 @@ re-check pay. Every row a store returns still goes through `decide`.
 
 ## Implementation Plan
 
-1. `wami-scope`: `Scope`, `Pattern`, `compile`, `matches`, `prefixes`,
-   `is_empty`, `compilable`, the harness. Deny and residual from day one.
-2. `wami-scope-sql`, ported from studio's `filter.rs` with its property test
-   moved onto the harness. Studio's `filter.rs` becomes a call.
-3. sippa: yuga id allowlist before top-k; `rights/filter.rs` becomes a call.
-4. gitsense: Grafeo translator; D35's scope as a set of (database, patterns)
-   routed by the `GraphStore` adapter; `rights/filter.rs` becomes a call.
+1. ✅ `wami-scope`: `Scope`, `Pattern`, `compile`, `fenced`, `lower`,
+   `Narrowing`, `compilable`; `wami-scope-gql`; `wami-scope-tests` with the
+   suite on Grafeo; `AuthorizationService::documents`.
+2. `wami-scope-sql`, ported from studio's `filter.rs`, run by the suite as
+   `tests/sqlite.rs`. Studio's `filter.rs` becomes a call.
+3. sippa: yuga id allowlist before top-k; `rights/filter.rs` becomes a call;
+   the `Narrowing` on every graph query, `admit` then `decide` on each row.
+4. gitsense: the same on the `GraphStore` adapter; D35's scope as a set of
+   (database, patterns).
+5. wami, found while building the world (each its own issue): a session's
+   `${tenant}` and `${principal}` resolve from the assumer's key, not the
+   role's (a role meant for outsiders names its tenant literally today); the
+   trust policy is not evaluated at `AssumeRole`; the evaluator lets a policy
+   name any tenant's ARN (one side of AWS's two) — the fence on the
+   evaluator's side.
 
 ## Testing Strategy
 

@@ -15,7 +15,7 @@ This directory tracks feature requests, enhancements, and major work items for t
 | [#005](../issues/wami/todo/feature-2025-11-07-jwt-authentication.md) | JWT Authentication | High | Feature Enhancement | 🔴 Open |
 | [#006](../issues/wami/todo/feature-2025-11-07-jwt-oidc-parsing.md) | OIDC JWT Parsing and Validation | Medium | Feature Enhancement | 🔴 Open |
 | [#007](../issues/wami/todo/feature-2025-11-07-jwt-api-tokens.md) | JWT API Tokens for External Clients | Medium | Feature Enhancement | 🔴 Open |
-| [#008](../issues/todo/feature/policy-scope.md) | `wami-scope`: policies compiled into what a query may reach | High | Feature Enhancement | 🔴 Open |
+| [#008](../issues/todo/feature/policy-scope.md) | `wami-scope`: policies compiled into what a query may reach | High | Feature Enhancement | 🟡 In progress |
 
 ### Closed Issues
 
