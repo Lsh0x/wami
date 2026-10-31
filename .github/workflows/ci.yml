@@ -52,6 +52,8 @@ jobs:
     # workspace's default members: grafeo 0.6 needs a toolchain above wami's MSRV.
     name: Scope tests on stores
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5

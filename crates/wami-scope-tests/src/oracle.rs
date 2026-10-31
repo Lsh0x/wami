@@ -22,12 +22,19 @@ use crate::world::{Principal, World};
 /// When the evaluator refuses to decide (an unreadable document, a context
 /// naming no principal): the world is broken, not the translator.
 pub async fn allows(world: &World, principal: &Principal, action: &str, arn: &str) -> bool {
-    let resource: WamiArn = arn.parse().unwrap_or_else(|e| panic!("{arn}: {e}"));
-    AuthorizationService::new(world.store())
+    // The world's rows are canonical ARNs (`suite::canonical`): a parse
+    // failure is a broken fixture, named without echoing the row.
+    let resource: WamiArn = arn.parse().expect("a canonical ARN of the world");
+    let decision = AuthorizationService::new(world.store())
         .authorize(world.context(principal), action, &resource)
-        .await
-        .unwrap_or_else(|e| panic!("{}: {action} on {arn}: {e}", principal.name))
-        .is_allowed()
+        .await;
+    match decision {
+        Ok(decision) => decision.is_allowed(),
+        Err(_) => panic!(
+            "{}: {action}: the evaluator refused to decide (an unreadable document, a context naming no principal): the world is broken",
+            principal.name
+        ),
+    }
 }
 
 /// The rows of the universe `authorize` allows `principal` `action` on.
