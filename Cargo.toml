@@ -5,6 +5,21 @@ members = [
     "crates/wami-service",
     "crates/wami",
     "crates/wami-macros",
+    "crates/wami-scope",
+    "crates/wami-scope-gql",
+    "crates/wami-scope-grafeo-tests",
+]
+# The Grafeo tests need a toolchain newer than wami's MSRV (grafeo 0.6:
+# 1.99): `cargo test` at the root leaves them out, CI runs them on stable
+# (`cargo test -p wami-scope-grafeo-tests`).
+default-members = [
+    "crates/wami-core",
+    "crates/wami-condition",
+    "crates/wami-service",
+    "crates/wami",
+    "crates/wami-macros",
+    "crates/wami-scope",
+    "crates/wami-scope-gql",
 ]
 
 resolver = "2"
