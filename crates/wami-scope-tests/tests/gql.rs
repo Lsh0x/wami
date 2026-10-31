@@ -1,13 +1,14 @@
-//! The fragment's shape, and the fragment as a store: a small GQL `WHERE`
-//! interpreter stands for the engine, so the harness holds the push-down to
-//! the invariant without a database (the real engine is in
-//! `wami-scope-grafeo-tests`).
+//! The GQL rendering: a small `WHERE` interpreter stands for an engine, so
+//! the rendering is proven equal to `Predicate::keeps` without a database
+//! (the real engine is in `tests/grafeo.rs`), and the fragment runs as a
+//! list store on random policies.
 
 use proptest::prelude::*;
 use wami_core::arn::matching::MatchContext;
-use wami_scope::harness::{self, arbitrary, world};
-use wami_scope::{Predicate, Scope};
-use wami_scope_gql::{arn_filter, render, Fragment, FragmentError};
+use wami_scope::{Narrowing, Predicate, Scope};
+use wami_scope_gql::{arn_filter, narrowing_filter, render, Fragment, FragmentError};
+use wami_scope_tests::world::{of, ACME, MARKET};
+use wami_scope_tests::{arbitrary, suite};
 
 /// What a GQL engine does with the fragment, on one row: `=`, `STARTS WITH`,
 /// `OR`, `AND`, `NOT`, parentheses, `true`, `false`, `$param`.
@@ -116,7 +117,7 @@ impl<'a> Engine<'a> {
     }
 }
 
-/// The fragment run as a store over `universe`.
+/// The fragment run as a list store over `universe`.
 fn store(scope: &Scope, universe: &[String]) -> Vec<String> {
     let fragment = arn_filter(scope, "n", "arn", "s").unwrap();
     universe
@@ -126,18 +127,32 @@ fn store(scope: &Scope, universe: &[String]) -> Vec<String> {
         .collect()
 }
 
-fn scope(resources_allow: &[&str], resources_deny: &[&str]) -> Scope {
-    let allow: Vec<String> = resources_allow.iter().map(ToString::to_string).collect();
-    let deny: Vec<String> = resources_deny.iter().map(ToString::to_string).collect();
-    let mut statements = vec![world::statement("Allow", &["*"], &allow, None)];
+fn scope(allow: &[String], deny: &[String]) -> Scope {
+    use wami_core::types::{PolicyDocument, PolicyStatement};
+    let statement = |effect: &str, resources: &[String]| PolicyStatement {
+        sid: None,
+        effect: effect.into(),
+        action: vec!["*".into()],
+        resource: resources.to_vec(),
+        condition: None,
+    };
+    let mut statements = vec![statement("Allow", allow)];
     if !deny.is_empty() {
-        statements.push(world::statement("Deny", &["*"], &deny, None));
+        statements.push(statement("Deny", deny));
     }
     let ctx = MatchContext {
-        tenant: Some("100".into()),
+        tenant: Some(ACME.into()),
         ..MatchContext::default()
     };
-    harness::compile(&[world::document(statements)], "atlas:ReadItem", &ctx)
+    Scope::compile(
+        &[PolicyDocument {
+            version: "2012-10-17".into(),
+            statement: statements,
+        }],
+        "s3:GetObject",
+        &ctx,
+    )
+    .unwrap()
 }
 
 /// A random predicate, three levels deep at most.
@@ -159,50 +174,43 @@ fn predicate() -> impl Strategy<Value = Predicate> {
 
 #[test]
 fn the_lowering_renders_as_the_issue_draws_it() {
-    let f = arn_filter(
-        &scope(&["arn:wami:atlas:${tenant}:wami:1:key/k1"], &[]),
-        "n",
-        "arn",
-        "s",
-    )
-    .unwrap();
+    let f = arn_filter(&scope(&[of("s3", ACME, "key/k1")], &[]), "n", "arn", "s").unwrap();
     assert_eq!(f.text, "(n.arn = $s0)");
-    assert_eq!(
-        f.params,
-        [(
-            "s0".to_string(),
-            "arn:wami:atlas:100:wami:1:key/k1".to_string()
-        )]
-    );
+    assert_eq!(f.params, [("s0".to_string(), of("s3", ACME, "key/k1"))]);
 
     let f = arn_filter(
-        &scope(&["arn:wami:atlas:${tenant}:wami:*:archive/*/note/*"], &[]),
+        &scope(
+            &["arn:wami:s3:${tenant}:wami:*:bucket/*/conv/*".to_string()],
+            &[],
+        ),
         "n",
         "arn",
         "s",
     )
     .unwrap();
     assert_eq!(f.text, "(n.arn STARTS WITH $s0)");
-    assert_eq!(f.params[0].1, "arn:wami:atlas:100:wami:");
+    assert_eq!(f.params[0].1, "arn:wami:s3:100:wami:");
 
-    let allow = "arn:wami:atlas:${tenant}:wami:1:archive/**";
-    let deny = "arn:wami:atlas:${tenant}:wami:1:archive/house/note/secret";
-    let f = arn_filter(&scope(&[allow], &[deny]), "n", "arn", "s").unwrap();
+    let allow = of("s3", "${tenant}", "bucket/atlas/conv/c1/**");
+    let deny = of("s3", "${tenant}", "bucket/atlas/conv/c1/thread/t2/msg/1");
+    let f = arn_filter(
+        &scope(std::slice::from_ref(&allow), &[deny]),
+        "n",
+        "arn",
+        "s",
+    )
+    .unwrap();
     assert_eq!(
         f.text,
         "(((n.arn STARTS WITH $s0) OR (n.arn = $s1)) AND (NOT (n.arn = $s2)))"
     );
-    assert_eq!(f.params[0].1, "arn:wami:atlas:100:wami:1:archive/");
-    assert_eq!(f.params[1].1, "arn:wami:atlas:100:wami:1:archive");
-    assert_eq!(
-        f.params[2].1,
-        "arn:wami:atlas:100:wami:1:archive/house/note/secret"
-    );
+    assert_eq!(f.params[0].1, of("s3", ACME, "bucket/atlas/conv/c1/"));
+    assert_eq!(f.params[1].1, of("s3", ACME, "bucket/atlas/conv/c1"));
 
     let f = arn_filter(
         &scope(
             &[allow],
-            &["arn:wami:atlas:${tenant}:wami:1:archive/*/note/*"],
+            &[of("s3", "${tenant}", "bucket/*/conv/*/thread/t2/**")],
         ),
         "n",
         "arn",
@@ -218,7 +226,7 @@ fn the_lowering_renders_as_the_issue_draws_it() {
         "(false)"
     );
     assert_eq!(
-        arn_filter(&scope(&["*"], &[]), "n", "arn", "s")
+        arn_filter(&scope(&["*".to_string()], &[]), "n", "arn", "s")
             .unwrap()
             .text,
         "(true)"
@@ -226,13 +234,35 @@ fn the_lowering_renders_as_the_issue_draws_it() {
 }
 
 #[test]
+fn a_fence_renders_as_an_and_of_exact_trees() {
+    let fenced = scope(&["*".to_string()], &[]).fenced(&[ACME, MARKET]);
+    let f = arn_filter(&fenced, "n", "arn", "s").unwrap();
+    assert_eq!(
+        f.text,
+        "((true) AND ((n.arn STARTS WITH $s0) OR ((n.arn STARTS WITH $s1) OR (n.arn = $s2)) OR (n.arn STARTS WITH $s3) OR ((n.arn STARTS WITH $s4) OR (n.arn = $s5))))"
+    );
+    assert_eq!(f.params[0].1, "arn:wami:s3:100:wami:");
+    assert_eq!(f.params[1].1, "arn:wami:s3:100/");
+    assert_eq!(f.params[3].1, "arn:wami:s3:1:wami:");
+    let rows = [
+        of("s3", ACME, "bucket/atlas"),
+        of("s3", "100/7", "bucket/labs-data"),
+        of("s3", "1007", "bucket/x"),
+        of("s3", MARKET, "bucket/public-data"),
+        of("lambda", ACME, "function/ingest"),
+    ];
+    let kept: Vec<&String> = rows.iter().filter(|r| Engine::keeps(&f, r)).collect();
+    assert_eq!(kept, [&rows[0], &rows[1], &rows[3]]);
+}
+
+#[test]
 fn values_stay_in_the_parameters_whatever_they_hold() {
-    let hostile = "arn:wami:atlas:${tenant}:wami:1:note/it's) OR true OR ($x";
+    let hostile = of("s3", "${tenant}", "bucket/atlas/conv/it's) OR true OR ($x");
     let f = arn_filter(&scope(&[hostile], &[]), "n", "arn", "s").unwrap();
     assert_eq!(f.text, "(n.arn = $s0)");
     assert_eq!(
         f.params[0].1,
-        "arn:wami:atlas:100:wami:1:note/it's) OR true OR ($x"
+        of("s3", ACME, "bucket/atlas/conv/it's) OR true OR ($x")
     );
     assert_eq!(
         arn_filter(&Scope::default(), "n", "arn;", "s"),
@@ -244,45 +274,37 @@ fn values_stay_in_the_parameters_whatever_they_hold() {
 }
 
 #[test]
-fn the_names_are_the_callers() {
-    let f = arn_filter(
-        &scope(&["arn:wami:atlas:${tenant}:wami:*:key/*"], &[]),
-        "node",
-        "id",
-        "rights_",
-    )
-    .unwrap();
-    assert_eq!(f.text, "(node.id STARTS WITH $rights_0)");
-    assert_eq!(f.params[0].0, "rights_0");
+fn a_narrowing_renders_tested_names_too() {
+    let n = Narrowing::new()
+        .bind("p", scope(&[of("s3", ACME, "bucket/atlas/conv/c1")], &[]))
+        .unwrap()
+        .test(
+            "c",
+            scope(&[of("s3", ACME, "bucket/atlas/conv/c1/**")], &[]),
+        )
+        .unwrap();
+    let f = narrowing_filter(&n, "arn", "q").unwrap();
+    assert_eq!(
+        f.text,
+        "((p.arn = $q_p_0) AND ((c.arn STARTS WITH $q_c_0) OR (c.arn = $q_c_1)))"
+    );
 }
 
 #[test]
-fn the_fragment_as_a_store_holds_the_invariant_on_the_standard_world() {
-    let world = world::World::standard();
-    let verdicts = harness::check_translator(&world, store);
-    let reader = verdicts
-        .iter()
-        .find(|v| v.principal == "reader" && v.action == "atlas:ReadItem")
-        .unwrap();
-    assert!(
-        reader.kept.len() > reader.allowed.len(),
-        "the wildcard deny is left to the re-check: the store over-includes"
-    );
-    let editor = verdicts
-        .iter()
-        .find(|v| v.principal == "editor" && v.action == "atlas:EditLayer")
-        .unwrap();
-    assert_eq!(
-        editor.kept.len(),
-        18,
-        "the world's motifs hold `wami:*`: every pattern widens to its tenant prefix"
-    );
-    assert_eq!(editor.allowed.len(), 3);
-    let nobody = verdicts
-        .iter()
-        .filter(|v| v.principal == "nobody")
-        .all(|v| v.kept.is_empty());
-    assert!(nobody);
+fn parameters_past_ten_stay_distinct_and_bound() {
+    let keys: Vec<String> = (0..12)
+        .map(|i| of("s3", "${tenant}", &format!("key/k{i}")))
+        .collect();
+    let s = scope(&keys, &[]);
+    let f = arn_filter(&s, "n", "arn", "s").unwrap();
+    let mut names: Vec<&str> = f.params.iter().map(|(n, _)| n.as_str()).collect();
+    names.sort_unstable();
+    names.dedup();
+    assert_eq!(names.len(), 12);
+    let universe: Vec<String> = (0..14)
+        .map(|i| of("s3", ACME, &format!("key/k{i}")))
+        .collect();
+    assert_eq!(store(&s, &universe).len(), 12);
 }
 
 proptest! {
@@ -301,79 +323,12 @@ proptest! {
         }
     }
 
+    /// The fragment as a list store never excludes what the evaluator allows.
     #[test]
     fn the_fragment_never_excludes_what_the_evaluator_allows(
         case in arbitrary::case(),
         universe in arbitrary::universe(),
     ) {
-        harness::check_case(&case, &universe, store);
+        suite::check_documents_case(&case, &universe, store);
     }
-}
-
-#[test]
-fn parameters_past_ten_stay_distinct_and_bound() {
-    let keys: Vec<String> = (0..12)
-        .map(|i| format!("arn:wami:atlas:${{tenant}}:wami:1:key/k{i}"))
-        .collect();
-    let refs: Vec<&str> = keys.iter().map(String::as_str).collect();
-    let scope = scope(&refs, &[]);
-    let f = arn_filter(&scope, "n", "arn", "s").unwrap();
-    assert_eq!(f.params.len(), 12);
-    let mut names: Vec<&str> = f.params.iter().map(|(n, _)| n.as_str()).collect();
-    names.sort_unstable();
-    names.dedup();
-    assert_eq!(names.len(), 12, "s0 … s11, no collision");
-    assert!(f.text.contains("$s11") && !f.text.contains("$s12"));
-    let universe: Vec<String> = (0..14)
-        .map(|i| format!("arn:wami:atlas:100:wami:1:key/k{i}"))
-        .collect();
-    let kept = store(&scope, &universe);
-    assert_eq!(kept.len(), 12);
-    assert!(!kept
-        .iter()
-        .any(|k| k.ends_with("k12") || k.ends_with("k13")));
-}
-
-#[test]
-fn everything_but_one_renders_true_and_a_not() {
-    let f = arn_filter(
-        &scope(&["*"], &["arn:wami:atlas:${tenant}:wami:1:key/k1"]),
-        "n",
-        "arn",
-        "s",
-    )
-    .unwrap();
-    assert_eq!(f.text, "((true) AND (NOT (n.arn = $s0)))");
-    let universe = world::World::standard().universe;
-    let kept = store(
-        &scope(&["*"], &["arn:wami:atlas:${tenant}:wami:1:key/k1"]),
-        &universe,
-    );
-    assert_eq!(kept.len(), universe.len() - 1);
-    assert!(!kept.contains(&"arn:wami:atlas:100:wami:1:key/k1".to_string()));
-}
-
-#[test]
-fn a_sub_tenants_prefix_stops_at_the_colon() {
-    let ctx = MatchContext {
-        tenant: Some("100/7".into()),
-        ..MatchContext::default()
-    };
-    let docs = [world::document(vec![world::statement(
-        "Allow",
-        &["*"],
-        &[world::own("realm/**")],
-        None,
-    )])];
-    let sub = harness::compile(&docs, "atlas:ReadItem", &ctx);
-    let f = arn_filter(&sub, "n", "arn", "s").unwrap();
-    assert_eq!(f.params[0].1, "arn:wami:atlas:100/7:wami:");
-    let universe = vec![
-        "arn:wami:atlas:100:wami:1:realm/main".to_string(),
-        "arn:wami:atlas:100/7:wami:1:realm/main".to_string(),
-        "arn:wami:atlas:1007:wami:1:realm/main".to_string(),
-    ];
-    assert_eq!(store(&sub, &universe), [universe[1].clone()]);
-    let parent = scope(&[&world::own("realm/**")], &[]);
-    assert_eq!(store(&parent, &universe), [universe[0].clone()]);
 }

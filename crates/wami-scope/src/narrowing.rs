@@ -21,6 +21,10 @@ pub struct Binding {
     pub name: String,
     /// The scope of the action reading it stands for.
     pub scope: Scope,
+    /// Whether the query returns it (then [`Narrowing::admit`] re-checks
+    /// it) or only tests it (`EXISTS`, `count`, `ORDER BY`: nothing comes
+    /// back to re-check, so only a tight scope keeps it from leaking).
+    pub returned: bool,
 }
 
 /// The scopes of one query, by bound name, and the re-check of its rows.
@@ -45,18 +49,35 @@ impl Narrowing {
         Self::default()
     }
 
-    /// Binds `name` to `scope`.
+    /// Binds `name`, a name the query returns, to `scope`.
     ///
     /// # Errors
     ///
     /// [`NarrowingError::DuplicateBinding`] when `name` is already bound.
-    pub fn bind(mut self, name: &str, scope: Scope) -> Result<Self, NarrowingError> {
+    pub fn bind(self, name: &str, scope: Scope) -> Result<Self, NarrowingError> {
+        self.add(name, scope, true)
+    }
+
+    /// Binds `name`, a name the query only tests (`EXISTS`, `count`,
+    /// `ORDER BY`) and never returns, to `scope`: the store filters it, and
+    /// nothing comes back to re-check. A service uses it with a tight scope,
+    /// or accepts that a residual one may let an existence show.
+    ///
+    /// # Errors
+    ///
+    /// [`NarrowingError::DuplicateBinding`] when `name` is already bound.
+    pub fn test(self, name: &str, scope: Scope) -> Result<Self, NarrowingError> {
+        self.add(name, scope, false)
+    }
+
+    fn add(mut self, name: &str, scope: Scope, returned: bool) -> Result<Self, NarrowingError> {
         if self.bindings.iter().any(|b| b.name == name) {
             return Err(NarrowingError::DuplicateBinding(name.into()));
         }
         self.bindings.push(Binding {
             name: name.into(),
             scope,
+            returned,
         });
         Ok(self)
     }
@@ -86,13 +107,14 @@ impl Narrowing {
             .all(|b| !b.scope.residual && b.scope.fence.is_empty())
     }
 
-    /// The re-check: whether `row` — the ARN each bound name holds in one
-    /// row the store returned — passes every binding's scope. A bound name
-    /// the row does not carry fails it: a store that did not return what the
-    /// query bound returned a row nobody can judge.
+    /// The re-check: whether `row` — the ARN each returned name holds in one
+    /// row the store returned — passes every returned binding's scope. A
+    /// returned name the row does not carry fails it: a store that did not
+    /// return what the query bound returned a row nobody can judge. A tested
+    /// name is not looked for.
     #[must_use]
     pub fn admit(&self, row: &[(&str, &str)]) -> bool {
-        self.bindings.iter().all(|b| {
+        self.bindings.iter().filter(|b| b.returned).all(|b| {
             row.iter()
                 .find(|(name, _)| *name == b.name)
                 .is_some_and(|(_, arn)| b.scope.matches(arn))

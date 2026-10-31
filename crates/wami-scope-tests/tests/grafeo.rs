@@ -1,17 +1,18 @@
-//! The fragment against Grafeo: the harness's world loaded as a graph —
-//! tenants, users, maps and layers, an archive, keys, memos about items and
-//! holding in places — and every (principal, action) scope run as a GQL
-//! `WHERE` the store narrows on, before the scope re-checks each row.
+//! The suite on a real graph store, Grafeo: the world loaded as nodes and
+//! edges, every shape rendered as GQL with the narrowing's fragments, the
+//! rows handed back for the suite to judge.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use grafeo::GrafeoDB;
 use grafeo_common::types::Value;
 use proptest::prelude::*;
 use wami_core::arn::matching::MatchContext;
-use wami_scope::harness::{self, arbitrary, world};
-use wami_scope::{Predicate, Scope};
+use wami_scope::{Narrowing, Predicate, Scope};
 use wami_scope_gql::{arn_filter, render, Fragment};
+use wami_scope_tests::port::{Row, Shape, Store};
+use wami_scope_tests::world::{of, Kind, World, ACME};
+use wami_scope_tests::{arbitrary, suite};
 
 fn text(value: &str) -> Value {
     Value::String(value.into())
@@ -21,441 +22,390 @@ fn params(pairs: &[(String, String)]) -> HashMap<String, Value> {
     pairs.iter().map(|(k, v)| (k.clone(), text(v))).collect()
 }
 
-/// The first column of every row, as text.
-fn column(result: &grafeo::database::QueryResult) -> Vec<String> {
+/// Every column of every row, as text.
+fn columns(result: &grafeo::database::QueryResult) -> Vec<Vec<String>> {
     result
         .rows()
         .iter()
-        .map(|row| match &row[0] {
-            Value::String(s) => s.to_string(),
-            other => panic!("not text: {other:?}"),
+        .map(|row| {
+            row.iter()
+                .map(|v| match v {
+                    Value::String(s) => s.to_string(),
+                    other => panic!("not text: {other:?}"),
+                })
+                .collect()
         })
         .collect()
 }
 
-/// A graph of the world: one `Tenant` per tenant, one `User` per principal,
-/// one `Thing {arn, tenant, kind}` per resource — a `Map` for a map, a
-/// `Layer`, an `Item`, a `Key`, a `Memo`, a `Place` — and the memos' edges.
-fn graph(world: &world::World) -> GrafeoDB {
-    let db = GrafeoDB::new_in_memory();
-    let s = db.session();
-    for tenant in [world::COMMONS, world::NORTH, world::SOUTH] {
-        s.execute_with_params(
-            "INSERT (:Tenant {id: $id})",
-            HashMap::from([(
-                "id".to_string(),
-                Value::Int64(i64::try_from(tenant).unwrap()),
-            )]),
-        )
-        .unwrap();
+/// The world in Grafeo.
+struct Grafeo {
+    db: GrafeoDB,
+}
+
+impl Grafeo {
+    fn new() -> Self {
+        Self {
+            db: GrafeoDB::new_in_memory(),
+        }
     }
-    for principal in &world.principals {
-        s.execute_with_params(
-            "INSERT (:User {name: $name, tenant: $tenant})",
-            HashMap::from([
-                ("name".to_string(), text(principal.name)),
-                (
-                    "tenant".to_string(),
-                    Value::Int64(i64::try_from(principal.tenant).unwrap()),
+
+    fn query(&self, query: &str, parameters: &[(String, String)]) -> Vec<Vec<String>> {
+        let result = self
+            .db
+            .session()
+            .execute_with_params(query, params(parameters))
+            .unwrap_or_else(|e| panic!("{query}: {e}"));
+        columns(&result)
+    }
+
+    /// The fragment of one bound name, `(true)` when the narrowing does not
+    /// bind it: an unbound name is not filtered, which is the leak the suite
+    /// proves it would see.
+    fn fragment(narrowing: &Narrowing, name: &str) -> Fragment {
+        narrowing
+            .lowered()
+            .into_iter()
+            .find(|(n, _)| *n == name)
+            .map_or_else(
+                || Fragment {
+                    text: "(true)".into(),
+                    params: Vec::new(),
+                },
+                |(_, predicate)| render(&predicate, name, "arn", &format!("q_{name}_")).unwrap(),
+            )
+    }
+
+    /// `WHERE` for the names given: each one's fragment and its `archived`
+    /// flag (a store rule: an archived container and its contents are never
+    /// returned — every resource under one carries the flag).
+    fn clause(narrowing: &Narrowing, names: &[&str]) -> (String, Vec<(String, String)>) {
+        let mut texts = Vec::new();
+        let mut all = Vec::new();
+        for name in names {
+            let f = Self::fragment(narrowing, name);
+            texts.push(format!("{} AND {name}.archived = false", f.text));
+            all.extend(f.params);
+        }
+        (texts.join(" AND "), all)
+    }
+
+    fn rows(&self, query: &str, parameters: &[(String, String)], names: &[&str]) -> Vec<Row> {
+        self.query(query, parameters)
+            .into_iter()
+            .map(|cols| Row {
+                arns: names
+                    .iter()
+                    .zip(cols)
+                    .map(|(n, a)| ((*n).to_string(), a))
+                    .collect(),
+                count: None,
+            })
+            .collect()
+    }
+
+    /// The pairs `(p, c)` of an edge, both filtered.
+    fn pairs(
+        &self,
+        parent: Kind,
+        edge: &str,
+        child: Kind,
+        narrowing: &Narrowing,
+    ) -> Vec<(String, String)> {
+        let (clause, parameters) = Self::clause(narrowing, &["p", "c"]);
+        let query = format!(
+            "MATCH (p:{})-[:{edge}]->(c:{}) WHERE {clause} RETURN p.arn, c.arn",
+            parent.label(),
+            child.label()
+        );
+        self.query(&query, &parameters)
+            .into_iter()
+            .map(|mut cols| (cols.remove(0), cols.remove(0)))
+            .collect()
+    }
+
+    fn parents(&self, kind: Kind, narrowing: &Narrowing) -> Vec<String> {
+        let (clause, parameters) = Self::clause(narrowing, &["p"]);
+        let query = format!("MATCH (p:{}) WHERE {clause} RETURN p.arn", kind.label());
+        self.query(&query, &parameters)
+            .into_iter()
+            .map(|mut cols| cols.remove(0))
+            .collect()
+    }
+}
+
+impl Store for Grafeo {
+    fn load(&mut self, world: &World) {
+        let s = self.db.session();
+        for r in &world.resources {
+            s.execute_with_params(
+                &format!(
+                    "INSERT (:{} {{arn: $arn, tenant: $tenant, archived: {}}})",
+                    r.kind.label(),
+                    r.archived
                 ),
-            ]),
-        )
-        .unwrap();
+                HashMap::from([
+                    ("arn".to_string(), text(&r.arn)),
+                    ("tenant".to_string(), text(r.tenant)),
+                ]),
+            )
+            .unwrap();
+        }
+        for e in &world.edges {
+            let from = world.resource(&e.from).kind.label();
+            let to = world.resource(&e.to).kind.label();
+            s.execute_with_params(
+                &format!(
+                    "MATCH (a:{from} {{arn: $a}}), (b:{to} {{arn: $b}}) INSERT (a)-[:{}]->(b)",
+                    e.label
+                ),
+                HashMap::from([
+                    ("a".to_string(), text(&e.from)),
+                    ("b".to_string(), text(&e.to)),
+                ]),
+            )
+            .unwrap();
+        }
     }
-    for arn in &world.universe {
-        let path = arn.rsplit(':').next().unwrap();
-        let kind = match path.split('/').next().unwrap() {
-            "realm" if path.contains("/layer/") => "Layer",
-            "realm" if path.contains("/map/") => "Map",
-            "realm" => "Realm",
-            "archive" => "Item",
-            "key" => "Key",
-            "memo" => "Memo",
-            "place" => "Place",
-            other => panic!("unknown kind {other}"),
-        };
-        s.execute_with_params(
-            "INSERT (:Thing {arn: $arn, kind: $kind})",
-            HashMap::from([
-                ("arn".to_string(), text(arn)),
-                ("kind".to_string(), text(kind)),
-            ]),
-        )
-        .unwrap();
-    }
-    memos(&s);
-    db
-}
 
-/// North's memos: `m1` about the soup recipe, in the oven's place; `m2`
-/// about the secret note, in the oven's and the alpha map's places.
-fn memos(s: &grafeo::Session) {
-    let link = |memo: &str, edge: &str, target: &str| {
-        s.execute_with_params(
-            &format!(
-                "MATCH (m:Thing {{arn: $m}}), (t:Thing {{arn: $t}}) INSERT (m)-[:{edge}]->(t)"
-            ),
-            HashMap::from([
-                ("m".to_string(), text(&world::arn(world::NORTH, memo))),
-                ("t".to_string(), text(&world::arn(world::NORTH, target))),
-            ]),
-        )
-        .unwrap();
-    };
-    link("memo/m1", "ABOUT", "archive/house/recipe/soup");
-    link("memo/m1", "IN", "place/tool/oven");
-    link("memo/m2", "ABOUT", "archive/house/note/secret");
-    link("memo/m2", "IN", "place/tool/oven");
-    link("memo/m2", "IN", "place/map/alpha");
-}
-
-/// The rows the store keeps for a scope: `MATCH (n:Thing) WHERE <fragment>`.
-fn keep(db: &GrafeoDB, scope: &Scope) -> Vec<String> {
-    let fragment = arn_filter(scope, "n", "arn", "s").unwrap();
-    rows(db, &fragment, "MATCH (n:Thing) WHERE {} RETURN n.arn")
-}
-
-fn rows(db: &GrafeoDB, fragment: &Fragment, query: &str) -> Vec<String> {
-    let query = query.replace("{}", &fragment.text);
-    let result = db
-        .session()
-        .execute_with_params(&query, params(&fragment.params))
-        .unwrap_or_else(|e| panic!("{query}: {e}"));
-    column(&result)
-}
-
-#[test]
-fn the_graph_holds_the_world() {
-    let world = world::World::standard();
-    let db = graph(&world);
-    let s = db.session();
-    assert_eq!(
-        s.execute("MATCH (t:Tenant) RETURN t.id")
-            .unwrap()
-            .rows()
-            .len(),
-        3
-    );
-    assert_eq!(
-        s.execute("MATCH (u:User) RETURN u.name")
-            .unwrap()
-            .rows()
-            .len(),
-        7
-    );
-    assert_eq!(
-        s.execute("MATCH (n:Thing) RETURN n.arn")
-            .unwrap()
-            .rows()
-            .len(),
-        world.universe.len()
-    );
-    let maps = s
-        .execute("MATCH (n:Thing {kind: 'Map'}) RETURN n.arn")
-        .unwrap();
-    assert_eq!(maps.rows().len(), 4, "alpha and beta, north and south");
-    let memos = s
-        .execute("MATCH (m:Thing)-[:ABOUT]->(t:Thing) RETURN m.arn")
-        .unwrap();
-    assert_eq!(memos.rows().len(), 2);
-}
-
-#[test]
-fn every_principal_and_action_holds_the_invariant_in_the_store() {
-    let world = world::World::standard();
-    let db = graph(&world);
-    let verdicts = harness::check_translator(&world, |scope, _| keep(&db, scope));
-    assert_eq!(verdicts.len(), 35);
-    let owner = verdicts
-        .iter()
-        .find(|v| v.principal == "owner" && v.action == "atlas:ReadItem")
-        .unwrap();
-    assert_eq!(
-        owner.kept.len(),
-        21,
-        "STARTS WITH on two tenant prefixes: north's 18, the commons' 3"
-    );
-    assert_eq!(
-        owner.allowed.len(),
-        20,
-        "the commons' key is kept by the prefix, removed by the re-check"
-    );
-    let visitor = verdicts
-        .iter()
-        .find(|v| v.principal == "visitor" && v.action == "atlas:ReadItem")
-        .unwrap();
-    assert_eq!(
-        visitor.kept.len(),
-        18,
-        "a pattern outside the subset, widened to its tenant prefix"
-    );
-    assert!(
-        visitor.kept.iter().all(|a| a.contains(":200:")),
-        "and nothing of another tenant"
-    );
-}
-
-#[test]
-fn an_exact_deny_narrows_in_the_store_a_wildcard_deny_after_it() {
-    let world = world::World::standard();
-    let db = graph(&world);
-    let ctx = MatchContext {
-        tenant: Some("100".into()),
-        ..MatchContext::default()
-    };
-    let exact = |path: &str| format!("arn:wami:atlas:${{tenant}}:wami:1:{path}");
-    let editor = harness::compile(
-        &[world::document(vec![
-            world::statement("Allow", &["*"], &[exact("realm/main/map/alpha/**")], None),
-            world::statement(
-                "Deny",
-                &["*"],
-                &[exact("realm/main/map/alpha/layer/two")],
-                None,
-            ),
-        ])],
-        "atlas:EditLayer",
-        &ctx,
-    );
-    let kept = keep(&db, &editor);
-    assert!(
-        !kept.iter().any(|a| a.ends_with("alpha/layer/two")),
-        "the literal deny is in the WHERE"
-    );
-    assert_eq!(kept.len(), 2, "map/alpha and layer/one, nothing of south");
-
-    let reader = harness::scope_of(world.principal("reader"), "atlas:ReadItem");
-    let kept = keep(&db, &reader);
-    assert!(
-        kept.iter()
-            .any(|a| a.ends_with("archive/house/note/secret")),
-        "the store cannot express `*/note/*`: kept"
-    );
-    let rechecked: Vec<&String> = kept.iter().filter(|a| reader.matches(a)).collect();
-    assert!(
-        !rechecked.iter().any(|a| a.ends_with("/note/secret")),
-        "the re-check removes it"
-    );
-    assert_eq!(rechecked.len(), 4, "soup, bread, tide, stew");
-}
-
-#[test]
-fn an_empty_scope_reads_no_row_and_tenants_never_mix() {
-    let world = world::World::standard();
-    let db = graph(&world);
-    assert_eq!(keep(&db, &Scope::default()).len(), 0);
-    assert_eq!(
-        keep(
-            &db,
-            &harness::scope_of(world.principal("nobody"), "atlas:ReadItem")
-        )
-        .len(),
-        0
-    );
-    for principal in &world.principals {
-        for action in &world.actions {
-            let kept = keep(&db, &harness::scope_of(principal, action));
-            for arn in kept {
-                let tenant: u64 = arn.split(':').nth(3).unwrap().parse().unwrap();
-                assert!(
-                    tenant == principal.tenant || tenant == world::COMMONS,
-                    "{} {action} reached {arn}",
-                    principal.name
+    #[allow(clippy::too_many_lines)] // one arm per shape, each its query
+    fn run(&self, shape: &Shape, narrowing: &Narrowing) -> Vec<Row> {
+        match shape {
+            Shape::List { kind } => {
+                let (clause, parameters) = Self::clause(narrowing, &["n"]);
+                let query = format!("MATCH (n:{}) WHERE {clause} RETURN n.arn", kind.label());
+                self.rows(&query, &parameters, &["n"])
+            }
+            Shape::Lookup { kind, suffix } => {
+                let (clause, mut parameters) = Self::clause(narrowing, &["n"]);
+                parameters.push(("suffix".into(), suffix.clone()));
+                let query = format!(
+                    "MATCH (n:{}) WHERE {clause} AND n.arn ENDS WITH $suffix RETURN n.arn",
+                    kind.label()
                 );
+                self.rows(&query, &parameters, &["n"])
+            }
+            Shape::Children {
+                parent,
+                edge,
+                child,
+            } => {
+                let (clause, parameters) = Self::clause(narrowing, &["p", "c"]);
+                let query = format!(
+                    "MATCH (p:{})-[:{edge}]->(c:{}) WHERE {clause} RETURN p.arn, c.arn",
+                    parent.label(),
+                    child.label()
+                );
+                self.rows(&query, &parameters, &["p", "c"])
+            }
+            Shape::Path {
+                first,
+                edge1,
+                middle,
+                edge2,
+                last,
+            } => {
+                let (clause, parameters) = Self::clause(narrowing, &["p", "m", "c"]);
+                let query = format!(
+                    "MATCH (p:{})-[:{edge1}]->(m:{})-[:{edge2}]->(c:{}) WHERE {clause} RETURN p.arn, m.arn, c.arn",
+                    first.label(),
+                    middle.label(),
+                    last.label()
+                );
+                self.rows(&query, &parameters, &["p", "m", "c"])
+            }
+            Shape::Exists { kind, edge, target } => {
+                let (on_p, mut parameters) = Self::clause(narrowing, &["p"]);
+                let (on_c, more) = Self::clause(narrowing, &["c"]);
+                parameters.extend(more);
+                let query = format!(
+                    "MATCH (p:{}) WHERE {on_p} AND EXISTS {{ MATCH (p)-[:{edge}]->(c:{}) WHERE {on_c} }} RETURN p.arn",
+                    kind.label(),
+                    target.label()
+                );
+                self.rows(&query, &parameters, &["p"])
+            }
+            Shape::Count {
+                parent,
+                edge,
+                child,
+            } => {
+                // Two queries, both narrowed in the store; the adapter counts.
+                let mut counts: BTreeMap<String, u64> = self
+                    .parents(*parent, narrowing)
+                    .into_iter()
+                    .map(|p| (p, 0))
+                    .collect();
+                for (p, _) in self.pairs(*parent, edge, *child, narrowing) {
+                    *counts.entry(p).or_insert(0) += 1;
+                }
+                counts
+                    .into_iter()
+                    .map(|(p, n)| Row {
+                        arns: vec![("p".into(), p)],
+                        count: Some(n),
+                    })
+                    .collect()
+            }
+            Shape::OrderBy {
+                parent,
+                edge,
+                child,
+            } => {
+                let mut last: BTreeMap<String, String> = self
+                    .parents(*parent, narrowing)
+                    .into_iter()
+                    .map(|p| (p, String::new()))
+                    .collect();
+                for (p, c) in self.pairs(*parent, edge, *child, narrowing) {
+                    let slot = last.entry(p).or_default();
+                    if c > *slot {
+                        *slot = c;
+                    }
+                }
+                let mut keyed: Vec<(String, String)> =
+                    last.into_iter().map(|(p, c)| (c, p)).collect();
+                keyed.sort();
+                keyed
+                    .into_iter()
+                    .map(|(_, p)| Row {
+                        arns: vec![("p".into(), p)],
+                        count: None,
+                    })
+                    .collect()
             }
         }
     }
 }
 
-#[test]
-fn a_hostile_literal_travels_as_a_parameter() {
-    let world = world::World::standard();
-    let db = graph(&world);
-    let hostile = world::arn(world::NORTH, "archive/house/note/it's) OR true OR (");
-    db.session()
+#[tokio::test]
+async fn the_graph_holds_the_world() {
+    let world = World::standard().await;
+    let mut store = Grafeo::new();
+    store.load(&world);
+    let n = store.query(
+        "MATCH (n) WHERE n.arn STARTS WITH $p RETURN n.arn",
+        &[("p".into(), "arn:wami:".into())],
+    );
+    assert_eq!(n.len(), world.resources.len());
+    let edges = store.query("MATCH (a)-[]->(b) RETURN a.arn, b.arn", &[]);
+    assert_eq!(edges.len(), world.edges.len());
+}
+
+#[tokio::test]
+async fn grafeo_holds_the_invariant_on_every_principal_and_shape() {
+    let world = World::standard().await;
+    let mut store = Grafeo::new();
+    store.load(&world);
+    suite::run_all(&world, &store).await;
+}
+
+#[tokio::test]
+async fn a_hostile_literal_travels_as_a_parameter() {
+    let world = World::standard().await;
+    let mut store = Grafeo::new();
+    store.load(&world);
+    let hostile = of("s3", ACME, "bucket/atlas/conv/it's) OR true OR (");
+    store
+        .db
+        .session()
         .execute_with_params(
-            "INSERT (:Thing {arn: $arn, kind: 'Item'})",
+            "INSERT (:Conversation {arn: $arn, tenant: '100', archived: false})",
             HashMap::from([("arn".to_string(), text(&hostile))]),
         )
         .unwrap();
+    let docs = [wami_core::types::PolicyDocument {
+        version: "2012-10-17".into(),
+        statement: vec![wami_core::types::PolicyStatement {
+            sid: None,
+            effect: "Allow".into(),
+            action: vec!["*".into()],
+            resource: vec![hostile.replace(":100:", ":${tenant}:")],
+            condition: None,
+        }],
+    }];
     let ctx = MatchContext {
-        tenant: Some("100".into()),
+        tenant: Some(ACME.into()),
         ..MatchContext::default()
     };
-    let docs = [world::document(vec![world::statement(
-        "Allow",
-        &["*"],
-        &[hostile.replace(":100:", ":${tenant}:")],
-        None,
-    )])];
-    let scope = harness::compile(&docs, "atlas:ReadItem", &ctx);
-    assert_eq!(keep(&db, &scope), [hostile]);
+    let scope = Scope::compile(&docs, "s3:ListBucket", &ctx).unwrap();
+    let narrowing = Narrowing::new().bind("n", scope).unwrap();
+    let rows = store.run(
+        &Shape::List {
+            kind: Kind::Conversation,
+        },
+        &narrowing,
+    );
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].arn("n"), Some(hostile.as_str()));
 }
 
-/// Two scopes in one query (a memo is read when its item is in the
-/// `ReadItem` scope and each place it holds in is in the `ReadPlace` scope),
-/// against the oracle on both.
-#[test]
-fn a_memo_is_read_through_two_scopes_in_one_query() {
-    let world = world::World::standard();
-    let db = graph(&world);
-    let cases = [
-        ("agent-key", vec!["memo/m1", "memo/m2"]),
-        ("reader", vec![]),
-        ("owner", vec!["memo/m1", "memo/m2"]),
-    ];
-    for (name, expected) in cases {
-        let principal = world.principal(name);
-        let items = harness::scope_of(principal, "atlas:ReadItem");
-        let places = harness::scope_of(principal, "atlas:Search");
-        let i = arn_filter(&items, "t", "arn", "i").unwrap();
-        let p = arn_filter(&places, "p", "arn", "p").unwrap();
-        let query = format!(
-            "MATCH (m:Thing {{kind: 'Memo'}})-[:ABOUT]->(t:Thing) WHERE {} \
-             AND NOT EXISTS {{ MATCH (m)-[:IN]->(p:Thing) WHERE NOT ({}) }} RETURN m.arn",
-            i.text, p.text
-        );
-        let mut all = params(&i.params);
-        all.extend(params(&p.params));
-        let result = db
-            .session()
-            .execute_with_params(&query, all)
-            .unwrap_or_else(|e| panic!("{query}: {e}"));
-        let mut kept = column(&result);
-        kept.sort();
-        let mut expected: Vec<String> = expected
-            .into_iter()
-            .map(|m| world::arn(world::NORTH, m))
-            .collect();
-        expected.sort();
-        assert_eq!(kept, expected, "{name}");
-    }
-}
-
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(48))]
-
-    #[test]
-    fn random_policies_hold_the_invariant_in_the_store(case in arbitrary::case()) {
-        let world = world::World::standard();
-        let db = graph(&world);
-        harness::check_case(&case, &world.universe, |scope, _| keep(&db, scope));
-    }
-}
-
-/// A row the store holds without an ARN: `=`, `STARTS WITH` and a `NOT` over
-/// them compare to null and drop it, as a row the evaluator cannot judge must
-/// be; only a scope reaching everything (`true`) keeps it, for the re-check.
-#[test]
-fn a_row_without_an_arn_is_never_kept() {
-    let world = world::World::standard();
-    let db = graph(&world);
-    db.session()
-        .execute("INSERT (:Thing {kind: 'Ghost'})")
+#[tokio::test]
+async fn a_row_without_an_arn_is_kept_by_true_alone() {
+    let world = World::standard().await;
+    let mut store = Grafeo::new();
+    store.load(&world);
+    store
+        .db
+        .session()
+        .execute("INSERT (:Conversation {tenant: '100', archived: false})")
         .unwrap();
-    assert_eq!(
-        db.session()
-            .execute("MATCH (n:Thing) RETURN n.kind")
-            .unwrap()
-            .rows()
-            .len(),
-        world.universe.len() + 1
-    );
-    let ctx = MatchContext {
-        tenant: Some("100".into()),
-        ..MatchContext::default()
-    };
-    let all_but_one = harness::compile(
-        &[world::document(vec![
-            world::statement("Allow", &["*"], &["*".to_string()], None),
-            world::statement(
-                "Deny",
-                &["*"],
-                &["arn:wami:atlas:${tenant}:wami:1:key/k1".to_string()],
-                None,
-            ),
-        ])],
-        "atlas:ReadItem",
-        &ctx,
-    );
-    let fragment = arn_filter(&all_but_one, "n", "arn", "s").unwrap();
-    assert_eq!(fragment.text, "((true) AND (NOT (n.arn = $s0)))");
-    let kept = rows(&db, &fragment, "MATCH (n:Thing) WHERE {} RETURN n.kind");
-    assert_eq!(
-        kept.len(),
-        world.universe.len() - 1,
-        "NOT (null = …) is null, not true: the ghost is dropped, with k1"
-    );
-    assert!(!kept.contains(&"Ghost".to_string()));
-    let everything = harness::compile(
-        &[world::document(vec![world::statement(
-            "Allow",
-            &["*"],
-            &["*".to_string()],
-            None,
-        )])],
-        "atlas:ReadItem",
-        &ctx,
-    );
-    let fragment = arn_filter(&everything, "n", "arn", "s").unwrap();
-    assert_eq!(fragment.text, "(true)");
-    let kinds = rows(&db, &fragment, "MATCH (n:Thing) WHERE {} RETURN n.kind");
-    assert_eq!(
-        kinds.len(),
-        world.universe.len() + 1,
-        "`true` alone keeps the ghost: a scope reaching everything is not a filter on the ARN, the re-check is"
-    );
-    for principal in &world.principals {
-        for action in &world.actions {
-            let kept = keep(&db, &harness::scope_of(principal, action));
-            assert!(kept.iter().all(|a| a.starts_with("arn:wami:")));
-        }
-    }
-}
-
-/// A sub-tenant's rows beside its parent's: `STARTS WITH` on
-/// `arn:wami:atlas:100:wami:` stops at the colon, so neither `100/7` nor
-/// `1007` is read by the parent, and the sub-tenant reads only its own.
-#[test]
-fn a_sub_tenant_row_is_reached_by_its_own_scope_only() {
-    let world = world::World::standard();
-    let db = graph(&world);
-    let sub = "arn:wami:atlas:100/7:wami:1:realm/main".to_string();
-    let lookalike = "arn:wami:atlas:1007:wami:1:realm/main".to_string();
-    harness::canonical(&[sub.clone(), lookalike.clone()]);
-    for arn in [&sub, &lookalike] {
-        db.session()
-            .execute_with_params(
-                "INSERT (:Thing {arn: $arn, kind: 'Realm'})",
-                HashMap::from([("arn".to_string(), text(arn))]),
+    let everything = Narrowing::new()
+        .bind(
+            "n",
+            Scope::compile(
+                &[wami_core::types::PolicyDocument {
+                    version: "2012-10-17".into(),
+                    statement: vec![wami_core::types::PolicyStatement {
+                        sid: None,
+                        effect: "Allow".into(),
+                        action: vec!["*".into()],
+                        resource: vec!["*".into()],
+                        condition: None,
+                    }],
+                }],
+                "s3:ListBucket",
+                &MatchContext::default(),
             )
-            .unwrap();
-    }
-    let docs = [world::document(vec![world::statement(
-        "Allow",
-        &["*"],
-        &[world::own("realm/**")],
-        None,
-    )])];
-    let scope_for = |tenant: &str| {
-        harness::compile(
-            &docs,
-            "atlas:ReadItem",
-            &MatchContext {
-                tenant: Some(tenant.into()),
-                ..MatchContext::default()
-            },
+            .unwrap(),
         )
-    };
-    let parent = keep(&db, &scope_for("100"));
-    assert_eq!(
-        parent.len(),
-        18,
-        "`wami:*` widens to the tenant prefix: every row of north, none beyond the colon"
+        .unwrap();
+    let ghost = store.query(
+        "MATCH (n:Conversation) WHERE (true) AND n.archived = false RETURN n.tenant",
+        &[],
     );
-    assert!(!parent.contains(&sub) && !parent.contains(&lookalike));
-    assert_eq!(keep(&db, &scope_for("100/7")), [sub]);
-    assert_eq!(keep(&db, &scope_for("1007")), [lookalike]);
+    let live = world
+        .of_kind(Kind::Conversation)
+        .iter()
+        .filter(|r| !r.archived)
+        .count();
+    assert_eq!(
+        ghost.len(),
+        live + 1,
+        "`true` keeps the ghost (the archived one stays out)"
+    );
+    let fenced = Narrowing::new()
+        .bind("n", everything.bindings()[0].scope.fenced(&[ACME]))
+        .unwrap();
+    let rows = store.run(
+        &Shape::List {
+            kind: Kind::Conversation,
+        },
+        &fenced,
+    );
+    assert!(
+        rows.iter()
+            .all(|r| r.arn("n").is_some_and(|a| a.starts_with("arn:wami:"))),
+        "`=`, `STARTS WITH` and `NOT` over a null drop the ghost"
+    );
+    assert_eq!(
+        rows.len(),
+        world
+            .of_kind(Kind::Conversation)
+            .iter()
+            .filter(|r| r.tenant == ACME && !r.archived)
+            .count()
+    );
 }
 
 /// A random predicate, three levels deep at most, over the world's ARNs.
@@ -484,18 +434,53 @@ proptest! {
     /// under the parentheses the renderer writes.
     #[test]
     fn the_rendering_is_equal_to_keeps_in_grafeo(predicate in predicate()) {
-        let world = world::World::standard();
-        let db = graph(&world);
+        let universe = arbitrary::standard_universe();
+        let store = {
+            let mut s = Grafeo::new();
+            let db = &s.db;
+            let session = db.session();
+            for arn in &universe {
+                session.execute_with_params(
+                    "INSERT (:Thing {arn: $arn})",
+                    HashMap::from([("arn".to_string(), text(arn))]),
+                ).unwrap();
+            }
+            drop(session);
+            let _ = &mut s;
+            s
+        };
         let fragment = render(&predicate, "n", "arn", "s").unwrap();
-        let mut kept = rows(&db, &fragment, "MATCH (n:Thing) WHERE {} RETURN n.arn");
+        let query = format!("MATCH (n:Thing) WHERE {} RETURN n.arn", fragment.text);
+        let mut kept: Vec<String> = store.query(&query, &fragment.params).into_iter().map(|mut c| c.remove(0)).collect();
         kept.sort();
-        let mut expected: Vec<String> = world
-            .universe
-            .iter()
-            .filter(|row| predicate.keeps(row))
-            .cloned()
-            .collect();
+        let mut expected: Vec<String> = universe.iter().filter(|row| predicate.keeps(row)).cloned().collect();
         expected.sort();
         prop_assert_eq!(kept, expected, "{}", fragment.text);
     }
+}
+
+#[test]
+fn arn_filter_is_the_list_shape() {
+    let scope = Scope::compile(
+        &[wami_core::types::PolicyDocument {
+            version: "2012-10-17".into(),
+            statement: vec![wami_core::types::PolicyStatement {
+                sid: None,
+                effect: "Allow".into(),
+                action: vec!["*".into()],
+                resource: vec![of("s3", "${tenant}", "bucket/atlas/**")],
+                condition: None,
+            }],
+        }],
+        "s3:ListBucket",
+        &MatchContext {
+            tenant: Some(ACME.into()),
+            ..MatchContext::default()
+        },
+    )
+    .unwrap();
+    let one = arn_filter(&scope, "n", "arn", "q_n_").unwrap();
+    let narrowed = Grafeo::fragment(&Narrowing::new().bind("n", scope).unwrap(), "n");
+    assert_eq!(one.text, narrowed.text);
+    assert_eq!(one.params, narrowed.params);
 }
