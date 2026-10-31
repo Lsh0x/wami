@@ -132,12 +132,17 @@ fn substitute_variables(pattern: &str, vars: &HashMap<&str, &str>) -> String {
 /// - `text` — the concrete ARN string to match against
 /// - `ctx` — context for variable substitution
 pub fn matches_arn_pattern(pattern: &str, text: &str, ctx: &MatchContext) -> bool {
-    // Step 1: substitute variables
-    let vars = ctx.to_vars();
-    let resolved = substitute_variables(pattern, &vars);
+    glob_match(&resolve_variables(pattern, ctx), text)
+}
 
-    // Step 2: match with glob support
-    glob_match(&resolved, text)
+/// A pattern with its `${tenant}`, `${principal}` and `${service}` filled in
+/// from `ctx`: the text [`matches_arn_pattern`] matches against, and the one
+/// a store is handed to narrow a query (wami 008).
+///
+/// A variable the context has no value for is left as it is, so the resolved
+/// pattern matches nothing — never everything.
+pub fn resolve_variables(pattern: &str, ctx: &MatchContext) -> String {
+    substitute_variables(pattern, &ctx.to_vars())
 }
 
 /// Match a resource pattern against a resource string (no variable substitution).
