@@ -78,6 +78,43 @@ enum Boundary {
     },
 }
 
+/// The documents the evaluator reads for one caller, parsed, in reading
+/// order (wami 008): what a scope (`wami-scope`) is compiled from, so a list
+/// is narrowed on exactly the documents a row is then judged on.
+#[derive(Debug, Clone)]
+pub struct Documents {
+    /// The caller is root: the evaluator consults no document and allows
+    /// everything, so there is nothing to compile — a scope for root is
+    /// everything, not nothing.
+    pub root: bool,
+    /// The identity documents — the user's own and its groups', or the
+    /// assumed role's only — sorted by [`PolicySource`], never the boundary.
+    pub identity: Vec<(PolicySource, PolicyDocument)>,
+    /// The permissions boundary, read apart: it narrows, never grants.
+    pub boundary: Ceiling,
+}
+
+/// A caller's permissions boundary, as [`AuthorizationService::documents`]
+/// reads it.
+#[derive(Debug, Clone)]
+pub enum Ceiling {
+    /// The principal has none.
+    None,
+    /// Referenced, but no policy is stored under that ARN: the evaluator
+    /// fails closed, so a scope built on these documents must list nothing.
+    Missing {
+        /// The referenced ARN.
+        arn: String,
+    },
+    /// Referenced and read.
+    Document {
+        /// `PolicySource::PermissionsBoundary`, naming it.
+        source: PolicySource,
+        /// The parsed document.
+        document: PolicyDocument,
+    },
+}
+
 /// Whose policies decide, as read by the context's keys.
 enum Principal {
     /// A user, judged on its own policies and its groups'.
@@ -181,6 +218,63 @@ where
             return Ok(Principal::Session(Box::new(role)));
         }
         Ok(Principal::User(Box::new(user)))
+    }
+
+    /// The documents the evaluator would read for the caller of `context`,
+    /// parsed and in reading order — the identity documents sorted by their
+    /// source, the permissions boundary apart (wami 008).
+    ///
+    /// Every document is read, as [`AuthorizationService::authorize`] reads
+    /// them: a document that cannot be read, or that cannot take part (another
+    /// tenant's, or an attachment naming nothing), refuses the whole set,
+    /// every one named. A caller that compiles a scope from these documents
+    /// therefore narrows a list on exactly what a row is then judged on.
+    ///
+    /// # Errors
+    ///
+    /// What [`AuthorizationService::authorize`] returns before deciding: a
+    /// context naming no stored principal, a store failure, an unreadable or
+    /// unusable document.
+    pub async fn documents(&self, context: &WamiContext) -> Result<Documents> {
+        if context.is_root() {
+            return Ok(Documents {
+                root: true,
+                identity: Vec::new(),
+                boundary: Ceiling::None,
+            });
+        }
+        let principal = self.principal(context).await?;
+        let mut unusable = Vec::new();
+        let (documents, boundary) = {
+            let store = self.store.read().await;
+            let documents = Self::identity_documents(&store, &principal, &mut unusable).await?;
+            let boundary = Self::boundary_document(&store, &principal, &mut unusable).await?;
+            (documents, boundary)
+        };
+        let boundary_document = match &boundary {
+            Boundary::Present { source, document } => Some((source.clone(), document.clone())),
+            Boundary::None | Boundary::Missing { .. } => None,
+        };
+        let ordered = policy_evaluator::in_reading_order(documents, boundary_document);
+        let mut identity = Self::read_every_document(&ordered, unusable)?;
+        let boundary = match boundary {
+            Boundary::None => Ceiling::None,
+            Boundary::Missing { arn } => Ceiling::Missing { arn },
+            Boundary::Present { .. } => {
+                let (source, document) = identity.pop().ok_or_else(|| {
+                    AmiError::StoreError(
+                        "the permissions boundary was read but is not the last document"
+                            .to_string(),
+                    )
+                })?;
+                Ceiling::Document { source, document }
+            }
+        };
+        Ok(Documents {
+            root: false,
+            identity,
+            boundary,
+        })
     }
 
     /// Check if access is denied (returns an error if not authorized)
