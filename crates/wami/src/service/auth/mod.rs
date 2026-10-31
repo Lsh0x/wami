@@ -57,7 +57,7 @@ pub mod decision;
 pub mod policy_evaluator;
 
 pub use authentication::{hash_secret, verify_secret, AuthenticationService};
-pub use authorization::AuthorizationService;
+pub use authorization::{AuthorizationService, Ceiling, Documents};
 pub use authorizer::{
     confirm, credential_found, guard, guard_arn, guard_by_id, guard_tenant, into_authorizer,
     target_arn, tenant_arn, Authorizer, Found,

@@ -1,0 +1,31 @@
+[package]
+name = "wami-scope-tests"
+version = "0.0.0"
+edition = "2021"
+license = "MIT"
+description = "The world, the oracle and the suite that hold wami-scope and its translators to the invariant, run on real stores (Grafeo). Tests only, never published."
+# Grafeo 0.6 needs 1.99, above wami's MSRV: this crate is out of the
+# workspace's default members and runs on stable in CI.
+rust-version = "1.99.0"
+publish = false
+
+[dependencies]
+proptest = "1.11"
+serde_json = "1.0"
+tokio = { version = "1", features = ["sync", "rt", "macros"] }
+wami = { path = "../wami" }
+wami-core = { path = "../wami-core" }
+wami-scope = { path = "../wami-scope" }
+wami-scope-gql = { path = "../wami-scope-gql" }
+
+[dev-dependencies]
+grafeo = { version = "0.6", default-features = false, features = ["gql"] }
+grafeo-common = "0.6"
+
+[lints.rust]
+missing_docs = "warn"
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"

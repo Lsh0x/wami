@@ -1,0 +1,31 @@
+[package]
+name = "wami-scope-gql"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "A wami-scope translated into a GQL WHERE fragment and its parameters, for a graph store to narrow before the evaluator re-checks"
+rust-version = "1.90.0"
+repository = "https://github.com/Lsh0x/wami"
+homepage = "https://github.com/Lsh0x/wami"
+documentation = "https://docs.rs/wami-scope-gql"
+readme = "README.md"
+keywords = ["iam", "policy", "authorization", "gql", "graph"]
+categories = ["authentication", "database"]
+authors = ["LSH <github@lsh.tech>"]
+
+[dependencies]
+thiserror = "2.0"
+wami-scope = { path = "../wami-scope", version = "0.1.0" }
+
+# Its tests against the world and against Grafeo are in `wami-scope-tests`;
+# the doc example compiles a scope.
+[dev-dependencies]
+wami-core = { path = "../wami-core", version = "0.19.0" }
+
+[lints.rust]
+missing_docs = "warn"
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"

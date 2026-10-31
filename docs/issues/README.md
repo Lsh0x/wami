@@ -15,6 +15,7 @@ This directory tracks feature requests, enhancements, and major work items for t
 | [#005](../issues/wami/todo/feature-2025-11-07-jwt-authentication.md) | JWT Authentication | High | Feature Enhancement | 🔴 Open |
 | [#006](../issues/wami/todo/feature-2025-11-07-jwt-oidc-parsing.md) | OIDC JWT Parsing and Validation | Medium | Feature Enhancement | 🔴 Open |
 | [#007](../issues/wami/todo/feature-2025-11-07-jwt-api-tokens.md) | JWT API Tokens for External Clients | Medium | Feature Enhancement | 🔴 Open |
+| [#008](../issues/todo/feature/policy-scope.md) | `wami-scope`: policies compiled into what a query may reach | High | Feature Enhancement | 🟡 In progress |
 
 ### Closed Issues
 
@@ -22,8 +23,8 @@ This directory tracks feature requests, enhancements, and major work items for t
 
 ## Issue Statistics
 
-- **Total Issues**: 7
-- **Open**: 7 (100%)
+- **Total Issues**: 8
+- **Open**: 8 (100%)
 - **Closed**: 0 (0%)
 - **In Progress**: 0
 
@@ -36,6 +37,7 @@ This directory tracks feature requests, enhancements, and major work items for t
 - [Issue #005: JWT Authentication](../issues/wami/todo/feature-2025-11-07-jwt-authentication.md) - JWT-based authentication
 - [Issue #006: OIDC JWT Parsing](../issues/wami/todo/feature-2025-11-07-jwt-oidc-parsing.md) - OIDC JWT validation and federation
 - [Issue #007: JWT API Tokens](../issues/wami/todo/feature-2025-11-07-jwt-api-tokens.md) - API tokens for external clients
+- [Issue #008: wami-scope](../issues/todo/feature/policy-scope.md) - Policies compiled into the ARN patterns a query may reach; one translator per store
 
 ## Issue Template
 
