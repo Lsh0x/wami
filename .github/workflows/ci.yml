@@ -47,6 +47,31 @@ jobs:
       - name: Run doc tests
         run: cargo test --doc --verbose
 
+  grafeo:
+    # wami-scope-gql against a real graph store. Out of the workspace's default
+    # members: grafeo 0.6 needs a toolchain above wami's MSRV.
+    name: Scope on Grafeo
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: grafeo-tests
+
+      - name: Lint the Grafeo tests
+        run: cargo clippy -p wami-scope-grafeo-tests --all-targets -- -D warnings
+
+      - name: Run the Grafeo tests
+        run: cargo test -p wami-scope-grafeo-tests --verbose
+
   fmt:
     name: Formatting
     runs-on: ubuntu-latest

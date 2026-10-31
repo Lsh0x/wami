@@ -32,6 +32,22 @@
       "bump-minor-pre-major": true,
       "draft": false,
       "prerelease": false
+    },
+    "crates/wami-scope": {
+      "release-type": "rust",
+      "package-name": "wami-scope",
+      "include-component-in-tag": true,
+      "bump-minor-pre-major": true,
+      "draft": false,
+      "prerelease": false
+    },
+    "crates/wami-scope-gql": {
+      "release-type": "rust",
+      "package-name": "wami-scope-gql",
+      "include-component-in-tag": true,
+      "bump-minor-pre-major": true,
+      "draft": false,
+      "prerelease": false
     }
   },
   "changelog-sections": [
