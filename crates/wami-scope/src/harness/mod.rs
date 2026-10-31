@@ -16,6 +16,16 @@
 //! check_translator(&world, |scope, universe| my_store.rows_kept_by(scope, universe));
 //! ```
 //!
+//! # The contract on the rows
+//!
+//! The evaluator judges the ARN **as [`WamiArn`] displays it** once parsed;
+//! the scope and every store judge the row's text. They agree only on rows
+//! written canonically — `arn:wami:atlas:100:…`, never `arn:wami:atlas:0100:…`
+//! (the same ARN to the evaluator, another text to the store). A store that
+//! writes ARNs through [`WamiArn`] holds the contract; the harness refuses a
+//! universe that does not ([`canonical`]), so a translator is never held to an
+//! invariant its rows have already broken.
+//!
 //! Behind the `harness` feature: test code shipped for other crates' tests.
 
 pub mod arbitrary;
@@ -23,6 +33,7 @@ pub mod oracle;
 pub mod world;
 
 use wami_core::arn::matching::MatchContext;
+use wami_core::arn::WamiArn;
 use wami_core::types::PolicyDocument;
 
 use crate::Scope;
@@ -42,6 +53,26 @@ pub struct Verdict {
     pub allowed: Vec<String>,
     /// Whether the scope was residual.
     pub residual: bool,
+}
+
+/// Every row of `universe` as [`WamiArn`] displays it: the contract the
+/// evaluator and the stores agree under (see the module's doc).
+///
+/// # Panics
+///
+/// Naming the first row that is not an ARN, or not written as [`WamiArn`]
+/// displays it (`0100` for `100`, a cloud ARN without its region).
+pub fn canonical(universe: &[String]) {
+    for row in universe {
+        let parsed: WamiArn = row
+            .parse()
+            .unwrap_or_else(|e| panic!("{row}: not an ARN, outside the contract: {e}"));
+        let displayed = parsed.to_string();
+        assert!(
+            &displayed == row,
+            "{row}: not canonical (the evaluator reads it as {displayed}), outside the contract"
+        );
+    }
 }
 
 /// The rows of `universe` the evaluator allows `principal` `action` on.
@@ -84,8 +115,9 @@ pub fn scope_of(principal: &Principal, action: &str) -> Scope {
 ///
 /// # Panics
 ///
-/// Naming the principal, the action and the row: when a kept row is outside
-/// the universe; when an allowed row was not kept (**the** failure: the
+/// When the universe is outside the contract ([`canonical`]). Then, naming
+/// the principal, the action and the row: when a kept row is outside the
+/// universe; when an allowed row was not kept (**the** failure: the
 /// translator excluded what the evaluator allows); when the kept rows, after
 /// the scope's re-check, are not exactly the allowed ones (a superset is
 /// accepted only for a residual scope); when the scope alone disagrees with
@@ -94,6 +126,7 @@ pub fn check_translator<F>(world: &World, mut keep: F) -> Vec<Verdict>
 where
     F: FnMut(&Scope, &[String]) -> Vec<String>,
 {
+    canonical(&world.universe);
     let mut verdicts = Vec::new();
     for principal in &world.principals {
         for action in &world.actions {
@@ -182,6 +215,7 @@ pub fn check_case<F>(case: &arbitrary::Case, universe: &[String], mut keep: F)
 where
     F: FnMut(&Scope, &[String]) -> Vec<String>,
 {
+    canonical(universe);
     let principal = Principal {
         name: case.principal,
         tenant: case.tenant,

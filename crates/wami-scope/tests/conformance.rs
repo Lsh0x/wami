@@ -218,3 +218,214 @@ proptest! {
         }
     }
 }
+
+/// The caller's context for a tenant path and a name, as the evaluator
+/// derives `${tenant}` and `${principal}` from it.
+fn caller(tenant: &[u64], name: &str) -> wami_core::context::WamiContext {
+    use wami_core::arn::{ScopedName, TenantPath, WamiArn};
+    let path = TenantPath::new(tenant.to_vec());
+    let arn: WamiArn = format!("arn:wami:atlas:{path}:wami:1:user/{name}")
+        .parse()
+        .unwrap();
+    wami_core::context::WamiContext::builder()
+        .caller_arn(arn)
+        .caller_key(ScopedName::new(path, name))
+        .build()
+        .unwrap()
+}
+
+#[test]
+fn a_sub_tenant_is_neither_its_parent_nor_a_stranger() {
+    use wami_core::arn::matching::MatchContext;
+    use wami_scope::harness::{oracle, world};
+
+    // The parent's owner and the sub-tenant's steward are granted the same
+    // motif, `${tenant}` resolving to `100` for one and `100/7` for the other.
+    let docs = [world::document(vec![world::statement(
+        "Allow",
+        &["atlas:*"],
+        &[world::own("realm/**")],
+        None,
+    )])];
+    let parent = caller(&[100], "owner");
+    let sub = caller(&[100, 7], "steward");
+    let parent_scope = harness::compile(&docs, "atlas:ReadItem", &MatchContext::from(&parent));
+    let sub_scope = harness::compile(&docs, "atlas:ReadItem", &MatchContext::from(&sub));
+    assert_eq!(
+        sub_scope.allow[0].as_str(),
+        "arn:wami:atlas:100/7:wami:*:realm/**"
+    );
+    assert_eq!(sub_scope.prefixes(), ["arn:wami:atlas:100/7:wami:"]);
+
+    let rows = [
+        world::arn(100, "realm/main"),
+        "arn:wami:atlas:100/7:wami:1:realm/main".to_string(),
+        "arn:wami:atlas:100/7/3:wami:1:realm/main".to_string(),
+        "arn:wami:atlas:1007:wami:1:realm/main".to_string(),
+    ];
+    harness::canonical(&rows);
+    for (ctx, scope, who) in [
+        (&parent, &parent_scope, "parent"),
+        (&sub, &sub_scope, "sub"),
+    ] {
+        for row in &rows {
+            let allowed = oracle::allows(&docs, "atlas:ReadItem", row, ctx).unwrap();
+            assert_eq!(scope.matches(row), allowed, "{who} on {row}");
+            assert!(
+                !allowed || scope.lower().keeps(row),
+                "{who}: the lowering dropped {row}"
+            );
+        }
+    }
+    assert!(parent_scope.matches(&rows[0]) && !parent_scope.matches(&rows[1]));
+    assert!(sub_scope.matches(&rows[1]) && !sub_scope.matches(&rows[0]));
+    assert!(
+        !sub_scope.matches(&rows[2]),
+        "a `*` instance does not reach a deeper path: the tenant part is literal"
+    );
+}
+
+#[test]
+fn a_row_written_otherwise_is_the_evaluators_and_not_the_scopes() {
+    use wami_core::arn::matching::MatchContext;
+    use wami_scope::harness::{oracle, world};
+
+    // `0100` parses to tenant 100: the evaluator allows it as `…:100:…`, the
+    // scope reads the text and does not. The contract is the canonical form.
+    let docs = [world::document(vec![world::statement(
+        "Allow",
+        &["*"],
+        &[world::own("realm/**")],
+        None,
+    )])];
+    let ctx = caller(&[100], "owner");
+    let scope = harness::compile(&docs, "atlas:ReadItem", &MatchContext::from(&ctx));
+    let otherwise = "arn:wami:atlas:0100:wami:1:realm/main";
+    assert!(oracle::allows(&docs, "atlas:ReadItem", otherwise, &ctx).unwrap());
+    assert!(!scope.matches(otherwise));
+    assert!(!scope.lower().keeps(otherwise));
+
+    // A legacy cloud ARN without its region is displayed with `global`.
+    let legacy = "arn:wami:atlas:100:wami:1:aws:123:realm/main";
+    let parsed: wami_core::arn::WamiArn = legacy.parse().unwrap();
+    assert_ne!(parsed.to_string(), legacy);
+}
+
+#[test]
+#[should_panic(
+    expected = "not canonical (the evaluator reads it as arn:wami:atlas:100:wami:1:realm/main)"
+)]
+fn the_harness_refuses_a_universe_outside_the_contract() {
+    let case = arbitrary::Case {
+        principal: "owner",
+        tenant: 100,
+        policies: vec![],
+        action: "atlas:ReadItem".into(),
+    };
+    let universe = vec!["arn:wami:atlas:0100:wami:1:realm/main".to_string()];
+    harness::check_case(&case, &universe, by_matches);
+}
+
+#[test]
+#[should_panic(expected = "not an ARN, outside the contract")]
+fn the_harness_refuses_a_row_that_is_not_an_arn() {
+    let world = World::standard();
+    let mut universe = world.universe.clone();
+    universe.push("arn:wami:atlas:100:wami:1:realm".to_string());
+    let case = arbitrary::Case {
+        principal: "owner",
+        tenant: 100,
+        policies: vec![],
+        action: "atlas:ReadItem".into(),
+    };
+    harness::check_case(&case, &universe, by_matches);
+}
+
+#[test]
+fn an_empty_condition_always_holds_for_the_evaluator_and_is_residual_here() {
+    use wami_core::arn::matching::MatchContext;
+    use wami_scope::harness::{oracle, world};
+
+    let mut deny = world::statement(
+        "Deny",
+        &["*"],
+        &[world::own("realm/main/map/alpha")],
+        Some(serde_json::json!({})),
+    );
+    deny.sid = Some("Empty".into());
+    let docs = [world::document(vec![
+        world::statement("Allow", &["*"], &[world::own("realm/**")], None),
+        deny,
+    ])];
+    let ctx = caller(&[100], "owner");
+    let scope = harness::compile(&docs, "atlas:ReadItem", &MatchContext::from(&ctx));
+    let alpha = world::arn(100, "realm/main/map/alpha");
+    assert!(
+        !oracle::allows(&docs, "atlas:ReadItem", &alpha, &ctx).unwrap(),
+        "an empty condition holds: the Deny applies"
+    );
+    assert!(scope.residual, "a condition the compiler does not read");
+    assert!(
+        scope.matches(&alpha),
+        "over-included: the re-check removes it"
+    );
+    assert!(scope.lower().keeps(&alpha));
+}
+
+#[test]
+fn an_effect_is_read_in_any_case_as_the_evaluator_reads_it() {
+    use wami_core::arn::matching::MatchContext;
+    use wami_scope::harness::{oracle, world};
+
+    let docs = [world::document(vec![
+        world::statement("ALLOW", &["*"], &[world::own("realm/**")], None),
+        world::statement("dEnY", &["*"], &[world::own("realm/main/map/beta")], None),
+    ])];
+    let ctx = caller(&[100], "owner");
+    let scope = harness::compile(&docs, "atlas:ReadItem", &MatchContext::from(&ctx));
+    let world = World::standard();
+    for row in &world.universe {
+        assert_eq!(
+            scope.matches(row),
+            oracle::allows(&docs, "atlas:ReadItem", row, &ctx).unwrap(),
+            "{row}"
+        );
+    }
+    assert_eq!(scope.deny.len(), 1);
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(512))]
+
+    /// A deny the lowering keeps (a literal, a `<literal>/**`) excludes
+    /// exactly what its glob matches — not one row more, or the store would
+    /// drop a row the evaluator allows.
+    #[test]
+    fn an_exact_deny_lowers_to_exactly_its_glob(
+        motif in arbitrary::motif(),
+        rows in proptest::collection::vec(arbitrary::arn(), 1..=16),
+    ) {
+        use wami_core::arn::matching::MatchContext;
+        use wami_scope::harness::world;
+        let ctx = MatchContext {
+            tenant: Some("100".into()),
+            principal: Some("owner".into()),
+            service: Some("atlas".into()),
+        };
+        let docs = [world::document(vec![
+            world::statement("Allow", &["*"], &["*".to_string()], None),
+            world::statement("Deny", &["*"], &[motif], None),
+        ])];
+        let scope = harness::compile(&docs, "atlas:ReadItem", &ctx);
+        let deny = &scope.deny[0];
+        let lowered = scope.lower();
+        let exact = deny.is_literal() || deny.trailing_tree().is_some();
+        for row in &rows {
+            if exact {
+                prop_assert_eq!(lowered.keeps(row), !deny.matches(row), "{} on {}", deny, row);
+            } else {
+                prop_assert!(lowered.keeps(row), "a wildcard deny is left to the re-check: {}", deny);
+            }
+        }
+    }
+}

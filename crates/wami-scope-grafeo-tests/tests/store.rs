@@ -10,8 +10,8 @@ use grafeo_common::types::Value;
 use proptest::prelude::*;
 use wami_core::arn::matching::MatchContext;
 use wami_scope::harness::{self, arbitrary, world};
-use wami_scope::Scope;
-use wami_scope_gql::{arn_filter, Fragment};
+use wami_scope::{Predicate, Scope};
+use wami_scope_gql::{arn_filter, render, Fragment};
 
 fn text(value: &str) -> Value {
     Value::String(value.into())
@@ -340,5 +340,162 @@ proptest! {
         let world = world::World::standard();
         let db = graph(&world);
         harness::check_case(&case, &world.universe, |scope, _| keep(&db, scope));
+    }
+}
+
+/// A row the store holds without an ARN: `=`, `STARTS WITH` and a `NOT` over
+/// them compare to null and drop it, as a row the evaluator cannot judge must
+/// be; only a scope reaching everything (`true`) keeps it, for the re-check.
+#[test]
+fn a_row_without_an_arn_is_never_kept() {
+    let world = world::World::standard();
+    let db = graph(&world);
+    db.session()
+        .execute("INSERT (:Thing {kind: 'Ghost'})")
+        .unwrap();
+    assert_eq!(
+        db.session()
+            .execute("MATCH (n:Thing) RETURN n.kind")
+            .unwrap()
+            .rows()
+            .len(),
+        world.universe.len() + 1
+    );
+    let ctx = MatchContext {
+        tenant: Some("100".into()),
+        ..MatchContext::default()
+    };
+    let all_but_one = harness::compile(
+        &[world::document(vec![
+            world::statement("Allow", &["*"], &["*".to_string()], None),
+            world::statement(
+                "Deny",
+                &["*"],
+                &["arn:wami:atlas:${tenant}:wami:1:key/k1".to_string()],
+                None,
+            ),
+        ])],
+        "atlas:ReadItem",
+        &ctx,
+    );
+    let fragment = arn_filter(&all_but_one, "n", "arn", "s").unwrap();
+    assert_eq!(fragment.text, "((true) AND (NOT (n.arn = $s0)))");
+    let kept = rows(&db, &fragment, "MATCH (n:Thing) WHERE {} RETURN n.kind");
+    assert_eq!(
+        kept.len(),
+        world.universe.len() - 1,
+        "NOT (null = …) is null, not true: the ghost is dropped, with k1"
+    );
+    assert!(!kept.contains(&"Ghost".to_string()));
+    let everything = harness::compile(
+        &[world::document(vec![world::statement(
+            "Allow",
+            &["*"],
+            &["*".to_string()],
+            None,
+        )])],
+        "atlas:ReadItem",
+        &ctx,
+    );
+    let fragment = arn_filter(&everything, "n", "arn", "s").unwrap();
+    assert_eq!(fragment.text, "(true)");
+    let kinds = rows(&db, &fragment, "MATCH (n:Thing) WHERE {} RETURN n.kind");
+    assert_eq!(
+        kinds.len(),
+        world.universe.len() + 1,
+        "`true` alone keeps the ghost: a scope reaching everything is not a filter on the ARN, the re-check is"
+    );
+    for principal in &world.principals {
+        for action in &world.actions {
+            let kept = keep(&db, &harness::scope_of(principal, action));
+            assert!(kept.iter().all(|a| a.starts_with("arn:wami:")));
+        }
+    }
+}
+
+/// A sub-tenant's rows beside its parent's: `STARTS WITH` on
+/// `arn:wami:atlas:100:wami:` stops at the colon, so neither `100/7` nor
+/// `1007` is read by the parent, and the sub-tenant reads only its own.
+#[test]
+fn a_sub_tenant_row_is_reached_by_its_own_scope_only() {
+    let world = world::World::standard();
+    let db = graph(&world);
+    let sub = "arn:wami:atlas:100/7:wami:1:realm/main".to_string();
+    let lookalike = "arn:wami:atlas:1007:wami:1:realm/main".to_string();
+    harness::canonical(&[sub.clone(), lookalike.clone()]);
+    for arn in [&sub, &lookalike] {
+        db.session()
+            .execute_with_params(
+                "INSERT (:Thing {arn: $arn, kind: 'Realm'})",
+                HashMap::from([("arn".to_string(), text(arn))]),
+            )
+            .unwrap();
+    }
+    let docs = [world::document(vec![world::statement(
+        "Allow",
+        &["*"],
+        &[world::own("realm/**")],
+        None,
+    )])];
+    let scope_for = |tenant: &str| {
+        harness::compile(
+            &docs,
+            "atlas:ReadItem",
+            &MatchContext {
+                tenant: Some(tenant.into()),
+                ..MatchContext::default()
+            },
+        )
+    };
+    let parent = keep(&db, &scope_for("100"));
+    assert_eq!(
+        parent.len(),
+        18,
+        "`wami:*` widens to the tenant prefix: every row of north, none beyond the colon"
+    );
+    assert!(!parent.contains(&sub) && !parent.contains(&lookalike));
+    assert_eq!(keep(&db, &scope_for("100/7")), [sub]);
+    assert_eq!(keep(&db, &scope_for("1007")), [lookalike]);
+}
+
+/// A random predicate, three levels deep at most, over the world's ARNs.
+fn predicate() -> impl Strategy<Value = Predicate> {
+    let leaf = prop_oneof![
+        Just(Predicate::All),
+        Just(Predicate::None),
+        arbitrary::arn().prop_map(Predicate::Exact),
+        arbitrary::arn().prop_map(|a| Predicate::Prefix(a[..a.len() / 2].to_string())),
+        Just(Predicate::Prefix(String::new())),
+    ];
+    leaf.prop_recursive(3, 16, 3, |inner| {
+        prop_oneof![
+            proptest::collection::vec(inner.clone(), 1..=3).prop_map(Predicate::And),
+            proptest::collection::vec(inner.clone(), 1..=3).prop_map(Predicate::Or),
+            inner.prop_map(|p| Predicate::Not(Box::new(p))),
+        ]
+    })
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(32))]
+
+    /// Grafeo reads the fragment as `Predicate::keeps` does: `=`, `STARTS
+    /// WITH` (an empty prefix too), `AND`, `OR`, `NOT`, `true`, `false`,
+    /// under the parentheses the renderer writes.
+    #[test]
+    fn the_rendering_is_equal_to_keeps_in_grafeo(predicate in predicate()) {
+        let world = world::World::standard();
+        let db = graph(&world);
+        let fragment = render(&predicate, "n", "arn", "s").unwrap();
+        let mut kept = rows(&db, &fragment, "MATCH (n:Thing) WHERE {} RETURN n.arn");
+        kept.sort();
+        let mut expected: Vec<String> = world
+            .universe
+            .iter()
+            .filter(|row| predicate.keeps(row))
+            .cloned()
+            .collect();
+        expected.sort();
+        prop_assert_eq!(kept, expected, "{}", fragment.text);
     }
 }

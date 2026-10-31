@@ -309,3 +309,71 @@ proptest! {
         harness::check_case(&case, &universe, store);
     }
 }
+
+#[test]
+fn parameters_past_ten_stay_distinct_and_bound() {
+    let keys: Vec<String> = (0..12)
+        .map(|i| format!("arn:wami:atlas:${{tenant}}:wami:1:key/k{i}"))
+        .collect();
+    let refs: Vec<&str> = keys.iter().map(String::as_str).collect();
+    let scope = scope(&refs, &[]);
+    let f = arn_filter(&scope, "n", "arn", "s").unwrap();
+    assert_eq!(f.params.len(), 12);
+    let mut names: Vec<&str> = f.params.iter().map(|(n, _)| n.as_str()).collect();
+    names.sort_unstable();
+    names.dedup();
+    assert_eq!(names.len(), 12, "s0 … s11, no collision");
+    assert!(f.text.contains("$s11") && !f.text.contains("$s12"));
+    let universe: Vec<String> = (0..14)
+        .map(|i| format!("arn:wami:atlas:100:wami:1:key/k{i}"))
+        .collect();
+    let kept = store(&scope, &universe);
+    assert_eq!(kept.len(), 12);
+    assert!(!kept
+        .iter()
+        .any(|k| k.ends_with("k12") || k.ends_with("k13")));
+}
+
+#[test]
+fn everything_but_one_renders_true_and_a_not() {
+    let f = arn_filter(
+        &scope(&["*"], &["arn:wami:atlas:${tenant}:wami:1:key/k1"]),
+        "n",
+        "arn",
+        "s",
+    )
+    .unwrap();
+    assert_eq!(f.text, "((true) AND (NOT (n.arn = $s0)))");
+    let universe = world::World::standard().universe;
+    let kept = store(
+        &scope(&["*"], &["arn:wami:atlas:${tenant}:wami:1:key/k1"]),
+        &universe,
+    );
+    assert_eq!(kept.len(), universe.len() - 1);
+    assert!(!kept.contains(&"arn:wami:atlas:100:wami:1:key/k1".to_string()));
+}
+
+#[test]
+fn a_sub_tenants_prefix_stops_at_the_colon() {
+    let ctx = MatchContext {
+        tenant: Some("100/7".into()),
+        ..MatchContext::default()
+    };
+    let docs = [world::document(vec![world::statement(
+        "Allow",
+        &["*"],
+        &[world::own("realm/**")],
+        None,
+    )])];
+    let sub = harness::compile(&docs, "atlas:ReadItem", &ctx);
+    let f = arn_filter(&sub, "n", "arn", "s").unwrap();
+    assert_eq!(f.params[0].1, "arn:wami:atlas:100/7:wami:");
+    let universe = vec![
+        "arn:wami:atlas:100:wami:1:realm/main".to_string(),
+        "arn:wami:atlas:100/7:wami:1:realm/main".to_string(),
+        "arn:wami:atlas:1007:wami:1:realm/main".to_string(),
+    ];
+    assert_eq!(store(&sub, &universe), [universe[1].clone()]);
+    let parent = scope(&[&world::own("realm/**")], &[]);
+    assert_eq!(store(&parent, &universe), [universe[0].clone()]);
+}

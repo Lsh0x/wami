@@ -100,6 +100,8 @@ pub fn motif() -> impl Strategy<Value = String> {
             3 => Just("/**"),
             1 => Just("/**/one"),
             1 => Just("/*"),
+            1 => Just("**"),
+            1 => Just("/**/"),
         ],
     )
         .prop_map(|(tenant, instance, segments, tail)| {
@@ -117,17 +119,25 @@ pub fn motif() -> impl Strategy<Value = String> {
     ]
 }
 
-/// A statement: an effect, one to three action patterns, one to three
-/// motifs, and sometimes a condition on `aws:username`.
+/// A statement: an effect in any case, up to three action patterns, up to
+/// three motifs (none: a statement reaching nothing), and sometimes a
+/// condition on `aws:username` — or an empty one, that always holds.
 pub fn statement() -> impl Strategy<Value = PolicyStatement> {
     (
-        prop_oneof![3 => Just("Allow"), 2 => Just("Deny"), 1 => Just("allow")],
-        proptest::collection::vec(proptest::sample::select(ACTION_PATTERNS), 1..=3),
-        proptest::collection::vec(motif(), 1..=3),
         prop_oneof![
-            5 => Just(None),
-            1 => proptest::sample::select(&["owner", "editor", "auditor", "nobody"][..])
+            3 => Just("Allow"),
+            2 => Just("Deny"),
+            1 => Just("allow"),
+            1 => Just("ALLOW"),
+            1 => Just("DENY"),
+        ],
+        proptest::collection::vec(proptest::sample::select(ACTION_PATTERNS), 0..=3),
+        proptest::collection::vec(motif(), 0..=3),
+        prop_oneof![
+            10 => Just(None),
+            2 => proptest::sample::select(&["owner", "editor", "auditor", "nobody"][..])
                 .prop_map(|name| Some(world::username_is(name))),
+            1 => Just(Some(serde_json::json!({}))),
         ],
     )
         .prop_map(|(effect, actions, resources, condition)| {

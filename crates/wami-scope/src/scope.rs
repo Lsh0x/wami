@@ -135,6 +135,11 @@ impl Scope {
     /// Whether `arn` is in the scope: some allow pattern matches it and no
     /// deny pattern does — the evaluator's verdict when nothing is residual,
     /// a superset of it otherwise. The re-check a store's rows go through.
+    ///
+    /// `arn` is the row's text, judged as it is: the evaluator judges the
+    /// ARN as `WamiArn` displays it once parsed, so the two agree on rows
+    /// written that way (`…:100:…`, never `…:0100:…`) — what a store that
+    /// writes ARNs through `WamiArn` holds, and the harness checks.
     #[must_use]
     pub fn matches(&self, arn: &str) -> bool {
         self.allow.iter().any(|p| p.matches(arn)) && !self.deny.iter().any(|p| p.matches(arn))
