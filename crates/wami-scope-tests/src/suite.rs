@@ -15,7 +15,7 @@
 //! the oracle before anything else, so a world that drifted from its design
 //! fails here, not in a translator.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use wami_core::arn::WamiArn;
 use wami_scope::{Narrowing, Pattern, Scope};
@@ -607,7 +607,7 @@ pub async fn existence_control(world: &World, store: &dyn Store) {
 pub async fn check_random(
     world: &World,
     store: &dyn Store,
-    allowed: &HashMap<&'static str, Allowed>,
+    allowed: &BTreeMap<&'static str, Allowed>,
     principal: &'static str,
     shape: &Shape,
     fenced: bool,
@@ -626,8 +626,8 @@ pub async fn check_random(
 
 /// The oracle's answers for every principal, computed once for a run of
 /// random shapes.
-pub async fn allowed_all(world: &World) -> HashMap<&'static str, Allowed> {
-    let mut all = HashMap::new();
+pub async fn allowed_all(world: &World) -> BTreeMap<&'static str, Allowed> {
+    let mut all = BTreeMap::new();
     for principal in &world.principals {
         all.insert(principal.name, Allowed::of(world, principal).await);
     }

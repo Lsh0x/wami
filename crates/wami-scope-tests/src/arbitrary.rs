@@ -285,9 +285,11 @@ pub fn context(case: &Case) -> WamiContext {
 /// traversal along one or two of the world's edges, as children, existence,
 /// a count, an ordering.
 pub fn shape(world: &World) -> impl Strategy<Value = Shape> {
+    /// An edge between two kinds, as the world draws it.
+    type Edge = (Kind, &'static str, Kind);
     let kinds: Vec<Kind> = Kind::ALL.to_vec();
     let edges = world.edge_kinds();
-    let two: Vec<((Kind, &'static str, Kind), (Kind, &'static str, Kind))> = edges
+    let two: Vec<(Edge, Edge)> = edges
         .iter()
         .flat_map(|a| {
             edges
