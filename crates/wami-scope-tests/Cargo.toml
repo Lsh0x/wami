@@ -1,6 +1,6 @@
 [package]
 name = "wami-scope-tests"
-version = "0.0.0"
+version = "0.0.1"
 edition = "2021"
 license = "MIT"
 description = "The world, the oracle and the suite that hold wami-scope and its translators to the invariant, run on real stores (Grafeo). Tests only, never published."

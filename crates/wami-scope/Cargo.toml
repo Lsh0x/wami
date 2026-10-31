@@ -15,7 +15,7 @@ authors = ["LSH <github@lsh.tech>"]
 
 [dependencies]
 thiserror = "2.0"
-wami-core = { path = "../wami-core", version = "0.19.0" }
+wami-core = { path = "../wami-core", version = "0.20.0" }
 
 # The world, the oracle and the suite that hold every translator to the
 # invariant are in `wami-scope-tests`, not here: this crate is the scope.
