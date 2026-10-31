@@ -4,10 +4,10 @@
 
 use proptest::prelude::*;
 use wami_core::arn::matching::MatchContext;
-use wami_scope::{NotCompilable, Pattern, Scope};
+use wami_scope::{Narrowing, NotCompilable, Pattern, Scope};
 use wami_scope_tests::port::{Shape, Store};
 use wami_scope_tests::reference::Reference;
-use wami_scope_tests::world::{arn, Kind, World, ACME, LABS, MARKET, PARTNER};
+use wami_scope_tests::world::{arn, of, Kind, World, ACME, DEEP, LABS, MARKET, PARTNER};
 use wami_scope_tests::{arbitrary, oracle, suite};
 
 /// The simplest store: it keeps what the scope matches.
@@ -348,6 +348,123 @@ async fn a_row_written_otherwise_is_outside_the_contract() {
         legacy,
         "a legacy cloud ARN gains its region"
     );
+}
+
+#[tokio::test]
+async fn a_moved_directory_leaves_the_old_share_behind_until_it_is_rewritten() {
+    let mut world = World::standard().await;
+    let session = world.principal("dave@conv-c1-reader").clone();
+    let old_share = oracle::scope_of(&world, &session, "s3:ListBucket").await;
+    // the move: conv/c1 becomes conv/c1-moved, in every ARN and edge
+    let from = s3(ACME, "bucket/atlas/conv/c1");
+    let to = s3(ACME, "bucket/atlas/conv/c1-moved");
+    let moved = |a: &str| {
+        if a == from {
+            to.clone()
+        } else if let Some(rest) = a.strip_prefix(&format!("{from}/")) {
+            format!("{to}/{rest}")
+        } else {
+            a.to_string()
+        }
+    };
+    for r in &mut world.resources {
+        r.arn = moved(&r.arn);
+    }
+    for e in &mut world.edges {
+        e.from = moved(&e.from);
+        e.to = moved(&e.to);
+    }
+    let mut reference = Reference::default();
+    reference.load(&world);
+    let shape = Shape::List {
+        kind: Kind::Conversation,
+    };
+    let rows = reference.run(
+        &shape,
+        &Narrowing::new().bind("n", old_share.clone()).unwrap(),
+    );
+    assert!(
+        rows.is_empty(),
+        "the share names conv/c1: nothing under the new name is reached, and c1-moved is not c1/: {rows:?}"
+    );
+    assert!(!old_share.matches(&format!("{to}/thread/t1")));
+    // the share rewritten by acme for the new name
+    let rewritten = Scope::compile(
+        &[wami_core::types::PolicyDocument {
+            version: "2012-10-17".into(),
+            statement: vec![wami_core::types::PolicyStatement {
+                sid: None,
+                effect: "Allow".into(),
+                action: vec!["s3:ListBucket".into()],
+                resource: vec![
+                    of("s3", ACME, "bucket/atlas/conv/c1-moved"),
+                    of("s3", ACME, "bucket/atlas/conv/c1-moved/**"),
+                ],
+                condition: None,
+            }],
+        }],
+        "s3:ListBucket",
+        &MatchContext::default(),
+    )
+    .unwrap();
+    let rows = reference.run(&shape, &Narrowing::new().bind("n", rewritten).unwrap());
+    assert_eq!(rows.len(), 1);
+    assert!(rows[0].arn("n").unwrap().ends_with("conv/c1-moved"));
+}
+
+#[tokio::test]
+async fn a_sub_sub_tenant_is_reached_by_nobody_and_the_fence_alone_would_not_stop_a_grant() {
+    let world = World::standard().await;
+    let deep = s3(DEEP, "bucket/deep-data/run-9.parquet");
+    for principal in &world.principals {
+        for action in &world.actions {
+            assert!(
+                !oracle::allows(&world, principal, action, &deep).await,
+                "{} {action} reaches 100/7/3",
+                principal.name
+            );
+        }
+    }
+    let alice = world.principal("alice");
+    let read = oracle::scope_of(&world, alice, "s3:GetObject").await;
+    assert!(
+        !read.matches(&deep),
+        "the descendants motif stops one level down"
+    );
+    let fenced = read.fenced(&World::fence(alice));
+    assert!(
+        fenced.fence.iter().any(|p| p.matches(&deep)),
+        "the fence of 100 holds every descendant: a grant naming 100/7/3 would pass it"
+    );
+    assert!(!fenced.matches(&deep), "but no grant names it");
+    let frank = oracle::scope_of(&world, world.principal("frank"), "s3:GetObject").await;
+    assert!(!frank.matches(&deep), "a literal 100/7 is not 100/7/3");
+}
+
+#[test]
+fn random_shapes_hold_the_invariant_on_the_reference() {
+    use proptest::test_runner::{Config, TestRunner};
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap();
+    let world = rt.block_on(World::standard());
+    let allowed = rt.block_on(suite::allowed_all(&world));
+    let mut reference = Reference::default();
+    reference.load(&world);
+    let mut runner = TestRunner::new(Config::with_cases(128));
+    let strategy = (
+        arbitrary::shape(&world),
+        arbitrary::principal(&world),
+        proptest::bool::ANY,
+    );
+    runner
+        .run(&strategy, |(shape, principal, fenced)| {
+            rt.block_on(suite::check_random(
+                &world, &reference, &allowed, principal, &shape, fenced,
+            ));
+            Ok(())
+        })
+        .unwrap();
 }
 
 proptest! {

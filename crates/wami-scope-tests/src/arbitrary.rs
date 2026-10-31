@@ -8,7 +8,8 @@ use wami_core::arn::{ScopedName, Service, TenantPath, WamiArn};
 use wami_core::context::WamiContext;
 use wami_core::types::{PolicyDocument, PolicyStatement};
 
-use crate::world::{self, ACME, INSTANCE, LABS, MARKET, PARTNER};
+use crate::port::Shape;
+use crate::world::{self, Kind, World, ACME, INSTANCE, LABS, MARKET, PARTNER};
 
 /// One case: a caller, its policies, the action asked.
 #[derive(Debug, Clone)]
@@ -278,4 +279,38 @@ pub fn context(case: &Case) -> WamiContext {
         .is_root(false)
         .build()
         .expect("a context")
+}
+
+/// A random query shape over `world`: a list or a lookup of any kind, or a
+/// traversal along one or two of the world's edges, as children, existence,
+/// a count, an ordering.
+pub fn shape(world: &World) -> impl Strategy<Value = Shape> {
+    let kinds: Vec<Kind> = Kind::ALL.to_vec();
+    let edges = world.edge_kinds();
+    let two: Vec<((Kind, &'static str, Kind), (Kind, &'static str, Kind))> = edges
+        .iter()
+        .flat_map(|a| {
+            edges
+                .iter()
+                .filter(move |b| b.0 == a.2)
+                .map(move |b| (*a, *b))
+        })
+        .collect();
+    let one = proptest::sample::select(edges);
+    let paths = proptest::sample::select(two);
+    prop_oneof![
+        2 => proptest::sample::select(kinds.clone()).prop_map(|kind| Shape::List { kind }),
+        1 => (proptest::sample::select(kinds), proptest::sample::select(&["alerts", "report", "c1", "r1", "t1"][..]))
+            .prop_map(|(kind, suffix)| Shape::Lookup { kind, suffix: suffix.to_string() }),
+        3 => one.clone().prop_map(|(parent, edge, child)| Shape::Children { parent, edge, child }),
+        2 => one.clone().prop_map(|(kind, edge, target)| Shape::Exists { kind, edge, target }),
+        2 => one.clone().prop_map(|(parent, edge, child)| Shape::Count { parent, edge, child }),
+        1 => one.prop_map(|(parent, edge, child)| Shape::OrderBy { parent, edge, child }),
+        2 => paths.prop_map(|((first, edge1, middle), (_, edge2, last))| Shape::Path { first, edge1, middle, edge2, last }),
+    ]
+}
+
+/// A principal of the world, by name.
+pub fn principal(world: &World) -> impl Strategy<Value = &'static str> {
+    proptest::sample::select(world.principals.iter().map(|p| p.name).collect::<Vec<_>>())
 }

@@ -227,6 +227,7 @@ pub async fn check(
             "{who}: the admitted and judged rows against the oracle"
         );
     }
+    let tight_all = narrowing.bindings().iter().all(|b| tight(&b.scope));
     if matches!(shape, Shape::Count { .. }) {
         for row in &kept {
             let n = row.count.expect("a count");
@@ -236,15 +237,16 @@ pub async fn check(
                 .and_then(|e| e.count)
                 .unwrap_or(0);
             assert!(n >= m, "{who}: {row:?} counts less than the oracle's {m}");
-            if narrowing.is_exact() {
+            // A count cannot be re-checked: only a tight scope makes it the
+            // oracle's; a loose one may count what a prefix over-includes.
+            if tight_all {
                 assert_eq!(n, m, "{who}: {row:?} counts what the oracle hides");
             }
         }
     }
-    if matches!(shape, Shape::OrderBy { .. }) && narrowing.is_exact() {
+    if matches!(shape, Shape::OrderBy { .. }) && tight_all {
         assert_eq!(kept, expected, "{who}: the order, with the hidden rows out");
     }
-    let tight_all = narrowing.bindings().iter().all(|b| tight(&b.scope));
     if tight_all {
         assert_eq!(
             kept_set,
@@ -452,6 +454,184 @@ pub async fn detector(world: &World, store: &dyn Store) {
         counted.iter().all(|row| row.count == Some(1)),
         "with the child bound the count is the oracle's: {counted:?}"
     );
+    order_by_detector(world, store);
+    existence_control(world, store).await;
+}
+
+/// A scope compiled from one Allow and one Deny for a caller of acme, for
+/// the controls below.
+fn hand_scope(action: &str, allow: &[String], deny: &[String]) -> Scope {
+    use wami_core::types::{PolicyDocument, PolicyStatement};
+    let statement = |effect: &str, resources: &[String]| PolicyStatement {
+        sid: None,
+        effect: effect.into(),
+        action: vec!["s3:*".into()],
+        resource: resources.to_vec(),
+        condition: None,
+    };
+    let document = PolicyDocument {
+        version: "2012-10-17".into(),
+        statement: vec![statement("Allow", allow), statement("Deny", deny)],
+    };
+    Scope::compile(
+        &[document],
+        action,
+        &wami_core::arn::matching::MatchContext {
+            tenant: Some(ACME.into()),
+            ..Default::default()
+        },
+    )
+    .expect("a scope")
+}
+
+/// The second negative control: an `ORDER BY` on a name the query does not
+/// return. A caller lists the conversations of atlas ordered by their last
+/// thread, and may not list `c2`'s thread: with the child bound, `c2` has no
+/// visible thread and sorts first; with it unbound, its hidden thread
+/// orders it last. The order itself leaks the hidden row, and the suite
+/// sees the difference.
+///
+/// # Panics
+///
+/// When the two orders are equal: the store did not order by the child, or
+/// the suite could not tell.
+pub fn order_by_detector(world: &World, store: &dyn Store) {
+    use crate::world::of;
+    let list = hand_scope(
+        "s3:ListBucket",
+        &[
+            of("s3", ACME, "bucket/atlas/conv/*"),
+            of("s3", ACME, "bucket/atlas/conv/*/**"),
+        ],
+        &[
+            of("s3", ACME, "bucket/atlas/conv/c2/thread/t1"),
+            of("s3", ACME, "bucket/atlas/conv/c2/thread/t1/**"),
+        ],
+    );
+    let shape = Shape::OrderBy {
+        parent: Kind::Conversation,
+        edge: "HOLDS",
+        child: Kind::Thread,
+    };
+    let bound = Narrowing::new()
+        .bind("p", list.clone())
+        .unwrap()
+        .test("c", list.clone())
+        .unwrap();
+    let unbound = Narrowing::new().bind("p", list).unwrap();
+    let order = |rows: Vec<Row>| -> Vec<String> {
+        rows.into_iter()
+            .map(|r| r.arn("p").unwrap().rsplit('/').next().unwrap().to_string())
+            .collect()
+    };
+    let with = order(store.run(&shape, &bound));
+    let without = order(store.run(&shape, &unbound));
+    let mut reference = Reference::default();
+    reference.load(world);
+    assert_eq!(
+        with,
+        order(reference.run(&shape, &bound)),
+        "the store's order with the child bound"
+    );
+    assert_eq!(
+        with.first().map(String::as_str),
+        Some("c2"),
+        "c2 has no visible thread: first — {with:?}"
+    );
+    assert_eq!(
+        without.last().map(String::as_str),
+        Some("c2"),
+        "unbound, c2's hidden thread orders it last — {without:?}"
+    );
+    assert_ne!(
+        with, without,
+        "the detector: the order leaks the hidden thread"
+    );
+}
+
+/// The trade-off `Narrowing::test` documents: an `EXISTS` over a name whose
+/// scope is loose keeps a row for a neighbour the oracle hides, and nothing
+/// comes back to re-check. carol reads messages under a wildcard deny (left
+/// to the re-check): "threads with a message she may read" keeps `t2`,
+/// whose only message she may not read. With a tight scope (the partner's
+/// session) the same shape is exact.
+///
+/// # Panics
+///
+/// When the loose case does not over-include, or the tight one does.
+pub async fn existence_control(world: &World, store: &dyn Store) {
+    let shape = Shape::Exists {
+        kind: Kind::Thread,
+        edge: "HOLDS",
+        target: Kind::Message,
+    };
+    let carol = world.principal("carol");
+    let allowed = Allowed::of(world, carol).await;
+    let narrowing = narrowing_of(world, carol, &shape, false).await;
+    assert!(
+        !tight(&narrowing.bindings()[1].scope),
+        "carol's message scope is loose (a wildcard deny, a condition)"
+    );
+    let kept = store.run(&shape, &narrowing);
+    let t2 = kept
+        .iter()
+        .any(|r| r.arn("p").is_some_and(|p| p.ends_with("conv/c1/thread/t2")));
+    assert!(
+        t2,
+        "the loose EXISTS keeps t2, whose message carol may not read: {kept:?}"
+    );
+    assert!(
+        !allowed.allows(
+            Kind::Message.read_action(),
+            &crate::world::arn("s3", ACME, "bucket/atlas/conv/c1/thread/t2/msg/1")
+        ),
+        "and the oracle hides that message"
+    );
+    let session = world.principal("dave@conv-c1-reader");
+    let narrowing = narrowing_of(world, session, &shape, false).await;
+    assert!(narrowing.bindings().iter().all(|b| tight(&b.scope)));
+    let kept = store.run(&shape, &narrowing);
+    assert!(
+        kept.iter()
+            .all(|r| r.arn("p").is_some_and(|p| p.contains("conv/c1/thread/t1"))),
+        "a tight EXISTS is exact: {kept:?}"
+    );
+}
+
+/// [`check`] on a random shape for a random principal, bare or fenced: the
+/// runner the property tests of every store call.
+///
+/// # Panics
+///
+/// As [`check`].
+pub async fn check_random(
+    world: &World,
+    store: &dyn Store,
+    allowed: &HashMap<&'static str, Allowed>,
+    principal: &'static str,
+    shape: &Shape,
+    fenced: bool,
+) {
+    let principal = world.principal(principal);
+    check(
+        world,
+        store,
+        &allowed[principal.name],
+        principal,
+        shape,
+        fenced,
+    )
+    .await;
+}
+
+/// The oracle's answers for every principal, computed once for a run of
+/// random shapes.
+pub async fn allowed_all(world: &World) -> HashMap<&'static str, Allowed> {
+    let mut all = HashMap::new();
+    for principal in &world.principals {
+        all.insert(principal.name, Allowed::of(world, principal).await);
+    }
+    all
 }
 
 /// The table: whether `authorize` must allow `principal` `action` on

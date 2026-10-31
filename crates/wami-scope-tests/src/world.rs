@@ -44,6 +44,10 @@ pub const MARKET: &str = "1";
 pub const ACME: &str = "100";
 /// A sub-tenant of the organisation.
 pub const LABS: &str = "100/7";
+/// A sub-tenant of the sub-tenant: no policy names it, alice's `${tenant}/*`
+/// stops one level down, frank's `${tenant}` is literal — nobody reaches it,
+/// and the fence of 100 alone would let a grant through.
+pub const DEEP: &str = "100/7/3";
 /// A partner organisation.
 pub const PARTNER: &str = "200";
 /// A tenant with no relation to acme.
@@ -361,6 +365,9 @@ fn resources() -> Vec<Resource> {
         resource(Bucket, LABS, "bucket/labs-data"),
         resource(Object, LABS, "bucket/labs-data/run-1.parquet"),
         resource(Function, LABS, "function/train"),
+        // acme-labs' own sub-tenant
+        resource(Bucket, DEEP, "bucket/deep-data"),
+        resource(Object, DEEP, "bucket/deep-data/run-9.parquet"),
         // partner: same names as acme's
         resource(Bucket, PARTNER, "bucket/partner-drop"),
         resource(Object, PARTNER, "bucket/partner-drop/inbox.csv"),
@@ -546,6 +553,10 @@ fn edges() -> Vec<Edge> {
         holds(
             s3(LABS, "bucket/labs-data"),
             s3(LABS, "bucket/labs-data/run-1.parquet"),
+        ),
+        holds(
+            s3(DEEP, "bucket/deep-data"),
+            s3(DEEP, "bucket/deep-data/run-9.parquet"),
         ),
         holds(
             s3(PARTNER, "bucket/partner-drop"),
@@ -1087,6 +1098,26 @@ impl World {
             .filter(|e| e.from == from && e.label == label)
             .map(|e| self.resource(&e.to))
             .collect()
+    }
+
+    /// The distinct `(kind, edge, kind)` triples of the world's edges: the
+    /// traversals a random shape may draw.
+    #[must_use]
+    pub fn edge_kinds(&self) -> Vec<(Kind, &'static str, Kind)> {
+        let mut triples: Vec<(Kind, &'static str, Kind)> = self
+            .edges
+            .iter()
+            .map(|e| {
+                (
+                    self.resource(&e.from).kind,
+                    e.label,
+                    self.resource(&e.to).kind,
+                )
+            })
+            .collect();
+        triples.sort_by_key(|(a, l, b)| (a.label(), *l, b.label()));
+        triples.dedup();
+        triples
     }
 
     /// The tenants a service puts in `principal`'s fence: its tenant at time

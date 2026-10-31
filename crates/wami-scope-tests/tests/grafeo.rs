@@ -300,6 +300,32 @@ async fn grafeo_holds_the_invariant_on_every_principal_and_shape() {
     suite::run_all(&world, &store).await;
 }
 
+#[test]
+fn random_shapes_hold_the_invariant_in_grafeo() {
+    use proptest::test_runner::{Config, TestRunner};
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap();
+    let world = rt.block_on(World::standard());
+    let allowed = rt.block_on(suite::allowed_all(&world));
+    let mut store = Grafeo::new();
+    store.load(&world);
+    let mut runner = TestRunner::new(Config::with_cases(64));
+    let strategy = (
+        arbitrary::shape(&world),
+        arbitrary::principal(&world),
+        proptest::bool::ANY,
+    );
+    runner
+        .run(&strategy, |(shape, principal, fenced)| {
+            rt.block_on(suite::check_random(
+                &world, &store, &allowed, principal, &shape, fenced,
+            ));
+            Ok(())
+        })
+        .unwrap();
+}
+
 #[tokio::test]
 async fn a_hostile_literal_travels_as_a_parameter() {
     let world = World::standard().await;
