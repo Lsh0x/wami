@@ -28,13 +28,13 @@ pub async fn allows(world: &World, principal: &Principal, action: &str, arn: &st
     let decision = AuthorizationService::new(world.store())
         .authorize(world.context(principal), action, &resource)
         .await;
-    match decision {
-        Ok(decision) => decision.is_allowed(),
-        Err(_) => panic!(
+    let Ok(decision) = decision else {
+        panic!(
             "{}: {action}: the evaluator refused to decide (an unreadable document, a context naming no principal): the world is broken",
             principal.name
-        ),
-    }
+        )
+    };
+    decision.is_allowed()
 }
 
 /// The rows of the universe `authorize` allows `principal` `action` on.
