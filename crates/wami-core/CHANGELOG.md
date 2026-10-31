@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/Lsh0x/wami/compare/wami-core-v0.19.0...wami-core-v0.20.0) (2026-10-31)
+
+
+### Features
+
+* **scope:** wami-scope, wami-scope-gql, the suite on a real store and Grafeo ([#152](https://github.com/Lsh0x/wami/issues/152)) ([2909ca9](https://github.com/Lsh0x/wami/commit/2909ca987570e1e4c982e69b98d152b93c48e9fe))
+
 ## [0.19.0](https://github.com/Lsh0x/wami/compare/wami-core-v0.18.0...wami-core-v0.19.0) (2026-10-22)
 
 
