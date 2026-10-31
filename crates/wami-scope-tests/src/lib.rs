@@ -7,7 +7,7 @@
 //! tenants. [`oracle`] is `authorize` on that store, the only definition of
 //! "allowed", and the scope compiled from exactly the documents it reads.
 //! [`port`] is what a store implements: load the world, run a [`port::Shape`]
-//! under a [`wami_scope::Narrowing`]. [`reference`](crate::reference) gives every shape its
+//! under a [`wami_scope::Narrowing`]. [`reference`](mod@reference) gives every shape its
 //! meaning in memory. [`suite`] holds a store to the invariant on every
 //! principal, every shape, bare and fenced, and proves it would see a leak.
 //! [`arbitrary`] draws random policies and ARNs for the property tests.

@@ -1885,31 +1885,30 @@ dependencies = [
 name = "wami-scope"
 version = "0.1.0"
 dependencies = [
- "proptest",
  "serde_json",
  "thiserror",
- "wami",
  "wami-core",
- "wami-scope",
 ]
 
 [[package]]
 name = "wami-scope-gql"
 version = "0.1.0"
 dependencies = [
- "proptest",
  "thiserror",
  "wami-core",
  "wami-scope",
 ]
 
 [[package]]
-name = "wami-scope-grafeo-tests"
+name = "wami-scope-tests"
 version = "0.0.0"
 dependencies = [
  "grafeo",
  "grafeo-common",
  "proptest",
+ "serde_json",
+ "tokio",
+ "wami",
  "wami-core",
  "wami-scope",
  "wami-scope-gql",

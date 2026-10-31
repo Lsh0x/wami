@@ -7,11 +7,12 @@ members = [
     "crates/wami-macros",
     "crates/wami-scope",
     "crates/wami-scope-gql",
-    "crates/wami-scope-grafeo-tests",
+    "crates/wami-scope-tests",
 ]
-# The Grafeo tests need a toolchain newer than wami's MSRV (grafeo 0.6:
-# 1.99): `cargo test` at the root leaves them out, CI runs them on stable
-# (`cargo test -p wami-scope-grafeo-tests`).
+# wami-scope-tests holds the scope's world, oracle and suite, and runs them
+# on real stores; Grafeo 0.6 needs a toolchain newer than wami's MSRV (1.99),
+# so `cargo test` at the root leaves it out and CI runs it on stable
+# (`cargo test -p wami-scope-tests`).
 default-members = [
     "crates/wami-core",
     "crates/wami-condition",

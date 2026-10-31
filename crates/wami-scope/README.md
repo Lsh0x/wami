@@ -33,7 +33,7 @@ it down would exclude a row the evaluator allows when its condition is false),
 and `residual` says so. A pattern a store cannot express exactly widens to its
 literal prefix. Every row a store returns still goes through `decide`.
 
-The `harness` feature ships the test that holds the lowering to it — a world
-of tenants, principals and resources, the evaluator as oracle, random
-policies, `check_translator` — and a translator's own tests prove their
-rendering equal to `Predicate::keeps`.
+The tests that hold the lowering to it — a world of tenants, principals and
+resources, the evaluator as oracle, random policies, a suite every store
+runs — are in `wami-scope-tests`; a translator's own tests prove their
+rendering equal to `Predicate::keeps` there too.

@@ -19,6 +19,6 @@ crate renders the predicate: `=`, `STARTS WITH`, `AND`, `OR`, `NOT`, `true`,
 `false`, every node parenthesised, every value a parameter. Its tests prove
 the rendering equal to `Predicate::keeps`.
 
-No database dependency. The tests against a real graph store (tenants,
-principals, projects, the wami-scope harness) are in
-`wami-scope-grafeo-tests`, which needs a newer toolchain than wami's MSRV.
+No database dependency. Its tests — the fragment as a store over the world,
+and against a real graph store (Grafeo) — are in `wami-scope-tests`, which
+needs a newer toolchain than wami's MSRV.
