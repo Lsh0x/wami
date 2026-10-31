@@ -35,7 +35,7 @@
 
 #![forbid(unsafe_code)]
 
-use wami_scope::{Predicate, Scope};
+use wami_scope::{Narrowing, Predicate, Scope};
 
 /// A `WHERE` fragment and the parameters it names, to splice into a query.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -151,6 +151,36 @@ pub fn render(
     })
 }
 
+/// The fragment of a whole query: every binding of `narrowing` rendered on
+/// `<name>.<property>`, and-ed, its parameters named
+/// `<param_prefix>_<name>_<n>` so two bindings never share one. A narrowing
+/// with no binding keeps every row (`(true)`): the service bound nothing,
+/// and [`Narrowing::admit`] will refuse what it returns.
+///
+/// # Errors
+///
+/// As [`render`], for each binding's name and the prefix.
+pub fn narrowing_filter(
+    narrowing: &Narrowing,
+    property: &str,
+    param_prefix: &str,
+) -> Result<Fragment, FragmentError> {
+    let mut texts = Vec::new();
+    let mut params = Vec::new();
+    for (name, predicate) in narrowing.lowered() {
+        let prefix = format!("{param_prefix}_{name}_");
+        let fragment = render(&predicate, name, property, &prefix)?;
+        texts.push(fragment.text);
+        params.extend(fragment.params);
+    }
+    let text = if texts.is_empty() {
+        "(true)".to_string()
+    } else {
+        format!("({})", texts.join(" AND "))
+    };
+    Ok(Fragment { text, params })
+}
+
 /// The fragment keeping what `scope` may reach: [`Scope::lower`] rendered.
 ///
 /// # Errors
@@ -207,5 +237,57 @@ mod tests {
             render(&Predicate::All, "n", "arn", "s").unwrap().text,
             "(true)"
         );
+    }
+
+    #[test]
+    fn a_narrowing_renders_one_fragment_per_binding_with_its_own_parameters() {
+        let n = Narrowing::new()
+            .bind("b", scope_on("arn:wami:s3:100:wami:1:bucket/atlas"))
+            .unwrap()
+            .bind(
+                "o",
+                scope_on("arn:wami:s3:100:wami:1:bucket/atlas/conv/c1/**"),
+            )
+            .unwrap();
+        let f = narrowing_filter(&n, "arn", "s").unwrap();
+        assert_eq!(
+            f.text,
+            "((b.arn = $s_b_0) AND ((o.arn STARTS WITH $s_o_0) OR (o.arn = $s_o_1)))"
+        );
+        let names: Vec<&str> = f.params.iter().map(|(n, _)| n.as_str()).collect();
+        assert_eq!(names, ["s_b_0", "s_o_0", "s_o_1"]);
+        assert_eq!(
+            narrowing_filter(&Narrowing::new(), "arn", "s")
+                .unwrap()
+                .text,
+            "(true)"
+        );
+        assert!(matches!(
+            narrowing_filter(
+                &Narrowing::new().bind("b.x", scope_on("*")).unwrap(),
+                "arn",
+                "s"
+            ),
+            Err(FragmentError::NotAnIdentifier {
+                what: "variable",
+                ..
+            })
+        ));
+    }
+
+    fn scope_on(resource: &str) -> Scope {
+        use wami_core::arn::matching::MatchContext;
+        use wami_core::types::{PolicyDocument, PolicyStatement};
+        let document = PolicyDocument {
+            version: "2012-10-17".into(),
+            statement: vec![PolicyStatement {
+                sid: None,
+                effect: "Allow".into(),
+                action: vec!["s3:*".into()],
+                resource: vec![resource.into()],
+                condition: None,
+            }],
+        };
+        Scope::compile(&[document], "s3:GetObject", &MatchContext::default()).unwrap()
     }
 }
