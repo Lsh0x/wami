@@ -1,4 +1,5 @@
-//! The scope: policies folded into allow and deny patterns for one action.
+//! The scope: policies folded into allow and deny patterns for one action,
+//! and the fence a service puts around a request.
 
 use wami_core::arn::matching::{glob_match, resolve_variables, MatchContext};
 use wami_core::types::{PolicyDocument, PolicyStatement};
@@ -23,6 +24,13 @@ pub struct Scope {
     /// a condition, whose truth depends on the request): the scope
     /// over-includes, and the re-check does real work.
     pub residual: bool,
+    /// The action the scope was compiled for (`s3:GetObject`): its service is
+    /// the service axis of [`Scope::fenced`].
+    pub action: String,
+    /// The fence, when the scope is fenced ([`Scope::fenced`]): exact patterns
+    /// a row must also match — one tenant root and its descendants each, in
+    /// the action's service. Empty: no fence.
+    pub fence: Vec<Pattern>,
 }
 
 /// Why policies could not be compiled.
@@ -92,7 +100,10 @@ impl Scope {
         action: &str,
         ctx: &MatchContext,
     ) -> Result<Self, ScopeError> {
-        let mut scope = Self::default();
+        let mut scope = Self {
+            action: action.to_string(),
+            ..Self::default()
+        };
         for (document, policy) in policies.iter().enumerate() {
             for (index, statement) in policy.statement.iter().enumerate() {
                 let effect = effect_of(statement).ok_or_else(|| ScopeError::UnreadableEffect {
@@ -132,9 +143,75 @@ impl Scope {
         );
     }
 
-    /// Whether `arn` is in the scope: some allow pattern matches it and no
-    /// deny pattern does — the evaluator's verdict when nothing is residual,
-    /// a superset of it otherwise. The re-check a store's rows go through.
+    /// The service of the action the scope was compiled for: `s3` for
+    /// `s3:GetObject`, the whole action when it names no service.
+    #[must_use]
+    pub fn service(&self) -> &str {
+        self.action.split(':').next().unwrap_or_default()
+    }
+
+    /// The scope fenced to `tenants` — each a tenant root (`100`, `100/7`):
+    /// a row must be of the action's service and of one of those tenants or
+    /// its descendants, whatever the policies name. The fence is what the
+    /// services' `decide` already refuses before any document (an ARN of
+    /// another workspace) and the public space they open; it is theirs to
+    /// give per request, never the library's to assume (an assumption judged
+    /// by wami's own STS gets none).
+    ///
+    /// The fence is a conjunction of exact patterns (`arn:wami:<svc>:<t>:wami:*:**`
+    /// and `arn:wami:<svc>:<t>/**`): [`Scope::matches`] requires one and
+    /// [`Scope::lower`] ands them, so a store narrows on them exactly. An
+    /// allow pattern whose literal service or tenant contradicts the fence is
+    /// dropped, so the lowering stays tight; denies and `residual` are kept.
+    /// A fenced scope **may exclude** what the bare evaluator allows: its
+    /// oracle is the evaluator and the fence.
+    #[must_use]
+    pub fn fenced(&self, tenants: &[&str]) -> Self {
+        if tenants.is_empty() {
+            return self.clone();
+        }
+        let service = self.service().to_string();
+        let within = |tenant: &str| {
+            tenants
+                .iter()
+                .any(|root| tenant == *root || tenant.starts_with(&format!("{root}/")))
+        };
+        let allow = self
+            .allow
+            .iter()
+            .filter(|pattern| {
+                let parts: Vec<&str> = pattern.as_str().split(':').collect();
+                if parts.len() < 6 || parts[0] != "arn" || parts[1] != "wami" {
+                    return true;
+                }
+                let literal = |part: &str| !part.contains('*') && !part.contains("${");
+                (!literal(parts[2]) || parts[2] == service)
+                    && (!literal(parts[3]) || within(parts[3]))
+            })
+            .cloned()
+            .collect();
+        let fence = tenants
+            .iter()
+            .flat_map(|root| {
+                [
+                    Pattern::resolved(format!("arn:wami:{service}:{root}:wami:*:**")),
+                    Pattern::resolved(format!("arn:wami:{service}:{root}/**")),
+                ]
+            })
+            .collect();
+        Self {
+            allow,
+            deny: self.deny.clone(),
+            residual: self.residual,
+            action: self.action.clone(),
+            fence,
+        }
+    }
+
+    /// Whether `arn` is in the scope: some allow pattern matches it, the
+    /// fence (when there is one) does, and no deny pattern does — the
+    /// evaluator's verdict when nothing is residual and nothing is fenced, a
+    /// superset of it otherwise. The re-check a store's rows go through.
     ///
     /// `arn` is the row's text, judged as it is: the evaluator judges the
     /// ARN as `WamiArn` displays it once parsed, so the two agree on rows
@@ -142,7 +219,9 @@ impl Scope {
     /// writes ARNs through `WamiArn` holds, and the harness checks.
     #[must_use]
     pub fn matches(&self, arn: &str) -> bool {
-        self.allow.iter().any(|p| p.matches(arn)) && !self.deny.iter().any(|p| p.matches(arn))
+        self.allow.iter().any(|p| p.matches(arn))
+            && (self.fence.is_empty() || self.fence.iter().any(|p| p.matches(arn)))
+            && !self.deny.iter().any(|p| p.matches(arn))
     }
 
     /// The literal prefix of each allow pattern (see [`Pattern::prefix`]):
@@ -332,6 +411,84 @@ mod tests {
                 "arn:wami:atlas:100:wami:*:a/**",
                 "arn:wami:atlas:100:wami:*:b/**"
             ]
+        );
+    }
+
+    #[test]
+    fn a_fence_is_the_tenant_and_its_descendants_in_the_actions_service() {
+        let docs = [document(vec![statement(
+            "Allow",
+            &["s3:GetObject"],
+            &[
+                "arn:wami:s3:300:wami:*:bucket/mine/**",
+                "arn:wami:s3:100:wami:*:bucket/atlas/**",
+                "arn:wami:s3:*:wami:*:bucket/public-data/**",
+                "arn:wami:*:300:wami:*:**",
+                "*",
+            ],
+        )])];
+        let erin = MatchContext {
+            tenant: Some("300".into()),
+            ..MatchContext::default()
+        };
+        let bare = Scope::compile(&docs, "s3:GetObject", &erin).unwrap();
+        assert_eq!(bare.service(), "s3");
+        assert!(bare.matches("arn:wami:s3:100:wami:1:bucket/atlas/conv/c1"));
+        assert!(bare.matches("arn:wami:lambda:300:wami:1:function/f"));
+
+        let fenced = bare.fenced(&["300", "1"]);
+        assert_eq!(fenced.allow.len(), 4, "the literal tenant 100 is dropped");
+        assert_eq!(fenced.fence.len(), 4);
+        assert!(
+            !fenced.matches("arn:wami:s3:100:wami:1:bucket/atlas/conv/c1"),
+            "another tenant"
+        );
+        assert!(
+            !fenced.matches("arn:wami:lambda:300:wami:1:function/f"),
+            "another service"
+        );
+        assert!(fenced.matches("arn:wami:s3:300:wami:1:bucket/mine/x"));
+        assert!(
+            fenced.matches("arn:wami:s3:300/7:wami:1:bucket/mine/x"),
+            "a descendant"
+        );
+        assert!(
+            !fenced.matches("arn:wami:s3:3007:wami:1:bucket/mine/x"),
+            "a lookalike"
+        );
+        assert!(
+            fenced.matches("arn:wami:s3:1:wami:1:bucket/public-data/catalog.json"),
+            "the public tenant given"
+        );
+        assert!(
+            fenced.matches("arn:wami:s3:300:wami:1:anything/at/all"),
+            "`*` within the fence"
+        );
+        assert!(fenced.residual == bare.residual && fenced.deny == bare.deny);
+        let lowered = fenced.lower();
+        assert!(!lowered.keeps("arn:wami:s3:100:wami:1:bucket/atlas/conv/c1"));
+        assert!(lowered.keeps("arn:wami:s3:300/7:wami:1:bucket/mine/x"));
+    }
+
+    #[test]
+    fn a_fence_never_touches_a_deny_and_an_empty_fence_lists_nothing() {
+        let docs = [document(vec![
+            statement("Allow", &["s3:*"], &["arn:wami:s3:${tenant}:wami:*:**"]),
+            statement(
+                "Deny",
+                &["s3:*"],
+                &["arn:wami:s3:100:wami:1:bucket/atlas/conv/c1/thread/t2/**"],
+            ),
+        ])];
+        let scope = Scope::compile(&docs, "s3:GetObject", &ctx("100")).unwrap();
+        let fenced = scope.fenced(&["100"]);
+        assert_eq!(fenced.deny, scope.deny);
+        assert!(!fenced.matches("arn:wami:s3:100:wami:1:bucket/atlas/conv/c1/thread/t2/msg/1"));
+        assert!(fenced.matches("arn:wami:s3:100:wami:1:bucket/atlas/conv/c1/thread/t1/msg/1"));
+        let nothing = scope.fenced(&[]);
+        assert!(
+            nothing.fence.is_empty() && nothing.allow == scope.allow,
+            "no tenants: no fence, the bare scope"
         );
     }
 }

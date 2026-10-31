@@ -93,7 +93,8 @@ impl Scope {
     /// The scope lowered to a [`Predicate`]: **including too much, never
     /// excluding**. Nothing granted is [`Predicate::None`]; else the allow
     /// patterns, each widened to what a store can test exactly, or-ed; then
-    /// `AND NOT` each deny that is exact. A conditioned `Allow` is already in
+    /// `AND` the fence when there is one (exact trees, [`Scope::fenced`]);
+    /// then `AND NOT` each deny that is exact. A conditioned `Allow` is already in
     /// `allow` and a conditioned `Deny` already out of `deny`
     /// ([`Scope::compile`]), so a residual scope lowers like any other, and
     /// [`Scope::residual`] tells the caller the re-check decides.
@@ -103,17 +104,21 @@ impl Scope {
             return Predicate::None;
         }
         let allowed = Predicate::any(self.allow.iter().map(Predicate::allow).collect());
-        let denied: Vec<Predicate> = self
-            .deny
-            .iter()
-            .filter_map(Predicate::deny)
-            .map(|exact| Predicate::Not(Box::new(exact)))
-            .collect();
-        if denied.is_empty() {
-            return allowed;
-        }
         let mut all = vec![allowed];
-        all.extend(denied);
+        if !self.fence.is_empty() {
+            all.push(Predicate::any(
+                self.fence.iter().map(Predicate::allow).collect(),
+            ));
+        }
+        all.extend(
+            self.deny
+                .iter()
+                .filter_map(Predicate::deny)
+                .map(|exact| Predicate::Not(Box::new(exact))),
+        );
+        if all.len() == 1 {
+            return all.remove(0);
+        }
         Predicate::And(all)
     }
 }
@@ -131,6 +136,8 @@ mod tests {
             allow: allow.iter().map(|p| pattern(p)).collect(),
             deny: deny.iter().map(|p| pattern(p)).collect(),
             residual: false,
+            action: "atlas:ReadItem".into(),
+            fence: Vec::new(),
         }
     }
 
@@ -204,5 +211,28 @@ mod tests {
         assert!(lowered.keeps("arn:wami:a:1:wami:1:key/k1"));
         assert!(!lowered.keeps("arn:wami:a:1:wami:1:key/k2"));
         assert!(!lowered.keeps("arn:wami:a:1:wami:1:key/k3"));
+    }
+
+    #[test]
+    fn a_fence_is_anded_between_the_allows_and_the_denies() {
+        let fenced = scope(&["*"], &["arn:wami:atlas:1:wami:1:key/k1"]).fenced(&["1"]);
+        let Predicate::And(parts) = fenced.lower() else {
+            panic!()
+        };
+        assert_eq!(parts.len(), 3, "allow, fence, deny");
+        assert_eq!(parts[0], Predicate::All);
+        assert_eq!(
+            parts[1],
+            Predicate::Or(vec![
+                Predicate::Prefix("arn:wami:atlas:1:wami:".into()),
+                Predicate::Or(vec![
+                    Predicate::Prefix("arn:wami:atlas:1/".into()),
+                    Predicate::Exact("arn:wami:atlas:1".into()),
+                ]),
+            ])
+        );
+        assert!(fenced.lower().keeps("arn:wami:atlas:1:wami:1:key/k2"));
+        assert!(!fenced.lower().keeps("arn:wami:atlas:1:wami:1:key/k1"));
+        assert!(!fenced.lower().keeps("arn:wami:atlas:2:wami:1:key/k2"));
     }
 }

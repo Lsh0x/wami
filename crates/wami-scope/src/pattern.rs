@@ -23,9 +23,15 @@ pub enum NotCompilable {
     /// `arn:wami:…`.
     #[error("{0:?} is not an ARN pattern")]
     NotAnArn(String),
+    /// The service part holds a wildcard: `arn:wami:*:…` widens to every
+    /// service's rows, the whole store.
+    #[error("{0:?}: the service part must be literal (or `${{service}}`)")]
+    ServiceWildcard(String),
     /// The tenant part holds a wildcard: nothing a tenant-prefixed index can
-    /// narrow.
-    #[error("{0:?}: the tenant part must be literal (or `${{tenant}}`)")]
+    /// narrow. `<tenant>/*` — a tenant's direct descendants — is allowed.
+    #[error(
+        "{0:?}: the tenant part must be literal (or `${{tenant}}`, or either followed by `/*`)"
+    )]
     TenantWildcard(String),
     /// `**` anywhere but as a trailing `/**`.
     #[error("{0:?}: `**` is only translated as a trailing `/**`")]
@@ -78,8 +84,10 @@ impl Pattern {
     }
 
     /// Whether `motif` is in the subset a store can translate exactly: a
-    /// literal tenant part (or `${tenant}`), `*` within a segment, `**` only
-    /// as a trailing `/**`, every variable resolved.
+    /// literal service part (or `${service}`), a literal tenant part (or
+    /// `${tenant}`, or either followed by `/*` for the direct descendants),
+    /// `*` within a segment, `**` only as a trailing `/**`, every variable
+    /// resolved.
     ///
     /// Checked on a raw motif (variables not yet resolved) as a service does
     /// on its role documents at boot, or on a resolved pattern.
@@ -92,7 +100,11 @@ impl Pattern {
         if parts.len() < 6 || parts[0] != "arn" || parts[1] != "wami" {
             return Err(NotCompilable::NotAnArn(motif.into()));
         }
-        if parts[3].contains('*') {
+        if parts[2].contains('*') {
+            return Err(NotCompilable::ServiceWildcard(motif.into()));
+        }
+        let descendants = parts[3].strip_suffix("/*").unwrap_or(parts[3]);
+        if descendants.contains('*') {
             return Err(NotCompilable::TenantWildcard(motif.into()));
         }
         let body = motif.strip_suffix("/**").unwrap_or(motif);
@@ -160,6 +172,8 @@ mod tests {
             "arn:wami:atlas:100:wami:1:realm/main/map/*/layer/*",
             "arn:wami:atlas:100/7:wami:*:key/k1",
             "arn:wami:${service}:${tenant}:wami:*:memo/${principal}",
+            "arn:wami:s3:${tenant}/*:wami:*:bucket/**",
+            "arn:wami:s3:100/*:wami:*:bucket/**",
         ];
         for motif in ok {
             assert_eq!(Pattern::compilable(motif), Ok(()), "{motif}");
@@ -178,6 +192,18 @@ mod tests {
             (
                 "arn:wami:atlas:1*:wami:*:archive/**",
                 NotCompilable::TenantWildcard("arn:wami:atlas:1*:wami:*:archive/**".into()),
+            ),
+            (
+                "arn:wami:atlas:100/**:wami:*:archive/**",
+                NotCompilable::TenantWildcard("arn:wami:atlas:100/**:wami:*:archive/**".into()),
+            ),
+            (
+                "arn:wami:*:100:wami:*:archive/**",
+                NotCompilable::ServiceWildcard("arn:wami:*:100:wami:*:archive/**".into()),
+            ),
+            (
+                "arn:wami:s*:${tenant}:wami:*:bucket/**",
+                NotCompilable::ServiceWildcard("arn:wami:s*:${tenant}:wami:*:bucket/**".into()),
             ),
             (
                 "arn:wami:atlas:100:wami:*:**/note/*",

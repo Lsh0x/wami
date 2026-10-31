@@ -20,8 +20,8 @@
 //! allow.** A statement the compiler cannot fold — a condition, whose truth
 //! depends on the request — sets [`Scope::residual`]: an `Allow` under a
 //! condition is kept (it may hold), a `Deny` under a condition is dropped (it
-//! may not), and the re-check pays. The `harness` feature ships the test that
-//! holds every translator to it.
+//! may not), and the re-check pays. `wami-scope-tests` holds every translator
+//! to it: a world, the evaluator as oracle, a suite every store runs.
 //!
 //! # Example
 //!
@@ -66,13 +66,12 @@
 
 #![forbid(unsafe_code)]
 
+mod narrowing;
 mod pattern;
 mod predicate;
 mod scope;
 
-#[cfg(feature = "harness")]
-pub mod harness;
-
+pub use narrowing::{Binding, Narrowing, NarrowingError};
 pub use pattern::{NotCompilable, Pattern};
 pub use predicate::Predicate;
 pub use scope::{Scope, ScopeError};
