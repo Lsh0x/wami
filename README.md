@@ -66,7 +66,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-wami = "0.16"
+wami = "0.20"
 tokio = { version = "1.0", features = ["full"] }
 ```
 
