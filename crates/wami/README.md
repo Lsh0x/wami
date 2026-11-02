@@ -18,7 +18,7 @@ wami holds no database and serves no HTTP. It decides, and it signs.
 
 ```toml
 [dependencies]
-wami = "0.16"
+wami = "0.20"
 tokio = { version = "1", features = ["full"] }
 ```
 
@@ -89,7 +89,7 @@ knows the difference.
 ## Feature flags
 
 ```toml
-wami = { version = "0.16", features = ["aws"] }
+wami = { version = "0.20", features = ["aws"] }
 ```
 
 | flag | default | what it adds |
