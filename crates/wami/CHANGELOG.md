@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.20.0](https://github.com/Lsh0x/wami/compare/v0.19.0...v0.20.0) (2026-11-02)
+
+
+### Documentation
+
+* **wami:** install snippets name the current release ([#154](https://github.com/Lsh0x/wami/issues/154)) ([c80a259](https://github.com/Lsh0x/wami/commit/c80a259b552f05a18264e677ef1b5346e7c8df41))
+
 ## [0.19.0](https://github.com/Lsh0x/wami/compare/v0.18.0...v0.19.0) (2026-10-31)
 
 
