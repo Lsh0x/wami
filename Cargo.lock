@@ -1974,7 +1974,7 @@ dependencies = [
 
 [[package]]
 name = "wami-scope-sql"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "rusqlite",
  "serde_json",
@@ -1985,7 +1985,7 @@ dependencies = [
 
 [[package]]
 name = "wami-scope-tests"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "grafeo",
  "grafeo-common",
