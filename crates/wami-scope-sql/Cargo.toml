@@ -13,7 +13,7 @@ thiserror = "2.0"
 wami-scope = { path = "../wami-scope", version = "0.1.0" }
 
 [dev-dependencies]
-rusqlite = { version = "0.37", features = ["bundled"] }
+rusqlite = { version = "0.41.1", features = ["bundled"] }
 serde_json = "1"
 wami-core = { path = "../wami-core", version = "0.20.0" }
 

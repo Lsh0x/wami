@@ -22,7 +22,7 @@ wami-scope-sql = { path = "../wami-scope-sql" }
 [dev-dependencies]
 grafeo = { version = "0.6.1", default-features = false, features = ["gql"] }
 grafeo-common = "0.6.1"
-rusqlite = { version = "0.37", features = ["bundled"] }
+rusqlite = { version = "0.41.1", features = ["bundled"] }
 
 [lints.rust]
 missing_docs = "warn"
