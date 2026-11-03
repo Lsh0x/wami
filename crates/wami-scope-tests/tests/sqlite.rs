@@ -69,7 +69,10 @@ impl Sqlite {
                     .map(|(i, name)| Ok(((*name).into(), record.get::<_, String>(i)?)))
                     .collect::<rusqlite::Result<Vec<_>>>()?;
                 let count = if count {
-                    Some(record.get::<_, u64>(names.len())?)
+                    Some(
+                        u64::try_from(record.get::<_, i64>(names.len())?)
+                            .expect("SQLite count must be non-negative"),
+                    )
                 } else {
                     None
                 };

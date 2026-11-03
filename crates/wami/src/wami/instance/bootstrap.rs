@@ -251,13 +251,13 @@ impl InstanceBootstrap {
     ///
     /// Format: AKIA + 16 uppercase alphanumeric characters (AWS-compatible)
     fn generate_access_key_id() -> String {
-        use rand::Rng;
+        use rand::RngExt;
         const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         let random: String = (0..16)
             .map(|_| {
-                let idx = rng.gen_range(0..CHARSET.len());
+                let idx = rng.random_range(0..CHARSET.len());
                 CHARSET[idx] as char
             })
             .collect();
@@ -269,13 +269,13 @@ impl InstanceBootstrap {
     ///
     /// Format: 40 character alphanumeric + special chars (AWS-compatible)
     fn generate_secret_access_key() -> String {
-        use rand::Rng;
+        use rand::RngExt;
         const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         (0..40)
             .map(|_| {
-                let idx = rng.gen_range(0..CHARSET.len());
+                let idx = rng.random_range(0..CHARSET.len());
                 CHARSET[idx] as char
             })
             .collect()
