@@ -6,6 +6,6 @@
   "crates/wami-service": "0.1.4",
   "crates/wami-scope": "0.1.0",
   "crates/wami-scope-gql": "0.1.0",
-  "crates/wami-scope-sql": "0.1.0",
-  "crates/wami-scope-tests": "0.0.2"
+  "crates/wami-scope-sql": "0.2.0",
+  "crates/wami-scope-tests": "0.0.3"
 }
