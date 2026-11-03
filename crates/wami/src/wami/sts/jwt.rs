@@ -12,7 +12,6 @@ use ed25519_dalek::pkcs8::spki::EncodePublicKey;
 use ed25519_dalek::pkcs8::EncodePrivateKey;
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
-use rand::rngs::OsRng;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -228,11 +227,17 @@ fn thumbprint(verifying_key: &VerifyingKey) -> String {
     URL_SAFE_NO_PAD.encode(Sha256::digest(canonical.as_bytes()))
 }
 
+fn generate_signing_key() -> SigningKey {
+    let mut bytes = [0_u8; 32];
+    getrandom::fill(&mut bytes).expect("failed to generate signing key bytes");
+    SigningKey::from_bytes(&bytes)
+}
+
 impl KeyManager {
     /// Generate a new random Ed25519 keypair.
     pub fn generate() -> Self {
         Self {
-            active: KeyPair::new(SigningKey::generate(&mut OsRng)),
+            active: KeyPair::new(generate_signing_key()),
             retired: Vec::new(),
         }
     }
@@ -1058,7 +1063,7 @@ mod tests {
         let before = km.sign_claims(&test_claims()).unwrap();
         let old_kid = km.active().kid().to_string();
 
-        km.rotate(SigningKey::generate(&mut OsRng));
+        km.rotate(generate_signing_key());
         let after = km.sign_claims(&test_claims()).unwrap();
 
         assert!(
@@ -1076,7 +1081,7 @@ mod tests {
         let token = km.sign_claims(&test_claims()).unwrap();
         let old_kid = km.active().kid().to_string();
 
-        km.rotate(SigningKey::generate(&mut OsRng));
+        km.rotate(generate_signing_key());
         assert!(km.verify_token(&token, AUD).is_ok());
 
         assert!(km.remove_retired(&old_kid));
@@ -1126,7 +1131,7 @@ mod tests {
     fn jwks_lists_every_verifying_key_active_first() {
         let mut km = KeyManager::generate();
         let first = km.active().kid().to_string();
-        km.rotate(SigningKey::generate(&mut OsRng));
+        km.rotate(generate_signing_key());
 
         let jwks = km.jwks();
         assert_eq!(jwks.keys.len(), 2);

@@ -26,7 +26,7 @@ pub struct TenantId {
 /// Generate a cryptographically secure random u64 for tenant ID segment
 fn generate_secure_u64() -> u64 {
     let mut bytes = [0u8; 8];
-    getrandom::getrandom(&mut bytes).expect("Failed to generate random bytes");
+    getrandom::fill(&mut bytes).expect("Failed to generate random bytes");
     u64::from_be_bytes(bytes)
 }
 

@@ -3465,14 +3465,15 @@ fn test_operator_evaluation_error_paths() {
         ), // Expected should be array but is number
     ];
 
-    // Each is an error, and the one its parser gives (wami 001).
+    // Each is an error, and the one its parser gives (wami 001). Date error
+    // text belongs to chrono and is intentionally not part of this contract.
     let errors = [
         ConditionError::TypeMismatch {
             expected: "a finite Number".to_string(),
             actual: "String".to_string(),
         },
         ConditionError::InvalidDate {
-            error: "input contains invalid characters".to_string(),
+            error: String::new(),
         },
         ConditionError::InvalidBooleanValue,
         ConditionError::TypeMismatch {
@@ -3481,11 +3482,15 @@ fn test_operator_evaluation_error_paths() {
         },
     ];
     for ((op, actual, expected), error) in test_cases.into_iter().zip(errors) {
-        assert_eq!(
-            evaluate_operator(op, actual, &expected),
-            Err(error),
-            "{op:?}"
-        );
+        let result = evaluate_operator(op, actual, &expected);
+        if matches!(op, ConditionOperator::DateEquals) {
+            assert!(
+                matches!(result, Err(ConditionError::InvalidDate { .. })),
+                "{op:?}"
+            );
+        } else {
+            assert_eq!(result, Err(error), "{op:?}");
+        }
     }
 }
 
