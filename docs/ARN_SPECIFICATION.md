@@ -590,3 +590,34 @@ if arn.tenant_path != user.tenant_path {
 
 - **v1.0** (2025-10-30): Initial ARN specification with multi-tenant and multi-cloud support
 
+
+## Deriving concrete descendants
+
+`WamiArn::child(resource_type, key)` appends one pair to the resource path,
+preserving the service, tenant hierarchy, Wami instance and optional provider,
+account and region. For example, a GitSense `project/p` can derive
+`project/p/source/github.com/owner/o42/repo/r17`. The parent is immutable;
+`ArnBuilder::resource` continues to replace the resource.
+
+New components accept ASCII letters, digits, `-`, `_`, and `.`, excluding empty
+strings and the special components `.` and `..`. Encode opaque application IDs
+into explicit safe address keys before calling this method. A wildcard or control
+character in the parent, or an unchecked value that fails a parser round trip,
+is rejected. This API constructs an identity; it neither grants descendant
+access nor changes policy wildcard semantics. Parent validation currently includes
+a round trip through the parser; this is not a constant-time path operation.
+
+### Resource names and confidentiality
+
+Use stable opaque IDs for private owners and repositories, for example
+`project/p/source/github.com/owner/o42/repo/r17`. Here `o42` and `r17`
+stand for service-assigned opaque IDs, not provider names, slugs, or hashes
+of names. Keep display names and clone coordinates in properties protected
+by the resource's access rules. Renaming an owner or repository does not change
+these IDs. Keep the source host explicit to distinguish GitHub and GitLab.
+
+This is an application addressing convention. The generic builder and `child`
+validate syntax; they cannot determine whether a key contains a private name.
+Opaque keys reduce name disclosure but do not anonymize the ARN: the service,
+host, hierarchy and identifiers remain visible, and authorization is still
+required for resource metadata and address enumeration.

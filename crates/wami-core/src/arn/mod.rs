@@ -93,6 +93,7 @@
 //! ```
 
 pub mod builder;
+mod child;
 pub mod matching;
 pub mod parser;
 pub mod scoped_name;
