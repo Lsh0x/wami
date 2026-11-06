@@ -590,3 +590,19 @@ if arn.tenant_path != user.tenant_path {
 
 - **v1.0** (2025-10-30): Initial ARN specification with multi-tenant and multi-cloud support
 
+
+## Deriving concrete descendants
+
+`WamiArn::child(resource_type, key)` appends one pair to the resource path,
+preserving the service, tenant hierarchy, Wami instance and optional provider,
+account and region. For example, a GitSense `project/p` can derive
+`project/p/source/github.com/owner/anatta-rs/repo/gitsense`. The parent is immutable;
+`ArnBuilder::resource` continues to replace the resource.
+
+New components accept ASCII letters, digits, `-`, `_`, and `.`, excluding empty
+strings and the special components `.` and `..`. Encode opaque application IDs
+into explicit safe address keys before calling this method. A wildcard or control
+character in the parent, or an unchecked value that fails a parser round trip,
+is rejected. This API constructs an identity; it neither grants descendant
+access nor changes policy wildcard semantics. Parent validation currently includes
+a round trip through the parser; this is not a constant-time path operation.
