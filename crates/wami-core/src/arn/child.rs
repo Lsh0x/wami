@@ -19,8 +19,8 @@ impl WamiArn {
     /// use wami_core::arn::WamiArn;
     /// let project: WamiArn = "arn:wami:gitsense:42:wami:anatta:project/p".parse()?;
     /// let repo = project.child("source", "github.com")?
-    ///     .child("owner", "anatta-rs")?.child("repo", "gitsense")?;
-    /// assert_eq!(repo.resource_id(), "p/source/github.com/owner/anatta-rs/repo/gitsense");
+    ///     .child("owner", "o42")?.child("repo", "r17")?;
+    /// assert_eq!(repo.resource_id(), "p/source/github.com/owner/o42/repo/r17");
     /// assert_eq!(project.resource_id(), "p");
     /// # Ok::<(), wami_core::arn::ArnParseError>(())
     /// ```

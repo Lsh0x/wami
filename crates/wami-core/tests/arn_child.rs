@@ -20,13 +20,13 @@ fn descendants_preserve_namespace_and_do_not_mutate_parent() {
         let child = parent
             .child("source", "github.com")
             .unwrap()
-            .child("owner", "anatta-rs")
+            .child("owner", "o42")
             .unwrap()
-            .child("repo", "gitsense")
+            .child("repo", "r17")
             .unwrap();
         assert_eq!(
             child.to_string(),
-            format!("{parent}/source/github.com/owner/anatta-rs/repo/gitsense")
+            format!("{parent}/source/github.com/owner/o42/repo/r17")
         );
         assert_eq!(child.to_string().parse::<WamiArn>().unwrap(), child);
         assert_eq!(child.prefix(), parent.prefix());
