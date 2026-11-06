@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.1](https://github.com/Lsh0x/wami/compare/wami-scope-v0.1.0...wami-scope-v0.1.1) (2026-11-06)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * wami-core bumped from 0.20.0 to 0.21.0
+
 ## 0.1.0 (2026-10-31)
 
 

@@ -1976,7 +1976,7 @@ dependencies = [
 
 [[package]]
 name = "wami"
-version = "0.20.0"
+version = "0.20.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2005,7 +2005,7 @@ dependencies = [
 
 [[package]]
 name = "wami-condition"
-version = "0.18.1"
+version = "0.18.2"
 dependencies = [
  "chrono",
  "serde",
@@ -2015,7 +2015,7 @@ dependencies = [
 
 [[package]]
 name = "wami-core"
-version = "0.20.0"
+version = "0.21.0"
 dependencies = [
  "chrono",
  "serde",
@@ -2034,7 +2034,7 @@ dependencies = [
 
 [[package]]
 name = "wami-scope"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde_json",
  "thiserror",
@@ -2043,7 +2043,7 @@ dependencies = [
 
 [[package]]
 name = "wami-scope-gql"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "thiserror",
  "wami-core",
@@ -2052,7 +2052,7 @@ dependencies = [
 
 [[package]]
 name = "wami-scope-sql"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "rusqlite",
  "serde_json",
@@ -2063,7 +2063,7 @@ dependencies = [
 
 [[package]]
 name = "wami-scope-tests"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "grafeo",
  "grafeo-common",
@@ -2080,7 +2080,7 @@ dependencies = [
 
 [[package]]
 name = "wami-service"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "wami-core",
  "wami-macros",
