@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/Lsh0x/wami/compare/wami-core-v0.20.0...wami-core-v0.21.0) (2026-11-06)
+
+
+### Features
+
+* **core:** derive concrete child resource ARNs ([#159](https://github.com/Lsh0x/wami/issues/159)) ([2edbdbd](https://github.com/Lsh0x/wami/commit/2edbdbde5d2f44dbc45cdd62df48697eeae7fcc6))
+
 ## [0.20.0](https://github.com/Lsh0x/wami/compare/wami-core-v0.19.0...wami-core-v0.20.0) (2026-10-31)
 
 
