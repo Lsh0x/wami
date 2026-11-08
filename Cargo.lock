@@ -1976,7 +1976,7 @@ dependencies = [
 
 [[package]]
 name = "wami"
-version = "0.20.1"
+version = "0.21.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2063,7 +2063,7 @@ dependencies = [
 
 [[package]]
 name = "wami-scope-tests"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "grafeo",
  "grafeo-common",
