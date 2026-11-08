@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.0](https://github.com/Lsh0x/wami/compare/v0.20.1...v0.21.0) (2026-11-08)
+
+
+### Features
+
+* **sts:** TokenType::Custom for caller-defined typ labels ([#161](https://github.com/Lsh0x/wami/issues/161)) ([47140ef](https://github.com/Lsh0x/wami/commit/47140ef23eb3b8898132ef72cbf0e0be326d96ce))
+
 ## [0.20.1](https://github.com/Lsh0x/wami/compare/v0.20.0...v0.20.1) (2026-11-06)
 
 
