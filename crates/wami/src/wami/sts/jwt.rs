@@ -73,6 +73,16 @@ pub enum TokenType {
     Jwt,
     /// `at+jwt` — an OAuth 2.0 access token, RFC 9068.
     AccessToken,
+    /// A `typ` of the caller's choosing, for its own signed documents: a policy
+    /// or rules bundle, say, labelled `"rules+jwt"`. It follows the RFC 9068
+    /// `+jwt` convention, which is not enforced.
+    ///
+    /// The label is compared as a string, exactly: case and padding are never
+    /// normalised. `Custom("at+jwt")` carries the same label as
+    /// [`TokenType::AccessToken`] and behaves exactly like it. An empty label
+    /// names nothing: [`KeyManager::verify_claims_as`] refuses it with
+    /// [`JwtError::TokenTypeMismatch`].
+    Custom(&'static str),
 }
 
 impl TokenType {
@@ -81,10 +91,16 @@ impl TokenType {
         match self {
             TokenType::Jwt => "JWT",
             TokenType::AccessToken => "at+jwt",
+            TokenType::Custom(label) => label,
         }
     }
 
     /// Parse a `typ` header value.
+    ///
+    /// Only the registered types are returned, [`TokenType::Jwt`] and
+    /// [`TokenType::AccessToken`]. A caller-defined label is never produced
+    /// here: it is checked by string comparison in
+    /// [`KeyManager::verify_claims_as`].
     ///
     /// RFC 9068 §4: a resource server accepts `at+jwt` or `application/at+jwt`.
     /// The media-type prefix is optional in JOSE headers and both forms are on
@@ -429,17 +445,21 @@ impl KeyManager {
             .map_err(JwtError::Decode)?
             .typ;
 
-        let acceptable = match (declared.as_deref().map(TokenType::parse), policy) {
+        let acceptable = match (declared.as_deref(), policy) {
+            // An empty label names nothing, so nothing can be held to it.
+            _ if expected.as_str().is_empty() => false,
             // No label. Genuine, and says nothing about what it is.
             (None, TypePolicy::Lenient) => true,
             (None, TypePolicy::Strict) => false,
-            // A label nobody recognises — `dpop+jwt`, say. Never ours.
-            (Some(None), _) => false,
-            (Some(Some(found)), TypePolicy::Strict) => found == expected,
+            // A label: it must be the one asked for, compared as a string so a
+            // custom label works without `parse`. Anything else — `dpop+jwt`,
+            // say — is never ours.
+            (Some(found), TypePolicy::Strict) => found == expected.as_str(),
             // Lenient: `JWT` is the unlabelled shape spelled out, so it passes
             // wherever no label would. Anything more specific must match.
-            (Some(Some(TokenType::Jwt)), TypePolicy::Lenient) => true,
-            (Some(Some(found)), TypePolicy::Lenient) => found == expected,
+            (Some(found), TypePolicy::Lenient) => {
+                TokenType::parse(found) == Some(TokenType::Jwt) || found == expected.as_str()
+            }
         };
 
         if !acceptable {
@@ -877,6 +897,122 @@ mod tests {
 
         // But the untyped door does not care, by design.
         assert!(km.verify_claims::<StsClaims>(&token, AUD).is_ok());
+    }
+
+    const RULES: TokenType = TokenType::Custom("rules+jwt");
+
+    #[test]
+    fn a_custom_type_round_trips_and_is_matched_exactly() {
+        assert_eq!(RULES.as_str(), "rules+jwt");
+        // `parse` returns only the registered types, never a custom label.
+        assert_eq!(TokenType::parse("rules+jwt"), None);
+        assert_eq!(TokenType::parse("at+jwt"), Some(TokenType::AccessToken));
+        // Same label as the registered type: same behaviour.
+        assert_eq!(TokenType::Custom("at+jwt").as_str(), "at+jwt");
+    }
+
+    #[test]
+    fn a_custom_typed_token_verifies_only_as_that_custom_type() {
+        let km = KeyManager::generate();
+        let claims = build_sts_claims(&test_credentials(), &test_claims_context());
+        let token = km.sign_claims_as(&claims, RULES).unwrap();
+        let header = jsonwebtoken::decode_header(&token).unwrap();
+        assert_eq!(header.typ.as_deref(), Some("rules+jwt"));
+
+        for policy in [TypePolicy::Lenient, TypePolicy::Strict] {
+            assert!(km
+                .verify_claims_as::<StsClaims>(&token, AUD, RULES, policy)
+                .is_ok());
+            for expected in [
+                TokenType::AccessToken,
+                TokenType::Jwt,
+                TokenType::Custom("other+jwt"),
+            ] {
+                let err = km
+                    .verify_claims_as::<StsClaims>(&token, AUD, expected, policy)
+                    .unwrap_err();
+                assert!(
+                    matches!(&err, JwtError::TokenTypeMismatch { found, .. } if found == "rules+jwt"),
+                    "{expected:?}/{policy:?}: {err:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn an_access_token_is_refused_as_a_custom_type() {
+        let km = KeyManager::generate();
+        let claims = build_sts_claims(&test_credentials(), &test_claims_context());
+        let token = km.sign_claims_as(&claims, TokenType::AccessToken).unwrap();
+        for policy in [TypePolicy::Lenient, TypePolicy::Strict] {
+            let err = km
+                .verify_claims_as::<StsClaims>(&token, AUD, RULES, policy)
+                .unwrap_err();
+            assert!(
+                matches!(err, JwtError::TokenTypeMismatch { .. }),
+                "{policy:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn custom_at_jwt_is_the_access_token() {
+        let km = KeyManager::generate();
+        let claims = build_sts_claims(&test_credentials(), &test_claims_context());
+        let token = km
+            .sign_claims_as(&claims, TokenType::Custom("at+jwt"))
+            .unwrap();
+        for policy in [TypePolicy::Lenient, TypePolicy::Strict] {
+            assert!(km
+                .verify_claims_as::<StsClaims>(&token, AUD, TokenType::AccessToken, policy)
+                .is_ok());
+        }
+    }
+
+    #[test]
+    fn an_empty_custom_label_is_refused_at_verify() {
+        let km = KeyManager::generate();
+        let claims = build_sts_claims(&test_credentials(), &test_claims_context());
+        let empty = TokenType::Custom("");
+        // Neither an unlabelled token nor one declaring an empty typ passes.
+        let mut tokens = vec![km.sign_claims_as(&claims, TokenType::Jwt).unwrap()];
+        tokens.push(km.sign_claims_as(&claims, empty).unwrap());
+        for token in tokens {
+            for policy in [TypePolicy::Lenient, TypePolicy::Strict] {
+                let err = km
+                    .verify_claims_as::<StsClaims>(&token, AUD, empty, policy)
+                    .unwrap_err();
+                assert!(
+                    matches!(err, JwtError::TokenTypeMismatch { .. }),
+                    "{policy:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_mis_cased_or_padded_custom_typ_is_refused() {
+        let km = KeyManager::generate();
+        let claims = build_sts_claims(&test_credentials(), &test_claims_context());
+        let pkcs8 = km.active.signing_key.to_pkcs8_der().unwrap();
+        for typ in ["RULES+JWT", "rules+jwt "] {
+            let mut header = Header::new(Algorithm::EdDSA);
+            header.kid = Some(km.active.kid.clone());
+            header.typ = Some(typ.to_string());
+            let token = encode(
+                &header,
+                &claims,
+                &EncodingKey::from_ed_der(pkcs8.as_bytes()),
+            )
+            .unwrap();
+            for policy in [TypePolicy::Lenient, TypePolicy::Strict] {
+                assert!(
+                    km.verify_claims_as::<StsClaims>(&token, AUD, RULES, policy)
+                        .is_err(),
+                    "{typ:?}/{policy:?} accepted"
+                );
+            }
+        }
     }
 
     #[test]
