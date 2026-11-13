@@ -32,7 +32,7 @@ bcrypt = "0.18"
 rand = "0.10"
 getrandom = "0.3"
 ed25519-dalek = { version = "2", features = ["rand_core", "pkcs8"], optional = true }
-jsonwebtoken = { version = "10", features = ["rust_crypto"], optional = true }
+jsonwebtoken = { version = "11", features = ["rust_crypto"], optional = true }
 roxmltree = "0.21"
 wami-condition = { path = "../wami-condition", version = "0.18.3" }
 wami-core = { path = "../wami-core", version = "0.21.1" }
