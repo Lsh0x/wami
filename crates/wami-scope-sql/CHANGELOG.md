@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.2](https://github.com/Lsh0x/wami/compare/wami-scope-sql-v0.2.1...wami-scope-sql-v0.2.2) (2026-11-13)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * wami-scope bumped from 0.1.1 to 0.1.2
+  * dev-dependencies
+    * wami-core bumped from 0.21.0 to 0.21.1
+
 ## [0.2.1](https://github.com/Lsh0x/wami/compare/wami-scope-sql-v0.2.0...wami-scope-sql-v0.2.1) (2026-11-06)
 
 

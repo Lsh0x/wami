@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.1](https://github.com/Lsh0x/wami/compare/wami-core-v0.21.0...wami-core-v0.21.1) (2026-11-13)
+
+
+### Features
+
+* **core:** TenantId, the tenant segment and the reserved tenant ids ([#175](https://github.com/Lsh0x/wami/issues/175)) ([bff9e2c](https://github.com/Lsh0x/wami/commit/bff9e2ccdd85a53cd89a093866a7e949056abc9a))
+
 ## [0.21.0](https://github.com/Lsh0x/wami/compare/wami-core-v0.20.0...wami-core-v0.21.0) (2026-11-06)
 
 

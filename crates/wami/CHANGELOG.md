@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.1](https://github.com/Lsh0x/wami/compare/v0.21.0...v0.21.1) (2026-11-13)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * wami-condition bumped from 0.18.2 to 0.18.3
+    * wami-core bumped from 0.21.0 to 0.21.1
+
 ## [0.21.0](https://github.com/Lsh0x/wami/compare/v0.20.1...v0.21.0) (2026-11-08)
 
 
