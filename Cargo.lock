@@ -1985,7 +1985,7 @@ dependencies = [
  "chrono",
  "ed25519-dalek",
  "env_logger",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "hex",
  "jsonwebtoken",
  "log",

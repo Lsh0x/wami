@@ -30,7 +30,7 @@ hex = "0.4"
 regex = "1.10"
 bcrypt = "0.18"
 rand = "0.10"
-getrandom = "0.3"
+getrandom = "0.4"
 ed25519-dalek = { version = "2", features = ["rand_core", "pkcs8"], optional = true }
 jsonwebtoken = { version = "10", features = ["rust_crypto"], optional = true }
 roxmltree = "0.21"
